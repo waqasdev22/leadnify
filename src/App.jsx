@@ -2953,9 +2953,14 @@ function LocationPickerModal({ open, initial, address, onConfirm, onClose }) {
   )
 }
 
-function DocumentBuilder({ config, onExit, onChangeType, onSave, notify }) {
-  const [step, setStep] = useState(0)
-  const [done, setDone] = useState({})
+function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify }) {
+  const [step, setStep] = useState(initial?.step || 0)
+  // Mark every step before the resume point as completed.
+  const [done, setDone] = useState(() => {
+    const d = {}
+    for (let i = 0; i < (initial?.step || 0); i++) d[i] = true
+    return d
+  })
   const [mapOpen, setMapOpen] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(true)
   const [viewerIdx, setViewerIdx] = useState(null)
@@ -2965,11 +2970,13 @@ function DocumentBuilder({ config, onExit, onChangeType, onSave, notify }) {
   const [copyCat, setCopyCat] = useState(0)
   const [catOpen, setCatOpen] = useState(false)
   const [libOpen, setLibOpen] = useState(false)
-  const [form, setForm] = useState({
-    name: '', price: '', priceVis: 'Show', country: 'US', searchMode: 'address',
-    street: '', city: '', state: '', zip: '', customDisplay: false, displayAddress: '',
-    lat: null, lng: null, dataPoints: [], metrics: [], sections: {},
-  })
+  const [form, setForm] = useState(
+    initial?.form || {
+      name: '', price: '', priceVis: 'Show', country: 'US', searchMode: 'address',
+      street: '', city: '', state: '', zip: '', customDisplay: false, displayAddress: '',
+      lat: null, lng: null, dataPoints: [], metrics: [], sections: {},
+    },
+  )
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target?.value ?? e }))
 
   // Street-address autocomplete (OpenStreetMap Nominatim — free, no key)
@@ -3024,7 +3031,7 @@ function DocumentBuilder({ config, onExit, onChangeType, onSave, notify }) {
       return
     }
     setDone((d) => ({ ...d, [step]: true }))
-    if (last) onSave(form)
+    if (last) onSave(form, step, true)
     else setStep(step + 1)
   }
 
@@ -3185,7 +3192,7 @@ function DocumentBuilder({ config, onExit, onChangeType, onSave, notify }) {
           <button onClick={() => notify('Invite link copied')} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
             <Users className="h-4 w-4" /> Invite
           </button>
-          <button onClick={() => onSave(form)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+          <button onClick={() => onSave(form, step, false)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
             <LogOut className="h-4 w-4" /> Save &amp; Exit
           </button>
         </div>
@@ -3763,7 +3770,7 @@ function DocumentBuilder({ config, onExit, onChangeType, onSave, notify }) {
   )
 }
 
-function DashboardPage({ packages, setPackages, setListings, globalQuery, createNonce }) {
+function DashboardPage({ packages, setPackages, setListings, globalQuery, createNonce, resume, onResumeHandled }) {
   const notify = useToast()
   const [subTab, setSubTab] = useState('my')
   const [search, setSearch] = useState('')
@@ -3792,6 +3799,22 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
   // Document builder (opens after "Get Started").
   const [builderOpen, setBuilderOpen] = useState(false)
   const [builderCfg, setBuilderCfg] = useState(null)
+  const [builderInitial, setBuilderInitial] = useState(null) // resume state {form, step}
+  const [builderDraftId, setBuilderDraftId] = useState(null) // id of the draft being edited
+  const [builderNonce, setBuilderNonce] = useState(0) // forces a fresh builder mount per open
+
+  // Resume an in-progress draft (opened from the Listing Hub).
+  useEffect(() => {
+    if (resume?.draft) {
+      const d = resume.draft
+      setBuilderCfg({ docType: d.docType, propertyType: d.propertyType, template: d.template, brandColor: d.brandColor })
+      setBuilderInitial({ form: d.form, step: d.step })
+      setBuilderDraftId(d.id)
+      setBuilderNonce((n) => n + 1)
+      setBuilderOpen(true)
+      onResumeHandled?.()
+    }
+  }, [resume])
 
   // Bulk-select mode (toggled by the "Select" button).
   const [selectMode, setSelectMode] = useState(false)
@@ -3839,58 +3862,89 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
   const finishWizard = ({ docType, propertyType, template, scope, locationKind, brandColor }) => {
     setNewDoc((d) => ({ ...d, template, scope, locationKind, brandColor }))
     setBuilderCfg({ docType, propertyType, template, brandColor })
+    setBuilderInitial(null)  // fresh document
+    setBuilderDraftId(null)
+    setBuilderNonce((n) => n + 1)
     setWizardOpen(false)
     setBuilderOpen(true)
   }
 
-  // Create the package from the Document Builder and close it.
-  const saveFromBuilder = (bf) => {
+  // Create/update the package + listing from the Document Builder and close it.
+  // `finished` = true when the last step was completed; otherwise it's saved as a Draft
+  // that can be resumed from the Listing Hub at `step`.
+  const saveFromBuilder = (bf, step = 0, finished = false) => {
+    const id = builderDraftId || uid()
     const title = (bf.name || '').trim() || 'Untitled Document'
     const address = [bf.street, bf.city, bf.state, bf.zip].filter(Boolean).join(', ') || '—'
-    setPackages((list) => [
-      {
-        id: uid(),
-        title,
-        address,
-        docType: builderCfg?.docType,
-        propertyType: builderCfg?.propertyType,
-        status: 'Draft',
-        tags: builderCfg?.propertyType ? [builderCfg.propertyType] : [],
-        image: '',
-        updated: 'just now',
-        progress: 10,
-        price: Number(bf.price) || 0,
-        owner: newDoc.owner,
-        assignee: newDoc.assignee,
-        template: newDoc.template,
-        brandColor: newDoc.brandColor,
-      },
-      ...list,
-    ])
-    // Also surface the new property in the Listing Hub's "My Listings" table.
-    if (setListings) {
-      const sizePoint = (bf.dataPoints || []).find(
-        (p) => /building sf|gla|rentable sf|size/i.test(p.label) && p.value,
-      )
-      setListings((list) => [
-        {
-          id: uid(),
-          name: title,
-          address,
-          price: Number(bf.price) || 0,
-          type: builderCfg?.propertyType || 'Retail',
-          size: sizePoint ? sizePoint.value : '—',
-          status: 'Active',
-          image: propertyImage('1497366216548-37526070297c'),
-          featured: false,
-          listed: true,
-          access: 'Public',
-        },
-        ...list,
-      ])
+    const total = BUILDER_SECTIONS.length
+    const progress = finished ? 100 : Math.max(10, Math.round((step / total) * 100))
+    const sizePoint = (bf.dataPoints || []).find(
+      (p) => /building sf|gla|rentable sf|size/i.test(p.label) && p.value,
+    )
+    // Everything needed to reopen the builder exactly where the user left off.
+    const draft = finished
+      ? null
+      : {
+          id,
+          form: bf,
+          step,
+          docType: builderCfg?.docType,
+          propertyType: builderCfg?.propertyType,
+          template: builderCfg?.template ?? newDoc.template,
+          brandColor: builderCfg?.brandColor ?? newDoc.brandColor,
+        }
+
+    const pkg = {
+      id,
+      title,
+      address,
+      docType: builderCfg?.docType,
+      propertyType: builderCfg?.propertyType,
+      status: finished ? 'In Progress' : 'Draft',
+      tags: builderCfg?.propertyType ? [builderCfg.propertyType] : [],
+      image: '',
+      updated: 'just now',
+      progress,
+      price: Number(bf.price) || 0,
+      owner: newDoc.owner,
+      assignee: newDoc.assignee,
+      template: newDoc.template,
+      brandColor: newDoc.brandColor,
+      _draft: draft,
     }
-    notify(newDoc.assignee ? `Document created for ${newDoc.assignee}` : 'Document created')
+    setPackages((list) =>
+      builderDraftId && list.some((p) => p.id === id)
+        ? list.map((p) => (p.id === id ? { ...p, ...pkg } : p))
+        : [pkg, ...list],
+    )
+
+    // Mirror into the Listing Hub "My Listings" table.
+    if (setListings) {
+      const row = {
+        id,
+        name: title,
+        address,
+        price: Number(bf.price) || 0,
+        type: builderCfg?.propertyType || 'Retail',
+        size: sizePoint ? sizePoint.value : '—',
+        status: finished ? 'Active' : 'Draft',
+        image: propertyImage('1497366216548-37526070297c'),
+        featured: false,
+        listed: true,
+        access: 'Public',
+        _draft: draft,
+      }
+      setListings((list) =>
+        builderDraftId && list.some((l) => l.id === id)
+          ? list.map((l) => (l.id === id ? { ...l, ...row } : l))
+          : [row, ...list],
+      )
+    }
+
+    notify(finished ? 'Document saved' : 'Draft saved — resume it anytime from Listing Hub')
     setBuilderOpen(false)
+    setBuilderInitial(null)
+    setBuilderDraftId(null)
   }
   const openEdit = (pkg) => {
     setEditing(pkg)
@@ -4096,7 +4150,9 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
 
       {builderOpen && builderCfg && (
         <DocumentBuilder
+          key={builderNonce}
           config={builderCfg}
+          initial={builderInitial}
           notify={notify}
           onExit={() => setBuilderOpen(false)}
           onChangeType={() => {
@@ -4920,7 +4976,7 @@ export const toMicrositeItems = (listings) =>
       }
     })
 
-function ListingHubPage({ listings, setListings, globalQuery, onCreateNew }) {
+function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onResumeDraft }) {
   const notify = useToast()
 
   const [slug, setSlug] = useState('vaziamts')
@@ -5266,9 +5322,18 @@ function ListingHubPage({ listings, setListings, globalQuery, onCreateNew }) {
                       <td className="py-2.5 pr-3">
                         <div className="flex items-center gap-2">
                           <img src={l.image} onError={(e) => (e.currentTarget.src = FALLBACK_IMG)} alt="" className="h-8 w-10 rounded object-cover" />
-                          <button onClick={() => { setEditing(l); setModalOpen(true) }} className="font-semibold text-slate-800 hover:text-brand">
+                          <button
+                            onClick={() => (l._draft ? onResumeDraft(l._draft) : (setEditing(l), setModalOpen(true)))}
+                            className="font-semibold text-slate-800 hover:text-brand"
+                            title={l._draft ? 'Resume where you left off' : 'Edit listing'}
+                          >
                             {l.name}
                           </button>
+                          {l._draft && (
+                            <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">
+                              Draft
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="py-2.5 pr-3 text-slate-500">{l.address}</td>
@@ -6305,6 +6370,7 @@ export default function App() {
   const [dbLoaded, setDbLoaded] = useState(false)
   const [mobileNav, setMobileNav] = useState(false)
   const [createNonce, setCreateNonce] = useState(0)
+  const [resume, setResume] = useState(null) // { draft, nonce } — resume a builder draft
   useEffect(() => {
     let alive = true
     ;(async () => {
@@ -6364,6 +6430,15 @@ export default function App() {
     setCreateNonce((n) => n + 1)
   }
 
+  // Resume an in-progress draft from the Listing Hub — jumps to the Dashboard and
+  // reopens the Document Builder where the user left off.
+  const resumeDraft = (draft) => {
+    if (!draft) return
+    setActive('dashboard')
+    setMobileNav(false)
+    setResume({ draft, nonce: (resume?.nonce || 0) + 1 })
+  }
+
   if (!isLoggedIn) {
     return (
       <ToastProvider>
@@ -6377,9 +6452,9 @@ export default function App() {
   const renderScreen = () => {
     switch (active) {
       case 'dashboard':
-        return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} />
+        return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} resume={resume} onResumeHandled={() => setResume(null)} />
       case 'listings':
-        return <ListingHubPage listings={listings} setListings={setListings} globalQuery={query} onCreateNew={startCreate} />
+        return <ListingHubPage listings={listings} setListings={setListings} globalQuery={query} onCreateNew={startCreate} onResumeDraft={resumeDraft} />
       case 'deals':
         return <DealRoomsPage dealRooms={dealRooms} setDealRooms={setDealRooms} />
       case 'documents':
@@ -6393,7 +6468,7 @@ export default function App() {
       case 'knowledge':
         return <PlaceholderPage label="Knowledge Base" icon={BookOpen} />
       default:
-        return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} />
+        return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} resume={resume} onResumeHandled={() => setResume(null)} />
     }
   }
 
