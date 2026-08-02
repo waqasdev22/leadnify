@@ -1,0 +1,29 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: #f8fafc; /* slate-50 */
+}
+
+/* Thin, subtle scrollbars for the kanban / scroll areas */
+.scrollbar-slim::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+.scrollbar-slim::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+.scrollbar-slim::-webkit-scrollbar-track {
+  background: transparent;
+}
