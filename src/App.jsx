@@ -24,6 +24,7 @@ import {
   BookOpen,
   Search,
   Plus,
+  GripVertical,
   LogOut,
   Bell,
   ChevronDown,
@@ -89,6 +90,17 @@ import {
   Code2,
   HelpCircle,
   Upload,
+  Bold,
+  Italic,
+  Underline,
+  ListOrdered,
+  Undo2,
+  Redo2,
+  Lightbulb,
+  ChevronUp,
+  Percent,
+  Calendar,
+  Library,
 } from 'lucide-react'
 
 /* -------------------------------------------------------------------------- */
@@ -2447,7 +2459,1311 @@ function CreateWizard({ open, onExit, onComplete, assignee }) {
   )
 }
 
-function DashboardPage({ packages, setPackages, globalQuery }) {
+/* -------------------------------------------------------------------------- */
+/*  Document Builder (opens after "Get Started" — Property Details + sections) */
+/* -------------------------------------------------------------------------- */
+
+const US_STATES = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY']
+const US_STATE_ABBR = { Alabama: 'AL', Alaska: 'AK', Arizona: 'AZ', Arkansas: 'AR', California: 'CA', Colorado: 'CO', Connecticut: 'CT', Delaware: 'DE', Florida: 'FL', Georgia: 'GA', Hawaii: 'HI', Idaho: 'ID', Illinois: 'IL', Indiana: 'IN', Iowa: 'IA', Kansas: 'KS', Kentucky: 'KY', Louisiana: 'LA', Maine: 'ME', Maryland: 'MD', Massachusetts: 'MA', Michigan: 'MI', Minnesota: 'MN', Mississippi: 'MS', Missouri: 'MO', Montana: 'MT', Nebraska: 'NE', Nevada: 'NV', 'New Hampshire': 'NH', 'New Jersey': 'NJ', 'New Mexico': 'NM', 'New York': 'NY', 'North Carolina': 'NC', 'North Dakota': 'ND', Ohio: 'OH', Oklahoma: 'OK', Oregon: 'OR', Pennsylvania: 'PA', 'Rhode Island': 'RI', 'South Carolina': 'SC', 'South Dakota': 'SD', Tennessee: 'TN', Texas: 'TX', Utah: 'UT', Vermont: 'VT', Virginia: 'VA', Washington: 'WA', 'West Virginia': 'WV', Wisconsin: 'WI', Wyoming: 'WY' }
+
+const BUILDER_SECTIONS = [
+  'Property Details', 'Property Data', 'Executive Summary', 'Investment Highlights',
+  'Location Highlights', 'Images & Media', 'Financials', 'Rent Roll',
+  'Income & Expenses', 'Valuation', 'Maps', 'Tenant Profiles', 'Sales Comparables', 'Rental Comparables',
+]
+
+// Suggested "Property Data" fields per property type (shown as one-tap pills).
+const DATA_SUGGESTIONS = {
+  Retail: ['Traffic Count (VPD)', 'Parking Ratio', 'Frontage', 'Anchor Tenants', 'GLA'],
+  'Office / Medical': ['Rentable SF', 'Parking Ratio', 'Number of Floors', 'Year Built', 'Occupancy %'],
+  Multifamily: ['Number of Units', 'Avg Unit SF', 'Year Built', 'Occupancy %', 'Parking Spaces'],
+  Industrial: ['Clear Height', 'Dock Doors', 'Building SF', 'Power (Amps)', 'Column Spacing'],
+  Land: ['Acreage', 'Zoning', 'Topography', 'Utilities', 'Road Frontage'],
+  Hospitality: ['Number of Keys', 'ADR', 'Occupancy %', 'RevPAR', 'Year Built'],
+  'Self-Storage': ['Number of Units', 'Net Rentable SF', 'Climate-Controlled %', 'Occupancy %', 'Year Built'],
+  'Mobile Home Parks': ['Number of Pads', 'Occupancy %', 'Avg Lot Rent', 'Utilities', 'Acreage'],
+  'Mixed-Use': ['Total SF', 'Retail SF', 'Residential Units', 'Parking Spaces', 'Year Built'],
+  'Net Lease': ['Lease Term', 'Cap Rate', 'Rent Escalations', 'Tenant Credit', 'NOI'],
+}
+
+// One-line description shown under each content-section title in the editor.
+const SECTION_DESC = {
+  'Executive Summary': 'Provide an overview of the investment opportunity. This section appears at the beginning of your document.',
+  'Investment Highlights': 'Call out the strongest reasons to buy — the bullet points buyers remember.',
+  'Location Highlights': 'Describe the market, access, demographics, and nearby demand drivers.',
+  'Images & Media': 'Add captions and context for the photos and media in your document.',
+  'Financials': 'Summarize the income, expenses, and returns of the property.',
+  'Rent Roll': 'Detail each tenant, their space, rent, and lease terms.',
+  'Income & Expenses': 'Break down the operating income and expenses line by line.',
+  'Valuation': 'Explain the pricing basis, cap rate, and value conclusion.',
+  'Maps': 'Add context for the maps and aerials included in your document.',
+  'Tenant Profiles': 'Introduce the tenants and their business strength.',
+  'Sales Comparables': 'Summarize comparable sales that support your pricing.',
+  'Rental Comparables': 'Summarize comparable rents that support your lease assumptions.',
+}
+
+// Suggested-copy library: per content section, a set of sub-topics each with
+// ready-made paragraphs. [Tokens] are auto-filled from the property when known,
+// otherwise shown as fill-in placeholder chips.
+const COPY_LIBRARY = {
+  'Executive Summary': [
+    { title: 'Opening Statement', cards: [
+      'We are pleased to present [Property Name], a premier [Property Type] asset strategically positioned at [Street] in [City], [State]. This exceptional property offers investors a rare opportunity to acquire a well-located asset in one of the region’s most dynamic trade areas.',
+      '[Property Name] presents a rare opportunity to acquire a fully-stabilized [Property Type] asset in the heart of [City], [State], offering durable income and meaningful long-term upside.',
+      'Offered to the market for the first time in years, [Property Name] is a landmark [Property Type] property located at [Street], [City]. The offering combines strong in-place cash flow with a clear path to future appreciation.',
+      'Positioned in the thriving [City], [State] market, [Property Name] is a well-maintained [Property Type] asset that delivers stable returns and standout visibility.',
+    ] },
+    { title: 'Property Description', cards: [
+      '[Property Name] encompasses [Building SF] square feet of leasable [Property Type] space situated on a [Lot Size]-acre parcel. Originally constructed in [Year Built], the property features [Construction] construction with [Parking] parking spaces, providing ample convenience for tenants and customers alike.',
+      'Built in [Year Built], [Property Name] offers [Building SF] square feet across a [Lot Size]-acre site, with quality [Construction] construction and [Parking] dedicated parking spaces.',
+      '[Property Name] is a [Building SF]-square-foot [Property Type] property featuring durable [Construction] construction, ample [Parking] parking, and excellent frontage along [Street].',
+    ] },
+    { title: 'Location & Access', cards: [
+      'Strategically positioned in [City], [State], [Property Name] enjoys strong visibility along [Street] with convenient regional access and proximity to major demand drivers.',
+      '[Property Name] benefits from a prime [City] location, with excellent access via [Street] and a surrounding trade area of [Population] residents within a [Radius]-mile radius.',
+      'Located at [Street] in [City], [State], the property sits within an established trade area supported by strong daytime population and [Traffic Count] vehicles per day.',
+    ] },
+    { title: 'Investment Thesis', cards: [
+      'This offering represents a compelling opportunity to acquire [Property Name] at an attractive [Cap Rate] cap rate, with [Lease Term] remaining and built-in [Escalations] escalations driving predictable cash flow.',
+      'With durable in-place income and below-market rents, [Property Name] offers investors both stability and upside in the growing [City], [State] market.',
+      '[Property Name] presents an attractive risk-adjusted return, combining a well-located [Property Type] asset with a clear value-creation strategy and long-term appreciation potential.',
+    ] },
+    { title: 'Closing Statement', cards: [
+      'In summary, [Property Name] combines a prime [City], [State] location, [Occupancy] occupancy, and [Cap Rate] returns into a single institutional-quality offering.',
+      '[Property Name] is an institutional-quality [Property Type] offering in [City], [State] that merits serious consideration from discerning investors.',
+      'We welcome the opportunity to discuss [Property Name] further and to arrange a private tour of this well-positioned [City] asset.',
+    ] },
+  ],
+  'Investment Highlights': [
+    { title: 'Income Stability', cards: [
+      '[Property Name] is [Occupancy] leased to [Anchor Tenants], generating [NOI] in net operating income with [Escalations] annual rent escalations that hedge against inflation.',
+      'Backed by a creditworthy tenant base, [Property Name] delivers [NOI] of stable net operating income with contractual rent growth over the hold period.',
+      'The property’s [Occupancy] occupancy and staggered lease expirations provide [Property Name] with a resilient, diversified income stream.',
+    ] },
+    { title: 'Location Advantage', cards: [
+      'Located in the high-growth [City], [State] corridor, [Property Name] benefits from [Traffic Count] vehicles per day and a trade-area population of [Population].',
+      '[Property Name] enjoys premier frontage along [Street], placing it directly in the path of growth within the [City] market.',
+      'Surrounded by strong demand drivers, [Property Name] offers exceptional accessibility and visibility in one of [City]’s most sought-after submarkets.',
+    ] },
+    { title: 'Value-Add Upside', cards: [
+      'With [Vacancy] of vacant space and below-market rents, [Property Name] offers meaningful upside through lease-up and mark-to-market rent growth.',
+      'Investors can unlock additional value at [Property Name] through cosmetic renovations, expense optimization, and renewing tenants to market rents.',
+      '[Property Name] provides a clear value-add path, positioning new ownership to grow NOI and expand asset value over time.',
+    ] },
+  ],
+  'Location Highlights': [
+    { title: 'Market Overview', cards: [
+      '[Property Name] is situated in [City], [State], one of the region’s most active [Property Type] submarkets, supported by strong population and job growth.',
+      'The [City], [State] market continues to attract residents and employers, providing a durable demand base for [Property Name].',
+      'Positioned in a supply-constrained corridor, [Property Name] benefits from limited competition and steady tenant demand.',
+    ] },
+    { title: 'Access & Visibility', cards: [
+      'The property enjoys prominent frontage along [Street] with [Traffic Count] vehicles per day and direct access to [Highway], ensuring exceptional visibility.',
+      '[Property Name] offers convenient ingress and egress from [Street], with strong signage visibility to passing traffic.',
+      'Located at [Street] in [City], the asset is easily accessible from major thoroughfares and regional transit routes.',
+    ] },
+    { title: 'Demographics', cards: [
+      'Within a [Radius]-mile radius, the trade area is home to [Population] residents with an average household income of [Income], underpinning strong consumer demand.',
+      'The surrounding population of [Population] and growing household incomes provide a deep customer base for tenants at [Property Name].',
+      'Favorable demographics — including a daytime population of [Daytime Population] — reinforce the long-term stability of [Property Name].',
+    ] },
+  ],
+  'Financials': [
+    { title: 'Income Summary', cards: [
+      '[Property Name] generates [GSI] in gross scheduled income and [NOI] in net operating income, reflecting a [Cap Rate] capitalization rate on the asking price of [Price].',
+      'In-place rents at [Property Name] produce [NOI] of net operating income, with contractual escalations supporting future growth.',
+      'At the [Price] asking price, [Property Name] offers investors a [Cap Rate] going-in cap rate on stable, in-place income.',
+    ] },
+    { title: 'Expense Overview', cards: [
+      'Operating expenses total [OpEx] annually, or [Expense Ratio] of effective gross income, covering taxes, insurance, CAM, and management.',
+      '[Property Name] operates efficiently with expenses of [OpEx], leaving significant net income for ownership.',
+      'A largely net-lease structure limits landlord expenses at [Property Name] to [OpEx] per year.',
+    ] },
+  ],
+}
+const GENERIC_COPY = (section, docType) => [
+  { title: 'Overview', cards: [
+    `This ${section.toLowerCase()} section highlights the defining details of [Property Name], a [Property Type] asset located at [Street] in [City], [State].`,
+    `[Property Name] stands out in the [City], [State] market as a well-positioned [Property Type] property with strong fundamentals.`,
+    `An overview of [Property Name] underscores its prime [City] location and appeal to ${docType || 'investors'}.`,
+  ] },
+  { title: 'Key Points', cards: [
+    `[Property Name] offers [Building SF] square feet with [Occupancy] occupancy, positioning it as a standout ${docType || 'offering'} in the [City] market.`,
+    `Key metrics for [Property Name] include [Building SF] of space, [Parking] parking spaces, and [Occupancy] occupancy.`,
+    `Investors will note [Property Name]’s [Cap Rate] cap rate, [NOI] in net operating income, and durable tenant base.`,
+  ] },
+  { title: 'Summary', cards: [
+    `In conclusion, [Property Name] combines strong fundamentals and a prime [City], [State] location into a compelling investment.`,
+    `[Property Name] represents a rare chance to acquire a quality [Property Type] asset in [City], [State].`,
+    `We invite qualified parties to review the details of [Property Name] and schedule a tour.`,
+  ] },
+]
+const copyGroups = (section, docType) => COPY_LIBRARY[section] || GENERIC_COPY(section, docType)
+const tokenCount = (text) => (text.match(/\[[^\]]+\]/g) || []).length
+const escapeHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+const CHIP_FILLED = 'background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;border-radius:5px;padding:0 5px;font-weight:600;'
+const CHIP_EMPTY = 'background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;border-radius:5px;padding:0 5px;font-style:italic;'
+const copyToHtml = (text, fill) =>
+  escapeHtml(text).replace(/\[([^\]]+)\]/g, (m, k) => {
+    const v = fill[k]
+    return v ? `<span style="${CHIP_FILLED}">${escapeHtml(v)}</span>` : `<span style="${CHIP_EMPTY}">[${escapeHtml(k)}]</span>`
+  })
+function CopyText({ text, fill }) {
+  return text.split(/(\[[^\]]+\])/g).map((p, i) => {
+    const m = p.match(/^\[([^\]]+)\]$/)
+    if (!m) return <span key={i}>{p}</span>
+    const v = fill[m[1]]
+    return v
+      ? <span key={i} className="rounded border border-orange-200 bg-orange-50 px-1 font-semibold text-orange-700">{v}</span>
+      : <span key={i} className="rounded border border-slate-200 bg-slate-100 px-1 italic text-slate-500">[{m[1]}]</span>
+  })
+}
+
+// ── Live-preview document pages ──────────────────────────────────────────────
+// Every page renders at a fixed 640×828 "sheet" so thumbnails and the full-size
+// popup share exactly the same layout (just scaled with a CSS transform).
+const PAGES = [
+  { key: 'cover', title: 'Cover Page' },
+  { key: 'exec', title: 'Executive Summary', section: 2 },
+  { key: 'invest', title: 'Investment Highlights', section: 3 },
+  { key: 'location', title: 'Location Highlights', section: 4 },
+  { key: 'valuation', title: 'Valuation Summary', section: 9 },
+  { key: 'demographics', title: 'Demographics' },
+  { key: 'financials', title: 'Financials', section: 8 },
+  { key: 'contact', title: 'Contact', section: 13 },
+]
+
+const PLine = ({ w = '100%', c = '#e2e8f0', h = 8 }) => (
+  <div style={{ width: w, height: h, background: c, borderRadius: 4 }} />
+)
+
+function ScaledPage({ scale, children }) {
+  return (
+    <div style={{ width: 640 * scale, height: 828 * scale, overflow: 'hidden' }} className="shrink-0 bg-white">
+      <div style={{ width: 640, height: 828, transform: `scale(${scale})`, transformOrigin: 'top left' }} className="bg-white">
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function BuilderPage({ pageKey, data }) {
+  const { name, docType, price, priceVis, location, owner, ownerEmail, dataPoints, brand, sections } = data
+  const initials = (owner || 'W').split(' ').map((s) => s[0]).join('').slice(0, 2).toUpperCase()
+  const showPrice = priceVis === 'Show' && price
+  const mapBlock = (
+    <div className="relative h-full w-full overflow-hidden rounded-lg" style={{ background: 'radial-gradient(circle at 52% 46%, #d1fae5, #bbf7d0 38%, #dcfce7 70%)' }}>
+      <span className="absolute left-1/2 top-1/2 h-40 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full border border-emerald-400/40" />
+      <span className="absolute left-1/2 top-1/2 h-24 w-24 -translate-x-1/2 -translate-y-1/2 rounded-full border border-emerald-500/50" />
+      <span className="absolute left-1/2 top-1/2 h-12 w-12 -translate-x-1/2 -translate-y-1/2 rounded-full border border-emerald-600/60" />
+      <MapPin className="absolute left-1/2 top-1/2 h-7 w-7 -translate-x-1/2 -translate-y-full text-rose-500" />
+    </div>
+  )
+  const header = (
+    <div>
+      <h2 className="text-2xl font-extrabold text-slate-900">{name}</h2>
+      <p className="mt-0.5 text-sm text-slate-400">{[docType, location].filter(Boolean).join(' · ')}</p>
+      <div className="mt-3 h-1.5 w-20 rounded" style={{ background: brand }} />
+    </div>
+  )
+  const rows = (dataPoints && dataPoints.length ? dataPoints : [
+    { label: 'Cap Rate', value: '6.25%' }, { label: 'NOI', value: '$182,400' },
+    { label: 'Price / SF', value: '$412' }, { label: 'Occupancy', value: '95%' },
+    { label: 'Year Built', value: '2016' }, { label: 'Building Size', value: '12,400 SF' },
+  ]).filter((r) => r.label)
+
+  if (pageKey === 'cover') {
+    return (
+      <div className="flex h-full flex-col">
+        <div className="relative flex-1" style={{ background: 'repeating-linear-gradient(45deg,#eef2f7,#eef2f7 14px,#e8eef6 14px,#e8eef6 28px)' }}>
+          <div className="absolute bottom-4 right-5 flex items-center gap-2 rounded-md bg-white/80 px-3 py-1.5">
+            <Building2 className="h-4 w-4" style={{ color: brand }} />
+            <span className="text-xs font-extrabold tracking-tight text-slate-700">CREbuilder</span>
+          </div>
+        </div>
+        <div className="px-10 py-8">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <span className="inline-block rounded px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-white" style={{ background: brand }}>{docType}</span>
+              <h1 className="mt-4 truncate text-4xl font-extrabold text-slate-900">{name}</h1>
+              <p className="mt-2 text-lg text-slate-500">{location || '—'}</p>
+            </div>
+            {showPrice && (
+              <div className="shrink-0 text-right">
+                <p className="text-3xl font-extrabold" style={{ color: brand }}>{currency(price)}</p>
+                <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Price</p>
+              </div>
+            )}
+          </div>
+          <div className="mt-6 border-t border-slate-200 pt-4">
+            <p className="text-base font-bold text-slate-900">{owner}</p>
+            <p className="text-sm text-slate-500">Agent</p>
+            <p className="text-sm text-slate-500">{ownerEmail}</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (pageKey === 'exec') {
+    const txt = sections?.[2]
+    return (
+      <div className="flex h-full flex-col p-10">
+        {header}
+        <h3 className="mt-7 text-lg font-bold" style={{ color: brand }}>Executive Summary</h3>
+        {txt ? (
+          <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-slate-600">{txt}</p>
+        ) : (
+          <div className="mt-4 space-y-2.5">
+            {['96%', '88%', '92%', '80%', '94%', '70%', '90%', '84%', '60%'].map((w, i) => (
+              <PLine key={i} w={w} />
+            ))}
+          </div>
+        )}
+        <div className="mt-auto grid grid-cols-3 gap-3">
+          {[['Asking Price', showPrice ? currency(price) : '—'], ['Property Type', docType], ['Location', location || '—']].map(([k, v]) => (
+            <div key={k} className="rounded-lg border border-slate-200 p-3">
+              <p className="text-[10px] uppercase tracking-wide text-slate-400">{k}</p>
+              <p className="mt-1 truncate text-sm font-bold text-slate-800">{v}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (pageKey === 'invest') {
+    const txt = sections?.[3]
+    return (
+      <div className="h-full p-10">
+        {header}
+        <h3 className="mt-7 text-lg font-bold" style={{ color: brand }}>Investment Highlights</h3>
+        <div className="mt-4 rounded-xl p-5 text-white" style={{ background: brand }}>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] opacity-80">Net Lease Status</p>
+          <p className="mt-1 text-2xl font-extrabold">Absolute NNN · Zero Landlord Responsibilities</p>
+        </div>
+        {txt ? (
+          <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-slate-600">{txt}</p>
+        ) : (
+          <ul className="mt-4 space-y-3">
+            {['Corporate-guaranteed lease with 10+ years remaining', 'Scheduled rent escalations every 5 years', 'Positioned in a high-growth retail corridor', 'Strong tenant credit and proven store performance'].map((t) => (
+              <li key={t} className="flex items-start gap-2 text-sm text-slate-600">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" style={{ color: brand }} /> {t}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    )
+  }
+
+  if (pageKey === 'location') {
+    return (
+      <div className="flex h-full flex-col p-10">
+        {header}
+        <h3 className="mt-6 text-lg font-bold" style={{ color: brand }}>Location Highlights</h3>
+        <div className="mt-3 h-52">{mapBlock}</div>
+        <div className="mt-4 grid grid-cols-2 gap-x-8 gap-y-3">
+          {[['Population (3 mi)', '128,400'], ['Median HH Income', '$92,100'], ['Daytime Population', '54,900'], ['Traffic Count (VPD)', '38,500']].map(([k, v]) => (
+            <div key={k} className="flex items-center justify-between border-b border-slate-100 pb-1.5">
+              <span className="text-sm text-slate-500">{k}</span>
+              <span className="text-sm font-bold text-slate-800">{v}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (pageKey === 'valuation') {
+    return (
+      <div className="h-full p-10">
+        <div className="rounded-md px-4 py-2.5 text-white" style={{ background: brand }}>
+          <p className="text-base font-bold">Valuation Summary</p>
+        </div>
+        <div className="mt-5 grid grid-cols-2 gap-x-6 gap-y-3">
+          {rows.slice(0, 8).map((r, i) => (
+            <div key={i} className="rounded-lg border border-slate-200 p-3">
+              <p className="text-[11px] uppercase tracking-wide text-slate-400">{r.label}</p>
+              <p className="mt-1 text-base font-extrabold" style={{ color: brand }}>{r.value || '—'}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (pageKey === 'demographics') {
+    return (
+      <div className="flex h-full flex-col p-10">
+        {header}
+        <h3 className="mt-6 text-lg font-bold" style={{ color: brand }}>Demographics</h3>
+        <div className="mt-3 h-44">{mapBlock}</div>
+        <table className="mt-5 w-full text-sm">
+          <thead>
+            <tr className="text-left text-[11px] uppercase tracking-wide text-slate-400">
+              <th className="pb-2 font-semibold">Metric</th><th className="pb-2 text-right font-semibold">1 mi</th><th className="pb-2 text-right font-semibold">3 mi</th><th className="pb-2 text-right font-semibold">5 mi</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[['Population', '18,200', '128,400', '312,900'], ['Households', '7,100', '49,600', '121,400'], ['Avg. Income', '$88k', '$92k', '$97k']].map((r) => (
+              <tr key={r[0]} className="border-t border-slate-100">
+                <td className="py-2 font-medium text-slate-700">{r[0]}</td><td className="py-2 text-right text-slate-600">{r[1]}</td><td className="py-2 text-right text-slate-600">{r[2]}</td><td className="py-2 text-right text-slate-600">{r[3]}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+
+  if (pageKey === 'financials') {
+    const txt = sections?.[8]
+    return (
+      <div className="h-full p-10">
+        {header}
+        <h3 className="mt-7 text-lg font-bold" style={{ color: brand }}>Financials</h3>
+        {txt ? (
+          <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-slate-600">{txt}</p>
+        ) : (
+          <div className="mt-4 divide-y divide-slate-100">
+            {[['Gross Scheduled Income', '$214,000'], ['Vacancy Loss (5%)', '-$10,700'], ['Effective Gross Income', '$203,300'], ['Operating Expenses', '-$20,900'], ['Net Operating Income', '$182,400']].map(([k, v], i, a) => (
+              <div key={k} className={`flex items-center justify-between py-3 ${i === a.length - 1 ? 'font-extrabold text-slate-900' : 'text-slate-600'}`}>
+                <span className="text-sm">{k}</span><span className="text-sm" style={i === a.length - 1 ? { color: brand } : undefined}>{v}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // contact
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-3 p-10 text-center">
+      <div className="flex h-24 w-24 items-center justify-center rounded-full text-3xl font-extrabold text-white" style={{ background: brand }}>{initials}</div>
+      <p className="mt-2 text-2xl font-extrabold text-slate-900">{owner}</p>
+      <p className="text-sm font-semibold uppercase tracking-widest text-slate-400">Agent · CREbuilder</p>
+      <div className="mt-2 space-y-1 text-sm text-slate-500">
+        <p>{ownerEmail}</p>
+        <p>{location || '—'}</p>
+      </div>
+    </div>
+  )
+}
+
+// Full-size page viewer with prev/next paging (opens from a Live-Preview thumbnail).
+function PageViewerModal({ index, data, onClose, onIndex }) {
+  if (index == null) return null
+  const page = PAGES[index]
+  const prev = () => onIndex((index - 1 + PAGES.length) % PAGES.length)
+  const next = () => onIndex((index + 1) % PAGES.length)
+  return (
+    <div className="fixed inset-0 z-[70] flex flex-col items-center justify-center bg-black/70 p-4" onClick={onClose}>
+      <p className="mb-3 text-sm font-semibold text-white">{page.title} — Page {index + 1} of {PAGES.length}</p>
+      <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+        <button onClick={prev} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/90 text-slate-700 shadow-lg transition hover:bg-white">
+          <ChevronLeft className="h-6 w-6" />
+        </button>
+        <div className="overflow-hidden rounded-xl shadow-2xl ring-1 ring-black/10">
+          <ScaledPage scale={0.82}>
+            <BuilderPage pageKey={page.key} data={data} />
+          </ScaledPage>
+        </div>
+        <button onClick={next} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/90 text-slate-700 shadow-lg transition hover:bg-white">
+          <ChevronRight className="h-6 w-6" />
+        </button>
+      </div>
+      <div className="mt-4 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+        {PAGES.map((p, i) => (
+          <button key={p.key} onClick={() => onIndex(i)} className={`h-1.5 rounded-full transition ${i === index ? 'w-6 bg-white' : 'w-1.5 bg-white/40'}`} />
+        ))}
+      </div>
+      <button onClick={onClose} className="absolute right-5 top-5 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-slate-700 shadow-lg transition hover:bg-white">
+        <X className="h-5 w-5" />
+      </button>
+    </div>
+  )
+}
+
+// Confirm-location modal: draggable Leaflet pin, opens after Property Details.
+function LocationPickerModal({ open, initial, address, onConfirm, onClose }) {
+  const elRef = useRef(null)
+  const posRef = useRef(null)
+
+  useEffect(() => {
+    if (!open || !elRef.current) return
+    const hasInit = initial && typeof initial[0] === 'number'
+    const start = hasInit ? initial : [30.3753, 69.3451] // fallback: center of Pakistan
+    posRef.current = start
+    const map = L.map(elRef.current, { scrollWheelZoom: true }).setView(start, hasInit ? 15 : 5)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 19,
+    }).addTo(map)
+    const pinIcon = L.divIcon({
+      className: '',
+      html: `<svg width="34" height="34" viewBox="0 0 24 24" fill="#F97316" stroke="white" stroke-width="1.5"><path d="M12 2C8 2 5 5 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-4-3-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="white" stroke="none"/></svg>`,
+      iconSize: [34, 34],
+      iconAnchor: [17, 34],
+    })
+    const marker = L.marker(start, { draggable: true, icon: pinIcon }).addTo(map)
+    marker.on('dragend', () => {
+      const p = marker.getLatLng()
+      posRef.current = [p.lat, p.lng]
+    })
+    map.on('click', (e) => {
+      marker.setLatLng(e.latlng)
+      posRef.current = [e.latlng.lat, e.latlng.lng]
+    })
+    const t = setTimeout(() => map.invalidateSize(), 120)
+    return () => {
+      clearTimeout(t)
+      map.remove()
+    }
+  }, [open, initial])
+
+  if (!open) return null
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+        <div className="flex items-start justify-between gap-3 border-b border-slate-200 px-5 py-4">
+          <div>
+            <h3 className="flex items-center gap-2 text-lg font-extrabold text-slate-900">
+              <MapPin className="h-5 w-5 text-brand" /> Confirm Property Location
+            </h3>
+            {address && <p className="mt-0.5 text-sm text-slate-500">{address}</p>}
+          </div>
+          <button onClick={onClose} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <div ref={elRef} className="h-80 w-full bg-slate-100" />
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-5 py-3">
+          <p className="text-xs text-slate-500">Drag the pin or click the map to fine-tune the exact location.</p>
+          <div className="flex items-center gap-2">
+            <button onClick={onClose} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
+            <button onClick={() => onConfirm(posRef.current)} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600">
+              <Check className="h-4 w-4" /> Confirm Location
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DocumentBuilder({ config, onExit, onChangeType, onSave, notify }) {
+  const [step, setStep] = useState(0)
+  const [done, setDone] = useState({})
+  const [mapOpen, setMapOpen] = useState(false)
+  const [previewOpen, setPreviewOpen] = useState(true)
+  const [viewerIdx, setViewerIdx] = useState(null)
+  // Rich-text draft editor (content sections, step >= 2)
+  const draftRef = useRef(null)
+  const [charCount, setCharCount] = useState(0)
+  const [copyCat, setCopyCat] = useState(0)
+  const [catOpen, setCatOpen] = useState(false)
+  const [libOpen, setLibOpen] = useState(false)
+  const [form, setForm] = useState({
+    name: '', price: '', priceVis: 'Show', country: 'US', searchMode: 'address',
+    street: '', city: '', state: '', zip: '', customDisplay: false, displayAddress: '',
+    lat: null, lng: null, dataPoints: [], metrics: [], sections: {},
+  })
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target?.value ?? e }))
+
+  // Street-address autocomplete (OpenStreetMap Nominatim — free, no key)
+  const [sug, setSug] = useState([])
+  const [showSug, setShowSug] = useState(false)
+  const sugTimer = useRef(null)
+  const onStreet = (e) => {
+    const v = e.target.value
+    setForm((f) => ({ ...f, street: v }))
+    clearTimeout(sugTimer.current)
+    if (v.trim().length < 3) {
+      setSug([])
+      setShowSug(false)
+      return
+    }
+    sugTimer.current = setTimeout(async () => {
+      try {
+        const r = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&q=${encodeURIComponent(v)}`,
+        )
+        const data = await r.json()
+        setSug(Array.isArray(data) ? data : [])
+        setShowSug(true)
+      } catch {
+        setSug([])
+      }
+    }, 350)
+  }
+  const pickSug = (s) => {
+    const a = s.address || {}
+    const road = [a.house_number, a.road].filter(Boolean).join(' ')
+    setForm((f) => ({
+      ...f,
+      street: road || (s.display_name || '').split(',')[0],
+      city: a.city || a.town || a.village || a.suburb || f.city,
+      zip: a.postcode || f.zip,
+      state: US_STATE_ABBR[a.state] || f.state,
+      countryName: a.country || f.countryName,
+      lat: parseFloat(s.lat),
+      lng: parseFloat(s.lon),
+    }))
+    setShowSug(false)
+    setSug([])
+  }
+  const total = BUILDER_SECTIONS.length
+  const last = step === total - 1
+
+  const goNext = () => {
+    // After Property Details, confirm the map location before moving on.
+    if (step === 0) {
+      setMapOpen(true)
+      return
+    }
+    setDone((d) => ({ ...d, [step]: true }))
+    if (last) onSave(form)
+    else setStep(step + 1)
+  }
+
+  const confirmLocation = (coords) => {
+    if (coords) setForm((f) => ({ ...f, lat: coords[0], lng: coords[1] }))
+    setMapOpen(false)
+    setDone((d) => ({ ...d, 0: true }))
+    setStep(1)
+    notify('Location confirmed')
+  }
+
+  // Property Data helpers
+  const suggestions = DATA_SUGGESTIONS[config.propertyType] || []
+  const addPoint = (label) =>
+    setForm((f) => ({ ...f, dataPoints: [...f.dataPoints, { id: uid(), label, value: '' }] }))
+  const updatePoint = (id, key, val) =>
+    setForm((f) => ({ ...f, dataPoints: f.dataPoints.map((p) => (p.id === id ? { ...p, [key]: val } : p)) }))
+  const removePoint = (id) =>
+    setForm((f) => ({ ...f, dataPoints: f.dataPoints.filter((p) => p.id !== id) }))
+  const autoPopulate = () => {
+    const have = new Set(form.dataPoints.map((p) => p.label))
+    const add = suggestions.filter((s) => !have.has(s)).map((label) => ({ id: uid(), label, value: '' }))
+    if (!add.length) {
+      notify('All suggested fields already added')
+      return
+    }
+    setForm((f) => ({ ...f, dataPoints: [...f.dataPoints, ...add] }))
+    notify('No public records found — added suggested fields to fill in')
+  }
+
+  // Key Metrics helpers (Investment Highlights sidebar)
+  const metrics = form.metrics || []
+  const addMetric = (label = '', value = '') =>
+    setForm((f) => ({ ...f, metrics: [...(f.metrics || []), { id: uid(), label, value, hidden: false, editing: !label }] }))
+  const updMetric = (id, key, val) =>
+    setForm((f) => ({ ...f, metrics: f.metrics.map((m) => (m.id === id ? { ...m, [key]: val } : m)) }))
+  const delMetric = (id) =>
+    setForm((f) => ({ ...f, metrics: f.metrics.filter((m) => m.id !== id) }))
+  const moveMetric = (id, dir) =>
+    setForm((f) => {
+      const arr = [...f.metrics]
+      const i = arr.findIndex((m) => m.id === id)
+      const j = i + dir
+      if (j < 0 || j >= arr.length) return f
+      ;[arr[i], arr[j]] = [arr[j], arr[i]]
+      return { ...f, metrics: arr }
+    })
+  const METRIC_LIBRARY = ['GLA', 'DSCR', 'GOPPAR', 'Parking Ratio', 'Clear Height', 'Loan-to-Value', 'Debt Yield', 'Break-Even Occupancy', 'Price/Unit', 'Expense Ratio']
+
+  const locLabel = [form.countryName || (form.country === 'CA' ? 'Canada' : 'United States'), form.city, form.state].filter(Boolean).join(', ')
+  const fullAddress = [form.street, form.city, form.state, form.zip].filter(Boolean).join(', ')
+  const brand = config.brandColor || '#0f172a'
+  const docName = form.name.trim() || 'Untitled Document'
+  const previewData = {
+    name: docName,
+    docType: config.docType,
+    price: form.price,
+    priceVis: form.priceVis,
+    location: locLabel,
+    address: fullAddress,
+    owner: CURRENT_USER.name,
+    ownerEmail: CURRENT_USER.email,
+    dataPoints: form.dataPoints,
+    brand,
+    sections: form.sections,
+  }
+
+  // Token values available to auto-fill suggested copy.
+  const copyFill = {
+    'Property Name': docName,
+    City: form.city,
+    State: form.state,
+    Street: form.street,
+    'Property Type': config.propertyType,
+    Price: form.priceVis === 'Show' && form.price ? currency(form.price) : '',
+    Address: fullAddress,
+  }
+  const groups = copyGroups(BUILDER_SECTIONS[step], config.docType)
+  const curGroup = groups[Math.min(copyCat, groups.length - 1)] || groups[0]
+  const isInvest = BUILDER_SECTIONS[step] === 'Investment Highlights'
+  const charLimit = isInvest ? 2500 : 3000
+
+  // Calculated Key Metrics — auto-fill from price & property data where possible.
+  const dpVal = (...labels) => {
+    for (const l of labels) {
+      const hit = form.dataPoints.find((p) => p.label.toLowerCase() === l.toLowerCase() && p.value)
+      if (hit) return hit.value
+    }
+    return ''
+  }
+  const calcMetrics = [
+    { label: 'Asking Price', icon: DollarSign, value: form.priceVis === 'Show' && form.price ? currency(form.price) : dpVal('Asking Price') },
+    { label: 'Cap Rate', icon: Percent, value: dpVal('Cap Rate') },
+    { label: 'Price/SF', icon: Scale, value: dpVal('Price/SF', 'Price per SF') },
+    { label: 'NOI', icon: TrendingUp, value: dpVal('NOI') },
+    { label: 'Occupancy', icon: Percent, value: dpVal('Occupancy', 'Occupancy %') },
+    { label: 'Vacancy Factor', icon: Percent, value: dpVal('Vacancy Factor', 'Vacancy') },
+    { label: 'Base Rent', icon: DollarSign, value: dpVal('Base Rent') },
+    { label: 'EGI', icon: DollarSign, value: dpVal('EGI') },
+    { label: 'Cash-on-Cash', icon: Percent, value: dpVal('Cash-on-Cash') },
+    { label: 'IRR', icon: TrendingUp, value: dpVal('IRR') },
+    { label: 'Building SF', icon: Building, value: dpVal('Building SF', 'GLA', 'Rentable SF') },
+    { label: 'Year Built', icon: Calendar, value: dpVal('Year Built') },
+  ]
+
+  // Load the saved HTML into the editor whenever the section changes.
+  useEffect(() => {
+    if (step >= 2 && draftRef.current) {
+      draftRef.current.innerHTML = form.sections[step] || ''
+      setCharCount(draftRef.current.textContent.length)
+      setCopyCat(0)
+      setCatOpen(false)
+    }
+    // Intentionally keyed on step only — must not reset while typing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step])
+
+  const saveDraft = () => {
+    if (!draftRef.current) return
+    setForm((f) => ({ ...f, sections: { ...f.sections, [step]: draftRef.current.innerHTML } }))
+    setCharCount(draftRef.current.textContent.length)
+  }
+  const execCmd = (cmd, val = null) => {
+    draftRef.current?.focus()
+    document.execCommand(cmd, false, val)
+    saveDraft()
+  }
+  const addLink = () => {
+    const url = window.prompt('Enter a URL')
+    if (url) execCmd('createLink', url)
+  }
+  const insertCard = (text) => {
+    if (!draftRef.current) return
+    draftRef.current.focus()
+    const lead = draftRef.current.textContent.trim() ? '<br><br>' : ''
+    document.execCommand('insertHTML', false, lead + copyToHtml(text, copyFill))
+    saveDraft()
+    notify('Copy added to your draft')
+  }
+
+  const ptCard = PROPERTY_TYPE_CARDS.find((c) => c.key === config.propertyType)
+  const PIcon = ptCard ? ptCard.icon : Building2
+  const seg = 'rounded-md px-4 py-1.5 text-sm font-semibold transition'
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col bg-slate-50">
+      {/* Header */}
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-6 py-3">
+        <div>
+          <h1 className="text-lg font-extrabold text-slate-900">{form.name.trim() || 'Untitled Document'}</h1>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">{config.propertyType}</span>
+            <span className="rounded bg-orange-50 px-2 py-0.5 text-xs font-semibold text-orange-700">{config.docType}</span>
+            {locLabel && <span className="text-xs text-slate-400">· {locLabel}</span>}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={() => notify('Invite link copied')} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+            <Users className="h-4 w-4" /> Invite
+          </button>
+          <button onClick={() => onSave(form)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+            <LogOut className="h-4 w-4" /> Save &amp; Exit
+          </button>
+        </div>
+      </header>
+
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left: form + footer */}
+        <div className="flex min-w-0 flex-1 flex-col">
+          <div className="scrollbar-slim flex-1 overflow-y-auto">
+            <div className="mx-auto max-w-6xl px-6 py-8">
+              {step === 0 ? (
+                <>
+                  <h2 className="text-2xl font-extrabold text-slate-900">Property Details</h2>
+                  <p className="mt-1 text-sm text-slate-500">Enter your property's basic information to get started.</p>
+
+                  {/* Property type */}
+                  <div className="mt-5 flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${ptCard ? PT_TONES[ptCard.tone] : 'bg-sky-50 text-sky-500'}`}>
+                        <PIcon className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Property Type</p>
+                        <p className="font-bold text-slate-900">{config.propertyType}</p>
+                      </div>
+                    </div>
+                    <button onClick={onChangeType} className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:underline">
+                      <Repeat2 className="h-4 w-4" /> Change Type
+                    </button>
+                  </div>
+
+                  {/* Name + price */}
+                  <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <Field label="Property Name (Optional)">
+                        <TextInput value={form.name} onChange={set('name')} placeholder="Property Name" />
+                      </Field>
+                      <div>
+                        <label className="mb-1.5 block text-sm font-semibold text-slate-700">Selling Price</label>
+                        <div className="flex gap-2">
+                          <div className="relative flex-1">
+                            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">$</span>
+                            <input value={form.price} onChange={set('price')} type="number" placeholder="e.g. 2,500,000" className={`${inputCls} pl-7`} />
+                          </div>
+                          <div className="inline-flex shrink-0 rounded-lg bg-slate-100 p-1">
+                            {['Show', 'Hide', 'Negotiable'].map((o) => (
+                              <button key={o} onClick={() => setForm((f) => ({ ...f, priceVis: o }))} className={`${seg} ${form.priceVis === o ? 'bg-brand text-white shadow-sm' : 'text-slate-500'}`}>{o}</button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Address */}
+                  <h3 className="mt-6 text-base font-bold text-slate-900">Property Address</h3>
+                  <div className="mt-2 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div className="inline-flex rounded-lg bg-slate-100 p-1">
+                      {[{ k: 'US', l: 'United States' }, { k: 'CA', l: 'Canada' }].map((c) => (
+                        <button key={c.k} onClick={() => setForm((f) => ({ ...f, country: c.k }))} className={`${seg} ${form.country === c.k ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>{c.l}</button>
+                      ))}
+                    </div>
+                    <div className="mt-3 inline-flex rounded-lg bg-slate-100 p-1">
+                      {[{ k: 'address', l: 'Search by Address' }, { k: 'parcel', l: 'Search by Parcel' }].map((m) => (
+                        <button key={m.k} onClick={() => setForm((f) => ({ ...f, searchMode: m.k }))} className={`${seg} inline-flex items-center gap-1.5 ${form.searchMode === m.k ? 'bg-white text-brand shadow-sm' : 'text-slate-500'}`}>
+                          {m.k === 'address' ? <MapPin className="h-4 w-4" /> : <Search className="h-4 w-4" />}{m.l}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="mt-4">
+                      <div className="relative">
+                        <label className="mb-1.5 block text-sm font-semibold text-slate-700">Street Address</label>
+                        <input
+                          value={form.street}
+                          onChange={onStreet}
+                          onFocus={() => form.street.trim().length >= 3 && sug.length && setShowSug(true)}
+                          onBlur={() => setTimeout(() => setShowSug(false), 150)}
+                          placeholder="123 Main Street"
+                          autoComplete="off"
+                          className={inputCls}
+                        />
+                        {showSug && sug.length > 0 && (
+                          <div className="absolute z-30 mt-1 w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
+                            {sug.map((s, i) => (
+                              <button
+                                key={i}
+                                type="button"
+                                onMouseDown={(e) => {
+                                  e.preventDefault()
+                                  pickSug(s)
+                                }}
+                                className="flex w-full items-center gap-2 border-b border-slate-50 px-3 py-2.5 text-left text-sm text-slate-600 transition last:border-0 hover:bg-slate-50"
+                              >
+                                <MapPin className="h-4 w-4 shrink-0 text-slate-400" />
+                                <span className="truncate">{s.display_name}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_140px_120px]">
+                        <Field label="City"><TextInput value={form.city} onChange={set('city')} placeholder="City" /></Field>
+                        <Field label="State">
+                          <SelectInput value={form.state} onChange={set('state')} options={['Select State', ...US_STATES]} />
+                        </Field>
+                        <Field label="ZIP"><TextInput value={form.zip} onChange={set('zip')} placeholder="12345" /></Field>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                    <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
+                      <input type="checkbox" checked={form.customDisplay} onChange={(e) => setForm((f) => ({ ...f, customDisplay: e.target.checked }))} className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-orange-300" />
+                      <MapPin className="h-4 w-4 text-slate-400" /> Use Custom Display Address
+                    </label>
+                    {form.customDisplay && (
+                      <div className="mt-3 rounded-lg border border-orange-200 bg-orange-50/40 p-3">
+                        <label className="mb-1.5 block text-sm font-semibold text-slate-700">Display Address</label>
+                        <input value={form.displayAddress || ''} onChange={set('displayAddress')} placeholder="e.g. Downtown Austin, TX" className={inputCls} />
+                        <p className="mt-1.5 text-xs text-slate-400">Shown in marketing materials instead of the actual address.</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {(form.street.trim() || form.name.trim()) && (
+                    <p className="mt-4 flex items-center gap-1.5 text-sm font-medium text-emerald-600">
+                      <CheckCircle2 className="h-4 w-4" /> Property details saved
+                    </p>
+                  )}
+                </>
+              ) : step === 1 ? (
+                <>
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h2 className="text-2xl font-extrabold text-slate-900">Property Data</h2>
+                      <p className="mt-1 text-sm text-slate-500">These fields appear in your printed document. Drag rows to reorder.</p>
+                    </div>
+                    <button
+                      onClick={autoPopulate}
+                      className="shrink-0 rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                    >
+                      Auto-populate from Records
+                    </button>
+                  </div>
+
+                  {form.dataPoints.length === 0 && (
+                    <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-700">
+                      No property records found for this address. Add fields manually.
+                    </div>
+                  )}
+
+                  {suggestions.length > 0 && (
+                    <div className="mt-5">
+                      <p className="text-sm font-semibold text-slate-500">Suggested for {config.propertyType}:</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {suggestions
+                          .filter((s) => !form.dataPoints.some((p) => p.label === s))
+                          .map((s) => (
+                            <button
+                              key={s}
+                              onClick={() => addPoint(s)}
+                              className="inline-flex items-center gap-1 rounded-full border border-orange-200 bg-orange-50/50 px-3 py-1.5 text-sm font-semibold text-brand transition hover:bg-orange-100"
+                            >
+                              <Plus className="h-3.5 w-3.5" /> {s}
+                            </button>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                    {form.dataPoints.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center gap-4 py-12 text-center">
+                        <p className="max-w-md text-sm text-slate-500">
+                          No property data yet. Add fields manually or auto-populate from public records.
+                        </p>
+                        <button
+                          onClick={autoPopulate}
+                          className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                        >
+                          Auto-populate from Records
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {form.dataPoints.map((p) => (
+                          <div key={p.id} className="flex items-center gap-2">
+                            <GripVertical className="h-4 w-4 shrink-0 text-slate-300" />
+                            <input
+                              value={p.label}
+                              onChange={(e) => updatePoint(p.id, 'label', e.target.value)}
+                              placeholder="Field name"
+                              className={`${inputCls} sm:max-w-[220px]`}
+                            />
+                            <input
+                              value={p.value}
+                              onChange={(e) => updatePoint(p.id, 'value', e.target.value)}
+                              placeholder="Value"
+                              className={`${inputCls} flex-1`}
+                            />
+                            <button
+                              onClick={() => removePoint(p.id)}
+                              className="rounded-lg p-2 text-slate-400 transition hover:bg-rose-50 hover:text-rose-500"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mt-3 flex items-center gap-3">
+                    <button
+                      onClick={() => addPoint('')}
+                      className="flex flex-1 items-center justify-center gap-2 rounded-xl border-2 border-dashed border-orange-300 bg-orange-50/40 px-4 py-3 text-sm font-semibold text-brand transition hover:bg-orange-50"
+                    >
+                      <Plus className="h-4 w-4" /> Add Custom Data Point
+                    </button>
+                    <span className="inline-flex items-center gap-1 text-sm font-medium text-emerald-600">
+                      <CheckCircle2 className="h-4 w-4" /> Auto-saved
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col gap-4 xl:flex-row">
+                <div className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white shadow-sm">
+                  {/* Section header */}
+                  <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-5">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-500">
+                        <BarChart3 className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-extrabold text-slate-900">{BUILDER_SECTIONS[step]}</h2>
+                        <p className="mt-0.5 text-sm text-slate-500">{SECTION_DESC[BUILDER_SECTIONS[step]] || `Add the content for this section of your ${config.docType}.`}</p>
+                      </div>
+                    </div>
+                    <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-emerald-600">
+                      <Check className="h-3.5 w-3.5" /> Saved
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2">
+                    {/* Left: suggested copy */}
+                    <div className="border-b border-slate-100 p-5 lg:border-b-0 lg:border-r">
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 text-amber-500">
+                          <Lightbulb className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-slate-900">Suggested Copy</p>
+                          <p className="text-xs text-slate-400">Click a card to drop it into your draft →</p>
+                        </div>
+                      </div>
+
+                      {/* Sub-topic dropdown */}
+                      <div className="relative mt-4">
+                        <button
+                          onClick={() => setCatOpen((o) => !o)}
+                          className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-4 py-3 text-sm font-bold text-slate-800 transition hover:bg-slate-50"
+                        >
+                          {curGroup.title}
+                          <span className="flex items-center gap-3 text-slate-400">
+                            <span>{tokenCount(curGroup.cards[0])}</span>
+                            {catOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                          </span>
+                        </button>
+                        {catOpen && (
+                          <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
+                            {groups.map((g, i) => (
+                              <button
+                                key={g.title}
+                                onClick={() => { setCopyCat(i); setCatOpen(false) }}
+                                className={`flex w-full items-center justify-between px-4 py-2.5 text-sm transition ${i === copyCat ? 'bg-orange-50 font-bold text-brand' : 'text-slate-600 hover:bg-slate-50'}`}
+                              >
+                                <span className="flex items-center gap-2">
+                                  {i === copyCat && <Check className="h-4 w-4" />}
+                                  {g.title}
+                                </span>
+                                <span className="text-slate-400">{tokenCount(g.cards[0])}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Cards */}
+                      <div className="scrollbar-slim mt-3 max-h-72 space-y-3 overflow-y-auto pr-1">
+                        {curGroup.cards.map((c, i) => (
+                          <button
+                            key={i}
+                            onClick={() => insertCard(c)}
+                            className="group flex w-full gap-3 rounded-xl border border-slate-200 p-3 text-left transition hover:border-orange-300 hover:bg-orange-50/30"
+                          >
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand text-white">
+                              <Plus className="h-4 w-4" />
+                            </span>
+                            <span className="text-sm leading-relaxed text-slate-600">
+                              <CopyText text={c} fill={copyFill} />
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Right: your draft */}
+                    <div className="p-5">
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-500">
+                          <Pencil className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-slate-900">Your Draft</p>
+                          <p className="text-xs text-slate-400">Edit freely — changes save automatically</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 overflow-hidden rounded-xl border border-slate-200">
+                        {/* Toolbar */}
+                        <div className="flex items-center gap-0.5 border-b border-slate-100 bg-slate-50/60 px-2 py-1.5">
+                          {[
+                            { icon: Bold, cmd: 'bold' }, { icon: Italic, cmd: 'italic' }, { icon: Underline, cmd: 'underline' },
+                          ].map(({ icon: I, cmd }) => (
+                            <button key={cmd} onClick={() => execCmd(cmd)} className="rounded p-1.5 text-slate-500 transition hover:bg-slate-200/70 hover:text-slate-800"><I className="h-4 w-4" /></button>
+                          ))}
+                          <span className="mx-1 h-5 w-px bg-slate-200" />
+                          <button onClick={() => execCmd('insertUnorderedList')} className="rounded p-1.5 text-slate-500 transition hover:bg-slate-200/70 hover:text-slate-800"><List className="h-4 w-4" /></button>
+                          <button onClick={() => execCmd('insertOrderedList')} className="rounded p-1.5 text-slate-500 transition hover:bg-slate-200/70 hover:text-slate-800"><ListOrdered className="h-4 w-4" /></button>
+                          <button onClick={addLink} className="rounded p-1.5 text-slate-500 transition hover:bg-slate-200/70 hover:text-slate-800"><Link2 className="h-4 w-4" /></button>
+                          <span className="mx-1 h-5 w-px bg-slate-200" />
+                          <button onClick={() => execCmd('undo')} className="rounded p-1.5 text-slate-500 transition hover:bg-slate-200/70 hover:text-slate-800"><Undo2 className="h-4 w-4" /></button>
+                          <button onClick={() => execCmd('redo')} className="rounded p-1.5 text-slate-500 transition hover:bg-slate-200/70 hover:text-slate-800"><Redo2 className="h-4 w-4" /></button>
+                          <span className="ml-auto pr-1 text-xs font-medium text-slate-400">{charCount}/{charLimit}</span>
+                        </div>
+                        {/* Editable area */}
+                        <div className="relative">
+                          <div
+                            ref={draftRef}
+                            contentEditable
+                            suppressContentEditableWarning
+                            onInput={saveDraft}
+                            className="scrollbar-slim min-h-[240px] max-h-[360px] overflow-y-auto p-4 text-sm leading-relaxed text-slate-700 outline-none [&_a]:text-brand [&_a]:underline"
+                          />
+                          {charCount === 0 && (
+                            <span className="pointer-events-none absolute left-4 top-4 text-sm text-slate-400">
+                              Click a suggested card on the left, or start typing your own content…
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Key Metrics side panel (Investment Highlights only) */}
+                {isInvest && (
+                  <aside className="w-full shrink-0 rounded-2xl border border-slate-200 bg-white shadow-sm xl:w-80">
+                    <div className="flex items-start justify-between gap-2 border-b border-slate-100 p-4">
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-500">
+                          <TrendingUp className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-extrabold text-slate-900">Key Metrics</p>
+                          <p className="text-xs text-slate-400">Edit metrics for sidebar</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 px-4 pt-3">
+                      <div className="relative">
+                        <button onClick={() => setLibOpen((o) => !o)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">
+                          <Library className="h-3.5 w-3.5" /> Add from Library
+                        </button>
+                        {libOpen && (
+                          <div className="absolute z-30 mt-1 max-h-56 w-48 overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+                            {METRIC_LIBRARY.filter((m) => !metrics.some((x) => x.label === m)).map((m) => (
+                              <button key={m} onClick={() => { addMetric(m, ''); setLibOpen(false) }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-600 transition hover:bg-slate-50">
+                                <Plus className="h-3.5 w-3.5 text-brand" /> {m}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <button onClick={() => addMetric('', '')} className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100">
+                        <Plus className="h-3.5 w-3.5" /> Custom Metric
+                      </button>
+                    </div>
+
+                    <div className="scrollbar-slim mt-3 max-h-[460px] overflow-y-auto px-4 pb-4">
+                      {/* Calculated */}
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-brand">
+                          <Zap className="h-3.5 w-3.5" /> Calculated
+                        </span>
+                        <span className="text-[11px] text-slate-400">Auto-updated</span>
+                      </div>
+                      <div className="mb-3 flex gap-2 rounded-lg bg-blue-50/70 p-2.5 text-[11px] leading-snug text-slate-500">
+                        <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-blue-400" />
+                        <span>These auto-fill once you complete the <b className="text-slate-600">Financials</b> and <b className="text-slate-600">Rent Roll</b> steps.</span>
+                      </div>
+                      <div className="divide-y divide-slate-100">
+                        {calcMetrics.map((m) => (
+                          <div key={m.label} className="flex items-center gap-3 py-2.5">
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-500">
+                              <m.icon className="h-4 w-4" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm text-slate-500">{m.label}</p>
+                              <p className={`text-sm font-bold ${m.value ? 'text-slate-900' : 'text-slate-300'}`}>{m.value || '—'}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Additional (custom) */}
+                      {metrics.length > 0 && (
+                        <>
+                          <div className="mb-1 mt-4 flex items-center gap-1 border-t border-slate-100 pt-3 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                            <Pencil className="h-3.5 w-3.5" /> Additional Metrics
+                          </div>
+                          <div className="divide-y divide-slate-100">
+                            {metrics.map((m, i) => (
+                              <div key={m.id} className={`group py-2.5 ${m.hidden ? 'opacity-50' : ''}`}>
+                                {m.editing ? (
+                                  <div className="flex items-center gap-2">
+                                    <input autoFocus value={m.label} onChange={(e) => updMetric(m.id, 'label', e.target.value)} placeholder="Metric name" className={`${inputCls} h-9 flex-1`} />
+                                    <input value={m.value} onChange={(e) => updMetric(m.id, 'value', e.target.value)} placeholder="Value" className={`${inputCls} h-9 w-20`} />
+                                    <button onClick={() => updMetric(m.id, 'editing', false)} className="rounded-lg bg-emerald-600 p-2 text-white transition hover:bg-emerald-700"><Check className="h-4 w-4" /></button>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-3">
+                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
+                                      <DollarSign className="h-4 w-4" />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <p className="truncate text-sm text-slate-500">{m.label || 'Untitled'}</p>
+                                      <p className={`text-sm font-bold ${m.value ? 'text-slate-900' : 'italic text-slate-300'}`}>{m.value || 'No value'}</p>
+                                    </div>
+                                    <div className="flex items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
+                                      <button onClick={() => moveMetric(m.id, -1)} disabled={i === 0} className="rounded p-1 text-slate-400 hover:bg-slate-100 disabled:opacity-30"><ChevronUp className="h-3.5 w-3.5" /></button>
+                                      <button onClick={() => moveMetric(m.id, 1)} disabled={i === metrics.length - 1} className="rounded p-1 text-slate-400 hover:bg-slate-100 disabled:opacity-30"><ChevronDown className="h-3.5 w-3.5" /></button>
+                                      <button onClick={() => updMetric(m.id, 'editing', true)} className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-brand"><Pencil className="h-3.5 w-3.5" /></button>
+                                      <button onClick={() => updMetric(m.id, 'hidden', !m.hidden)} className="rounded p-1 text-slate-400 hover:bg-slate-100">{m.hidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}</button>
+                                      <button onClick={() => delMetric(m.id)} className="rounded p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-500"><X className="h-3.5 w-3.5" /></button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      )}
+
+                      <p className="mt-4 text-center text-[11px] text-slate-400">Appears on the Investment Highlights page sidebar.</p>
+                    </div>
+                  </aside>
+                )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-between border-t border-slate-200 bg-white px-6 py-3">
+            <button
+              onClick={() => step > 0 && setStep(step - 1)}
+              disabled={step === 0}
+              className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-500 transition enabled:hover:text-slate-800 disabled:opacity-40"
+            >
+              <ArrowLeft className="h-4 w-4" /> Back
+            </button>
+            {step >= 1 && (
+              <span className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-600">
+                <CheckCircle2 className="h-4 w-4" /> Auto-saved
+              </span>
+            )}
+            <button
+              onClick={goNext}
+              className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+            >
+              {last ? 'Finish & Save' : 'Continue'} <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* Live preview dock — shown from Property Data onward (not on Property Details) */}
+          {step >= 1 && (
+            <div className="border-t border-slate-200 bg-white">
+              <div className="flex items-center justify-between px-6 py-2">
+                <div className="flex items-center gap-2">
+                  <Eye className="h-4 w-4 text-brand" />
+                  <span className="text-xs font-bold uppercase tracking-wide text-slate-700">Live Preview</span>
+                  <span className="hidden text-xs text-slate-400 sm:inline">Click any page to open</span>
+                </div>
+                <button onClick={() => setPreviewOpen((o) => !o)} className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 transition hover:text-slate-800">
+                  {previewOpen ? 'Hide' : 'Show'} <ChevronDown className={`h-4 w-4 transition ${previewOpen ? '' : '-rotate-90'}`} />
+                </button>
+              </div>
+              {previewOpen && (
+                <div className="scrollbar-slim flex gap-3 overflow-x-auto px-6 pb-3">
+                  {PAGES.map((pg, i) => (
+                    <button
+                      key={pg.key}
+                      onClick={() => setViewerIdx(i)}
+                      title={`Open ${pg.title}`}
+                      className="group relative shrink-0 overflow-hidden rounded-md border border-slate-200 shadow-sm transition hover:ring-2 hover:ring-orange-300"
+                    >
+                      <ScaledPage scale={0.2}>
+                        <BuilderPage pageKey={pg.key} data={previewData} />
+                      </ScaledPage>
+                      <span className="absolute inset-x-0 bottom-0 bg-slate-900/70 px-1 py-0.5 text-center text-[8px] font-semibold text-white opacity-0 transition group-hover:opacity-100">
+                        {pg.title}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Right: Document Sections */}
+        <aside className="scrollbar-slim hidden w-72 shrink-0 overflow-y-auto border-l border-slate-200 bg-white p-4 lg:block">
+          <p className="flex items-center gap-2 text-sm font-bold text-slate-900">
+            <span className="h-4 w-1 rounded bg-brand" /> Document Sections
+          </p>
+          <p className="mt-1 text-xs text-slate-400">Click any completed section to jump back and edit.</p>
+          <div className="mt-3 space-y-1">
+            {BUILDER_SECTIONS.map((s, i) => {
+              const isActive = i === step
+              const isDone = done[i]
+              // Only completed sections (or the current one) can be jumped to.
+              const canJump = isActive || isDone
+              return (
+                <button
+                  key={s}
+                  onClick={() => canJump && setStep(i)}
+                  disabled={!canJump}
+                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium transition ${
+                    isActive ? 'bg-orange-50 text-brand' : canJump ? 'text-slate-600 hover:bg-slate-50' : 'cursor-not-allowed text-slate-300'
+                  }`}
+                >
+                  <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                    isActive ? 'bg-brand text-white' : isDone ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-300'
+                  }`}>
+                    {isDone && !isActive ? <Check className="h-3.5 w-3.5" /> : i + 1}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate">{s}</span>
+                    {isActive && <span className="text-[11px] font-normal text-brand">Editing</span>}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </aside>
+      </div>
+
+      <LocationPickerModal
+        open={mapOpen}
+        initial={form.lat ? [form.lat, form.lng] : null}
+        address={fullAddress || docName}
+        onConfirm={confirmLocation}
+        onClose={() => setMapOpen(false)}
+      />
+
+      <PageViewerModal
+        index={viewerIdx}
+        data={previewData}
+        onClose={() => setViewerIdx(null)}
+        onIndex={setViewerIdx}
+      />
+    </div>
+  )
+}
+
+function DashboardPage({ packages, setPackages, setListings, globalQuery, createNonce }) {
   const notify = useToast()
   const [subTab, setSubTab] = useState('my')
   const [search, setSearch] = useState('')
@@ -2464,9 +3780,18 @@ function DashboardPage({ packages, setPackages, globalQuery }) {
   const [chooserOpen, setChooserOpen] = useState(false)
   const [newDoc, setNewDoc] = useState({ owner: 'my', assignee: null })
 
+  // Open the create-document flow when triggered from elsewhere (e.g. Listing Hub's "Create New").
+  useEffect(() => {
+    if (createNonce) setChooserOpen(true)
+  }, [createNonce])
+
   // Full-screen create wizard (Document Type -> Property Type -> Template).
   const [wizardOpen, setWizardOpen] = useState(false)
   const [wizardDefaults, setWizardDefaults] = useState(null)
+
+  // Document builder (opens after "Get Started").
+  const [builderOpen, setBuilderOpen] = useState(false)
+  const [builderCfg, setBuilderCfg] = useState(null)
 
   // Bulk-select mode (toggled by the "Select" button).
   const [selectMode, setSelectMode] = useState(false)
@@ -2513,10 +3838,59 @@ function DashboardPage({ packages, setPackages, globalQuery }) {
   }
   const finishWizard = ({ docType, propertyType, template, scope, locationKind, brandColor }) => {
     setNewDoc((d) => ({ ...d, template, scope, locationKind, brandColor }))
-    setWizardDefaults({ docType, propertyType, status: 'Draft', tags: [propertyType] })
+    setBuilderCfg({ docType, propertyType, template, brandColor })
     setWizardOpen(false)
-    setEditing(null)
-    setModalOpen(true)
+    setBuilderOpen(true)
+  }
+
+  // Create the package from the Document Builder and close it.
+  const saveFromBuilder = (bf) => {
+    const title = (bf.name || '').trim() || 'Untitled Document'
+    const address = [bf.street, bf.city, bf.state, bf.zip].filter(Boolean).join(', ') || '—'
+    setPackages((list) => [
+      {
+        id: uid(),
+        title,
+        address,
+        docType: builderCfg?.docType,
+        propertyType: builderCfg?.propertyType,
+        status: 'Draft',
+        tags: builderCfg?.propertyType ? [builderCfg.propertyType] : [],
+        image: '',
+        updated: 'just now',
+        progress: 10,
+        price: Number(bf.price) || 0,
+        owner: newDoc.owner,
+        assignee: newDoc.assignee,
+        template: newDoc.template,
+        brandColor: newDoc.brandColor,
+      },
+      ...list,
+    ])
+    // Also surface the new property in the Listing Hub's "My Listings" table.
+    if (setListings) {
+      const sizePoint = (bf.dataPoints || []).find(
+        (p) => /building sf|gla|rentable sf|size/i.test(p.label) && p.value,
+      )
+      setListings((list) => [
+        {
+          id: uid(),
+          name: title,
+          address,
+          price: Number(bf.price) || 0,
+          type: builderCfg?.propertyType || 'Retail',
+          size: sizePoint ? sizePoint.value : '—',
+          status: 'Active',
+          image: propertyImage('1497366216548-37526070297c'),
+          featured: false,
+          listed: true,
+          access: 'Public',
+        },
+        ...list,
+      ])
+    }
+    notify(newDoc.assignee ? `Document created for ${newDoc.assignee}` : 'Document created')
+    setBuilderOpen(false)
   }
   const openEdit = (pkg) => {
     setEditing(pkg)
@@ -2719,6 +4093,19 @@ function DashboardPage({ packages, setPackages, globalQuery }) {
         onComplete={finishWizard}
         assignee={newDoc.assignee}
       />
+
+      {builderOpen && builderCfg && (
+        <DocumentBuilder
+          config={builderCfg}
+          notify={notify}
+          onExit={() => setBuilderOpen(false)}
+          onChangeType={() => {
+            setBuilderOpen(false)
+            setWizardOpen(true)
+          }}
+          onSave={saveFromBuilder}
+        />
+      )}
 
       <Modal
         open={modalOpen}
@@ -3533,7 +4920,7 @@ export const toMicrositeItems = (listings) =>
       }
     })
 
-function ListingHubPage({ listings, setListings, globalQuery }) {
+function ListingHubPage({ listings, setListings, globalQuery, onCreateNew }) {
   const notify = useToast()
 
   const [slug, setSlug] = useState('vaziamts')
@@ -3847,9 +5234,15 @@ function ListingHubPage({ listings, setListings, globalQuery }) {
                 </button>
                 <button
                   onClick={openCreate}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-hover"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
                 >
                   <Plus className="h-3.5 w-3.5" /> Add
+                </button>
+                <button
+                  onClick={onCreateNew}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-hover"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Create New
                 </button>
               </div>
             </div>
@@ -4911,6 +6304,7 @@ export default function App() {
   // then persist any change back to the database.
   const [dbLoaded, setDbLoaded] = useState(false)
   const [mobileNav, setMobileNav] = useState(false)
+  const [createNonce, setCreateNonce] = useState(0)
   useEffect(() => {
     let alive = true
     ;(async () => {
@@ -4962,6 +6356,14 @@ export default function App() {
     setMobileNav(false)
   }
 
+  // "Create New" (document) — usable from Dashboard and Listing Hub.
+  // Goes to the Dashboard and opens the create-document flow there.
+  const startCreate = () => {
+    setActive('dashboard')
+    setMobileNav(false)
+    setCreateNonce((n) => n + 1)
+  }
+
   if (!isLoggedIn) {
     return (
       <ToastProvider>
@@ -4975,9 +6377,9 @@ export default function App() {
   const renderScreen = () => {
     switch (active) {
       case 'dashboard':
-        return <DashboardPage packages={packages} setPackages={setPackages} globalQuery={query} />
+        return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} />
       case 'listings':
-        return <ListingHubPage listings={listings} setListings={setListings} globalQuery={query} />
+        return <ListingHubPage listings={listings} setListings={setListings} globalQuery={query} onCreateNew={startCreate} />
       case 'deals':
         return <DealRoomsPage dealRooms={dealRooms} setDealRooms={setDealRooms} />
       case 'documents':
@@ -4991,7 +6393,7 @@ export default function App() {
       case 'knowledge':
         return <PlaceholderPage label="Knowledge Base" icon={BookOpen} />
       default:
-        return <DashboardPage packages={packages} setPackages={setPackages} globalQuery={query} />
+        return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} />
     }
   }
 
