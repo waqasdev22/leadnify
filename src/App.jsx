@@ -4347,15 +4347,15 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                     </div>
                   </div>
 
-                  <div className="mt-6 grid gap-8 lg:grid-cols-2">
+                  <div className="mt-6 grid items-stretch gap-8 lg:grid-cols-2">
                     {/* Left column */}
-                    <div>
+                    <div className="flex flex-col">
                       <label className="mb-1 block text-sm font-semibold text-slate-700">Page Title</label>
                       <input value={form.moTitle || ''} onChange={(e) => setForm((f) => ({ ...f, moTitle: e.target.value }))} placeholder="e.g., Market Overview: The Greater Houston Metropolitan Area" className={inputCls} />
                       <p className="mt-1 text-xs text-slate-400">Appears as the heading on the PDF page</p>
 
                       <label className="mb-1 mt-4 block text-sm font-semibold text-slate-700">About Text</label>
-                      <div className="overflow-hidden rounded-xl border border-slate-200">
+                      <div className="flex flex-1 flex-col overflow-hidden rounded-xl border border-slate-200">
                         <div className="flex items-center gap-0.5 border-b border-slate-100 bg-slate-50/60 px-2 py-1.5">
                           <button onClick={() => moExec('bold')} className="rounded p-1.5 text-slate-500 transition hover:bg-slate-200/70 hover:text-slate-800"><Bold className="h-4 w-4" /></button>
                           <button onClick={() => moExec('italic')} className="rounded p-1.5 text-slate-500 transition hover:bg-slate-200/70 hover:text-slate-800"><Italic className="h-4 w-4" /></button>
@@ -4368,13 +4368,13 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                           <button onClick={() => moExec('undo')} className="rounded p-1.5 text-slate-500 transition hover:bg-slate-200/70 hover:text-slate-800"><Undo2 className="h-4 w-4" /></button>
                           <button onClick={() => moExec('redo')} className="rounded p-1.5 text-slate-500 transition hover:bg-slate-200/70 hover:text-slate-800"><Redo2 className="h-4 w-4" /></button>
                         </div>
-                        <div className="relative">
+                        <div className="relative flex-1">
                           <div
                             ref={moRef}
                             contentEditable
                             suppressContentEditableWarning
                             onInput={() => setForm((f) => ({ ...f, moAbout: moRef.current?.innerHTML || '' }))}
-                            className="scrollbar-slim min-h-[400px] max-h-[520px] overflow-y-auto p-4 text-sm leading-relaxed text-slate-700 outline-none [&_a]:text-brand [&_a]:underline"
+                            className="scrollbar-slim h-full min-h-[280px] overflow-y-auto p-4 text-sm leading-relaxed text-slate-700 outline-none [&_a]:text-brand [&_a]:underline"
                           />
                           {!(form.moAbout && form.moAbout.replace(/<[^>]*>/g, '').trim()) && (
                             <span className="pointer-events-none absolute left-4 top-4 text-sm text-slate-400">Enter city / market information here…</span>
