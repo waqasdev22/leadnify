@@ -10,7 +10,9 @@ import { jsPDF } from 'jspdf'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { getCol, putCol, saveUser } from './api'
-import { auth, googleProvider } from './firebase'
+import { auth, googleProvider, db } from './firebase'
+import { ref as dbRef, get as dbGet, set as dbSet, update as dbUpdate, onValue } from 'firebase/database'
+import { PERMISSION_GROUPS, ROLE_PRESETS, ROLES, ROLE_INFO, resolvePerms } from './permissions'
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -951,9 +953,20 @@ function UpgradeCard({ onDismiss }) {
   )
 }
 
-function Sidebar({ active, onNavigate, onSignOut, user, forceCollapsed }) {
+const NAV_PERM = { dashboard: 'dashboard.view', listings: 'listings.view', deals: 'dealrooms.view' }
+
+function Sidebar({ active, onNavigate, onSignOut, user, forceCollapsed, can }) {
   const [collapsed, setCollapsed] = useState(!!forceCollapsed)
   const [showPromo, setShowPromo] = useState(true)
+
+  // Filter nav by page permissions (when a `can` gate is provided), and add the
+  // admin-only Team & Permissions entry.
+  const navItems = can
+    ? [
+        ...NAV_ITEMS.filter((n) => !NAV_PERM[n.key] || can(NAV_PERM[n.key])),
+        ...(can('team.manage_permissions') ? [{ key: 'team', label: 'Team & Permissions', icon: Users, dividerBefore: true }] : []),
+      ]
+    : NAV_ITEMS
 
   return (
     <aside
@@ -980,7 +993,7 @@ function Sidebar({ active, onNavigate, onSignOut, user, forceCollapsed }) {
 
       {/* Nav */}
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-        {NAV_ITEMS.map(({ key, label, icon: Icon, dot, dividerBefore }) => {
+        {navItems.map(({ key, label, icon: Icon, dot, dividerBefore }) => {
           const isActive = active === key
           return (
             <React.Fragment key={key}>
@@ -6748,7 +6761,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
   )
 }
 
-function DashboardPage({ packages, setPackages, setListings, globalQuery, createNonce, resume, onResumeHandled, onNavigate, onSignOut, user }) {
+function DashboardPage({ packages, setPackages, setListings, globalQuery, createNonce, resume, onResumeHandled, onNavigate, onSignOut, user, can = () => true }) {
   const notify = useToast()
   const [subTab, setSubTab] = useState('my')
   const [search, setSearch] = useState('')
@@ -7018,9 +7031,11 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
             Manage and create marketing materials for your properties
           </p>
         </div>
-        <PrimaryButton icon={Plus} onClick={openCreate}>
-          Create New
-        </PrimaryButton>
+        {can('document.create') && (
+          <PrimaryButton icon={Plus} onClick={openCreate}>
+            Create New
+          </PrimaryButton>
+        )}
       </div>
 
       <div className="mt-6 inline-flex rounded-lg bg-slate-100 p-1">
@@ -7984,7 +7999,7 @@ export const toMicrositeItems = (listings) =>
       }
     })
 
-function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onResumeDraft }) {
+function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onResumeDraft, can = () => true }) {
   const notify = useToast()
 
   const [slug, setSlug] = useState('vaziamts')
@@ -8296,18 +8311,22 @@ function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onRes
                 >
                   <Download className="h-3.5 w-3.5" /> Export
                 </button>
-                <button
-                  onClick={openCreate}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
-                >
-                  <Plus className="h-3.5 w-3.5" /> Add
-                </button>
-                <button
-                  onClick={onCreateNew}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-hover"
-                >
-                  <Plus className="h-3.5 w-3.5" /> Create New
-                </button>
+                {can('listing.create') && (
+                  <button
+                    onClick={openCreate}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Add
+                  </button>
+                )}
+                {can('document.create') && (
+                  <button
+                    onClick={onCreateNew}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-hover"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Create New
+                  </button>
+                )}
               </div>
             </div>
 
@@ -9485,6 +9504,118 @@ function PlaceholderPage({ label, icon: Icon }) {
 }
 
 /* -------------------------------------------------------------------------- */
+/*  Team & Permissions (Admin)                                                */
+/* -------------------------------------------------------------------------- */
+
+function PermToggle({ on, onClick, disabled }) {
+  return (
+    <button onClick={onClick} disabled={disabled} className={`relative h-5 w-9 shrink-0 rounded-full transition disabled:opacity-40 ${on ? 'bg-brand' : 'bg-slate-300'}`}>
+      <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${on ? 'left-[18px]' : 'left-0.5'}`} />
+    </button>
+  )
+}
+
+function TeamPermissionsPage({ myUid, notify }) {
+  const [users, setUsers] = useState({})
+  const [openUid, setOpenUid] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [err, setErr] = useState(false)
+
+  useEffect(() => {
+    return onValue(dbRef(db, 'users'), (snap) => { setUsers(snap.val() || {}); setLoading(false) }, () => { setErr(true); setLoading(false) })
+  }, [])
+
+  const list = Object.entries(users).map(([uid, u]) => ({ uid, ...u })).sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+
+  const setUserRole = (uid, role) => { dbUpdate(dbRef(db, `users/${uid}`), { role }).then(() => notify('Role updated')).catch(() => notify('Save failed — check DB rules', 'error')) }
+  const togglePerm = (uid, key) => {
+    const u = users[uid]; if (!u) return
+    const eff = resolvePerms(u.role, u.overrides)
+    const preset = new Set(ROLE_PRESETS[u.role] || [])
+    const desired = !eff.has(key)
+    const overrides = { ...(u.overrides || {}) }
+    if (desired === preset.has(key)) delete overrides[key]
+    else overrides[key] = desired
+    dbUpdate(dbRef(db, `users/${uid}`), { overrides }).catch(() => notify('Save failed — check DB rules', 'error'))
+  }
+
+  const roleBadge = (r) => ({ Admin: 'bg-amber-50 text-amber-700', Member: 'bg-slate-100 text-slate-600', Coordinator: 'bg-emerald-50 text-emerald-700' }[r] || 'bg-slate-100 text-slate-600')
+
+  return (
+    <div className="mx-auto max-w-4xl px-6 py-8">
+      <div className="flex items-start gap-3">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-500"><Users className="h-6 w-6" /></div>
+        <div>
+          <h1 className="text-2xl font-extrabold text-slate-900">Team &amp; Permissions</h1>
+          <p className="mt-1 text-sm text-slate-500">Set each member's role, then fine-tune exactly which functions they can use.</p>
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50/60 p-4 text-sm text-blue-800">
+        New members join by choosing <b>Create account</b> on the sign-in page. They start as <b>Member</b> and appear here — then you adjust their access below.
+      </div>
+
+      {loading ? (
+        <p className="mt-8 text-sm text-slate-400">Loading team…</p>
+      ) : err ? (
+        <p className="mt-8 rounded-lg bg-amber-50 p-4 text-sm text-amber-700">Couldn't read the team from Firebase. Make sure Realtime Database rules allow authenticated reads of <code>/users</code>.</p>
+      ) : (
+        <div className="mt-5 space-y-3">
+          {list.map((u) => {
+            const eff = resolvePerms(u.role, u.overrides)
+            const isMe = u.uid === myUid
+            const open = openUid === u.uid
+            return (
+              <div key={u.uid} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                <div className="flex flex-wrap items-center gap-3 p-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-500">{(u.name || u.email || '?').slice(0, 1).toUpperCase()}</div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-bold text-slate-900">{u.name || '—'} {isMe && <span className="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">You</span>}</p>
+                    <p className="truncate text-xs text-slate-500">{u.email}</p>
+                  </div>
+                  <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${roleBadge(u.role)}`}>{u.role}</span>
+                  <select value={u.role} onChange={(e) => setUserRole(u.uid, e.target.value)} disabled={isMe} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-700 outline-none disabled:opacity-50">
+                    {ROLES.map((r) => <option key={r}>{r}</option>)}
+                  </select>
+                  <button onClick={() => setOpenUid(open ? null : u.uid)} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+                    Permissions <ChevronDown className={`h-4 w-4 transition ${open ? 'rotate-180' : ''}`} />
+                  </button>
+                </div>
+                {open && (
+                  <div className="border-t border-slate-100 bg-slate-50/50 p-4">
+                    {isMe && <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">You can't remove your own admin access here.</p>}
+                    <div className="grid gap-5 sm:grid-cols-2">
+                      {PERMISSION_GROUPS.map((grp) => (
+                        <div key={grp.group}>
+                          <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-400">{grp.group}</p>
+                          <div className="space-y-1.5">
+                            {grp.perms.map((p) => {
+                              const preset = (ROLE_PRESETS[u.role] || []).includes(p.key)
+                              const on = eff.has(p.key)
+                              const overridden = on !== preset
+                              return (
+                                <div key={p.key} className="flex items-center justify-between gap-2 rounded-lg bg-white px-3 py-2 ring-1 ring-slate-100">
+                                  <span className="text-sm text-slate-700">{p.label}{overridden && <span className="ml-1.5 rounded bg-orange-50 px-1 py-0.5 text-[9px] font-bold uppercase text-orange-600">custom</span>}</span>
+                                  <PermToggle on={on} onClick={() => togglePerm(u.uid, p.key)} disabled={isMe} />
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* -------------------------------------------------------------------------- */
 /*  Main App                                                                  */
 /* -------------------------------------------------------------------------- */
 
@@ -9493,19 +9624,43 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false)
   const [active, setActive] = useState('dashboard')
   const [user, setUser] = useState(CURRENT_USER)
+  const [myUid, setMyUid] = useState(null)
+  const [role, setRole] = useState('Member')
+  const [perms, setPerms] = useState(() => new Set())
+  const can = (key) => perms.has(key)
 
-  // Firebase Auth is the source of truth. It persists the session across
-  // refreshes automatically, so no manual localStorage flag is needed.
+  // Firebase Auth is the source of truth. On sign-in we ensure a profile exists
+  // in the Realtime DB (the FIRST account to sign up becomes the Admin), then
+  // resolve that user's effective permissions from their role + overrides.
   useEffect(() => {
-    return onAuthStateChanged(auth, (u) => {
+    return onAuthStateChanged(auth, async (u) => {
       if (u) {
         const name = u.displayName || (u.email ? u.email.split('@')[0] : CURRENT_USER.name)
-        const nextUser = { ...CURRENT_USER, name, email: u.email || '', initials: name.slice(0, 1).toUpperCase() }
-        setUser(nextUser)
+        setUser({ ...CURRENT_USER, name, email: u.email || '', initials: name.slice(0, 1).toUpperCase() })
+        setMyUid(u.uid)
         setIsLoggedIn(true)
-        saveUser({ name: nextUser.name, email: nextUser.email }).catch(() => {})
+        saveUser({ name, email: u.email }).catch(() => {})
+        let profile = null
+        try {
+          const usersSnap = await dbGet(dbRef(db, 'users'))
+          const users = usersSnap.val() || {}
+          profile = users[u.uid]
+          if (!profile) {
+            const isFirst = Object.keys(users).length === 0
+            profile = { name, email: u.email || '', role: isFirst ? 'Admin' : 'Member', overrides: {}, createdAt: u.metadata?.creationTime || '' }
+            await dbSet(dbRef(db, `users/${u.uid}`), profile)
+          }
+        } catch {
+          // DB unreachable / rules blocking — fall back to Member (no elevated access).
+          profile = { role: 'Member', overrides: {} }
+        }
+        setRole(profile.role || 'Member')
+        setPerms(resolvePerms(profile.role || 'Member', profile.overrides))
       } else {
         setIsLoggedIn(false)
+        setRole('Member')
+        setPerms(new Set())
+        setMyUid(null)
       }
       setAuthReady(true)
     })
@@ -9609,11 +9764,13 @@ export default function App() {
   const renderScreen = () => {
     switch (active) {
       case 'dashboard':
-        return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} resume={resume} onResumeHandled={() => setResume(null)} onNavigate={navigate} onSignOut={handleSignOut} user={user} />
+        return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} resume={resume} onResumeHandled={() => setResume(null)} onNavigate={navigate} onSignOut={handleSignOut} user={user} can={can} />
       case 'listings':
-        return <ListingHubPage listings={listings} setListings={setListings} globalQuery={query} onCreateNew={startCreate} onResumeDraft={resumeDraft} />
+        return <ListingHubPage listings={listings} setListings={setListings} globalQuery={query} onCreateNew={startCreate} onResumeDraft={resumeDraft} can={can} />
       case 'deals':
         return <DealRoomsPage dealRooms={dealRooms} setDealRooms={setDealRooms} />
+      case 'team':
+        return <TeamPermissionsPage myUid={myUid} notify={notify} />
       case 'documents':
         return <PlaceholderPage label="Documents" icon={FileText} />
       case 'crm':
@@ -9625,7 +9782,7 @@ export default function App() {
       case 'knowledge':
         return <PlaceholderPage label="Knowledge Base" icon={BookOpen} />
       default:
-        return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} resume={resume} onResumeHandled={() => setResume(null)} onNavigate={navigate} onSignOut={handleSignOut} user={user} />
+        return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} resume={resume} onResumeHandled={() => setResume(null)} onNavigate={navigate} onSignOut={handleSignOut} user={user} can={can} />
     }
   }
 
@@ -9634,7 +9791,7 @@ export default function App() {
       <div className="flex h-screen overflow-hidden bg-slate-50 text-slate-900">
         {/* Desktop sidebar */}
         <div className="hidden md:block">
-          <Sidebar active={active} onNavigate={navigate} onSignOut={handleSignOut} user={user} />
+          <Sidebar active={active} onNavigate={navigate} onSignOut={handleSignOut} user={user} can={can} />
         </div>
 
         {/* Mobile slide-in drawer */}
@@ -9653,6 +9810,7 @@ export default function App() {
                   handleSignOut()
                 }}
                 user={user}
+                can={can}
               />
             </div>
           </div>
