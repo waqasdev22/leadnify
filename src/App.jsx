@@ -64,6 +64,11 @@ import {
   Camera,
   Image as ImageIcon,
   ListChecks,
+  Crown,
+  UserCircle,
+  UserPlus,
+  Settings,
+  ShieldCheck,
   PieChart,
   Scale,
   Users,
@@ -2479,10 +2484,17 @@ function CreateWizard({ open, onExit, onComplete, assignee }) {
 const US_STATES = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY']
 const US_STATE_ABBR = { Alabama: 'AL', Alaska: 'AK', Arizona: 'AZ', Arkansas: 'AR', California: 'CA', Colorado: 'CO', Connecticut: 'CT', Delaware: 'DE', Florida: 'FL', Georgia: 'GA', Hawaii: 'HI', Idaho: 'ID', Illinois: 'IL', Indiana: 'IN', Iowa: 'IA', Kansas: 'KS', Kentucky: 'KY', Louisiana: 'LA', Maine: 'ME', Maryland: 'MD', Massachusetts: 'MA', Michigan: 'MI', Minnesota: 'MN', Mississippi: 'MS', Missouri: 'MO', Montana: 'MT', Nebraska: 'NE', Nevada: 'NV', 'New Hampshire': 'NH', 'New Jersey': 'NJ', 'New Mexico': 'NM', 'New York': 'NY', 'North Carolina': 'NC', 'North Dakota': 'ND', Ohio: 'OH', Oklahoma: 'OK', Oregon: 'OR', Pennsylvania: 'PA', 'Rhode Island': 'RI', 'South Carolina': 'SC', 'South Dakota': 'SD', Tennessee: 'TN', Texas: 'TX', Utah: 'UT', Vermont: 'VT', Virginia: 'VA', Washington: 'WA', 'West Virginia': 'WV', Wisconsin: 'WI', Wyoming: 'WY' }
 
+// Standard offering-memorandum confidentiality boilerplate (read-only, admin-managed).
+const CONFIDENTIALITY_TEXT = [
+  'The information contained in the following offering memorandum is proprietary and strictly confidential. It is intended to be reviewed only by the party receiving it from [COMPANY_NAME] and it should not be made available to any other person or entity without the written consent of [COMPANY_NAME].',
+  'By taking possession of and reviewing the information contained herein the recipient agrees to hold and treat all such information in the strictest confidence. The recipient further agrees that recipient will not photocopy or duplicate any part of the offering memorandum. If you have no interest in the subject property, please promptly return this offering memorandum to [COMPANY_NAME]. This offering memorandum has been prepared to provide summary, unverified financial and physical information to prospective purchasers, and to establish only a preliminary level of interest in the subject property. The information contained herein is not a substitute for a thorough due diligence investigation. [COMPANY_NAME] has not made any investigation, and makes no warranty or representation with respect to the income or expenses for the subject property, the future projected financial performance of the property, the size and square footage of the property and improvements, the presence or absence of contaminating substances, PCBs or asbestos, the compliance with local, state and federal regulations, the physical condition of the improvements thereon, or financial condition or business prospects of any tenant, or any tenant\'s plans or intentions to continue its occupancy of the subject property. The information contained in this offering memorandum has been obtained from sources we believe reliable; however, [COMPANY_NAME] has not verified, and will not verify, any of the information contained herein, nor has [COMPANY_NAME] conducted any investigation regarding these matters and makes no warranty or representation whatsoever regarding the accuracy or completeness of the information provided. All potential buyers must take appropriate measures to verify all of the information set forth herein. Prospective buyers shall be responsible for their costs and expenses of investigating the subject property.',
+  'PROPERTY SHOWINGS ARE BY APPOINTMENT ONLY.\nPLEASE CONTACT THE [COMPANY_NAME] ADVISOR FOR MORE DETAILS.',
+]
+
 const BUILDER_SECTIONS = [
   'Property Details', 'Property Data', 'Executive Summary', 'Investment Highlights',
   'Location Highlights', 'Images & Media', 'Financials', 'Rent Roll',
-  'Income & Expenses', 'Valuation', 'Tenant Profiles', 'Sales Comparables', 'Rental Comparables', 'Market Overview', 'Maps',
+  'Income & Expenses', 'Valuation', 'Tenant Profiles', 'Sales Comparables', 'Rental Comparables', 'Market Overview', 'Contact Information', 'Confidentiality Statement', 'Maps',
 ]
 
 // Suggested "Property Data" fields per property type (shown as one-tap pills).
@@ -3544,6 +3556,21 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
   const addFact = () => setForm((f) => ({ ...f, moFacts: [...(f.moFacts || []), { id: uid(), label: '', value: '' }] }))
   const updFact = (id, k, v) => setForm((f) => ({ ...f, moFacts: f.moFacts.map((x) => (x.id === id ? { ...x, [k]: v } : x)) }))
   const delFact = (id) => setForm((f) => ({ ...f, moFacts: f.moFacts.filter((x) => x.id !== id) }))
+  // Contact Information
+  const isContacts = BUILDER_SECTIONS[step] === 'Contact Information'
+  const coAgents = form.coAgents || []
+  const [coModal, setCoModal] = useState(null)
+  const openCoModal = (c) => setCoModal(c ? { ...c } : { name: '', role: 'Agent', email: '', phone: '' })
+  const submitCo = () => {
+    const c = coModal
+    if (c.id) setForm((f) => ({ ...f, coAgents: f.coAgents.map((x) => (x.id === c.id ? c : x)) }))
+    else setForm((f) => ({ ...f, coAgents: [...(f.coAgents || []), { ...c, id: uid() }] }))
+    setCoModal(null)
+    notify(c.id ? 'Co-listing agent updated' : 'Co-listing agent added')
+  }
+  const delCo = (id) => setForm((f) => ({ ...f, coAgents: f.coAgents.filter((x) => x.id !== id) }))
+  // Confidentiality Statement (read-only, admin-managed)
+  const isConfidentiality = BUILDER_SECTIONS[step] === 'Confidentiality Statement'
   const maps = form.maps || []
   const addMap = () => setForm((f) => ({ ...f, maps: [...(f.maps || []), { id: uid(), title: `Map ${(f.maps?.length || 0) + 1}`, lat: f.lat, lng: f.lng }] }))
   const updMap = (id, title) => setForm((f) => ({ ...f, maps: f.maps.map((m) => (m.id === id ? { ...m, title } : m)) }))
@@ -3685,7 +3712,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
         {/* Left: form + footer */}
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="scrollbar-slim flex-1 overflow-y-auto">
-            <div className={`mx-auto px-6 py-8 ${isMedia || isFinancials ? 'max-w-5xl' : isMarket ? 'max-w-6xl' : 'max-w-none'}`}>
+            <div className={`mx-auto px-6 py-8 ${isMedia || isFinancials || isConfidentiality ? 'max-w-5xl' : isMarket ? 'max-w-6xl' : isContacts ? 'max-w-3xl' : 'max-w-none'}`}>
               {step === 0 ? (
                 <>
                   <h2 className="text-2xl font-extrabold text-slate-900">Property Details</h2>
@@ -4409,6 +4436,109 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                       <div className="mt-3 flex items-center justify-between">
                         <button onClick={addFact} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"><Plus className="h-4 w-4" /> Add Key Fact</button>
                         <span className="text-xs text-slate-400">Empty rows won't appear in the PDF</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : isContacts ? (
+                <div>
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-500"><Users className="h-5 w-5" /></div>
+                    <div>
+                      <h2 className="text-2xl font-extrabold text-slate-900">Contact Information</h2>
+                      <p className="mt-1 text-sm text-slate-500">Add the contacts that will appear on your marketing package.</p>
+                    </div>
+                  </div>
+
+                  {/* Primary contact card */}
+                  <div className="relative mt-6 overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 p-5 text-white shadow-lg">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/20 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-blue-300"><Crown className="h-3 w-3" /> Primary Contact</span>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2.5 py-1 text-[11px] font-bold text-emerald-300"><CheckCircle2 className="h-3 w-3" /> Synced</span>
+                      </div>
+                      <button onClick={() => notify('Open your profile in Settings to edit')} className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/90 transition hover:bg-white/20"><ExternalLink className="h-3.5 w-3.5" /> Edit Profile</button>
+                    </div>
+                    <div className="mt-4 flex items-center gap-4">
+                      <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-700 ring-2 ring-orange-400/60">
+                        {CURRENT_USER.avatar ? <img src={CURRENT_USER.avatar} alt="" className="h-full w-full object-cover" /> : <UserCircle className="h-10 w-10 text-slate-400" />}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xl font-extrabold">{CURRENT_USER.name}</p>
+                        <p className="text-sm text-slate-300">{CURRENT_USER.role}</p>
+                        <span className="mt-1.5 inline-flex items-center gap-1.5 rounded-md bg-white/10 px-2 py-1 text-xs text-slate-200"><Mail className="h-3.5 w-3.5" /> {CURRENT_USER.email}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Co-listing agents */}
+                  {coAgents.length > 0 && (
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      {coAgents.map((c) => (
+                        <div key={c.id} className="group flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4">
+                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-400"><UserCircle className="h-7 w-7" /></div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-bold text-slate-900">{c.name || 'Co-Listing Agent'}</p>
+                            <p className="truncate text-xs text-slate-500">{c.role}{c.email ? ` · ${c.email}` : ''}</p>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-1">
+                            <button onClick={() => openCoModal(c)} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-brand"><Pencil className="h-4 w-4" /></button>
+                            <button onClick={() => delCo(c.id)} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-500"><Trash2 className="h-4 w-4" /></button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <button onClick={() => openCoModal()} className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"><Plus className="h-4 w-4" /> Add Co-Listing Agent</button>
+
+                  {/* No team members notice */}
+                  <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-400"><UserPlus className="h-4 w-4" /></div>
+                      <div>
+                        <p className="text-sm font-bold text-slate-900">No team members available</p>
+                        <p className="mt-0.5 text-xs text-slate-500">Additional contacts must be team members. Invite your colleagues from the Team Settings page.</p>
+                        <button onClick={() => notify('Team management lives in Settings')} className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-brand hover:underline"><Settings className="h-3.5 w-3.5" /> Manage Team →</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : isConfidentiality ? (
+                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                  <div className="flex items-start gap-3 border-b border-slate-100 p-5">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500"><ShieldCheck className="h-5 w-5" /></div>
+                    <div>
+                      <h2 className="text-xl font-extrabold text-slate-900">Confidentiality Statement</h2>
+                      <p className="mt-1 text-sm text-slate-500">Legal disclaimer for your marketing package. Auto-populated with your company name.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 border-b border-amber-200 bg-amber-50 px-5 py-3 text-sm text-amber-700">
+                    <Lock className="h-4 w-4 shrink-0" />
+                    <p>This agreement is managed by your team administrator and cannot be edited. Contact your admin to make changes.</p>
+                  </div>
+                  <div className="p-5">
+                    <div className="overflow-hidden rounded-xl border border-slate-200">
+                      <div className="flex items-center gap-0.5 border-b border-slate-100 bg-slate-50/60 px-2 py-1.5 opacity-40">
+                        {[Bold, Italic, Underline].map((I, i) => (<span key={i} className="rounded p-1.5 text-slate-400"><I className="h-4 w-4" /></span>))}
+                        <span className="mx-1 h-5 w-px bg-slate-200" />
+                        <span className="rounded p-1.5 text-slate-400"><List className="h-4 w-4" /></span>
+                        <span className="rounded p-1.5 text-slate-400"><ListOrdered className="h-4 w-4" /></span>
+                        <span className="rounded p-1.5 text-slate-400"><Link2 className="h-4 w-4" /></span>
+                        <span className="mx-1 h-5 w-px bg-slate-200" />
+                        <span className="rounded p-1.5 text-slate-400"><Undo2 className="h-4 w-4" /></span>
+                        <span className="rounded p-1.5 text-slate-400"><Redo2 className="h-4 w-4" /></span>
+                      </div>
+                      <div className="space-y-5 bg-white p-6 text-sm leading-relaxed text-slate-700">
+                        {CONFIDENTIALITY_TEXT.map((para, i) => (
+                          <p key={i} className="whitespace-pre-line">
+                            {para.split(/(\[COMPANY_NAME\])/g).map((chunk, j) => (
+                              chunk === '[COMPANY_NAME]'
+                                ? <span key={j} className="font-semibold text-blue-500">[COMPANY_NAME]</span>
+                                : <span key={j}>{chunk}</span>
+                            ))}
+                          </p>
+                        ))}
                       </div>
                     </div>
                   </div>
@@ -5449,6 +5579,40 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
               >
                 Change Scope
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add / Edit Co-Listing Agent modal */}
+      {coModal && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => setCoModal(null)}>
+          <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+              <h3 className="text-lg font-extrabold text-slate-900">{coModal.id ? 'Edit Co-Listing Agent' : 'Add Co-Listing Agent'}</h3>
+              <button onClick={() => setCoModal(null)} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="space-y-3 p-5">
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-slate-700">Full Name</label>
+                <input value={coModal.name} onChange={(e) => setCoModal((x) => ({ ...x, name: e.target.value }))} placeholder="e.g. Jane Doe" className={inputCls} />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-slate-700">Title / Role</label>
+                <input value={coModal.role} onChange={(e) => setCoModal((x) => ({ ...x, role: e.target.value }))} placeholder="e.g. Agent" className={inputCls} />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-slate-700">Email</label>
+                <input value={coModal.email} onChange={(e) => setCoModal((x) => ({ ...x, email: e.target.value }))} placeholder="name@company.com" className={inputCls} />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-slate-700">Phone</label>
+                <input value={coModal.phone} onChange={(e) => setCoModal((x) => ({ ...x, phone: e.target.value }))} placeholder="(555) 000-0000" className={inputCls} />
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-3">
+              <button onClick={() => setCoModal(null)} className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 transition hover:text-slate-900">Cancel</button>
+              <button onClick={submitCo} disabled={!coModal.name.trim()} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600 disabled:opacity-50">{coModal.id ? 'Save Changes' : 'Add Agent'}</button>
             </div>
           </div>
         </div>
