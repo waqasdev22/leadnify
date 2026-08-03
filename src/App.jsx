@@ -80,6 +80,10 @@ import {
   Save,
   FilePlus,
   Columns2,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Minus,
   ShoppingCart,
   Utensils,
   GraduationCap,
@@ -4078,11 +4082,27 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
   const [mapEditor, setMapEditor] = useState(null)
   const [reviewMode, setReviewMode] = useState(initial?.reviewMode || false)
   const [addPageOpen, setAddPageOpen] = useState(false)
-  const addCustomPage = (layout) => {
-    const titles = { media: 'Full Page Media', titleMedia: 'Title + Media', titleText: 'Title + Text', mediaText: 'Media & Text' }
-    setForm((f) => ({ ...f, customPages: [...(f.customPages || []), { id: uid(), layout, title: titles[layout] || 'Custom Page', heading: '', body: '', image: null }] }))
-    setAddPageOpen(false)
+  const [pageDraft, setPageDraft] = useState(null) // { layout, title, image, imageName, body }
+  const pageRef = useRef(null)
+  const [pageChars, setPageChars] = useState(0)
+  const openAddPage = () => { setPageDraft(null); setAddPageOpen(true) }
+  const startPage = (layout) => { setPageDraft({ layout, title: '', image: null, imageName: '', body: '' }); setPageChars(0) }
+  const setPD = (k, v) => setPageDraft((x) => ({ ...x, [k]: v }))
+  const pageExec = (cmd, val = null) => { pageRef.current?.focus(); document.execCommand(cmd, false, val); if (pageRef.current) { setPD('body', pageRef.current.innerHTML); setPageChars(pageRef.current.textContent.length) } }
+  const onPageMedia = async (e) => { const f = e.target.files?.[0]; if (!f) return; const [m] = await readFiles([f]); setPageDraft((x) => ({ ...x, image: m.url, imageName: f.name })); e.target.value = '' }
+  const savePage = () => {
+    const d = pageDraft
+    if (!d || !d.title.trim()) return
+    const body = pageRef.current ? pageRef.current.innerHTML : d.body
+    setForm((f) => ({ ...f, customPages: [...(f.customPages || []), { id: uid(), layout: d.layout, title: d.title.trim(), image: d.image || null, imageName: d.imageName || '', body }] }))
+    setAddPageOpen(false); setPageDraft(null)
     notify('Custom page added')
+  }
+  const PAGE_LAYOUTS = {
+    media: { t: 'Full Page Media', d: 'Edge-to-edge photo, floorplan, or PDF page', icon: Maximize2, c: 'bg-violet-50 text-violet-500', media: true, text: false, titleHint: 'Used in the Table of Contents (not shown on the page itself).' },
+    titleMedia: { t: 'Title + Media', d: 'Branded header with image, PDF, or site plan', icon: ImageIcon, c: 'bg-blue-50 text-blue-500', media: true, text: false, titleHint: 'Shown at the top of the page and in the Table of Contents.' },
+    titleText: { t: 'Title + Text', d: 'Branded header with rich text content', icon: FileText, c: 'bg-emerald-50 text-emerald-500', media: false, text: true, titleHint: 'Shown at the top of the page and in the Table of Contents.' },
+    mediaText: { t: 'Media & Text', d: 'Photo or PDF alongside text, side by side', icon: Columns2, c: 'bg-amber-50 text-amber-500', media: true, text: true, titleHint: 'Shown at the top of the page and in the Table of Contents.' },
   }
   const [rc, setRc] = useState({
     primary: '#1e293b', secondary: '#3b82f6', preset: 'Brokerage Presets', scheme: 'Color Schemes',
@@ -4425,7 +4445,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                 </div>
               )
             })}
-            <button onClick={() => setAddPageOpen(true)} className="flex h-24 w-40 shrink-0 flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-orange-300 text-brand transition hover:bg-orange-50">
+            <button onClick={openAddPage} className="flex h-24 w-40 shrink-0 flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-orange-300 text-brand transition hover:bg-orange-50">
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-100"><Plus className="h-4 w-4" /></span>
               <span className="text-xs font-bold">Add Page</span>
             </button>
@@ -4433,10 +4453,10 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
         </div>
         </div>
 
-        {/* Add Custom Page modal */}
+        {/* Add Custom Page modal — step 1: pick layout, step 2: fill content */}
         {addPageOpen && (
           <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => setAddPageOpen(false)}>
-            <div className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-start justify-between border-b border-slate-200 px-5 py-4">
                 <div className="flex items-start gap-3">
                   <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-orange-50 text-brand"><FilePlus className="h-5 w-5" /></div>
@@ -4447,22 +4467,90 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                 </div>
                 <button onClick={() => setAddPageOpen(false)} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"><X className="h-5 w-5" /></button>
               </div>
-              <div className="grid gap-3 p-5 sm:grid-cols-2">
-                {[
-                  { k: 'media', icon: Maximize2, c: 'bg-violet-50 text-violet-500', t: 'Full Page Media', d: 'Edge-to-edge photo, floorplan, or PDF page' },
-                  { k: 'titleMedia', icon: ImageIcon, c: 'bg-blue-50 text-blue-500', t: 'Title + Media', d: 'Branded header with image, PDF, or site plan' },
-                  { k: 'titleText', icon: FileText, c: 'bg-emerald-50 text-emerald-500', t: 'Title + Text', d: 'Branded header with rich text content' },
-                  { k: 'mediaText', icon: Columns2, c: 'bg-amber-50 text-amber-500', t: 'Media & Text', d: 'Photo or PDF alongside text, side by side' },
-                ].map((o) => (
-                  <button key={o.k} onClick={() => addCustomPage(o.k)} className="flex items-start gap-3 rounded-xl border border-slate-200 p-4 text-left transition hover:border-orange-300 hover:bg-orange-50/40">
-                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${o.c}`}><o.icon className="h-5 w-5" /></div>
-                    <div><p className="text-sm font-bold text-slate-900">{o.t}</p><p className="mt-0.5 text-xs text-slate-500">{o.d}</p></div>
-                  </button>
-                ))}
-              </div>
-              <div className="flex items-center justify-end border-t border-slate-200 px-5 py-3">
-                <button onClick={() => setAddPageOpen(false)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
-              </div>
+
+              {!pageDraft ? (
+                <div className="grid gap-3 p-5 sm:grid-cols-2">
+                  {Object.entries(PAGE_LAYOUTS).map(([k, o]) => (
+                    <button key={k} onClick={() => startPage(k)} className="flex items-start gap-3 rounded-xl border border-slate-200 p-4 text-left transition hover:border-orange-300 hover:bg-orange-50/40">
+                      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${o.c}`}><o.icon className="h-5 w-5" /></div>
+                      <div><p className="text-sm font-bold text-slate-900">{o.t}</p><p className="mt-0.5 text-xs text-slate-500">{o.d}</p></div>
+                    </button>
+                  ))}
+                </div>
+              ) : (() => {
+                const lay = PAGE_LAYOUTS[pageDraft.layout]
+                return (
+                  <>
+                    <div className="scrollbar-slim flex-1 overflow-y-auto p-5">
+                      <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-3 ring-1 ring-slate-200">
+                        <span className="flex items-center gap-2 text-sm font-semibold text-slate-800"><span className={`flex h-8 w-8 items-center justify-center rounded-lg ${lay.c}`}><lay.icon className="h-4 w-4" /></span> {lay.t}</span>
+                        <button onClick={() => setPageDraft(null)} className="text-sm font-semibold text-brand hover:underline">Change layout</button>
+                      </div>
+
+                      <label className="mb-1 mt-5 block text-sm font-semibold text-slate-700">Page Title <span className="text-rose-500">*</span></label>
+                      <input value={pageDraft.title} onChange={(e) => setPD('title', e.target.value)} placeholder="e.g. Floor Plans, Additional Photos, Terms & Conditions" className={inputCls} />
+                      <p className="mt-1 text-xs text-slate-400">{lay.titleHint}</p>
+
+                      {lay.media && (
+                        <>
+                          <label className="mb-1 mt-5 block text-sm font-semibold text-slate-700">Media</label>
+                          {pageDraft.image ? (
+                            <div className="flex items-center gap-3 rounded-xl border border-slate-200 p-3">
+                              {(pageDraft.imageName || '').toLowerCase().endsWith('.pdf') ? <FileText className="h-10 w-10 text-rose-500" /> : <img src={pageDraft.image} alt="" className="h-16 w-24 rounded object-cover" />}
+                              <span className="min-w-0 flex-1 truncate text-sm text-slate-600">{pageDraft.imageName || 'Uploaded media'}</span>
+                              <button onClick={() => setPageDraft((x) => ({ ...x, image: null, imageName: '' }))} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-500"><Trash2 className="h-4 w-4" /></button>
+                            </div>
+                          ) : (
+                            <label className="flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-slate-200 py-12 text-center transition hover:border-orange-300 hover:bg-orange-50/30">
+                              <Upload className="h-6 w-6 text-slate-400" />
+                              <span className="mt-1 text-sm font-semibold text-slate-700">Upload Image or PDF</span>
+                              <span className="text-xs text-slate-400">Drag &amp; drop a photo, floorplan, site plan, or PDF page</span>
+                              <input type="file" accept="image/*,application/pdf" className="hidden" onChange={onPageMedia} />
+                            </label>
+                          )}
+                        </>
+                      )}
+
+                      {lay.text && (
+                        <>
+                          <label className="mb-1 mt-5 block text-sm font-semibold text-slate-700">Content</label>
+                          <div className="overflow-hidden rounded-xl border border-slate-200">
+                            <div className="flex flex-wrap items-center gap-0.5 border-b border-slate-100 bg-slate-50/60 px-2 py-1.5">
+                              <button onClick={() => pageExec('formatBlock', 'H2')} className="rounded px-1.5 py-1 text-xs font-bold text-slate-500 transition hover:bg-slate-200/70">H2</button>
+                              <span className="mx-1 h-5 w-px bg-slate-200" />
+                              <button onClick={() => pageExec('bold')} className="rounded p-1.5 text-slate-500 transition hover:bg-slate-200/70"><Bold className="h-4 w-4" /></button>
+                              <button onClick={() => pageExec('italic')} className="rounded p-1.5 text-slate-500 transition hover:bg-slate-200/70"><Italic className="h-4 w-4" /></button>
+                              <button onClick={() => pageExec('underline')} className="rounded p-1.5 text-slate-500 transition hover:bg-slate-200/70"><Underline className="h-4 w-4" /></button>
+                              <span className="mx-1 h-5 w-px bg-slate-200" />
+                              <button onClick={() => pageExec('insertUnorderedList')} className="rounded p-1.5 text-slate-500 transition hover:bg-slate-200/70"><List className="h-4 w-4" /></button>
+                              <button onClick={() => pageExec('insertOrderedList')} className="rounded p-1.5 text-slate-500 transition hover:bg-slate-200/70"><ListOrdered className="h-4 w-4" /></button>
+                              <span className="mx-1 h-5 w-px bg-slate-200" />
+                              <button onClick={() => pageExec('justifyLeft')} className="rounded p-1.5 text-slate-500 transition hover:bg-slate-200/70"><AlignLeft className="h-4 w-4" /></button>
+                              <button onClick={() => pageExec('justifyCenter')} className="rounded p-1.5 text-slate-500 transition hover:bg-slate-200/70"><AlignCenter className="h-4 w-4" /></button>
+                              <button onClick={() => pageExec('justifyRight')} className="rounded p-1.5 text-slate-500 transition hover:bg-slate-200/70"><AlignRight className="h-4 w-4" /></button>
+                              <span className="mx-1 h-5 w-px bg-slate-200" />
+                              <button onClick={() => { const u = window.prompt('Link URL'); if (u) pageExec('createLink', u) }} className="rounded p-1.5 text-slate-500 transition hover:bg-slate-200/70"><Link2 className="h-4 w-4" /></button>
+                              <button onClick={() => pageExec('insertHorizontalRule')} className="rounded p-1.5 text-slate-500 transition hover:bg-slate-200/70"><Minus className="h-4 w-4" /></button>
+                              <span className="mx-1 h-5 w-px bg-slate-200" />
+                              <button onClick={() => pageExec('undo')} className="rounded p-1.5 text-slate-500 transition hover:bg-slate-200/70"><Undo2 className="h-4 w-4" /></button>
+                              <button onClick={() => pageExec('redo')} className="rounded p-1.5 text-slate-500 transition hover:bg-slate-200/70"><Redo2 className="h-4 w-4" /></button>
+                              <span className="ml-auto pr-1 text-xs font-medium text-slate-400">{pageChars}/2000</span>
+                            </div>
+                            <div className="relative">
+                              <div ref={pageRef} contentEditable suppressContentEditableWarning onInput={() => { setPD('body', pageRef.current?.innerHTML || ''); setPageChars(pageRef.current?.textContent.length || 0) }} className="scrollbar-slim min-h-[220px] max-h-[300px] overflow-y-auto p-4 text-sm leading-relaxed text-slate-700 outline-none [&_a]:text-brand [&_a]:underline" />
+                              {pageChars === 0 && <span className="pointer-events-none absolute left-4 top-4 text-sm text-slate-400">Type your content here… Use the toolbar for formatting, images, tables, and more.</span>}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-3">
+                      <button onClick={() => setAddPageOpen(false)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
+                      <button onClick={savePage} disabled={!pageDraft.title.trim()} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600 disabled:opacity-50">Add Page</button>
+                    </div>
+                  </>
+                )
+              })()}
             </div>
           </div>
         )}
