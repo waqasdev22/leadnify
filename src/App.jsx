@@ -3378,6 +3378,7 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
 
   // Financials + Rent Roll state
   const finType = form.finType || 'Full Financials'
+  const [scopeConfirm, setScopeConfirm] = useState(null) // pending finType change awaiting confirm
   const rrSel = form.rrSel || { family: 'Multi-Year Cash Flow', mode: 'Unit-by-Unit' }
   const rentRoll = form.rentRoll || []
   const addRentRow = (kind) =>
@@ -3723,7 +3724,7 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
                       return (
                         <button
                           key={t.key}
-                          onClick={() => setForm((f) => ({ ...f, finType: t.key }))}
+                          onClick={() => (t.key === finType ? null : setScopeConfirm(t.key))}
                           className={`relative rounded-2xl border-2 p-5 text-center transition ${sel ? 'border-orange-400 bg-orange-50/50' : 'border-slate-200 bg-white hover:border-slate-300'}`}
                         >
                           {sel && (
@@ -4597,6 +4598,34 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
                 <button onClick={() => setGalleryModal((g) => ({ ...g, open: false }))} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
                 <button onClick={createGallery} disabled={galleryModal.images.length < 2} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600 disabled:opacity-40">Create Page</button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Change Financial Scope confirm */}
+      {scopeConfirm && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => setScopeConfirm(null)}>
+          <div className="w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+              <h3 className="text-base font-extrabold text-slate-900">Change Financial Scope?</h3>
+              <button onClick={() => setScopeConfirm(null)} className="rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="flex gap-3 p-5">
+              <AlertTriangle className="h-5 w-5 shrink-0 text-amber-500" />
+              <div>
+                <p className="text-sm text-slate-700">Switching to <b className="font-bold">{scopeConfirm}</b> will change which wizard steps are active.</p>
+                <p className="mt-2 text-sm text-slate-400">Your existing data is preserved and accessible if you switch back.</p>
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-3">
+              <button onClick={() => setScopeConfirm(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
+              <button
+                onClick={() => { setForm((f) => ({ ...f, finType: scopeConfirm })); notify(`Financial scope changed to ${scopeConfirm}`); setScopeConfirm(null) }}
+                className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
+              >
+                Change Scope
+              </button>
             </div>
           </div>
         </div>
