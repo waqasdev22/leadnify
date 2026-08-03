@@ -3035,6 +3035,27 @@ function MiniMap({ lat, lng, zoom, className }) {
   return <div ref={elRef} className={`relative isolate ${className || 'h-40 w-full overflow-hidden rounded-lg bg-slate-100'}`} />
 }
 
+// Static Google-map thumbnail — a plain <img>, so it always renders (no Leaflet
+// sizing/timing/z-index issues). Falls back to a pin placeholder if it can't load.
+function GMapThumb({ lat, lng, zoom, className }) {
+  const [failed, setFailed] = useState(false)
+  const has = typeof lat === 'number' && !Number.isNaN(lat)
+  const c = has ? `${lat},${lng}` : '22.5937,78.9629'
+  const z = zoom || (has ? 14 : 5)
+  const url = GMAPS_KEY
+    ? `https://maps.googleapis.com/maps/api/staticmap?center=${c}&zoom=${z}&size=400x280&scale=2&maptype=roadmap&markers=color:red%7C${c}&style=feature:poi%7Cvisibility:off&style=feature:transit%7Cvisibility:off&key=${GMAPS_KEY}`
+    : null
+  return (
+    <div className={`relative isolate flex items-center justify-center bg-slate-100 ${className || 'h-40 w-full overflow-hidden rounded-lg'}`}>
+      {url && !failed ? (
+        <img src={url} alt="Map preview" onError={() => setFailed(true)} className="h-full w-full object-cover" />
+      ) : (
+        <MapPin className="h-8 w-8 text-rose-400" />
+      )}
+    </div>
+  )
+}
+
 // Interactive editor for a single map slide — pan/zoom/drag the pin, then save.
 // ---- Google Maps loader (uses the gitignored VITE_GOOGLE_MAPS_API_KEY) -------
 const GMAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
@@ -3849,7 +3870,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
     const hasLoc = typeof form.lat === 'number' && !Number.isNaN(form.lat)
     const m = {
       id: uid(),
-      title: `Map ${(form.maps?.length || 0) + 1}`,
+      title: 'Map',
       lat: hasLoc ? form.lat : 22.5937,
       lng: hasLoc ? form.lng : 78.9629,
       zoom: hasLoc ? 14 : 5,
@@ -4109,7 +4130,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
               return (
                 <div className="w-full max-w-[720px] overflow-hidden rounded-xl bg-white shadow-xl ring-1 ring-slate-200">
                   {pg?.map ? (
-                    <MiniMap lat={pg.map.lat} lng={pg.map.lng} zoom={pg.map.zoom} className="h-[360px] w-full" />
+                    <GMapThumb lat={pg.map.lat} lng={pg.map.lng} zoom={pg.map.zoom} className="h-[360px] w-full" />
                   ) : (
                     <div className="flex h-[360px] items-center justify-center bg-[repeating-linear-gradient(45deg,#f1f5f9,#f1f5f9_10px,#e2e8f0_10px,#e2e8f0_20px)] text-slate-300">
                       {rc.logo && <ImageIcon className="h-10 w-10" />}
@@ -4165,7 +4186,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                     <span onClick={(e) => { e.stopPropagation(); toggleHide(p.key) }} className="absolute right-1.5 top-1.5 z-10 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-white text-slate-500 shadow ring-1 ring-slate-200 transition hover:text-brand">
                       {hidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                     </span>
-                    {p.map ? <MiniMap lat={p.map.lat} lng={p.map.lng} zoom={p.map.zoom} className="h-full w-full" /> : (
+                    {p.map ? <GMapThumb lat={p.map.lat} lng={p.map.lng} zoom={p.map.zoom} className="h-full w-full" /> : (
                       <span className="flex h-full flex-col justify-center gap-1 px-3">
                         <span className="h-1.5 w-2/3 rounded bg-slate-300" />
                         <span className="h-1 w-full rounded bg-slate-200" />
@@ -5129,7 +5150,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                         {maps.map((m) => (
                           <div key={m.id} className="rounded-xl border border-slate-200 p-2">
                             <div className="relative">
-                              <MiniMap lat={m.lat} lng={m.lng} zoom={m.zoom} className="h-52 w-full overflow-hidden rounded-lg bg-slate-100" />
+                              <GMapThumb lat={m.lat} lng={m.lng} zoom={m.zoom} className="h-52 w-full overflow-hidden rounded-lg bg-slate-100" />
                               <div className="absolute right-2 top-2 z-[900] flex gap-1">
                                 <button onClick={() => setMapEditor(m)} className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-brand shadow-md ring-1 ring-slate-200 transition hover:bg-orange-50"><Pencil className="h-4 w-4" /></button>
                                 <button onClick={() => setMapDel(m)} className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-rose-500 shadow-md ring-1 ring-slate-200 transition hover:bg-rose-50"><Trash2 className="h-4 w-4" /></button>
