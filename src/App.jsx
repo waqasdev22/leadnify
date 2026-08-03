@@ -10,7 +10,7 @@ import { jsPDF } from 'jspdf'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { getCol, putCol, saveUser } from './api'
-import { auth, googleProvider, db } from './firebase'
+import { auth, googleProvider, db, createMemberAccount } from './firebase'
 import { ref as dbRef, get as dbGet, set as dbSet, update as dbUpdate, onValue } from 'firebase/database'
 import { PERMISSION_GROUPS, ROLE_PRESETS, ROLES, ROLE_INFO, resolvePerms } from './permissions'
 import {
@@ -9521,6 +9521,25 @@ function TeamPermissionsPage({ myUid }) {
   const [openUid, setOpenUid] = useState(null)
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState(false)
+  const [addOpen, setAddOpen] = useState(false)
+  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'Member', allPerms: false })
+  const [busy, setBusy] = useState(false)
+
+  const submitMember = async () => {
+    const { name, email, password, role, allPerms } = form
+    if (!email.trim() || password.length < 6) { notify('Enter an email and a password of 6+ characters', 'error'); return }
+    setBusy(true)
+    try {
+      const uid = await createMemberAccount({ email: email.trim(), password, name: name.trim() || email.trim().split('@')[0] })
+      const overrides = allPerms ? Object.fromEntries(PERMISSION_GROUPS.flatMap((g) => g.perms.map((p) => [p.key, true]))) : {}
+      await dbSet(dbRef(db, `users/${uid}`), { name: name.trim() || email.trim().split('@')[0], email: email.trim(), role, overrides })
+      notify('Member added')
+      setAddOpen(false); setForm({ name: '', email: '', password: '', role: 'Member', allPerms: false })
+    } catch (e) {
+      const msg = e.code === 'auth/email-already-in-use' ? 'That email already has an account' : e.code === 'auth/weak-password' ? 'Password should be at least 6 characters' : 'Could not add member — check the details and DB rules'
+      notify(msg, 'error')
+    } finally { setBusy(false) }
+  }
 
   useEffect(() => {
     return onValue(dbRef(db, 'users'), (snap) => { setUsers(snap.val() || {}); setLoading(false) }, () => { setErr(true); setLoading(false) })
@@ -9544,13 +9563,56 @@ function TeamPermissionsPage({ myUid }) {
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-8">
-      <div className="flex items-start gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-500"><Users className="h-6 w-6" /></div>
-        <div>
-          <h1 className="text-2xl font-extrabold text-slate-900">Team &amp; Permissions</h1>
-          <p className="mt-1 text-sm text-slate-500">Set each member's role, then fine-tune exactly which functions they can use.</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-500"><Users className="h-6 w-6" /></div>
+          <div>
+            <h1 className="text-2xl font-extrabold text-slate-900">Team &amp; Permissions</h1>
+            <p className="mt-1 text-sm text-slate-500">Set each member's role, then fine-tune exactly which functions they can use.</p>
+          </div>
         </div>
+        <button onClick={() => setAddOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"><Plus className="h-4 w-4" /> Add Member</button>
       </div>
+
+      {addOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => !busy && setAddOpen(false)}>
+          <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+              <h3 className="text-lg font-extrabold text-slate-900">Add Team Member</h3>
+              <button onClick={() => setAddOpen(false)} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="space-y-3 p-5">
+              <p className="text-xs text-slate-500">Creates a login for the member. Share the email &amp; password with them — they can change the password later.</p>
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-slate-700">Full Name</label>
+                <input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Jane Doe" className={inputCls} />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-slate-700">Email</label>
+                <input type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} placeholder="jane@company.com" className={inputCls} />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-slate-700">Temporary Password</label>
+                <input value={form.password} onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} placeholder="At least 6 characters" className={inputCls} />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-slate-700">Role</label>
+                <select value={form.role} onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))} className={inputCls}>
+                  {ROLES.map((r) => <option key={r}>{r}</option>)}
+                </select>
+              </div>
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                <input type="checkbox" checked={form.allPerms} onChange={(e) => setForm((f) => ({ ...f, allPerms: e.target.checked }))} className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-orange-300" />
+                Grant <b>all permissions</b> to this member
+              </label>
+            </div>
+            <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-3">
+              <button onClick={() => setAddOpen(false)} disabled={busy} className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 transition hover:text-slate-900">Cancel</button>
+              <button onClick={submitMember} disabled={busy} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600 disabled:opacity-60">{busy ? 'Adding…' : 'Add Member'}</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50/60 p-4 text-sm text-blue-800">
         New members join by choosing <b>Create account</b> on the sign-in page. They start as <b>Member</b> and appear here — then you adjust their access below.
