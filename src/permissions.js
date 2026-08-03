@@ -71,6 +71,13 @@ export const ROLE_INFO = {
   Coordinator: { color: 'emerald', desc: 'Creates documents on behalf of others. Free seat.' },
 }
 
+// Realtime DB keys can't contain "." — encode permission keys for storage.
+// (Permission keys never contain "-", so the mapping is reversible.)
+export const encPerm = (k) => k.replace(/\./g, '-')
+export const decPerm = (k) => k.replace(/-/g, '.')
+export const decodeOverrides = (ov) => { const o = {}; for (const k in (ov || {})) o[decPerm(k)] = ov[k]; return o }
+export const encodeOverrides = (ov) => { const o = {}; for (const k in (ov || {})) o[encPerm(k)] = ov[k]; return o }
+
 // Effective permission set = role preset ± per-user overrides ({ key: true|false }).
 export function resolvePerms(role, overrides) {
   const set = new Set(ROLE_PRESETS[role] || [])

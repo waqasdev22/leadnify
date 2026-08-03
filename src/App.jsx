@@ -12,7 +12,7 @@ import 'leaflet/dist/leaflet.css'
 import { getCol, putCol, saveUser } from './api'
 import { auth, googleProvider, db, createMemberAccount } from './firebase'
 import { ref as dbRef, get as dbGet, set as dbSet, update as dbUpdate, onValue } from 'firebase/database'
-import { PERMISSION_GROUPS, ROLE_PRESETS, ROLES, ROLE_INFO, resolvePerms } from './permissions'
+import { PERMISSION_GROUPS, ROLE_PRESETS, ROLES, ROLE_INFO, resolvePerms, decodeOverrides, encodeOverrides } from './permissions'
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -9531,7 +9531,7 @@ function TeamPermissionsPage({ myUid }) {
     setBusy(true)
     try {
       const uid = await createMemberAccount({ email: email.trim(), password, name: name.trim() || email.trim().split('@')[0] })
-      const overrides = allPerms ? Object.fromEntries(PERMISSION_GROUPS.flatMap((g) => g.perms.map((p) => [p.key, true]))) : {}
+      const overrides = allPerms ? encodeOverrides(Object.fromEntries(PERMISSION_GROUPS.flatMap((g) => g.perms.map((p) => [p.key, true])))) : {}
       await dbSet(dbRef(db, `users/${uid}`), { name: name.trim() || email.trim().split('@')[0], email: email.trim(), role, overrides })
       notify('Member added')
       setAddOpen(false); setForm({ name: '', email: '', password: '', role: 'Member', allPerms: false })
@@ -9550,13 +9550,13 @@ function TeamPermissionsPage({ myUid }) {
   const setUserRole = (uid, role) => { dbUpdate(dbRef(db, `users/${uid}`), { role }).then(() => notify('Role updated')).catch(() => notify('Save failed — check DB rules', 'error')) }
   const togglePerm = (uid, key) => {
     const u = users[uid]; if (!u) return
-    const eff = resolvePerms(u.role, u.overrides)
+    const overrides = decodeOverrides(u.overrides) // dotted keys
+    const eff = resolvePerms(u.role, overrides)
     const preset = new Set(ROLE_PRESETS[u.role] || [])
     const desired = !eff.has(key)
-    const overrides = { ...(u.overrides || {}) }
     if (desired === preset.has(key)) delete overrides[key]
     else overrides[key] = desired
-    dbUpdate(dbRef(db, `users/${uid}`), { overrides }).catch(() => notify('Save failed — check DB rules', 'error'))
+    dbSet(dbRef(db, `users/${uid}/overrides`), encodeOverrides(overrides)).catch(() => notify('Save failed — check DB rules', 'error'))
   }
 
   const roleBadge = (r) => ({ Admin: 'bg-amber-50 text-amber-700', Member: 'bg-slate-100 text-slate-600', Coordinator: 'bg-emerald-50 text-emerald-700' }[r] || 'bg-slate-100 text-slate-600')
@@ -9625,7 +9625,7 @@ function TeamPermissionsPage({ myUid }) {
       ) : (
         <div className="mt-5 space-y-3">
           {list.map((u) => {
-            const eff = resolvePerms(u.role, u.overrides)
+            const eff = resolvePerms(u.role, decodeOverrides(u.overrides))
             const isMe = u.uid === myUid
             const open = openUid === u.uid
             return (
@@ -9718,7 +9718,7 @@ export default function App() {
           profile = { role: 'Member', overrides: {} }
         }
         setRole(profile.role || 'Member')
-        setPerms(resolvePerms(profile.role || 'Member', profile.overrides))
+        setPerms(resolvePerms(profile.role || 'Member', decodeOverrides(profile.overrides)))
       } else {
         setIsLoggedIn(false)
         setRole('Member')
