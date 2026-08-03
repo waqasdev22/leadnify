@@ -4117,7 +4117,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
   // Calculated Key Metrics — auto-fill from price & property data where possible.
   const dpVal = (...labels) => {
     for (const l of labels) {
-      const hit = form.dataPoints.find((p) => p.label.toLowerCase() === l.toLowerCase() && p.value)
+      const hit = (form.dataPoints || []).find((p) => p.label.toLowerCase() === l.toLowerCase() && p.value)
       if (hit) return hit.value
     }
     return ''
