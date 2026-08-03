@@ -470,13 +470,8 @@ const downloadPdf = (item, notify) => {
 
 const NAV_ITEMS = [
   { key: 'dashboard', label: 'Dashboard', icon: Home },
-  { key: 'documents', label: 'Documents', icon: FileText },
   { key: 'listings', label: 'Listing Hub', icon: Globe },
   { key: 'deals', label: 'Deal Rooms', icon: FolderLock },
-  { key: 'crm', label: 'CRM', icon: Contact, dot: true },
-  { key: 'email', label: 'Email Blasts', icon: Send },
-  { key: 'templates', label: 'Custom Templates', icon: Wand2 },
-  { key: 'knowledge', label: 'Knowledge Base', icon: BookOpen, dividerBefore: true },
 ]
 
 /* -------------------------------------------------------------------------- */
@@ -4167,7 +4162,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
     return (
       <div className="fixed inset-0 z-50 flex bg-slate-50">
         <div className="hidden md:block">
-          <Sidebar forceCollapsed active="documents" onNavigate={navFromBuilder} onSignOut={() => { if (onExit) onExit(); if (onSignOut) onSignOut() }} user={user || CURRENT_USER} />
+          <Sidebar forceCollapsed active="dashboard" onNavigate={navFromBuilder} onSignOut={() => { if (onExit) onExit(); if (onSignOut) onSignOut() }} user={user || CURRENT_USER} />
         </div>
         <div className="flex min-w-0 flex-1 flex-col">
         {/* Header */}
@@ -4361,7 +4356,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
     <div className="fixed inset-0 z-50 flex bg-slate-50">
       {/* Collapsed nav rail — same app sidebar, shown while building */}
       <div className="hidden md:block">
-        <Sidebar forceCollapsed active="documents" onNavigate={navFromBuilder} onSignOut={() => { if (onExit) onExit(); if (onSignOut) onSignOut() }} user={user || CURRENT_USER} />
+        <Sidebar forceCollapsed active="dashboard" onNavigate={navFromBuilder} onSignOut={() => { if (onExit) onExit(); if (onSignOut) onSignOut() }} user={user || CURRENT_USER} />
       </div>
       <div className="flex min-w-0 flex-1 flex-col">
       {/* Header */}
