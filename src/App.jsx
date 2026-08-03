@@ -4386,9 +4386,18 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                     {/* Right column */}
                     <div>
                       <label className="mb-1 block text-sm font-semibold text-slate-700">Market Image</label>
-                      <div className="flex min-h-[200px] flex-col items-center justify-center rounded-xl border border-slate-200 bg-white p-6 text-center">
+                      <div className="group relative flex min-h-[200px] flex-col items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white p-6 text-center">
                         {form.moImage ? (
-                          <img src={form.moImage} alt="" className="max-h-64 w-full rounded-lg object-cover" />
+                          <>
+                            <img src={form.moImage} alt="" className="max-h-64 w-full rounded-lg object-cover" />
+                            <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/40 opacity-0 transition group-hover:opacity-100">
+                              <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow transition hover:bg-slate-50">
+                                <Pencil className="h-4 w-4" /> Change
+                                <input type="file" accept="image/*" className="hidden" onChange={async (e) => { if (!e.target.files?.length) return; const [img] = await readFiles([e.target.files[0]]); setForm((f) => ({ ...f, moImage: img.url })); notify('Market image updated') }} />
+                              </label>
+                              <button onClick={() => { setForm((f) => ({ ...f, moImage: null })); notify('Market image removed') }} className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-rose-500 shadow transition hover:bg-rose-50"><Trash2 className="h-4 w-4" /> Remove</button>
+                            </div>
+                          </>
                         ) : (
                           <>
                             <ImageIcon className="h-8 w-8 text-slate-300" />
@@ -4400,10 +4409,15 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                           </>
                         )}
                       </div>
-                      <label className="mt-3 flex h-11 w-14 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-orange-300 text-orange-400 transition hover:bg-orange-50">
-                        <Upload className="h-4 w-4" />
-                        <input type="file" accept="image/*" className="hidden" onChange={async (e) => { if (!e.target.files?.length) return; const [img] = await readFiles([e.target.files[0]]); setForm((f) => ({ ...f, moImage: img.url })) }} />
-                      </label>
+                      <div className="mt-3 flex items-center gap-2">
+                        <label className="flex h-11 w-14 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-orange-300 text-orange-400 transition hover:bg-orange-50">
+                          <Upload className="h-4 w-4" />
+                          <input type="file" accept="image/*" className="hidden" onChange={async (e) => { if (!e.target.files?.length) return; const [img] = await readFiles([e.target.files[0]]); setForm((f) => ({ ...f, moImage: img.url })) }} />
+                        </label>
+                        {form.moImage && (
+                          <button onClick={() => { setForm((f) => ({ ...f, moImage: null })); notify('Market image removed') }} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50"><Trash2 className="h-4 w-4" /> Remove</button>
+                        )}
+                      </div>
 
                       <div className="mt-6 flex items-center justify-between">
                         <div className="flex items-center gap-2">
