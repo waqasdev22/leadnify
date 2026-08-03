@@ -4112,8 +4112,8 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                             <div className="relative">
                               <MiniMap lat={m.lat} lng={m.lng} zoom={m.zoom} className="h-56 w-full overflow-hidden rounded-lg bg-slate-100" />
                               <div className="absolute right-2 top-2 flex gap-1">
-                                <button onClick={() => setMapEditor(m)} className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-slate-500 shadow ring-1 ring-slate-200 transition hover:text-brand"><Pencil className="h-3.5 w-3.5" /></button>
-                                <button onClick={() => delMap(m.id)} className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-rose-400 shadow ring-1 ring-slate-200 transition hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" /></button>
+                                <button onClick={() => setMapEditor(m)} className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-brand shadow ring-1 ring-slate-200 transition hover:bg-orange-50"><Pencil className="h-4 w-4" /></button>
+                                <button onClick={() => delMap(m.id)} className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-rose-500 shadow ring-1 ring-slate-200 transition hover:bg-rose-50"><Trash2 className="h-4 w-4" /></button>
                               </div>
                             </div>
                             <div className="mt-2 flex items-center gap-1 px-1">
@@ -4695,8 +4695,8 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                             <div className="relative">
                               <MiniMap lat={m.lat} lng={m.lng} zoom={m.zoom} className="h-56 w-full overflow-hidden rounded-lg bg-slate-100" />
                               <div className="absolute right-2 top-2 flex gap-1">
-                                <button onClick={() => setMapEditor(m)} className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-slate-500 shadow ring-1 ring-slate-200 transition hover:text-brand"><Pencil className="h-3.5 w-3.5" /></button>
-                                <button onClick={() => delMap(m.id)} className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-rose-400 shadow ring-1 ring-slate-200 transition hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" /></button>
+                                <button onClick={() => setMapEditor(m)} className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-brand shadow ring-1 ring-slate-200 transition hover:bg-orange-50"><Pencil className="h-4 w-4" /></button>
+                                <button onClick={() => delMap(m.id)} className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-rose-500 shadow ring-1 ring-slate-200 transition hover:bg-rose-50"><Trash2 className="h-4 w-4" /></button>
                               </div>
                             </div>
                             <div className="mt-2 flex items-center gap-1 px-1">
