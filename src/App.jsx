@@ -5206,7 +5206,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
           {/* Footer */}
           <div className="flex items-center justify-between border-t border-slate-200 bg-white px-6 py-3">
             <button
-              onClick={() => ((step === 8 && form.finType === 'Cap Rate & NOI') || (step === 9 && form.finType === 'Skip Financials') ? setStep(6) : step > 0 ? setStep(step - 1) : onExit())}
+              onClick={() => (step > 0 ? setStep(step - 1) : onExit())}
               className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-500 transition hover:text-slate-800"
             >
               <ArrowLeft className="h-4 w-4" /> Back
