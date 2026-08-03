@@ -3227,7 +3227,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
     // Cap Rate & NOI / Skip scopes skip the Rent Roll step from Financials (6).
     if (step === 6 && form.finType === 'Cap Rate & NOI') { setStep(8); return }
     if (step === 6 && form.finType === 'Skip Financials') { setStep(9); return }
-    if (last) onSave(form, step, true)
+    if (last) setReviewMode(true)
     else setStep(step + 1)
   }
 
@@ -3617,6 +3617,13 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
   const isConfidentiality = BUILDER_SECTIONS[step] === 'Confidentiality Statement'
   const maps = form.maps || []
   const [mapEditor, setMapEditor] = useState(null)
+  const [reviewMode, setReviewMode] = useState(false)
+  const [rc, setRc] = useState({
+    primary: '#1e293b', secondary: '#3b82f6', preset: 'Brokerage Presets', scheme: 'Color Schemes',
+    logo: true, logoSize: 90, companyInfo: true, contactInfo: true, price: true, capRate: true, noi: true, capNoiMode: 'Auto',
+    hidden: {}, colorsOpen: true, coverOpen: true, page: 0,
+  })
+  const setRcv = (k, v) => setRc((x) => ({ ...x, [k]: v }))
   const addMap = () => {
     const m = { id: uid(), title: `Map ${(form.maps?.length || 0) + 1}`, lat: form.lat, lng: form.lng, zoom: 14 }
     setForm((f) => ({ ...f, maps: [...(f.maps || []), m] }))
@@ -3735,6 +3742,217 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
   const ptCard = PROPERTY_TYPE_CARDS.find((c) => c.key === config.propertyType)
   const PIcon = ptCard ? ptCard.icon : Building2
   const seg = 'rounded-md px-4 py-1.5 text-sm font-semibold transition'
+
+  // ---- Review & Customize (final step) -------------------------------------
+  if (reviewMode) {
+    const priceStr = form.price ? `$${(Number(form.price) / 1e6).toFixed(3)}M` : '—'
+    const contact = (form.coAgents && form.coAgents[0]) || { name: CURRENT_USER.name, title: 'Agent', email: CURRENT_USER.email }
+    const reviewPages = [
+      { key: 'cover', title: 'Cover Page' },
+      { key: 'exec', title: 'Executive Summary' },
+      { key: 'toc', title: 'Table of Contents' },
+      { key: 'invest', title: 'Investment Highlights' },
+      { key: 'location', title: 'Location Highlights' },
+      ...(maps || []).map((m) => ({ key: m.id, title: m.title || 'Map', map: m })),
+      { key: 'tenants', title: 'Tenant Profiles' },
+      { key: 'demographics', title: 'Demographics' },
+      { key: 'closing', title: 'Closing' },
+    ]
+    const visiblePages = reviewPages.filter((p) => !rc.hidden[p.key])
+    const toggleHide = (k) => setRc((x) => ({ ...x, hidden: { ...x.hidden, [k]: !x.hidden[k] } }))
+    const RcToggle = ({ on, onClick }) => (
+      <button onClick={onClick} className={`relative h-5 w-9 shrink-0 rounded-full transition ${on ? 'bg-brand' : 'bg-slate-300'}`}>
+        <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${on ? 'left-[18px]' : 'left-0.5'}`} />
+      </button>
+    )
+    const rowCls = 'flex items-center justify-between py-2.5'
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col bg-slate-50">
+        {/* Header */}
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-6 py-3">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setReviewMode(false)} className="inline-flex items-center gap-1.5 rounded-lg px-2 py-2 text-sm font-semibold text-slate-500 transition hover:text-slate-800"><ArrowLeft className="h-4 w-4" /></button>
+            <h1 className="text-lg font-extrabold text-slate-900">Review &amp; Customize <span className="ml-1 text-sm font-semibold text-slate-400">{visiblePages.length}/{reviewPages.length} pages</span></h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => notify('Template gallery coming soon')} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"><Repeat2 className="h-4 w-4" /> Swap Template</button>
+            <button onClick={() => { notify('Generating PDF…'); onSave(form, step, true) }} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"><Download className="h-4 w-4" /> Download PDF</button>
+          </div>
+        </header>
+
+        {/* Body */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Left customization panel */}
+          <aside className="scrollbar-slim w-80 shrink-0 overflow-y-auto border-r border-slate-200 bg-white">
+            {/* COLORS */}
+            <div className="border-b border-slate-100">
+              <button onClick={() => setRcv('colorsOpen', !rc.colorsOpen)} className="flex w-full items-center justify-between px-4 py-3">
+                <span className="flex items-center gap-2 text-sm font-extrabold uppercase tracking-wide text-slate-700"><Palette className="h-4 w-4 text-brand" /> Colors</span>
+                <ChevronDown className={`h-4 w-4 text-slate-400 transition ${rc.colorsOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {rc.colorsOpen && (
+                <div className="space-y-3 px-4 pb-4">
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 text-sm text-slate-600">
+                      <input type="color" value={rc.primary} onChange={(e) => setRcv('primary', e.target.value)} className="h-7 w-7 cursor-pointer rounded-lg border border-slate-200 bg-white p-0.5" /> Primary
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-slate-600">
+                      <input type="color" value={rc.secondary} onChange={(e) => setRcv('secondary', e.target.value)} className="h-7 w-7 cursor-pointer rounded-lg border border-slate-200 bg-white p-0.5" /> Secondary
+                    </label>
+                  </div>
+                  <div className="relative">
+                    <select value={rc.preset} onChange={(e) => setRcv('preset', e.target.value)} className="w-full appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none">
+                      <option>Brokerage Presets</option><option>Value REIS</option><option>Classic Navy</option><option>Modern Slate</option>
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  </div>
+                  <div className="relative">
+                    <select value={rc.scheme} onChange={(e) => setRcv('scheme', e.target.value)} className="w-full appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none">
+                      <option>Color Schemes</option><option>Ocean</option><option>Sunset</option><option>Forest</option><option>Monochrome</option>
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* COVER PAGE */}
+            <div className="border-b border-slate-100">
+              <button onClick={() => setRcv('coverOpen', !rc.coverOpen)} className="flex w-full items-center justify-between px-4 py-3">
+                <span className="flex items-center gap-2 text-sm font-extrabold uppercase tracking-wide text-slate-700"><ImageIcon className="h-4 w-4 text-brand" /> Cover Page</span>
+                <ChevronDown className={`h-4 w-4 text-slate-400 transition ${rc.coverOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {rc.coverOpen && (
+                <div className="px-4 pb-4">
+                  <div className={rowCls}>
+                    <span className="text-sm font-semibold text-slate-700">Company Logo</span>
+                    <RcToggle on={rc.logo} onClick={() => setRcv('logo', !rc.logo)} />
+                  </div>
+                  {rc.logo && (
+                    <div className="pb-2">
+                      <div className="flex items-center justify-between text-xs text-slate-500">
+                        <span>Logo Size</span>
+                        <span>{rc.logoSize}% <button onClick={() => setRcv('logoSize', 100)} className="ml-1 font-semibold text-brand">Reset</button></span>
+                      </div>
+                      <input type="range" min="40" max="140" value={rc.logoSize} onChange={(e) => setRcv('logoSize', Number(e.target.value))} className="mt-1 w-full accent-orange-500" />
+                    </div>
+                  )}
+                  <div className={rowCls}>
+                    <span>
+                      <span className="block text-sm font-semibold text-slate-700">Company Info</span>
+                      <span className="block text-xs text-slate-400">Brokerage name, phone, website &amp; address</span>
+                    </span>
+                    <RcToggle on={rc.companyInfo} onClick={() => setRcv('companyInfo', !rc.companyInfo)} />
+                  </div>
+                  <div className={rowCls}>
+                    <span>
+                      <span className="block text-sm font-semibold text-slate-700">Contact Info</span>
+                      <span className="block text-xs text-slate-400">Show broker name &amp; phone</span>
+                    </span>
+                    <RcToggle on={rc.contactInfo} onClick={() => setRcv('contactInfo', !rc.contactInfo)} />
+                  </div>
+                  <div className={rowCls}><span className="text-sm font-semibold text-slate-700">Price</span><RcToggle on={rc.price} onClick={() => setRcv('price', !rc.price)} /></div>
+                  <div className={rowCls}><span className="text-sm font-semibold text-slate-700">Cap Rate</span><RcToggle on={rc.capRate} onClick={() => setRcv('capRate', !rc.capRate)} /></div>
+                  <div className={rowCls}><span className="text-sm font-semibold text-slate-700">NOI</span><RcToggle on={rc.noi} onClick={() => setRcv('noi', !rc.noi)} /></div>
+                  <div className="flex items-center justify-between py-2.5">
+                    <span className="text-sm font-semibold text-slate-700">Cap Rate &amp; NOI</span>
+                    <div className="relative">
+                      <select value={rc.capNoiMode} onChange={(e) => setRcv('capNoiMode', e.target.value)} className="appearance-none rounded-lg border border-slate-200 bg-white py-1.5 pl-3 pr-8 text-sm text-slate-700 outline-none">
+                        <option>Auto</option><option>Always</option><option>Never</option>
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    </div>
+                  </div>
+                  <p className="pt-1 text-xs text-slate-400">Applies to the cover, contents, valuation, and pro forma analysis pages. Pro Forma hides the in-place value.</p>
+                </div>
+              )}
+            </div>
+          </aside>
+
+          {/* Center preview */}
+          <div className="relative flex flex-1 items-center justify-center overflow-auto p-8">
+            {(() => {
+              const pg = visiblePages[Math.min(rc.page, visiblePages.length - 1)] || visiblePages[0]
+              return (
+                <div className="w-full max-w-[720px] overflow-hidden rounded-xl bg-white shadow-xl ring-1 ring-slate-200">
+                  {pg?.map ? (
+                    <MiniMap lat={pg.map.lat} lng={pg.map.lng} zoom={pg.map.zoom} className="h-[360px] w-full" />
+                  ) : (
+                    <div className="flex h-[360px] items-center justify-center bg-[repeating-linear-gradient(45deg,#f1f5f9,#f1f5f9_10px,#e2e8f0_10px,#e2e8f0_20px)] text-slate-300">
+                      {rc.logo && <ImageIcon className="h-10 w-10" />}
+                    </div>
+                  )}
+                  <div className="px-8 py-6">
+                    <span className="inline-block rounded px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white" style={{ background: rc.primary }}>Offering Memorandum</span>
+                    <div className="mt-3 flex items-start justify-between gap-4">
+                      <div>
+                        <h2 className="text-3xl font-extrabold text-slate-900">{docName}</h2>
+                        <p className="mt-1 text-sm text-slate-500">{form.city || 'City'}</p>
+                        <p className="text-sm text-slate-500">{[form.city, form.state, form.zip].filter(Boolean).join(', ') || 'Address'}</p>
+                      </div>
+                      {rc.price && (
+                        <div className="text-right">
+                          <p className="text-xl font-extrabold text-slate-900">{priceStr}</p>
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Price</p>
+                        </div>
+                      )}
+                    </div>
+                    {rc.contactInfo && (
+                      <div className="mt-4 border-t border-slate-200 pt-3">
+                        <p className="text-sm font-bold text-slate-900">{contact.name}</p>
+                        <p className="text-xs text-slate-500">{contact.title || 'Agent'}</p>
+                        <p className="text-xs text-slate-500">{contact.email}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })()}
+            {visiblePages.length > 1 && (
+              <button onClick={() => setRcv('page', (rc.page + 1) % visiblePages.length)} className="absolute right-6 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white text-brand shadow-md ring-1 ring-slate-200 transition hover:bg-orange-50">
+                <ChevronDown className="h-5 w-5 -rotate-90" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Bottom: document pages */}
+        <div className="border-t border-slate-200 bg-white px-4 py-3">
+          <p className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+            Document Pages <span className="font-medium normal-case text-slate-400">· Drag to reorder · Click <Eye className="inline h-3.5 w-3.5" /> to show/hide pages</span>
+          </p>
+          <div className="scrollbar-slim flex gap-3 overflow-x-auto pb-1">
+            {reviewPages.map((p, i) => {
+              const hidden = !!rc.hidden[p.key]
+              const active = visiblePages[rc.page]?.key === p.key
+              return (
+                <div key={p.key} className="w-40 shrink-0">
+                  <button onClick={() => { const vi = visiblePages.findIndex((v) => v.key === p.key); if (vi >= 0) setRcv('page', vi) }} className={`relative block h-24 w-full overflow-hidden rounded-lg border-2 bg-slate-50 text-left transition ${active ? 'border-brand' : 'border-slate-200 hover:border-slate-300'} ${hidden ? 'opacity-40' : ''}`}>
+                    <span className="absolute left-1.5 top-1.5 z-10 flex h-5 w-5 items-center justify-center rounded bg-slate-900/80 text-[11px] font-bold text-white">{i + 1}</span>
+                    <span onClick={(e) => { e.stopPropagation(); toggleHide(p.key) }} className="absolute right-1.5 top-1.5 z-10 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-white text-slate-500 shadow ring-1 ring-slate-200 transition hover:text-brand">
+                      {hidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                    </span>
+                    {p.map ? <MiniMap lat={p.map.lat} lng={p.map.lng} zoom={p.map.zoom} className="h-full w-full" /> : (
+                      <span className="flex h-full flex-col justify-center gap-1 px-3">
+                        <span className="h-1.5 w-2/3 rounded bg-slate-300" />
+                        <span className="h-1 w-full rounded bg-slate-200" />
+                        <span className="h-1 w-4/5 rounded bg-slate-200" />
+                      </span>
+                    )}
+                  </button>
+                  <p className="mt-1 truncate text-center text-xs font-semibold text-slate-600">{p.title}</p>
+                </div>
+              )
+            })}
+            <button onClick={() => notify('Add a custom page')} className="flex h-24 w-40 shrink-0 flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-orange-300 text-brand transition hover:bg-orange-50">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-100"><Plus className="h-4 w-4" /></span>
+              <span className="text-xs font-bold">Add Page</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-slate-50">
