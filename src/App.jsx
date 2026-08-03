@@ -4536,7 +4536,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                       <div>
                         <p className="text-sm font-bold text-slate-900">No team members available</p>
                         <p className="mt-0.5 text-xs text-slate-500">Additional contacts must be team members. Invite your colleagues from the Team Settings page.</p>
-                        <button onClick={() => notify('Team management lives in Settings')} className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-brand hover:underline"><Settings className="h-3.5 w-3.5" /> Manage Team →</button>
+                        <span className="mt-1.5 inline-flex cursor-default items-center gap-1 text-xs font-semibold text-brand"><Settings className="h-3.5 w-3.5" /> Manage Team →</span>
                       </div>
                     </div>
                   </div>
