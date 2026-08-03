@@ -3853,7 +3853,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                         <span className="h-2 w-2 rounded-full bg-brand" /> {rrSelLabel}
                       </span>
                       <span className="text-slate-300">|</span>
-                      <button onClick={() => setRrConfirm(true)} className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-50">
+                      <button onClick={() => setForm((f) => ({ ...f, rrChosen: false }))} className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-50">
                         <Repeat2 className="h-3.5 w-3.5" /> Change Rent Roll Type
                       </button>
                     </div>
@@ -3878,7 +3878,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                                 return (
                                   <button
                                     key={m.mode}
-                                    onClick={() => setForm((f) => ({ ...f, rrSel: { family: fam.family, mode: m.mode }, rrChosen: true }))}
+                                    onClick={() => (sel ? setForm((f) => ({ ...f, rrChosen: true })) : setRrConfirm({ family: fam.family, mode: m.mode }))}
                                     className={`w-full rounded-xl border-2 bg-white p-3 text-left transition ${sel ? 'border-orange-400' : 'border-slate-200 hover:border-slate-300'}`}
                                   >
                                     <div className="flex items-center justify-between">
@@ -4911,7 +4911,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
             </div>
             <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-3">
               <button onClick={() => setRrConfirm(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
-              <button onClick={() => { setForm((f) => ({ ...f, rrChosen: false })); setRrConfirm(null) }} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600">Change Type</button>
+              <button onClick={() => { setForm((f) => ({ ...f, rrSel: rrConfirm, rrChosen: true })); setRrConfirm(null) }} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600">Change Type</button>
             </div>
           </div>
         </div>
