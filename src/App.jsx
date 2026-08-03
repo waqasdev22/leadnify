@@ -8020,9 +8020,9 @@ function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onRes
   const notify = useToast()
 
   const [slug, setSlug] = useState('vaziamts')
-  const siteUrl = `https://www.crebuilder.com/listings/${slug}`
   // Functional link that actually opens the microsite (works when pasted in a new tab).
   const hubUrl = `${window.location.origin}${window.location.pathname}?hub=${slug}`
+  const siteUrl = hubUrl
 
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
@@ -8201,9 +8201,9 @@ function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onRes
         </button>
       </div>
 
-      <div className="mt-5 grid items-start gap-5 md:grid-cols-[minmax(0,1fr)_340px] lg:grid-cols-[minmax(0,1fr)_400px] xl:grid-cols-[minmax(0,1fr)_450px]">
+      <div className="mt-5 grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_340px]">
         {/* LEFT column */}
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           {/* Public URL card */}
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex flex-wrap items-center gap-2">
@@ -8251,7 +8251,7 @@ function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onRes
                   Replace the long default URL with a short, easy-to-remember link. This is the URL you share with clients or put on your business cards.
                 </p>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <span className="whitespace-nowrap text-sm text-slate-500">https://www.crebuilder.com/listings/</span>
+                  <span className="whitespace-nowrap text-sm text-slate-500">{window.location.origin}{window.location.pathname}?hub=</span>
                   <input
                     value={slugDraft}
                     onChange={(e) => setSlugDraft(e.target.value.replace(/[^a-z0-9-]/gi, '').toLowerCase())}
@@ -8915,7 +8915,7 @@ function DocumentHubView({ room, onBack, notify, onEditDocument }) {
       },
     })
   }
-  const publicUrl = `https://www.crebuilder.com/listings/valuereis/${room.id}${room.id}195`.slice(0, 46)
+  const publicUrl = `${window.location.origin}${window.location.pathname}?room=${room.id}`
   const stat = (Icon, value, label, color) => (
     <div className="flex items-center gap-3 px-4 py-3">
       <Icon className={`h-5 w-5 ${color}`} />
