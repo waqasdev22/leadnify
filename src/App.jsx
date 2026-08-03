@@ -4890,14 +4890,15 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                         {maps.map((m) => (
                           <div key={m.id} className="rounded-xl border border-slate-200 p-2">
                             <div className="relative">
-                              <div className="flex h-56 w-full items-center justify-center rounded-lg bg-slate-100 text-slate-300"><Map className="h-10 w-10" /></div>
+                              <MiniMap lat={m.lat} lng={m.lng} zoom={m.zoom} className="h-56 w-full overflow-hidden rounded-lg bg-slate-100" />
                               <div className="absolute right-2 top-2 flex gap-1">
+                                <button onClick={() => setMapEditor(m)} className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-brand shadow ring-1 ring-slate-200 transition hover:bg-orange-50"><Pencil className="h-4 w-4" /></button>
                                 <button onClick={() => delMap(m.id)} className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-rose-500 shadow ring-1 ring-slate-200 transition hover:bg-rose-50"><Trash2 className="h-4 w-4" /></button>
                               </div>
                             </div>
                             <div className="mt-2 flex items-center gap-1 px-1">
                               <input id={`maptitle-${m.id}`} value={m.title} onChange={(e) => updMap(m.id, e.target.value)} className="min-w-0 flex-1 border-none bg-transparent text-sm font-bold text-slate-800 outline-none" />
-                              <Pencil className="h-3 w-3 shrink-0 text-slate-300" />
+                              <button onClick={() => setMapEditor(m)} className="shrink-0 text-slate-300 transition hover:text-brand"><Pencil className="h-3 w-3" /></button>
                             </div>
                             <p className="px-1 text-xs text-slate-400">Shown as the page header</p>
                           </div>
