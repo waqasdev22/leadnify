@@ -4425,15 +4425,25 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
             <div className="border-l-4 border-brand pl-2 text-sm font-extrabold text-slate-900">Document Sections</div>
             <p className="mt-1 pl-2 text-xs text-slate-500">Click any section below to jump back and edit it.</p>
             <div className="mt-3 space-y-0.5">
-              {BUILDER_SECTIONS.map((s, i) => (
-                <button key={i} onClick={() => { setReviewMode(false); setStep(i) }} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-50">
+              {[
+                { label: 'Property Details', i: 0 },
+                { label: 'Property Data', i: 1 },
+                { label: 'Contact Info', i: 14 },
+                { label: 'Executive Summary', i: 2 },
+                { label: 'Property Highlights', i: 3 },
+                { label: 'Market Overview', i: 13 },
+                { label: 'Images & Media', i: 5 },
+                { label: 'Maps', i: 16 },
+                { label: 'Confidentiality', i: 15 },
+              ].map((s) => (
+                <button key={s.i} onClick={() => { setReviewMode(false); setStep(s.i) }} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-50">
                   <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
-                  <span className="min-w-0 flex-1 truncate">{s}</span>
+                  <span className="min-w-0 flex-1 truncate">{s.label}</span>
                   <ChevronRight className="h-4 w-4 shrink-0 text-slate-300" />
                 </button>
               ))}
               <div className="mt-1 flex items-center gap-2 rounded-lg bg-orange-50 px-2 py-2">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-white">{BUILDER_SECTIONS.length + 1}</span>
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-white">10</span>
                 <span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-slate-900">Review &amp; Customize</span><span className="block text-xs font-medium text-brand">Editing</span></span>
               </div>
             </div>
