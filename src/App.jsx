@@ -950,7 +950,6 @@ function Sidebar({ active, onNavigate, onSignOut, user, forceCollapsed }) {
       </nav>
 
       {/* Upgrade promo */}
-      {!collapsed && showPromo && <UpgradeCard onDismiss={() => setShowPromo(false)} />}
 
       {/* Sign out + profile */}
       <div className="border-t border-slate-100 p-3">
