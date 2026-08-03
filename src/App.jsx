@@ -4099,10 +4099,13 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
     const d = pageDraft
     if (!d || !d.title.trim()) return
     const body = pageRef.current ? pageRef.current.innerHTML : d.body
-    setForm((f) => ({ ...f, customPages: [...(f.customPages || []), { id: uid(), layout: d.layout, title: d.title.trim(), image: d.image || null, imageName: d.imageName || '', body }] }))
+    const page = { id: d.id || uid(), layout: d.layout, title: d.title.trim(), image: d.image || null, imageName: d.imageName || '', body }
+    setForm((f) => ({ ...f, customPages: d.id ? (f.customPages || []).map((x) => (x.id === d.id ? page : x)) : [...(f.customPages || []), page] }))
     setAddPageOpen(false); setPageDraft(null)
-    notify('Custom page added')
+    notify(d.id ? 'Page updated' : 'Custom page added')
   }
+  const editCustomPage = (c) => { setPageDraft({ id: c.id, layout: c.layout, title: c.title, image: c.image, imageName: c.imageName, body: c.body }); setPageChars((c.body || '').replace(/<[^>]*>/g, '').length); setAddPageOpen(true) }
+  const delCustomPage = (id) => setForm((f) => ({ ...f, customPages: (f.customPages || []).filter((x) => x.id !== id) }))
   const PAGE_LAYOUTS = {
     media: { t: 'Full Page Media', d: 'Edge-to-edge photo, floorplan, or PDF page', icon: Maximize2, c: 'bg-violet-50 text-violet-500', media: true, text: false, titleHint: 'Used in the Table of Contents (not shown on the page itself).' },
     titleMedia: { t: 'Title + Media', d: 'Branded header with image, PDF, or site plan', icon: ImageIcon, c: 'bg-blue-50 text-blue-500', media: true, text: false, titleHint: 'Shown at the top of the page and in the Table of Contents.' },
@@ -4251,12 +4254,9 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
     const reviewPages = [
       { key: 'cover', title: 'Cover Page' },
       { key: 'exec', title: 'Executive Summary' },
-      { key: 'toc', title: 'Table of Contents' },
       { key: 'invest', title: 'Investment Highlights' },
-      { key: 'location', title: 'Location Highlights' },
       ...(maps || []).map((m) => ({ key: m.id, title: m.title || 'Map', map: m })),
-      { key: 'tenants', title: 'Tenant Profiles' },
-      { key: 'demographics', title: 'Demographics' },
+      { key: 'market', title: 'Market Overview' },
       ...(form.customPages || []).map((c) => ({ key: c.id, title: c.title, custom: c })),
       { key: 'closing', title: 'Closing' },
     ]
@@ -4459,19 +4459,36 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
             {reviewPages.map((p, i) => {
               const hidden = !!rc.hidden[p.key]
               const active = visiblePages[rc.page]?.key === p.key
+              const bpKey = { cover: 'cover', exec: 'exec', invest: 'invest', market: 'location', closing: 'contact' }[p.key] || 'exec'
               return (
-                <div key={p.key} className="w-40 shrink-0">
-                  <button onClick={() => { const vi = visiblePages.findIndex((v) => v.key === p.key); if (vi >= 0) setRcv('page', vi) }} className={`relative block h-24 w-full overflow-hidden rounded-lg border-2 bg-slate-50 text-left transition ${active ? 'border-brand' : 'border-slate-200 hover:border-slate-300'} ${hidden ? 'opacity-40' : ''}`}>
-                    <span className="absolute left-1.5 top-1.5 z-10 flex h-5 w-5 items-center justify-center rounded bg-slate-900/80 text-[11px] font-bold text-white">{i + 1}</span>
-                    <span onClick={(e) => { e.stopPropagation(); toggleHide(p.key) }} className="absolute right-1.5 top-1.5 z-10 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-white text-slate-500 shadow ring-1 ring-slate-200 transition hover:text-brand">
+                <div key={p.key} className="group w-40 shrink-0">
+                  <button onClick={() => { const vi = visiblePages.findIndex((v) => v.key === p.key); if (vi >= 0) setRcv('page', vi) }} className={`relative block h-24 w-full overflow-hidden rounded-lg border-2 bg-white text-left transition ${active ? 'border-brand' : 'border-slate-200 hover:border-slate-300'} ${hidden ? 'opacity-40' : ''}`}>
+                    <span className="absolute left-1.5 top-1.5 z-20 flex h-5 w-5 items-center justify-center rounded bg-slate-900/80 text-[11px] font-bold text-white">{i + 1}</span>
+                    <span onClick={(e) => { e.stopPropagation(); toggleHide(p.key) }} className="absolute right-1.5 top-1.5 z-20 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-white text-slate-500 shadow ring-1 ring-slate-200 transition hover:text-brand">
                       {hidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                     </span>
-                    {p.map ? <GMapThumb lat={p.map.lat} lng={p.map.lng} zoom={p.map.zoom} className="h-full w-full" /> : (
-                      <span className="flex h-full flex-col justify-center gap-1 px-3">
-                        <span className="h-1.5 w-2/3 rounded bg-slate-300" />
-                        <span className="h-1 w-full rounded bg-slate-200" />
-                        <span className="h-1 w-4/5 rounded bg-slate-200" />
+                    {p.custom && (
+                      <span className="absolute bottom-1.5 right-1.5 z-20 flex gap-1 opacity-0 transition group-hover:opacity-100">
+                        <span onClick={(e) => { e.stopPropagation(); editCustomPage(p.custom) }} className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-white text-brand shadow ring-1 ring-slate-200 hover:bg-orange-50"><Pencil className="h-3 w-3" /></span>
+                        <span onClick={(e) => { e.stopPropagation(); delCustomPage(p.custom.id) }} className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-white text-rose-500 shadow ring-1 ring-slate-200 hover:bg-rose-50"><Trash2 className="h-3 w-3" /></span>
                       </span>
+                    )}
+                    {p.map ? (
+                      <GMapThumb lat={p.map.lat} lng={p.map.lng} zoom={p.map.zoom} className="h-full w-full" />
+                    ) : p.custom ? (
+                      <div className="h-full w-full overflow-hidden bg-white p-2">
+                        {p.custom.image ? (
+                          (p.custom.imageName || '').toLowerCase().endsWith('.pdf')
+                            ? <div className="flex h-full flex-col items-center justify-center gap-1 text-slate-400"><FileText className="h-7 w-7 text-rose-400" /><span className="text-[8px]">PDF</span></div>
+                            : <img src={p.custom.image} alt="" className="h-full w-full rounded object-cover" />
+                        ) : (
+                          <div className="text-[7px] leading-tight text-slate-500"><div className="mb-1 text-[9px] font-bold text-slate-800">{p.custom.title}</div><div className="line-clamp-6" dangerouslySetInnerHTML={{ __html: (p.custom.body || 'Custom page').slice(0, 400) }} /></div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="pointer-events-none absolute left-0 top-0 origin-top-left overflow-hidden" style={{ transform: 'scale(0.25)' }}>
+                        <div style={{ width: 640, height: 828 }}><BuilderPage pageKey={bpKey} data={previewData} /></div>
+                      </div>
                     )}
                   </button>
                   <p className="mt-1 truncate text-center text-xs font-semibold text-slate-600">{p.title}</p>
@@ -4570,7 +4587,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                               <span className="ml-auto pr-1 text-xs font-medium text-slate-400">{pageChars}/2000</span>
                             </div>
                             <div className="relative">
-                              <div ref={pageRef} contentEditable suppressContentEditableWarning onInput={() => { setPD('body', pageRef.current?.innerHTML || ''); setPageChars(pageRef.current?.textContent.length || 0) }} className="scrollbar-slim min-h-[220px] max-h-[300px] overflow-y-auto p-4 text-sm leading-relaxed text-slate-700 outline-none [&_a]:text-brand [&_a]:underline" />
+                              <div ref={(el) => { pageRef.current = el; if (el && el.dataset.loaded !== '1') { el.innerHTML = pageDraft.body || ''; el.dataset.loaded = '1' } }} contentEditable suppressContentEditableWarning onInput={() => { setPD('body', pageRef.current?.innerHTML || ''); setPageChars(pageRef.current?.textContent.length || 0) }} className="scrollbar-slim min-h-[220px] max-h-[300px] overflow-y-auto p-4 text-sm leading-relaxed text-slate-700 outline-none [&_a]:text-brand [&_a]:underline" />
                               {pageChars === 0 && <span className="pointer-events-none absolute left-4 top-4 text-sm text-slate-400">Type your content here… Use the toolbar for formatting, images, tables, and more.</span>}
                             </div>
                           </div>
