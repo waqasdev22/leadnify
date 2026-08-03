@@ -8056,9 +8056,20 @@ function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onRes
   const [slugDraft, setSlugDraft] = useState(slug)
   const [embedOpen, setEmbedOpen] = useState(false)
 
+  // Appearance
+  const [micrositeTpl, setMicrositeTpl] = useState('Modern')
+  const [propertyTpl, setPropertyTpl] = useState('Match Listings')
+  const [defaultView, setDefaultView] = useState('grid')
+  const [sameAsMicrosite, setSameAsMicrosite] = useState(true)
+  const [primary, setPrimary] = useState('#F97316')
+  const secondary = lighten(primary, 0.3)
+
+  // Embed URL carries the theme in the URL (?t=&c=) so it renders correctly on
+  // any external site / visitor browser, where localStorage isn't available.
+  const embedUrl = `${hubUrl}&t=${encodeURIComponent(micrositeTpl)}&c=${primary.replace('#', '')}`
   const embedCode = `<iframe
   id="cre-listings"
-  src="${hubUrl}"
+  src="${embedUrl}"
   width="100%"
   height="900"
   frameborder="0"
@@ -8090,14 +8101,6 @@ function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onRes
   });
 })();
 </script>`
-
-  // Appearance
-  const [micrositeTpl, setMicrositeTpl] = useState('Modern')
-  const [propertyTpl, setPropertyTpl] = useState('Match Listings')
-  const [defaultView, setDefaultView] = useState('grid')
-  const [sameAsMicrosite, setSameAsMicrosite] = useState(true)
-  const [primary, setPrimary] = useState('#F97316')
-  const secondary = lighten(primary, 0.3)
 
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState(null)

@@ -24,10 +24,14 @@ if (params.get('hub') !== null) {
     saved && Array.isArray(saved.items) && saved.items.length
       ? saved.items
       : toMicrositeItems(INITIAL_LISTINGS)
+  // Explicit URL params (?t= theme, ?c= colour) win — they carry the theme into
+  // embeds/shared links where localStorage isn't available; otherwise fall back
+  // to the owner's saved selection, then the default.
+  const template = params.get('t') || (saved && saved.template) || 'Modern'
   const primary =
+    (params.get('c') ? '#' + params.get('c') : null) ||
     (saved && saved.primary) ||
-    (params.get('c') ? '#' + params.get('c') : '#F97316')
-  const template = (saved && saved.template) || params.get('t') || 'Modern'
+    '#F97316'
 
   document.open()
   document.write(buildMicrositeHtml(items, primary, template))
