@@ -66,6 +66,13 @@ import {
   ImagePlus,
   Type,
   Save,
+  ShoppingCart,
+  Utensils,
+  GraduationCap,
+  Landmark,
+  Fuel,
+  Hotel,
+  Pill,
   ListChecks,
   Crown,
   UserCircle,
@@ -3111,6 +3118,19 @@ const GMAP_TOOLS = [
   { key: 'center', icon: Target, label: 'Center Map', desc: '' },
 ]
 
+const NEARBY_CATEGORIES = [
+  { label: 'Grocery', term: 'grocery store', icon: ShoppingCart, cls: 'text-emerald-600 ring-emerald-200' },
+  { label: 'Retail', term: 'retail store', icon: Store, cls: 'text-blue-600 ring-blue-200' },
+  { label: 'Restaurants', term: 'restaurant', icon: Utensils, cls: 'text-orange-600 ring-orange-200' },
+  { label: 'Schools', term: 'school', icon: GraduationCap, cls: 'text-violet-600 ring-violet-200' },
+  { label: 'Banks', term: 'bank', icon: Landmark, cls: 'text-slate-600 ring-slate-200' },
+  { label: 'Gas Stations', term: 'gas station', icon: Fuel, cls: 'text-red-600 ring-red-200' },
+  { label: 'Government', term: 'government office', icon: Building2, cls: 'text-indigo-600 ring-indigo-200' },
+  { label: 'Medical', term: 'hospital clinic', icon: HeartPulse, cls: 'text-rose-600 ring-rose-200' },
+  { label: 'Hotels', term: 'hotel', icon: Hotel, cls: 'text-amber-600 ring-amber-200' },
+  { label: 'Pharmacies', term: 'pharmacy', icon: Pill, cls: 'text-teal-600 ring-teal-200' },
+]
+
 // Full-screen Google-Maps-based map editor (Phase 1: map, property marker,
 // draggable labels, center, map style, save).
 function GoogleMapEditor({ open, map, onSave, onClose, notify }) {
@@ -3241,18 +3261,19 @@ function GoogleMapEditor({ open, map, onSave, onClose, notify }) {
   const applyStyle = (name) => { setStyle(name); setStyleOpen(false); mapRef.current?.setOptions({ styles: GMAP_STYLES[name] || [] }) }
 
   // Nearby Places — Google Places text search within the current view.
-  const searchNearby = () => {
+  const searchNearby = (term) => {
+    const query = (term || q).trim()
     const g = window.google?.maps; const gmap = mapRef.current
-    if (!g || !gmap || !q.trim()) return
+    if (!g || !gmap || !query) return
     if (!g.places) { notify?.('Places library not loaded'); return }
     const svc = new g.places.PlacesService(gmap)
-    svc.textSearch({ query: q, bounds: gmap.getBounds() }, (res, status) => {
+    svc.textSearch({ query, bounds: gmap.getBounds() }, (res, status) => {
       if (status === g.places.PlacesServiceStatus.OK && res?.[0]) {
         const p = res[0]; const loc = p.geometry.location
         new g.Marker({ position: loc, map: gmap, title: p.name })
         const off = 0.12 / Math.pow(2, gmap.getZoom() - 12)
         addLabel(g, gmap, { text: p.name, lat: loc.lat() + off, lng: loc.lng() })
-        gmap.panTo(loc); notify?.(`Added ${p.name}`); setPanel(null); setQ('')
+        gmap.panTo(loc); notify?.(`Added ${p.name}`); setQ('')
       } else notify?.('No place found', 'error')
     })
   }
@@ -3334,16 +3355,41 @@ function GoogleMapEditor({ open, map, onSave, onClose, notify }) {
                     ))}
                   </div>
                 )}
-                {((t.key === 'nearby' && panel === 'nearby') || (t.key === 'logo' && panel === 'logo')) && (
+                {t.key === 'logo' && panel === 'logo' && (
                   <div className="mt-1 rounded-md bg-neutral-800 p-2">
-                    <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') (panel === 'nearby' ? searchNearby() : addLogo()) }} placeholder={panel === 'nearby' ? 'e.g. Starbucks, park…' : 'e.g. apple.com'} className="w-full rounded bg-neutral-900 px-2 py-1.5 text-sm text-white outline-none ring-1 ring-neutral-700 placeholder:text-neutral-500" />
-                    <button onClick={() => (panel === 'nearby' ? searchNearby() : addLogo())} className="mt-2 w-full rounded bg-brand px-2 py-1.5 text-sm font-semibold text-white transition hover:bg-orange-600">{panel === 'nearby' ? 'Search & add' : 'Add logo'}</button>
+                    <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') addLogo() }} placeholder="e.g. apple.com" className="w-full rounded bg-neutral-900 px-2 py-1.5 text-sm text-white outline-none ring-1 ring-neutral-700 placeholder:text-neutral-500" />
+                    <button onClick={addLogo} className="mt-2 w-full rounded bg-brand px-2 py-1.5 text-sm font-semibold text-white transition hover:bg-orange-600">Add logo</button>
                   </div>
                 )}
               </div>
             )
           })}
         </div>
+
+        {/* Nearby Places panel */}
+        {panel === 'nearby' && (
+          <div className="flex w-96 shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-white">
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+              <h3 className="text-lg font-extrabold text-slate-900">Nearby Places</h3>
+              <button onClick={() => setPanel(null)} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="p-5">
+              <p className="text-sm text-slate-500">Search for nearby businesses, restaurants, retail stores, schools, or any point of interest to add to your map.</p>
+              <div className="relative mt-4">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') searchNearby() }} placeholder="Search by business name or type…" className="w-full rounded-lg border border-slate-200 py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100" />
+              </div>
+              <p className="mb-2 mt-4 text-xs font-semibold text-slate-400">Quick categories</p>
+              <div className="flex flex-wrap gap-2">
+                {NEARBY_CATEGORIES.map((c) => (
+                  <button key={c.label} onClick={() => searchNearby(c.term)} className={`inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-sm font-medium ring-1 transition hover:bg-slate-50 ${c.cls}`}>
+                    <c.icon className="h-4 w-4" /> {c.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Map canvas */}
         <div className="relative flex-1 bg-neutral-800 p-3">
