@@ -63,6 +63,9 @@ import {
   BarChart3,
   Camera,
   Image as ImageIcon,
+  ImagePlus,
+  Type,
+  Save,
   ListChecks,
   Crown,
   UserCircle,
@@ -3031,6 +3034,216 @@ function MiniMap({ lat, lng, zoom, className }) {
 }
 
 // Interactive editor for a single map slide — pan/zoom/drag the pin, then save.
+// ---- Google Maps loader (uses the gitignored VITE_GOOGLE_MAPS_API_KEY) -------
+const GMAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
+let gmapsPromise = null
+function loadGoogleMaps() {
+  if (typeof window !== 'undefined' && window.google?.maps) return Promise.resolve(window.google.maps)
+  if (gmapsPromise) return gmapsPromise
+  gmapsPromise = new Promise((resolve, reject) => {
+    if (!GMAPS_KEY) { reject(new Error('missing-key')); return }
+    const s = document.createElement('script')
+    s.src = `https://maps.googleapis.com/maps/api/js?key=${GMAPS_KEY}&libraries=places,drawing,marker&v=weekly`
+    s.async = true
+    s.defer = true
+    s.onload = () => resolve(window.google.maps)
+    s.onerror = () => reject(new Error('load-failed'))
+    document.head.appendChild(s)
+  })
+  return gmapsPromise
+}
+
+// Map style presets (matches the reference's clean, label-dimmed look).
+const GMAP_STYLES = {
+  Clean: [
+    { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+    { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+    { featureType: 'road', elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
+  ],
+  Standard: [],
+  Silver: [
+    { elementType: 'geometry', stylers: [{ color: '#f5f5f5' }] },
+    { elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
+    { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#ffffff' }] },
+    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#c9c9c9' }] },
+  ],
+  Dark: [
+    { elementType: 'geometry', stylers: [{ color: '#242f3e' }] },
+    { elementType: 'labels.text.fill', stylers: [{ color: '#a5b3c9' }] },
+    { elementType: 'labels.text.stroke', stylers: [{ color: '#242f3e' }] },
+    { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#38414e' }] },
+    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#17263c' }] },
+    { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+  ],
+}
+
+const GMAP_TOOLS = [
+  { key: 'property', icon: MapPin, label: 'Property', desc: 'Edit subject property marker' },
+  { key: 'nearby', icon: Search, label: 'Nearby Places', desc: 'Search & add nearby businesses' },
+  { key: 'logo', icon: ImagePlus, label: 'Brand Logo', desc: "Find any company's logo" },
+  { key: 'label', icon: Type, label: 'Label', desc: 'Add text to the map' },
+  { key: 'upload', icon: Upload, label: 'Upload', desc: 'Upload a custom image' },
+  { key: 'draw', icon: Pencil, label: 'Draw', desc: 'Draw shapes on the map' },
+  { key: 'style', icon: Map, label: 'Map Style', desc: 'Change map appearance' },
+  { key: 'center', icon: Target, label: 'Center Map', desc: '' },
+]
+
+// Full-screen Google-Maps-based map editor (Phase 1: map, property marker,
+// draggable labels, center, map style, save).
+function GoogleMapEditor({ open, map, onSave, onClose, notify }) {
+  const elRef = useRef(null)
+  const mapRef = useRef(null)
+  const markerRef = useRef(null)
+  const overlaysRef = useRef([])
+  const [ready, setReady] = useState(false)
+  const [err, setErr] = useState(null)
+  const [title, setTitle] = useState('')
+  const [style, setStyle] = useState('Clean')
+  const [styleOpen, setStyleOpen] = useState(false)
+
+  useEffect(() => {
+    if (!open || !map) return
+    setTitle(map.title || '')
+    setReady(false)
+    setErr(null)
+    let cancelled = false
+    loadGoogleMaps().then((g) => {
+      if (cancelled || !elRef.current) return
+      const has = typeof map.lat === 'number' && !Number.isNaN(map.lat)
+      const center = has ? { lat: map.lat, lng: map.lng } : { lat: 22.5937, lng: 78.9629 }
+      const gmap = new g.Map(elRef.current, {
+        center,
+        zoom: map.zoom || (has ? 14 : 5),
+        disableDefaultUI: false,
+        zoomControl: true,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: true,
+        styles: GMAP_STYLES[map.style || 'Clean'] || [],
+      })
+      mapRef.current = gmap
+      setStyle(map.style || 'Clean')
+      // Draggable property marker
+      const marker = new g.Marker({ position: center, map: gmap, draggable: true })
+      markerRef.current = marker
+      // Restore saved label overlays
+      overlaysRef.current = []
+      ;(map.overlays || []).forEach((ov) => addLabel(g, gmap, ov))
+      setReady(true)
+    }).catch((e) => { if (!cancelled) setErr(e.message === 'missing-key' ? 'no-key' : 'load-failed') })
+    return () => { cancelled = true; mapRef.current = null; markerRef.current = null; overlaysRef.current = [] }
+  }, [open, map])
+
+  // A draggable, editable text label rendered as a Google Maps OverlayView.
+  const addLabel = (g, gmap, data) => {
+    const d = { id: data.id || uid(), text: data.text || 'Label', lat: data.lat, lng: data.lng }
+    if (typeof d.lat !== 'number') { const c = gmap.getCenter(); d.lat = c.lat(); d.lng = c.lng() }
+    class LabelOverlay extends g.OverlayView {
+      onAdd() {
+        const div = document.createElement('div')
+        div.className = 'gm-label'
+        div.style.cssText = 'position:absolute;transform:translate(-50%,-50%);background:rgba(255,255,255,.9);border:1px solid #e2e8f0;border-radius:6px;padding:4px 8px;font:600 13px Arial;color:#0f172a;cursor:move;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.12);user-select:none'
+        div.textContent = d.text
+        div.title = 'Double-click to edit, drag to move'
+        div.addEventListener('dblclick', (e) => {
+          e.stopPropagation()
+          const t = window.prompt('Label text', d.text)
+          if (t != null) { d.text = t; div.textContent = t }
+        })
+        let dragging = false
+        div.addEventListener('mousedown', (e) => { e.stopPropagation(); dragging = true; gmap.setOptions({ draggable: false }) })
+        const move = (e) => {
+          if (!dragging) return
+          const proj = this.getProjection(); if (!proj) return
+          const box = elRef.current.getBoundingClientRect()
+          const pt = new g.Point(e.clientX - box.left, e.clientY - box.top)
+          const ll = proj.fromContainerPixelToLatLng(pt)
+          d.lat = ll.lat(); d.lng = ll.lng(); this.draw()
+        }
+        const up = () => { if (dragging) { dragging = false; gmap.setOptions({ draggable: true }) } }
+        window.addEventListener('mousemove', move)
+        window.addEventListener('mouseup', up)
+        this._cleanup = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up) }
+        this._div = div
+        this.getPanes().overlayMouseTarget.appendChild(div)
+      }
+      draw() {
+        const proj = this.getProjection(); if (!proj || !this._div) return
+        const p = proj.fromLatLngToDivPixel(new g.LatLng(d.lat, d.lng))
+        this._div.style.left = p.x + 'px'; this._div.style.top = p.y + 'px'
+      }
+      onRemove() { this._cleanup?.(); this._div?.remove(); this._div = null }
+    }
+    const o = new LabelOverlay(); o.setMap(gmap); o._data = d
+    overlaysRef.current.push(o)
+  }
+
+  const applyStyle = (name) => { setStyle(name); setStyleOpen(false); mapRef.current?.setOptions({ styles: GMAP_STYLES[name] || [] }) }
+
+  const handleTool = (key) => {
+    const g = window.google?.maps; const gmap = mapRef.current
+    if (!g || !gmap) return
+    if (key === 'center') { if (markerRef.current) gmap.panTo(markerRef.current.getPosition()) }
+    else if (key === 'style') { setStyleOpen((v) => !v) }
+    else if (key === 'label') { addLabel(g, gmap, { text: 'New Label' }); notify?.('Label added — double-click to edit') }
+    else if (key === 'property') { if (markerRef.current) { gmap.panTo(markerRef.current.getPosition()); notify?.('Drag the pin to reposition the property') } }
+    else if (key === 'upload') { notify?.('Image upload arrives in the next step') }
+    else notify?.(`${GMAP_TOOLS.find((t) => t.key === key)?.label} — coming next`)
+  }
+
+  const save = () => {
+    const gmap = mapRef.current, mk = markerRef.current
+    if (!gmap || !mk) { onClose?.(); return }
+    const c = mk.getPosition()
+    const overlays = overlaysRef.current.map((o) => ({ id: o._data.id, text: o._data.text, lat: o._data.lat, lng: o._data.lng }))
+    onSave({ ...map, lat: c.lat(), lng: c.lng(), zoom: gmap.getZoom(), style, title, overlays })
+  }
+
+  if (!open || !map) return null
+  return (
+    <div className="fixed inset-0 z-[80] flex flex-col bg-neutral-900">
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left tool panel */}
+        <div className="w-56 shrink-0 space-y-1 overflow-y-auto border-r border-neutral-800 bg-neutral-900 p-3">
+          {GMAP_TOOLS.map((t) => (
+            <button key={t.key} onClick={() => handleTool(t.key)} className={`flex w-full items-center gap-2.5 rounded-md p-2 text-left transition ${style && t.key === 'style' && styleOpen ? 'bg-neutral-800 text-white' : 'text-neutral-300 hover:bg-neutral-800 hover:text-white'}`}>
+              <t.icon className="h-4 w-4 shrink-0" />
+              <span><span className="block text-sm font-medium leading-tight">{t.label}</span>{t.desc && <span className="block text-xs leading-snug text-neutral-400">{t.desc}</span>}</span>
+            </button>
+          ))}
+          {styleOpen && (
+            <div className="mt-1 space-y-1 rounded-md bg-neutral-800 p-2">
+              {Object.keys(GMAP_STYLES).map((s) => (
+                <button key={s} onClick={() => applyStyle(s)} className={`block w-full rounded px-2 py-1.5 text-left text-sm ${style === s ? 'bg-brand text-white' : 'text-neutral-300 hover:bg-neutral-700'}`}>{s}</button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Map canvas */}
+        <div className="relative flex-1 bg-neutral-800 p-3">
+          <div className="relative h-full w-full overflow-hidden rounded-lg border border-neutral-200 bg-neutral-100">
+            {/* Top toolbar */}
+            <div className="pointer-events-none absolute left-1/2 top-3 z-[5] flex -translate-x-1/2 flex-col items-center gap-1">
+              <span className="rounded-full bg-slate-800/90 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-300">Map Editor</span>
+            </div>
+            <div ref={elRef} className="h-full w-full" />
+            {!ready && !err && <div className="absolute inset-0 flex items-center justify-center bg-neutral-100 text-sm text-slate-500">Loading map…</div>}
+            {err === 'no-key' && <div className="absolute inset-0 flex items-center justify-center bg-neutral-100 p-6 text-center text-sm text-slate-600">Google Maps key missing. Add <code className="mx-1 rounded bg-slate-200 px-1">VITE_GOOGLE_MAPS_API_KEY</code> to .env.local and rebuild.</div>}
+            {err === 'load-failed' && <div className="absolute inset-0 flex items-center justify-center bg-neutral-100 p-6 text-center text-sm text-slate-600">Map failed to load — check the key's enabled APIs, billing, and that this domain is an allowed referrer.</div>}
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="flex items-center justify-between border-t border-neutral-200 bg-white px-6 py-3">
+        <button onClick={onClose} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-neutral-600 transition hover:bg-neutral-100"><ArrowLeft className="h-4 w-4" /> Back</button>
+        <button onClick={save} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"><Save className="h-4 w-4" /> Save Map</button>
+      </div>
+    </div>
+  )
+}
+
 function MapEditorModal({ open, map, onSave, onClose }) {
   const elRef = useRef(null)
   const stateRef = useRef(null)
@@ -5620,12 +5833,22 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
         onClose={() => setMapOpen(false)}
       />
 
-      <MapEditorModal
-        open={!!mapEditor}
-        map={mapEditor}
-        onSave={saveMap}
-        onClose={() => setMapEditor(null)}
-      />
+      {GMAPS_KEY ? (
+        <GoogleMapEditor
+          open={!!mapEditor}
+          map={mapEditor}
+          onSave={saveMap}
+          onClose={() => setMapEditor(null)}
+          notify={notify}
+        />
+      ) : (
+        <MapEditorModal
+          open={!!mapEditor}
+          map={mapEditor}
+          onSave={saveMap}
+          onClose={() => setMapEditor(null)}
+        />
+      )}
 
       <PageViewerModal
         index={viewerIdx}
