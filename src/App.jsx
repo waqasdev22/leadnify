@@ -2854,10 +2854,13 @@ function ScaledPage({ scale, children }) {
 }
 
 function BuilderPage({ pageKey, data }) {
-  const { name, docType, price, priceVis, location, owner, ownerEmail, dataPoints, brand, sections } = data
+  const { name, docType, price, priceVis, location, owner, ownerEmail, dataPoints, brand, sections, lat, lng } = data
   const initials = (owner || 'W').split(' ').map((s) => s[0]).join('').slice(0, 2).toUpperCase()
   const showPrice = priceVis === 'Show' && price
-  const mapBlock = (
+  const hasLoc = typeof lat === 'number' && !Number.isNaN(lat)
+  const mapBlock = hasLoc ? (
+    <GMapThumb lat={lat} lng={lng} zoom={13} className="h-full w-full overflow-hidden rounded-lg" />
+  ) : (
     <div className="relative h-full w-full overflow-hidden rounded-lg" style={{ background: 'radial-gradient(circle at 52% 46%, #d1fae5, #bbf7d0 38%, #dcfce7 70%)' }}>
       <span className="absolute left-1/2 top-1/2 h-40 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full border border-emerald-400/40" />
       <span className="absolute left-1/2 top-1/2 h-24 w-24 -translate-x-1/2 -translate-y-1/2 rounded-full border border-emerald-500/50" />
@@ -3988,6 +3991,8 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
     dataPoints: form.dataPoints,
     brand,
     sections: form.sections,
+    lat: form.lat,
+    lng: form.lng,
   }
 
   // Token values available to auto-fill suggested copy.
