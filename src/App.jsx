@@ -3201,7 +3201,7 @@ function GoogleMapEditor({ open, map, onSave, onClose, notify }) {
 
   if (!open || !map) return null
   return (
-    <div className="fixed inset-0 z-[80] flex flex-col bg-neutral-900">
+    <div className="fixed inset-0 z-[1200] flex flex-col bg-neutral-900">
       <div className="flex flex-1 overflow-hidden">
         {/* Left tool panel */}
         <div className="w-56 shrink-0 space-y-1 overflow-y-auto border-r border-neutral-800 bg-neutral-900 p-3">
