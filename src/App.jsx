@@ -886,8 +886,8 @@ function UpgradeCard({ onDismiss }) {
   )
 }
 
-function Sidebar({ active, onNavigate, onSignOut, user }) {
-  const [collapsed, setCollapsed] = useState(false)
+function Sidebar({ active, onNavigate, onSignOut, user, forceCollapsed }) {
+  const [collapsed, setCollapsed] = useState(!!forceCollapsed)
   const [showPromo, setShowPromo] = useState(true)
 
   return (
@@ -902,14 +902,16 @@ function Sidebar({ active, onNavigate, onSignOut, user }) {
       </div>
 
       {/* Collapse toggle */}
-      <button
-        onClick={() => setCollapsed((c) => !c)}
-        className="absolute -right-3 top-14 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 shadow-sm transition hover:text-brand"
-        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        title={collapsed ? 'Expand' : 'Collapse'}
-      >
-        <ChevronLeft className={`h-4 w-4 transition-transform ${collapsed ? 'rotate-180' : ''}`} />
-      </button>
+      {!forceCollapsed && (
+        <button
+          onClick={() => setCollapsed((c) => !c)}
+          className="absolute -right-3 top-14 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 shadow-sm transition hover:text-brand"
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={collapsed ? 'Expand' : 'Collapse'}
+        >
+          <ChevronLeft className={`h-4 w-4 transition-transform ${collapsed ? 'rotate-180' : ''}`} />
+        </button>
+      )}
 
       {/* Nav */}
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
@@ -3145,7 +3147,9 @@ function LocationPickerModal({ open, initial, address, onConfirm, onClose }) {
 }
 
 const BUILDER_SESSION_KEY = 'crebuilder_builder_session'
-function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSave, notify }) {
+function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSave, notify, onNavigate, onSignOut, user }) {
+  // Clicking a nav icon in the builder rail exits the builder and jumps to that section.
+  const navFromBuilder = (key) => { if (onExit) onExit(); if (onNavigate) onNavigate(key) }
   const [step, setStep] = useState(initial?.step || 0)
   // Mark every step before the resume point as completed.
   const [done, setDone] = useState(() => {
@@ -3777,7 +3781,11 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
     )
     const rowCls = 'flex items-center justify-between py-2.5'
     return (
-      <div className="fixed inset-0 z-50 flex flex-col bg-slate-50">
+      <div className="fixed inset-0 z-50 flex bg-slate-50">
+        <div className="hidden md:block">
+          <Sidebar forceCollapsed active="documents" onNavigate={navFromBuilder} onSignOut={() => { if (onExit) onExit(); if (onSignOut) onSignOut() }} user={user || CURRENT_USER} />
+        </div>
+        <div className="flex min-w-0 flex-1 flex-col">
         {/* Header */}
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-6 py-3">
           <div className="flex items-center gap-3">
@@ -3960,12 +3968,18 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
             </button>
           </div>
         </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-slate-50">
+    <div className="fixed inset-0 z-50 flex bg-slate-50">
+      {/* Collapsed nav rail — same app sidebar, shown while building */}
+      <div className="hidden md:block">
+        <Sidebar forceCollapsed active="documents" onNavigate={navFromBuilder} onSignOut={() => { if (onExit) onExit(); if (onSignOut) onSignOut() }} user={user || CURRENT_USER} />
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col">
       {/* Header */}
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-6 py-3">
         <div>
@@ -5596,6 +5610,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
           </div>
         </aside>
       </div>
+      </div>
 
       <LocationPickerModal
         open={mapOpen}
@@ -6285,7 +6300,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
   )
 }
 
-function DashboardPage({ packages, setPackages, setListings, globalQuery, createNonce, resume, onResumeHandled }) {
+function DashboardPage({ packages, setPackages, setListings, globalQuery, createNonce, resume, onResumeHandled, onNavigate, onSignOut, user }) {
   const notify = useToast()
   const [subTab, setSubTab] = useState('my')
   const [search, setSearch] = useState('')
@@ -6689,6 +6704,9 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
           initial={builderInitial}
           draftId={builderDraftId}
           notify={notify}
+          onNavigate={onNavigate}
+          onSignOut={onSignOut}
+          user={user}
           onExit={() => { setBuilderOpen(false); try { localStorage.removeItem(BUILDER_SESSION_KEY) } catch { /* ignore */ } }}
           onChangeType={() => {
             setBuilderOpen(false)
@@ -9003,7 +9021,7 @@ export default function App() {
   const renderScreen = () => {
     switch (active) {
       case 'dashboard':
-        return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} resume={resume} onResumeHandled={() => setResume(null)} />
+        return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} resume={resume} onResumeHandled={() => setResume(null)} onNavigate={navigate} onSignOut={handleSignOut} user={user} />
       case 'listings':
         return <ListingHubPage listings={listings} setListings={setListings} globalQuery={query} onCreateNew={startCreate} onResumeDraft={resumeDraft} />
       case 'deals':
@@ -9019,7 +9037,7 @@ export default function App() {
       case 'knowledge':
         return <PlaceholderPage label="Knowledge Base" icon={BookOpen} />
       default:
-        return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} resume={resume} onResumeHandled={() => setResume(null)} />
+        return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} resume={resume} onResumeHandled={() => setResume(null)} onNavigate={navigate} onSignOut={handleSignOut} user={user} />
     }
   }
 
