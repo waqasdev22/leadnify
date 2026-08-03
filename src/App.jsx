@@ -3159,6 +3159,8 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
       return
     }
     setDone((d) => ({ ...d, [step]: true }))
+    // Cap Rate & NOI scope skips the Rent Roll step: Financials (6) -> Cap Rate (8).
+    if (step === 6 && form.finType === 'Cap Rate & NOI') { setStep(8); return }
     if (last) onSave(form, step, true)
     else setStep(step + 1)
   }
@@ -3476,6 +3478,8 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
   const isMedia = BUILDER_SECTIONS[step] === 'Images & Media'
   const isFinancials = BUILDER_SECTIONS[step] === 'Financials'
   const isRentRoll = BUILDER_SECTIONS[step] === 'Rent Roll'
+  // Cap Rate & NOI lives on step 9 (index 8) when that scope is chosen.
+  const isCapRate = step === 8 && form.finType === 'Cap Rate & NOI'
   const isMaps = BUILDER_SECTIONS[step] === 'Maps'
   const maps = form.maps || []
   const addMap = () => setForm((f) => ({ ...f, maps: [...(f.maps || []), { id: uid(), title: `Map ${(f.maps?.length || 0) + 1}`, lat: f.lat, lng: f.lng }] }))
@@ -3845,7 +3849,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                         <button
                           key={t.key}
                           onClick={() => {
-                            if (t.key === finType) { setDone((d) => ({ ...d, [step]: true })); setStep(step + 1) }
+                            if (t.key === finType) { setDone((d) => ({ ...d, [step]: true })); setStep(t.key === 'Cap Rate & NOI' ? 8 : step + 1) }
                             else setScopeConfirm(t.key)
                           }}
                           className={`relative rounded-2xl border-2 p-5 text-center transition ${sel ? 'border-orange-400 bg-orange-50/50' : 'border-slate-200 bg-white hover:border-slate-300'}`}
@@ -3863,7 +3867,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                     })}
                   </div>
                 </div>
-              ) : isRentRoll && finType === 'Cap Rate & NOI' ? (() => {
+              ) : isCapRate ? (() => {
                 const price = Number(form.price) || 0
                 const capMode = form.capMode || 'noi'
                 const noiVal = parseFloat(form.capNoi) || 0
@@ -4729,7 +4733,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
           {/* Footer */}
           <div className="flex items-center justify-between border-t border-slate-200 bg-white px-6 py-3">
             <button
-              onClick={() => (step > 0 ? setStep(step - 1) : onExit())}
+              onClick={() => (step === 8 && form.finType === 'Cap Rate & NOI' ? setStep(6) : step > 0 ? setStep(step - 1) : onExit())}
               className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-500 transition hover:text-slate-800"
             >
               <ArrowLeft className="h-4 w-4" /> Back
@@ -4795,6 +4799,8 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
               const isDone = done[i]
               // Only completed sections (or the current one) can be jumped to.
               const canJump = isActive || isDone
+              // Step 9 (index 8) is relabelled when the Cap Rate & NOI scope is chosen.
+              const label = i === 8 && finType === 'Cap Rate & NOI' ? 'Cap Rate & NOI' : s
               return (
                 <button
                   key={s}
@@ -4810,7 +4816,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                     {isDone && !isActive ? <Check className="h-3.5 w-3.5" /> : i + 1}
                   </span>
                   <span className="min-w-0">
-                    <span className="block truncate">{s}</span>
+                    <span className="block truncate">{label}</span>
                     {isActive && <span className="text-[11px] font-normal text-brand">Editing</span>}
                   </span>
                 </button>
@@ -5096,7 +5102,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
             <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-3">
               <button onClick={() => setScopeConfirm(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
               <button
-                onClick={() => { setForm((f) => ({ ...f, finType: scopeConfirm })); notify(`Financial scope changed to ${scopeConfirm}`); setScopeConfirm(null); setDone((d) => ({ ...d, [step]: true })); setStep(step + 1) }}
+                onClick={() => { setForm((f) => ({ ...f, finType: scopeConfirm })); notify(`Financial scope changed to ${scopeConfirm}`); const target = scopeConfirm === 'Cap Rate & NOI' ? 8 : step + 1; setScopeConfirm(null); setDone((d) => ({ ...d, [step]: true })); setStep(target) }}
                 className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
               >
                 Change Scope
