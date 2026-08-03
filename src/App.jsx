@@ -62,6 +62,7 @@ import {
   TrendingUp,
   BarChart3,
   Camera,
+  Image as ImageIcon,
   PieChart,
   Scale,
   Users,
@@ -3503,6 +3504,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
   const salesComps = form.salesComps || []
   const EMPTY_COMP = { photo: null, propertyName: '', street: '', city: '', state: '', zip: '', yearBuilt: '', description: '', salePrice: '', saleDate: '', capRate: '', noi: '', buildingSf: '', tenants: '', bedrooms: '', occupancy: '', unitMix: '', hideSaleDate: false, active: true }
   const [compModal, setCompModal] = useState(null)
+  const [compDel, setCompDel] = useState(null)
   const openCompModal = (c) => setCompModal(c ? { ...EMPTY_COMP, ...c } : { ...EMPTY_COMP })
   const setCM = (k, v) => setCompModal((x) => ({ ...x, [k]: v }))
   const submitComp = () => {
@@ -3513,6 +3515,9 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
     notify(c.id ? 'Comparable updated' : 'Comparable added')
   }
   const delComp = (id) => setForm((f) => ({ ...f, salesComps: f.salesComps.filter((x) => x.id !== id) }))
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  const soldLabel = (d) => { if (!d) return '—'; const [y, m] = String(d).split('-'); return `${MONTHS[Number(m) - 1] || ''} ${y}` }
+  const compYears = [...new Set(salesComps.map((c) => (c.saleDate ? String(c.saleDate).slice(0, 4) : null)).filter(Boolean))].sort()
   const maps = form.maps || []
   const addMap = () => setForm((f) => ({ ...f, maps: [...(f.maps || []), { id: uid(), title: `Map ${(f.maps?.length || 0) + 1}`, lat: f.lat, lng: f.lng }] }))
   const updMap = (id, title) => setForm((f) => ({ ...f, maps: f.maps.map((m) => (m.id === id ? { ...m, title } : m)) }))
@@ -4198,28 +4203,39 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                       <button onClick={() => openCompModal()} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"><Plus className="h-4 w-4" /> Add First Comparable</button>
                     </div>
                   ) : (
-                    <div className="mt-4 grid gap-4 md:grid-cols-2">
-                      {salesComps.map((c) => (
-                        <div key={c.id} className="group flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4">
-                          <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50 text-slate-400">
-                            {c.photo ? <img src={c.photo} alt="" className="h-full w-full object-cover" /> : <Camera className="h-6 w-6" />}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate font-bold text-slate-900">{c.propertyName || c.street || 'Untitled Comparable'}</p>
-                            <p className="truncate text-xs text-slate-500">{[c.city, c.state].filter(Boolean).join(', ') || '—'}</p>
-                            <div className="mt-1 flex flex-wrap gap-1.5 text-[11px]">
-                              {c.salePrice && <span className="rounded bg-emerald-50 px-1.5 py-0.5 font-semibold text-emerald-600">{currency(c.salePrice)}</span>}
-                              {c.capRate && <span className="rounded bg-slate-100 px-1.5 py-0.5 font-semibold text-slate-600">{c.capRate}% cap</span>}
-                              {c.buildingSf && <span className="rounded bg-slate-100 px-1.5 py-0.5 font-semibold text-slate-600">{c.buildingSf} SF</span>}
+                    <>
+                      <div className="mt-4 flex flex-wrap items-center gap-2">
+                        <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">{salesComps.length} Comp{salesComps.length === 1 ? '' : 's'}</span>
+                        {compYears.map((y) => (
+                          <span key={y} className="rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-600">{y}</span>
+                        ))}
+                      </div>
+                      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {salesComps.map((c) => (
+                          <div key={c.id} className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md">
+                            <div className="flex aspect-[16/10] items-center justify-center overflow-hidden bg-slate-100 text-slate-300">
+                              {c.photo ? <img src={c.photo} alt="" className="h-full w-full object-cover" /> : <ImageIcon className="h-9 w-9" />}
+                            </div>
+                            <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition group-hover:opacity-100">
+                              <button onClick={() => openCompModal(c)} className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-slate-500 shadow ring-1 ring-slate-200 transition hover:text-brand"><Pencil className="h-3.5 w-3.5" /></button>
+                              <button onClick={() => setCompDel(c)} className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-rose-400 shadow ring-1 ring-slate-200 transition hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" /></button>
+                            </div>
+                            {(c.propertyName || c.city) && (
+                              <div className="px-4 pt-3">
+                                <p className="truncate text-sm font-bold text-slate-900">{c.propertyName || 'Untitled Comparable'}</p>
+                                {(c.city || c.state) && <p className="truncate text-xs text-slate-400">{[c.city, c.state].filter(Boolean).join(', ')}</p>}
+                              </div>
+                            )}
+                            <div className="flex items-center justify-between px-4 py-3 text-sm">
+                              <span className="text-xs text-slate-400">Price</span>
+                              <span className="font-bold text-brand">{c.salePrice ? currency(c.salePrice) : '—'}</span>
+                              <span className="text-xs text-slate-400">Sold</span>
+                              <span className="font-bold text-slate-900">{soldLabel(c.saleDate)}</span>
                             </div>
                           </div>
-                          <div className="flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
-                            <button onClick={() => openCompModal(c)} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-brand"><Pencil className="h-4 w-4" /></button>
-                            <button onClick={() => delComp(c.id)} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-500"><Trash2 className="h-4 w-4" /></button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    </>
                   )}
                 </div>
               ) : isMaps ? (
@@ -5161,6 +5177,24 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
       })()}
 
       {/* Delete tenant/vacancy confirm */}
+      {compDel && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => setCompDel(null)}>
+          <div className="w-full max-w-sm overflow-hidden rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-50 text-rose-500"><Trash2 className="h-5 w-5" /></div>
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900">Delete this comparable?</h3>
+                <p className="mt-1 text-sm text-slate-400">{compDel.propertyName ? `"${compDel.propertyName}" will be permanently removed.` : 'This comparable will be permanently removed.'} This action cannot be undone.</p>
+              </div>
+            </div>
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <button onClick={() => setCompDel(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
+              <button onClick={() => { delComp(compDel.id); setCompDel(null); notify('Comparable deleted') }} className="rounded-lg bg-rose-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-600">Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {deleteRow && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => setDeleteRow(null)}>
           <div className="w-full max-w-sm overflow-hidden rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
