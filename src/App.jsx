@@ -3038,8 +3038,8 @@ function MapEditorModal({ open, map, onSave, onClose }) {
     if (!open || !elRef.current || !map) return
     setTitle(map.title || '')
     const has = typeof map.lat === 'number' && !Number.isNaN(map.lat)
-    const start = has ? [map.lat, map.lng] : [39.8, -98.5]
-    const startZoom = map.zoom || (has ? 14 : 4)
+    const start = has ? [map.lat, map.lng] : [22.5937, 78.9629]
+    const startZoom = map.zoom || (has ? 14 : 5)
     stateRef.current = { lat: start[0], lng: start[1], zoom: startZoom }
     const lm = L.map(elRef.current, { scrollWheelZoom: true }).setView(start, startZoom)
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 20, attribution: '&copy; OpenStreetMap contributors &copy; CARTO' }).addTo(lm)
@@ -3625,7 +3625,16 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
   })
   const setRcv = (k, v) => setRc((x) => ({ ...x, [k]: v }))
   const addMap = () => {
-    const m = { id: uid(), title: `Map ${(form.maps?.length || 0) + 1}`, lat: form.lat, lng: form.lng, zoom: 14 }
+    // Default new maps to a view of India (editable via the map editor) when the
+    // property has no coordinates, so the map is never blank.
+    const hasLoc = typeof form.lat === 'number' && !Number.isNaN(form.lat)
+    const m = {
+      id: uid(),
+      title: `Map ${(form.maps?.length || 0) + 1}`,
+      lat: hasLoc ? form.lat : 22.5937,
+      lng: hasLoc ? form.lng : 78.9629,
+      zoom: hasLoc ? 14 : 5,
+    }
     setForm((f) => ({ ...f, maps: [...(f.maps || []), m] }))
     setMapEditor(m)
   }
