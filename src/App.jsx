@@ -10,6 +10,16 @@ import { jsPDF } from 'jspdf'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { getCol, putCol, saveUser } from './api'
+import { auth, googleProvider } from './firebase'
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged,
+  sendPasswordResetEmail,
+  updateProfile,
+} from 'firebase/auth'
 import {
   Menu,
   Home,
@@ -716,19 +726,50 @@ function ConfirmDialog({ open, onClose, onConfirm, title, message }) {
 /* -------------------------------------------------------------------------- */
 
 function LoginPage({ onLogin }) {
-  const [email, setEmail] = useState('waqas.axecorp@gmail.com')
-  const [password, setPassword] = useState('demo1234')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [showPw, setShowPw] = useState(false)
   const [error, setError] = useState('')
+  const [mode, setMode] = useState('signin') // 'signin' | 'signup'
+  const [busy, setBusy] = useState(false)
 
-  const submit = (e) => {
+  const friendly = (code) => ({
+    'auth/invalid-credential': 'Incorrect email or password.',
+    'auth/invalid-email': 'That email address looks invalid.',
+    'auth/user-not-found': 'No account found for that email.',
+    'auth/wrong-password': 'Incorrect password.',
+    'auth/email-already-in-use': 'An account already exists for that email.',
+    'auth/weak-password': 'Password should be at least 6 characters.',
+    'auth/too-many-requests': 'Too many attempts — please try again later.',
+    'auth/popup-closed-by-user': 'Sign-in was cancelled.',
+    'auth/operation-not-allowed': 'This sign-in method is not enabled in Firebase Console.',
+  })[code] || 'Something went wrong. Please try again.'
+
+  const submit = async (e) => {
     e.preventDefault()
-    if (!email.trim() || !password.trim()) {
-      setError('Please enter both email and password.')
-      return
-    }
-    setError('')
-    onLogin({ email })
+    if (!email.trim() || !password.trim()) { setError('Please enter both email and password.'); return }
+    setError(''); setBusy(true)
+    try {
+      if (mode === 'signup') {
+        const cred = await createUserWithEmailAndPassword(auth, email.trim(), password)
+        try { await updateProfile(cred.user, { displayName: email.trim().split('@')[0] }) } catch { /* non-fatal */ }
+      } else {
+        await signInWithEmailAndPassword(auth, email.trim(), password)
+      }
+      onLogin?.()
+    } catch (err) { setError(friendly(err.code)) } finally { setBusy(false) }
+  }
+
+  const google = async () => {
+    setError(''); setBusy(true)
+    try { await signInWithPopup(auth, googleProvider); onLogin?.() }
+    catch (err) { setError(friendly(err.code)) } finally { setBusy(false) }
+  }
+
+  const forgot = async () => {
+    if (!email.trim()) { setError('Enter your email above first, then click “Forgot password”.'); return }
+    try { await sendPasswordResetEmail(auth, email.trim()); setError('Password reset email sent — check your inbox.') }
+    catch (err) { setError(friendly(err.code)) }
   }
 
   return (
@@ -774,9 +815,9 @@ function LoginPage({ onLogin }) {
             </span>
           </div>
 
-          <h2 className="text-2xl font-bold text-slate-900">Welcome back</h2>
+          <h2 className="text-2xl font-bold text-slate-900">{mode === 'signup' ? 'Create your account' : 'Welcome back'}</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Sign in to your workspace to continue.
+            {mode === 'signup' ? 'Set up your workspace to get started.' : 'Sign in to your workspace to continue.'}
           </p>
 
           <form onSubmit={submit} className="mt-8 space-y-5">
@@ -828,21 +869,40 @@ function LoginPage({ onLogin }) {
                 />
                 Remember me
               </label>
-              <button type="button" className="font-semibold text-brand hover:underline">
-                Forgot password?
-              </button>
+              {mode === 'signin' && (
+                <button type="button" onClick={forgot} className="font-semibold text-brand hover:underline">
+                  Forgot password?
+                </button>
+              )}
             </div>
 
             <button
               type="submit"
-              className="w-full rounded-lg bg-brand py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-orange-300 active:scale-[0.99]"
+              disabled={busy}
+              className="w-full rounded-lg bg-brand py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-orange-300 active:scale-[0.99] disabled:opacity-60"
             >
-              Sign in
+              {busy ? 'Please wait…' : mode === 'signup' ? 'Create account' : 'Sign in'}
             </button>
           </form>
 
+          <div className="my-5 flex items-center gap-3 text-xs text-slate-400">
+            <span className="h-px flex-1 bg-slate-200" /> or <span className="h-px flex-1 bg-slate-200" />
+          </div>
+
+          <button
+            onClick={google}
+            disabled={busy}
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-60"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 48 48" aria-hidden><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.4 29.3 35 24 35c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 5.1 29.5 3 24 3 12.4 3 3 12.4 3 24s9.4 21 21 21 21-9.4 21-21c0-1.2-.1-2.3-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 5.1 29.5 3 24 3 16.3 3 9.7 7.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 45c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 36 26.7 37 24 37c-5.3 0-9.7-2.6-11.3-7l-6.5 5C9.6 40.6 16.2 45 24 45z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4.1 5.6l6.2 5.2C39.9 36.2 45 31 45 24c0-1.2-.1-2.3-.4-3.5z"/></svg>
+            Continue with Google
+          </button>
+
           <p className="mt-6 text-center text-sm text-slate-500">
-            Demo build — any email &amp; password will sign you in.
+            {mode === 'signup' ? 'Already have an account?' : "Don't have an account?"}{' '}
+            <button type="button" onClick={() => { setMode(mode === 'signup' ? 'signin' : 'signup'); setError('') }} className="font-semibold text-brand hover:underline">
+              {mode === 'signup' ? 'Sign in' : 'Create one'}
+            </button>
           </p>
         </div>
       </div>
@@ -9429,16 +9489,27 @@ function PlaceholderPage({ label, icon: Icon }) {
 /* -------------------------------------------------------------------------- */
 
 export default function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    try { return localStorage.getItem('crebuilder_auth') === '1' } catch { return false }
-  })
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [authReady, setAuthReady] = useState(false)
   const [active, setActive] = useState('dashboard')
-  const [user, setUser] = useState(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem('crebuilder_db_user') || 'null')
-      return saved?.email ? { ...CURRENT_USER, ...saved } : CURRENT_USER
-    } catch { return CURRENT_USER }
-  })
+  const [user, setUser] = useState(CURRENT_USER)
+
+  // Firebase Auth is the source of truth. It persists the session across
+  // refreshes automatically, so no manual localStorage flag is needed.
+  useEffect(() => {
+    return onAuthStateChanged(auth, (u) => {
+      if (u) {
+        const name = u.displayName || (u.email ? u.email.split('@')[0] : CURRENT_USER.name)
+        const nextUser = { ...CURRENT_USER, name, email: u.email || '', initials: name.slice(0, 1).toUpperCase() }
+        setUser(nextUser)
+        setIsLoggedIn(true)
+        saveUser({ name: nextUser.name, email: nextUser.email }).catch(() => {})
+      } else {
+        setIsLoggedIn(false)
+      }
+      setAuthReady(true)
+    })
+  }, [])
   const [query, setQuery] = useState('')
 
   // Live app data — shared across screens
@@ -9484,20 +9555,12 @@ export default function App() {
     if (dbLoaded) putCol('dealrooms', dealRooms).catch(() => {})
   }, [dealRooms, dbLoaded])
 
-  const handleLogin = ({ email }) => {
-    const nextUser = { ...CURRENT_USER, email }
-    setUser(nextUser)
-    setIsLoggedIn(true)
-    setActive('dashboard')
-    try { localStorage.setItem('crebuilder_auth', '1') } catch {}
-    // Save the login to MongoDB (users collection). Ignored if backend/DB offline.
-    saveUser({ name: nextUser.name, email: nextUser.email }).catch(() => {})
-  }
+  // onAuthStateChanged already sets the user + logged-in flag; just reset the view.
+  const handleLogin = () => { setActive('dashboard') }
 
   const handleSignOut = () => {
-    setIsLoggedIn(false)
     setQuery('')
-    try { localStorage.removeItem('crebuilder_auth') } catch {}
+    signOut(auth).catch(() => {})
   }
 
   const navigate = (key) => {
@@ -9521,6 +9584,16 @@ export default function App() {
     setActive('dashboard')
     setMobileNav(false)
     setResume({ draft, nonce: (resume?.nonce || 0) + 1 })
+  }
+
+  if (!authReady) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-400">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-brand" /> Loading…
+        </div>
+      </div>
+    )
   }
 
   if (!isLoggedIn) {
