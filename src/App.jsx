@@ -3224,7 +3224,7 @@ function GoogleMapEditor({ open, map, onSave, onClose, notify }) {
 
   if (!open || !map) return null
   return (
-    <div className="fixed inset-0 z-[1200] flex flex-col bg-neutral-900">
+    <div className="flex h-full flex-col overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900">
       <div className="flex flex-1 overflow-hidden">
         {/* Left tool panel */}
         <div className="w-56 shrink-0 space-y-1 overflow-y-auto border-r border-neutral-800 bg-neutral-900 p-3">
@@ -5129,6 +5129,11 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                   </div>
                 </div>
               ) : isMaps ? (
+                mapEditor ? (
+                  <div className="-mx-6 -my-8 h-[calc(100vh-4.5rem)]">
+                    <GoogleMapEditor open map={mapEditor} onSave={saveMap} onClose={() => setMapEditor(null)} notify={notify} />
+                  </div>
+                ) : (
                 <div>
                   <h2 className="text-2xl font-extrabold text-slate-900">Maps</h2>
                   <p className="mt-1 text-sm text-slate-500">Create branded maps with business logos, labels, and styled overlays for your document.</p>
@@ -5167,6 +5172,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                     )}
                   </div>
                 </div>
+                )
               ) : isMedia ? (
                 <div>
                   <div className="flex items-start gap-3">
@@ -5751,7 +5757,8 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
             </div>
           </div>
 
-          {/* Footer */}
+          {/* Footer (hidden while the inline map editor is open — it has its own bar) */}
+          {!mapEditor && (
           <div className="flex items-center justify-between border-t border-slate-200 bg-white px-6 py-3">
             <button
               onClick={() => (step > 0 ? setStep(step - 1) : onExit())}
@@ -5771,9 +5778,10 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
               {last ? 'Finish & Save' : 'Continue'} <ChevronRight className="h-4 w-4" />
             </button>
           </div>
+          )}
 
           {/* Live preview dock — shown from Property Data onward (not on Property Details) */}
-          {step >= 1 && (
+          {step >= 1 && !mapEditor && (
             <div className="border-t border-slate-200 bg-white">
               <div className="flex items-center justify-between px-6 py-2">
                 <div className="flex items-center gap-2">
@@ -5856,15 +5864,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
         onClose={() => setMapOpen(false)}
       />
 
-      {GMAPS_KEY ? (
-        <GoogleMapEditor
-          open={!!mapEditor}
-          map={mapEditor}
-          onSave={saveMap}
-          onClose={() => setMapEditor(null)}
-          notify={notify}
-        />
-      ) : (
+      {!GMAPS_KEY && (
         <MapEditorModal
           open={!!mapEditor}
           map={mapEditor}
