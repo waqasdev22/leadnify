@@ -9515,7 +9515,8 @@ function PermToggle({ on, onClick, disabled }) {
   )
 }
 
-function TeamPermissionsPage({ myUid, notify }) {
+function TeamPermissionsPage({ myUid }) {
+  const notify = useToast()
   const [users, setUsers] = useState({})
   const [openUid, setOpenUid] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -9770,7 +9771,7 @@ export default function App() {
       case 'deals':
         return <DealRoomsPage dealRooms={dealRooms} setDealRooms={setDealRooms} />
       case 'team':
-        return <TeamPermissionsPage myUid={myUid} notify={notify} />
+        return <TeamPermissionsPage myUid={myUid} />
       case 'documents':
         return <PlaceholderPage label="Documents" icon={FileText} />
       case 'crm':
