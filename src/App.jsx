@@ -3485,8 +3485,17 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
   const isMaps = BUILDER_SECTIONS[step] === 'Maps'
   const isTenantProfiles = BUILDER_SECTIONS[step] === 'Tenant Profiles'
   const tenantProfiles = form.tenantProfiles || []
-  const addProfile = () => setForm((f) => ({ ...f, tenantProfiles: [...(f.tenantProfiles || []), { id: uid(), name: '', credit: '', industry: '', sf: '', description: '', logo: null }] }))
-  const updProfile = (id, k, v) => setForm((f) => ({ ...f, tenantProfiles: f.tenantProfiles.map((p) => (p.id === id ? { ...p, [k]: v } : p)) }))
+  const EMPTY_PROFILE = { tradeName: '', industry: '', description: '', logo: null, yearFounded: '', hq: '', locations: '', website: '', credit: 'Not specified', sf: '', leaseExp: '' }
+  const [profileModal, setProfileModal] = useState(null)
+  const openProfileModal = (p) => setProfileModal(p ? { ...EMPTY_PROFILE, ...p } : { ...EMPTY_PROFILE })
+  const setPM = (k, v) => setProfileModal((x) => ({ ...x, [k]: v }))
+  const submitProfile = () => {
+    const p = profileModal
+    if (p.id) setForm((f) => ({ ...f, tenantProfiles: f.tenantProfiles.map((x) => (x.id === p.id ? p : x)) }))
+    else setForm((f) => ({ ...f, tenantProfiles: [...(f.tenantProfiles || []), { ...p, id: uid() }] }))
+    setProfileModal(null)
+    notify(p.id ? 'Tenant updated' : 'Tenant added')
+  }
   const delProfile = (id) => setForm((f) => ({ ...f, tenantProfiles: f.tenantProfiles.filter((p) => p.id !== id) }))
   const maps = form.maps || []
   const addMap = () => setForm((f) => ({ ...f, maps: [...(f.maps || []), { id: uid(), title: `Map ${(f.maps?.length || 0) + 1}`, lat: f.lat, lng: f.lng }] }))
@@ -4121,36 +4130,34 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                       <h2 className="text-2xl font-extrabold text-slate-900">Tenant Profiles</h2>
                       <p className="mt-1 text-sm text-slate-500">Add profiles for each major tenant. Include their logo, credit rating, and key business details.</p>
                     </div>
-                    <button onClick={addProfile} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"><Plus className="h-4 w-4" /> Add Tenant</button>
+                    <button onClick={() => openProfileModal()} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"><Plus className="h-4 w-4" /> Add Tenant</button>
                   </div>
                   {tenantProfiles.length === 0 ? (
                     <div className="mt-4 flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-slate-200 py-16 text-center">
                       <Building2 className="h-8 w-8 text-slate-300" />
                       <p className="text-sm text-slate-400">No tenant profiles yet.</p>
-                      <button onClick={addProfile} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"><Plus className="h-4 w-4" /> Add First Tenant</button>
+                      <button onClick={() => openProfileModal()} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"><Plus className="h-4 w-4" /> Add First Tenant</button>
                     </div>
                   ) : (
                     <div className="mt-4 grid gap-4 md:grid-cols-2">
                       {tenantProfiles.map((p) => (
-                        <div key={p.id} className="rounded-2xl border border-slate-200 bg-white p-4">
-                          <div className="flex items-start gap-3">
-                            <label className="flex h-16 w-16 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-dashed border-slate-300 bg-slate-50 text-slate-400 transition hover:border-orange-300">
-                              {p.logo ? <img src={p.logo} alt="logo" className="h-full w-full object-contain" /> : <Camera className="h-5 w-5" />}
-                              <input type="file" accept="image/*" className="hidden" onChange={async (e) => { if (!e.target.files?.length) return; const [img] = await readFiles([e.target.files[0]]); updProfile(p.id, 'logo', img.url) }} />
-                            </label>
-                            <div className="min-w-0 flex-1 space-y-2">
-                              <input value={p.name} onChange={(e) => updProfile(p.id, 'name', e.target.value)} placeholder="Company / Tenant name" className={`${inputCls} font-semibold`} />
-                              <div className="grid grid-cols-2 gap-2">
-                                <input value={p.credit} onChange={(e) => updProfile(p.id, 'credit', e.target.value)} placeholder="Credit rating (e.g. A-)" className={inputCls} />
-                                <input value={p.industry} onChange={(e) => updProfile(p.id, 'industry', e.target.value)} placeholder="Industry" className={inputCls} />
-                              </div>
+                        <div key={p.id} className="group flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4">
+                          <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50 text-slate-400">
+                            {p.logo ? <img src={p.logo} alt="logo" className="h-full w-full object-contain" /> : <Building2 className="h-6 w-6" />}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-bold text-slate-900">{p.tradeName || 'Untitled Tenant'}</p>
+                            <p className="truncate text-xs text-slate-500">{[p.industry, p.hq].filter(Boolean).join(' · ') || '—'}</p>
+                            <div className="mt-1 flex flex-wrap gap-1.5 text-[11px]">
+                              {p.credit && p.credit !== 'Not specified' && <span className="rounded bg-emerald-50 px-1.5 py-0.5 font-semibold text-emerald-600">{p.credit}</span>}
+                              {p.sf && <span className="rounded bg-slate-100 px-1.5 py-0.5 font-semibold text-slate-600">{p.sf} SF</span>}
+                              {p.leaseExp && <span className="rounded bg-slate-100 px-1.5 py-0.5 font-semibold text-slate-600">Exp {p.leaseExp}</span>}
                             </div>
+                          </div>
+                          <div className="flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
+                            <button onClick={() => openProfileModal(p)} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-brand"><Pencil className="h-4 w-4" /></button>
                             <button onClick={() => delProfile(p.id)} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-500"><Trash2 className="h-4 w-4" /></button>
                           </div>
-                          <div className="mt-2 grid grid-cols-2 gap-2">
-                            <input value={p.sf} onChange={(e) => updProfile(p.id, 'sf', e.target.value)} placeholder="Leased SF" className={inputCls} />
-                          </div>
-                          <textarea value={p.description} onChange={(e) => updProfile(p.id, 'description', e.target.value)} rows={3} placeholder="Key business details, lease terms, tenant strength…" className="mt-2 w-full rounded-lg border border-slate-200 p-3 text-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100" />
                         </div>
                       ))}
                     </div>
@@ -5156,6 +5163,84 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
               >
                 Change Scope
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add / Edit Tenant Profile modal */}
+      {profileModal && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => setProfileModal(null)}>
+          <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+              <h3 className="text-lg font-extrabold text-slate-900">{profileModal.id ? 'Edit Tenant Profile' : 'Add Tenant Profile'}</h3>
+              <button onClick={() => setProfileModal(null)} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="scrollbar-slim grid flex-1 gap-x-8 gap-y-4 overflow-y-auto p-5 md:grid-cols-2">
+              {/* Left: basic info */}
+              <div>
+                <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">Basic Information</p>
+                <label className="mb-1 block text-sm font-semibold text-slate-700">Trade Name</label>
+                <input value={profileModal.tradeName} onChange={(e) => setPM('tradeName', e.target.value)} placeholder="e.g. Starbucks, Target" className={inputCls} />
+                <label className="mb-1 mt-3 block text-sm font-semibold text-slate-700">Industry</label>
+                <input value={profileModal.industry} onChange={(e) => setPM('industry', e.target.value)} placeholder="Select or type…" className={inputCls} />
+                <div className="mt-3 flex items-center justify-between">
+                  <label className="text-sm font-semibold text-slate-700">Description</label>
+                  <span className="text-xs text-slate-400">{(profileModal.description || '').length}/2000</span>
+                </div>
+                <textarea value={profileModal.description} onChange={(e) => setPM('description', e.target.value.slice(0, 2000))} rows={4} placeholder="Brief description of the tenant, their business, and relevance to the property…" className="mt-1 w-full rounded-lg border border-slate-200 p-3 text-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100" />
+                <p className="mb-2 mt-4 text-[11px] font-bold uppercase tracking-wide text-slate-400">Logo</p>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-100 text-slate-400">
+                    {profileModal.logo ? <img src={profileModal.logo} alt="logo" className="h-full w-full object-contain" /> : <Building2 className="h-6 w-6" />}
+                  </div>
+                  <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50">
+                    <Upload className="h-4 w-4" /> Upload Logo
+                    <input type="file" accept="image/*" className="hidden" onChange={async (e) => { if (!e.target.files?.length) return; const [img] = await readFiles([e.target.files[0]]); setPM('logo', img.url) }} />
+                  </label>
+                </div>
+              </div>
+
+              {/* Right: company + lease */}
+              <div>
+                <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">Company Details</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1 block text-sm font-semibold text-slate-700">Year Founded</label>
+                    <input value={profileModal.yearFounded} onChange={(e) => setPM('yearFounded', e.target.value)} placeholder="e.g. 1971" className={inputCls} />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-semibold text-slate-700">Headquarters</label>
+                    <input value={profileModal.hq} onChange={(e) => setPM('hq', e.target.value)} placeholder="e.g. Seattle, WA" className={inputCls} />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-semibold text-slate-700"># of Locations</label>
+                    <input value={profileModal.locations} onChange={(e) => setPM('locations', e.target.value)} placeholder="e.g. 35000" className={inputCls} />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-semibold text-slate-700">Website</label>
+                    <input value={profileModal.website} onChange={(e) => setPM('website', e.target.value)} placeholder="e.g. starbucks.com" className={inputCls} />
+                  </div>
+                </div>
+                <label className="mb-1 mt-3 block text-sm font-semibold text-slate-700">Credit Rating</label>
+                <SelectInput value={profileModal.credit} onChange={(e) => setPM('credit', e.target.value)} options={['Not specified', 'AAA', 'AA', 'A', 'BBB', 'BB', 'B', 'Below B', 'Not rated']} />
+
+                <p className="mb-2 mt-4 text-[11px] font-bold uppercase tracking-wide text-slate-400">Lease Information</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1 block text-sm font-semibold text-slate-700">Square Feet</label>
+                    <input value={profileModal.sf} onChange={(e) => setPM('sf', e.target.value)} placeholder="e.g. 12500" className={inputCls} />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-semibold text-slate-700">Lease Expiration</label>
+                    <input value={profileModal.leaseExp} onChange={(e) => setPM('leaseExp', e.target.value)} placeholder="e.g. Dec 2029" className={inputCls} />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-3">
+              <button onClick={() => setProfileModal(null)} className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 transition hover:text-slate-900">Cancel</button>
+              <button onClick={submitProfile} disabled={!(profileModal.tradeName || '').trim()} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600 disabled:opacity-40">{profileModal.id ? 'Save Changes' : 'Add Tenant'}</button>
             </div>
           </div>
         </div>
