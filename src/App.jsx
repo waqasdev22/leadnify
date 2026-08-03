@@ -4374,7 +4374,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                             contentEditable
                             suppressContentEditableWarning
                             onInput={() => setForm((f) => ({ ...f, moAbout: moRef.current?.innerHTML || '' }))}
-                            className="scrollbar-slim min-h-[300px] max-h-[420px] overflow-y-auto p-4 text-sm leading-relaxed text-slate-700 outline-none [&_a]:text-brand [&_a]:underline"
+                            className="scrollbar-slim min-h-[400px] max-h-[520px] overflow-y-auto p-4 text-sm leading-relaxed text-slate-700 outline-none [&_a]:text-brand [&_a]:underline"
                           />
                           {!(form.moAbout && form.moAbout.replace(/<[^>]*>/g, '').trim()) && (
                             <span className="pointer-events-none absolute left-4 top-4 text-sm text-slate-400">Enter city / market information here…</span>
