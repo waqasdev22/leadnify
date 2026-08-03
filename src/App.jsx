@@ -2480,7 +2480,7 @@ const US_STATE_ABBR = { Alabama: 'AL', Alaska: 'AK', Arizona: 'AZ', Arkansas: 'A
 const BUILDER_SECTIONS = [
   'Property Details', 'Property Data', 'Executive Summary', 'Investment Highlights',
   'Location Highlights', 'Images & Media', 'Financials', 'Rent Roll',
-  'Income & Expenses', 'Valuation', 'Tenant Profiles', 'Maps', 'Sales Comparables', 'Rental Comparables',
+  'Income & Expenses', 'Valuation', 'Tenant Profiles', 'Sales Comparables', 'Rental Comparables', 'Maps',
 ]
 
 // Suggested "Property Data" fields per property type (shown as one-tap pills).
@@ -3497,6 +3497,22 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
     notify(p.id ? 'Tenant updated' : 'Tenant added')
   }
   const delProfile = (id) => setForm((f) => ({ ...f, tenantProfiles: f.tenantProfiles.filter((p) => p.id !== id) }))
+
+  // Sales Comparables
+  const isSalesComps = BUILDER_SECTIONS[step] === 'Sales Comparables'
+  const salesComps = form.salesComps || []
+  const EMPTY_COMP = { photo: null, propertyName: '', street: '', city: '', state: '', zip: '', yearBuilt: '', description: '', salePrice: '', saleDate: '', capRate: '', noi: '', buildingSf: '', tenants: '', bedrooms: '', occupancy: '', unitMix: '', hideSaleDate: false, active: true }
+  const [compModal, setCompModal] = useState(null)
+  const openCompModal = (c) => setCompModal(c ? { ...EMPTY_COMP, ...c } : { ...EMPTY_COMP })
+  const setCM = (k, v) => setCompModal((x) => ({ ...x, [k]: v }))
+  const submitComp = () => {
+    const c = compModal
+    if (c.id) setForm((f) => ({ ...f, salesComps: f.salesComps.map((x) => (x.id === c.id ? c : x)) }))
+    else setForm((f) => ({ ...f, salesComps: [...(f.salesComps || []), { ...c, id: uid() }] }))
+    setCompModal(null)
+    notify(c.id ? 'Comparable updated' : 'Comparable added')
+  }
+  const delComp = (id) => setForm((f) => ({ ...f, salesComps: f.salesComps.filter((x) => x.id !== id) }))
   const maps = form.maps || []
   const addMap = () => setForm((f) => ({ ...f, maps: [...(f.maps || []), { id: uid(), title: `Map ${(f.maps?.length || 0) + 1}`, lat: f.lat, lng: f.lng }] }))
   const updMap = (id, title) => setForm((f) => ({ ...f, maps: f.maps.map((m) => (m.id === id ? { ...m, title } : m)) }))
@@ -4157,6 +4173,49 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                           <div className="flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
                             <button onClick={() => openProfileModal(p)} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-brand"><Pencil className="h-4 w-4" /></button>
                             <button onClick={() => delProfile(p.id)} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-500"><Trash2 className="h-4 w-4" /></button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : isSalesComps ? (
+                <div>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-500"><Scale className="h-5 w-5" /></div>
+                      <div>
+                        <h2 className="text-2xl font-extrabold text-slate-900">Sales Comparables</h2>
+                        <p className="mt-1 text-sm text-slate-500">Add comparable sales transactions to support your property valuation.</p>
+                      </div>
+                    </div>
+                    <button onClick={() => openCompModal()} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"><Plus className="h-4 w-4" /> Add Comparable</button>
+                  </div>
+                  {salesComps.length === 0 ? (
+                    <div className="mt-4 flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-slate-200 py-16 text-center">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-400"><MapPin className="h-6 w-6" /></div>
+                      <p className="text-sm text-slate-400">No comparables added yet.</p>
+                      <button onClick={() => openCompModal()} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"><Plus className="h-4 w-4" /> Add First Comparable</button>
+                    </div>
+                  ) : (
+                    <div className="mt-4 grid gap-4 md:grid-cols-2">
+                      {salesComps.map((c) => (
+                        <div key={c.id} className="group flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4">
+                          <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50 text-slate-400">
+                            {c.photo ? <img src={c.photo} alt="" className="h-full w-full object-cover" /> : <Camera className="h-6 w-6" />}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-bold text-slate-900">{c.propertyName || c.street || 'Untitled Comparable'}</p>
+                            <p className="truncate text-xs text-slate-500">{[c.city, c.state].filter(Boolean).join(', ') || '—'}</p>
+                            <div className="mt-1 flex flex-wrap gap-1.5 text-[11px]">
+                              {c.salePrice && <span className="rounded bg-emerald-50 px-1.5 py-0.5 font-semibold text-emerald-600">{currency(c.salePrice)}</span>}
+                              {c.capRate && <span className="rounded bg-slate-100 px-1.5 py-0.5 font-semibold text-slate-600">{c.capRate}% cap</span>}
+                              {c.buildingSf && <span className="rounded bg-slate-100 px-1.5 py-0.5 font-semibold text-slate-600">{c.buildingSf} SF</span>}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
+                            <button onClick={() => openCompModal(c)} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-brand"><Pencil className="h-4 w-4" /></button>
+                            <button onClick={() => delComp(c.id)} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-500"><Trash2 className="h-4 w-4" /></button>
                           </div>
                         </div>
                       ))}
@@ -5163,6 +5222,122 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
               >
                 Change Scope
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add / Edit Sales Comparable modal */}
+      {compModal && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => setCompModal(null)}>
+          <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+              <h3 className="text-lg font-extrabold text-slate-900">{compModal.id ? 'Edit Sales Comparable' : 'Add Sales Comparable'}</h3>
+              <button onClick={() => setCompModal(null)} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="scrollbar-slim grid flex-1 gap-x-8 gap-y-4 overflow-y-auto p-5 md:grid-cols-2">
+              {/* Left */}
+              <div>
+                <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">Photo</p>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-16 w-20 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-100 text-slate-400">
+                    {compModal.photo ? <img src={compModal.photo} alt="" className="h-full w-full object-cover" /> : <Camera className="h-6 w-6" />}
+                  </div>
+                  <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50">
+                    <Upload className="h-4 w-4" /> Upload Photo
+                    <input type="file" accept="image/*" className="hidden" onChange={async (e) => { if (!e.target.files?.length) return; const [img] = await readFiles([e.target.files[0]]); setCM('photo', img.url) }} />
+                  </label>
+                </div>
+
+                <p className="mb-2 mt-5 text-[11px] font-bold uppercase tracking-wide text-slate-400">Property Information</p>
+                <label className="mb-1 block text-sm font-semibold text-slate-700">Property Name</label>
+                <input value={compModal.propertyName} onChange={(e) => setCM('propertyName', e.target.value)} placeholder="e.g. Sunset Plaza" className={inputCls} />
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1 block text-sm font-semibold text-slate-700">Street Address</label>
+                    <input value={compModal.street} onChange={(e) => setCM('street', e.target.value)} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-semibold text-slate-700">City</label>
+                    <input value={compModal.city} onChange={(e) => setCM('city', e.target.value)} className={inputCls} />
+                  </div>
+                </div>
+                <div className="mt-3 grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="mb-1 block text-sm font-semibold text-slate-700">State</label>
+                    <input value={compModal.state} onChange={(e) => setCM('state', e.target.value)} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-semibold text-slate-700">Zip Code</label>
+                    <input value={compModal.zip} onChange={(e) => setCM('zip', e.target.value)} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-semibold text-slate-700">Year Built</label>
+                    <input value={compModal.yearBuilt} onChange={(e) => setCM('yearBuilt', e.target.value)} placeholder="e.g. 2005" className={inputCls} />
+                  </div>
+                </div>
+                <label className="mb-1 mt-3 block text-sm font-semibold text-slate-700">Description</label>
+                <textarea value={compModal.description} onChange={(e) => setCM('description', e.target.value)} rows={3} placeholder="Brief description of the comparable…" className="w-full rounded-lg border border-slate-200 p-3 text-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100" />
+              </div>
+
+              {/* Right */}
+              <div>
+                <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">Sale Details</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1 block text-sm font-semibold text-slate-700">Sale Price</label>
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">$</span>
+                      <input value={compModal.salePrice} onChange={(e) => setCM('salePrice', e.target.value)} className={`${inputCls} pl-6`} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-semibold text-slate-700">Sale Date</label>
+                    <input type="date" value={compModal.saleDate} onChange={(e) => setCM('saleDate', e.target.value)} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-semibold text-slate-700">Cap Rate %</label>
+                    <input value={compModal.capRate} onChange={(e) => setCM('capRate', e.target.value)} placeholder="0" className={inputCls} />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-semibold text-slate-700">NOI</label>
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">$</span>
+                      <input value={compModal.noi} onChange={(e) => setCM('noi', e.target.value)} placeholder="0" className={`${inputCls} pl-6`} />
+                    </div>
+                  </div>
+                </div>
+
+                <p className="mb-2 mt-5 text-[11px] font-bold uppercase tracking-wide text-slate-400">Building Details</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1 block text-sm font-semibold text-slate-700">Building Size (SF)</label>
+                    <input value={compModal.buildingSf} onChange={(e) => setCM('buildingSf', e.target.value)} placeholder="0" className={inputCls} />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-semibold text-slate-700"># of Tenants</label>
+                    <input value={compModal.tenants} onChange={(e) => setCM('tenants', e.target.value)} placeholder="0" className={inputCls} />
+                  </div>
+                </div>
+                <label className="mb-1 mt-3 block text-sm font-semibold text-slate-700"># of Bedrooms</label>
+                <input value={compModal.bedrooms} onChange={(e) => setCM('bedrooms', e.target.value)} placeholder="e.g. 70" className={inputCls} />
+                <label className="mb-1 mt-3 block text-sm font-semibold text-slate-700">Occupancy %</label>
+                <input value={compModal.occupancy} onChange={(e) => setCM('occupancy', e.target.value)} placeholder="0" className={inputCls} />
+                <label className="mb-1 mt-3 block text-sm font-semibold text-slate-700">Unit Mix</label>
+                <input value={compModal.unitMix} onChange={(e) => setCM('unitMix', e.target.value)} placeholder="e.g. 10 Studio; 4 One Bed; 1 Commercial" className={inputCls} />
+
+                <p className="mb-2 mt-5 text-[11px] font-bold uppercase tracking-wide text-slate-400">Options</p>
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                  <input type="checkbox" checked={compModal.hideSaleDate} onChange={(e) => setCM('hideSaleDate', e.target.checked)} className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-orange-300" /> Hide sale date
+                </label>
+                <label className="mt-2 flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                  <input type="checkbox" checked={compModal.active} onChange={(e) => setCM('active', e.target.checked)} className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-orange-300" /> Property is currently active
+                </label>
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-3">
+              <button onClick={() => setCompModal(null)} className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 transition hover:text-slate-900">Cancel</button>
+              <button onClick={submitComp} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600">{compModal.id ? 'Save Changes' : 'Add Comparable'}</button>
             </div>
           </div>
         </div>
