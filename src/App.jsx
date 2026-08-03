@@ -8575,9 +8575,16 @@ function PlaceholderPage({ label, icon: Icon }) {
 /* -------------------------------------------------------------------------- */
 
 export default function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    try { return localStorage.getItem('crebuilder_auth') === '1' } catch { return false }
+  })
   const [active, setActive] = useState('dashboard')
-  const [user, setUser] = useState(CURRENT_USER)
+  const [user, setUser] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('crebuilder_db_user') || 'null')
+      return saved?.email ? { ...CURRENT_USER, ...saved } : CURRENT_USER
+    } catch { return CURRENT_USER }
+  })
   const [query, setQuery] = useState('')
 
   // Live app data — shared across screens
@@ -8628,6 +8635,7 @@ export default function App() {
     setUser(nextUser)
     setIsLoggedIn(true)
     setActive('dashboard')
+    try { localStorage.setItem('crebuilder_auth', '1') } catch {}
     // Save the login to MongoDB (users collection). Ignored if backend/DB offline.
     saveUser({ name: nextUser.name, email: nextUser.email }).catch(() => {})
   }
@@ -8635,6 +8643,7 @@ export default function App() {
   const handleSignOut = () => {
     setIsLoggedIn(false)
     setQuery('')
+    try { localStorage.removeItem('crebuilder_auth') } catch {}
   }
 
   const navigate = (key) => {
