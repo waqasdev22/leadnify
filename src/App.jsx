@@ -4886,11 +4886,11 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                         <p className="text-sm text-slate-400">No maps yet — click "Create Map" to add a full-page map slide.</p>
                       </div>
                     ) : (
-                      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                      <div className="mt-4 grid gap-4 grid-cols-[repeat(auto-fill,minmax(240px,300px))]">
                         {maps.map((m) => (
                           <div key={m.id} className="rounded-xl border border-slate-200 p-2">
                             <div className="relative">
-                              <MiniMap lat={m.lat} lng={m.lng} zoom={m.zoom} className="h-56 w-full overflow-hidden rounded-lg bg-slate-100" />
+                              <MiniMap lat={m.lat} lng={m.lng} zoom={m.zoom} className="h-44 w-full overflow-hidden rounded-lg bg-slate-100" />
                               <div className="absolute right-2 top-2 flex gap-1">
                                 <button onClick={() => setMapEditor(m)} className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-brand shadow ring-1 ring-slate-200 transition hover:bg-orange-50"><Pencil className="h-4 w-4" /></button>
                                 <button onClick={() => delMap(m.id)} className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-rose-500 shadow ring-1 ring-slate-200 transition hover:bg-rose-50"><Trash2 className="h-4 w-4" /></button>
