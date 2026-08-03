@@ -8887,6 +8887,13 @@ function DocumentHubView({ room, onBack, notify, onEditDocument }) {
         state: (parts[2] || '').split(' ')[0] || '',
         zip: (parts[2] || '').split(' ')[1] || '',
         sections: {},
+        dataPoints: [],
+        rentRoll: [],
+        maps: [],
+        salesComps: [],
+        rentComps: [],
+        coAgents: [],
+        moFacts: [],
       },
     })
   }
