@@ -7697,18 +7697,19 @@ export function buildMicrositeHtml(items, brandColor, template = 'Modern') {
 body{font-family:${bodyFont};background:#f8fafc;color:#0f172a}
 .hero{position:relative;height:200px;overflow:hidden;color:#fff;background:${hero}}
 .hero .cut{position:absolute;inset:0;background:linear-gradient(115deg,transparent 55%,rgba(0,0,0,.28) 55%)}
-.hero .inner{position:relative;height:100%;display:flex;align-items:center;justify-content:space-between;padding:0 40px}
+.hero .inner{position:relative;height:100%;display:flex;align-items:center;justify-content:space-between;padding:0 40px;max-width:1240px;margin:0 auto}
 .logo{height:96px;width:160px;border-radius:12px;background:rgba(255,255,255,.15)}
 .count b{font-size:48px;font-weight:800;line-height:1;display:block;text-align:right}
 .count span{font-size:12px;font-weight:600;letter-spacing:2px;text-transform:uppercase;opacity:.85}
-.toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:12px;background:#fff;border-bottom:1px solid #e2e8f0;padding:12px 24px;position:sticky;top:0;z-index:1000}
+.toolbar{background:#fff;border-bottom:1px solid #e2e8f0;position:sticky;top:0;z-index:1000}
+.tbin{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:12px 24px;max-width:1240px;margin:0 auto}
 .seg{display:inline-flex;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden}
 .seg button{border:0;background:#fff;padding:8px 16px;font-size:14px;font-weight:600;color:#475569;cursor:pointer}
 .seg button.active{color:#fff;background:${primary}}
 input,select{border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;font-size:14px;outline:none;color:#334155}
 .spacer{margin-left:auto;display:flex;align-items:center;gap:12px}
 .result{font-size:14px;color:#94a3b8}.result b{color:#334155}
-.content{padding:24px;display:grid;gap:24px}
+.content{padding:24px;display:grid;gap:24px;max-width:1240px;margin:0 auto}
 .content.mapgrid{grid-template-columns:1fr 1fr}
 .content.map{grid-template-columns:1fr}
 .content.grid #map,.content.list #map{display:none}
@@ -7811,12 +7812,12 @@ body.detail-open .detail{display:block}
 @media(max-width:900px){.dwrap{grid-template-columns:1fr}.demo{grid-template-columns:1fr}.fg{grid-template-columns:1fr}.gal{grid-template-columns:repeat(2,1fr)}}
 </style></head><body>
 <header class="hero"><div class="cut"></div><div class="inner"><div class="logo"></div><div class="count" id="count"></div></div></header>
-<div class="toolbar">
+<div class="toolbar"><div class="tbin">
   <div class="seg" id="filterSeg"><button data-f="All" class="active">All</button><button data-f="For Sale">For Sale</button><button data-f="For Lease">For Lease</button></div>
   <input id="search" placeholder="Search..."/>
   <select id="sort"><option value="Newest">Sort: Newest First</option><option value="PriceHigh">Sort: Price High to Low</option><option value="PriceLow">Sort: Price Low to High</option></select>
   <div class="spacer"><span class="result" id="result"></span><div class="seg" id="viewSeg"><button data-v="map">Map</button><button data-v="mapgrid" class="active">Map + Grid</button><button data-v="grid">Grid</button><button data-v="list">List</button></div></div>
-</div>
+</div></div>
 <div class="content mapgrid" id="content"><div id="map"></div><div id="cards"></div></div>
 <footer class="list-footer"><div class="line"></div><p>Powered by <b>CREBuilder</b></p></footer>
 <div class="detail" id="detailView"></div>
