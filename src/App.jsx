@@ -70,6 +70,7 @@ import {
   Trees,
   HeartPulse,
   ArrowLeft,
+  ArrowRight,
   Palette,
   LayoutList,
   ShoppingBag,
@@ -109,6 +110,8 @@ import {
   Frame,
   Video,
   Route,
+  Calculator,
+  Lock,
 } from 'lucide-react'
 
 /* -------------------------------------------------------------------------- */
@@ -3835,6 +3838,102 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                         </button>
                       )
                     })}
+                  </div>
+                </div>
+              ) : isRentRoll && finType === 'Cap Rate & NOI' ? (() => {
+                const price = Number(form.price) || 0
+                const capMode = form.capMode || 'noi'
+                const noiVal = parseFloat(form.capNoi) || 0
+                const capRateVal = parseFloat(form.capRate) || 0
+                const calcCap = price ? (noiVal / price) * 100 : 0
+                const calcNoi = (price * capRateVal) / 100
+                return (
+                  <div className="max-w-xl">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-500"><Calculator className="h-5 w-5" /></div>
+                      <h2 className="text-2xl font-extrabold text-slate-900">Cap Rate &amp; NOI</h2>
+                      <span className="inline-flex items-center gap-1 rounded-md bg-violet-50 px-2 py-1 text-xs font-semibold text-violet-600"><Calculator className="h-3.5 w-3.5" /> {finType}</span>
+                      <button onClick={() => setStep(6)} className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"><Repeat2 className="h-3.5 w-3.5" /> Change</button>
+                    </div>
+                    <p className="mt-1 text-sm text-slate-500">Your selling price is set on the Property Details page. Enter either NOI or Cap Rate to calculate the other.</p>
+
+                    {/* Valuation */}
+                    <div className="mt-4 rounded-2xl border border-violet-200 bg-violet-50/30 p-4">
+                      <p className="flex items-center gap-2 text-sm font-bold text-slate-900"><Calculator className="h-4 w-4 text-violet-500" /> Valuation <span className="text-xs font-normal text-violet-500">NOI ÷ Cap Rate = Selling Price</span></p>
+                      <div className="mt-3 flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3">
+                        <div>
+                          <p className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400"><Lock className="h-3 w-3" /> Selling Price</p>
+                          <p className="text-xl font-extrabold text-slate-900">{currency(price)}</p>
+                        </div>
+                        <span className="rounded bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-500">From Property Details</span>
+                      </div>
+                      <div className="mt-3 inline-flex w-full rounded-lg bg-slate-100 p-1">
+                        {[{ k: 'noi', l: 'I know the NOI' }, { k: 'caprate', l: 'I know the Cap Rate' }].map((o) => (
+                          <button key={o.k} onClick={() => setForm((f) => ({ ...f, capMode: o.k }))} className={`flex-1 rounded-md px-3 py-1.5 text-sm font-semibold transition ${capMode === o.k ? 'bg-white text-violet-600 shadow-sm' : 'text-slate-500'}`}>{o.l}</button>
+                        ))}
+                      </div>
+                      <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-end gap-2">
+                        <div>
+                          <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">NOI</label>
+                          {capMode === 'noi' ? (
+                            <div className="relative">
+                              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">$</span>
+                              <input value={form.capNoi || ''} onChange={(e) => setForm((f) => ({ ...f, capNoi: e.target.value }))} placeholder="0" className={`${inputCls} pl-6`} />
+                            </div>
+                          ) : (
+                            <div className="rounded-lg border border-violet-200 bg-violet-50/50 px-3 py-2 text-sm font-bold text-slate-800">{currency(calcNoi)}</div>
+                          )}
+                        </div>
+                        <ArrowRight className="mb-2 h-4 w-4 text-slate-300" />
+                        <div>
+                          <label className="mb-1 flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-slate-500">Cap Rate <span className="rounded bg-violet-100 px-1 text-[10px] font-semibold text-violet-600">{capMode === 'noi' ? 'Calculated' : 'Input'}</span></label>
+                          {capMode === 'caprate' ? (
+                            <div className="relative">
+                              <input value={form.capRate || ''} onChange={(e) => setForm((f) => ({ ...f, capRate: e.target.value }))} placeholder="0" className={`${inputCls} pr-7`} />
+                              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">%</span>
+                            </div>
+                          ) : (
+                            <div className="rounded-lg border border-violet-200 bg-violet-50/50 px-3 py-2 text-right text-sm font-bold text-slate-800">{calcCap.toFixed(2)}%</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Property metrics */}
+                    <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+                      <p className="flex items-center gap-2 text-sm font-bold text-slate-900"><Building2 className="h-4 w-4 text-amber-500" /> Property Metrics <span className="text-xs font-normal text-slate-400">Optional — appears on Investment Highlights page</span></p>
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                        <div>
+                          <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Occupancy</label>
+                          <div className="relative">
+                            <input value={form.capOcc || ''} onChange={(e) => setForm((f) => ({ ...f, capOcc: e.target.value }))} placeholder="e.g. 94" className={`${inputCls} pr-7`} />
+                            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">%</span>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Number of Tenants</label>
+                          <div className="relative">
+                            <Users className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                            <input value={form.capTenants || ''} onChange={(e) => setForm((f) => ({ ...f, capTenants: e.target.value }))} placeholder="e.g. 12" className={`${inputCls} pl-9`} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })() : isRentRoll && finType === 'Skip Financials' ? (
+                <div className="max-w-xl">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-500"><EyeOff className="h-5 w-5" /></div>
+                    <h2 className="text-2xl font-extrabold text-slate-900">Financials Skipped</h2>
+                    <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600"><EyeOff className="h-3.5 w-3.5" /> {finType}</span>
+                    <button onClick={() => setStep(6)} className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"><Repeat2 className="h-3.5 w-3.5" /> Change</button>
+                  </div>
+                  <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-white p-8 text-center">
+                    <EyeOff className="mx-auto h-8 w-8 text-slate-300" />
+                    <p className="mt-3 font-bold text-slate-700">No financial pages in this document</p>
+                    <p className="mt-1 text-sm text-slate-500">You chose to skip financials, so no rent roll, income &amp; expenses, or valuation pages will be generated. You can change this anytime.</p>
+                    <button onClick={() => setStep(6)} className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"><Repeat2 className="h-4 w-4" /> Change Financial Scope</button>
                   </div>
                 </div>
               ) : isRentRoll ? (
