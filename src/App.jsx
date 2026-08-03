@@ -4525,7 +4525,9 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                     </div>
                   ))}
 
-                  <button onClick={addCo} className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"><Plus className="h-4 w-4" /> Add Co-Listing Agent</button>
+                  {coAgents.length === 0 && (
+                    <button onClick={addCo} className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"><Plus className="h-4 w-4" /> Add Co-Listing Agent</button>
+                  )}
 
                   {/* No team members notice */}
                   <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
