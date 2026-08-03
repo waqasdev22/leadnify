@@ -4886,7 +4886,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                         <p className="text-sm text-slate-400">No maps yet — click "Create Map" to add a full-page map slide.</p>
                       </div>
                     ) : (
-                      <div className="mt-4 grid gap-4 grid-cols-[repeat(auto-fill,minmax(300px,340px))]">
+                      <div className="mt-4 grid gap-4 grid-cols-[repeat(auto-fill,minmax(260px,300px))]">
                         {maps.map((m) => (
                           <div key={m.id} className="rounded-xl border border-slate-200 p-2">
                             <div className="relative">
