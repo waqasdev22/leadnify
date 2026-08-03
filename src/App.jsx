@@ -3518,6 +3518,22 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
   const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
   const soldLabel = (d) => { if (!d) return '—'; const [y, m] = String(d).split('-'); return `${MONTHS[Number(m) - 1] || ''} ${y}` }
   const compYears = [...new Set(salesComps.map((c) => (c.saleDate ? String(c.saleDate).slice(0, 4) : null)).filter(Boolean))].sort()
+  // Rental Comparables
+  const isRentalComps = BUILDER_SECTIONS[step] === 'Rental Comparables'
+  const rentComps = form.rentComps || []
+  const EMPTY_RENT = { photo: null, propertyName: '', street: '', city: '', state: '', zip: '', yearBuilt: '', description: '', marketRent: '', buildingSf: '', tenants: '', bedrooms: '', occupancy: '', unitMix: '', active: true }
+  const [rentModal, setRentModal] = useState(null)
+  const [rentDel, setRentDel] = useState(null)
+  const openRentModal = (c) => setRentModal(c ? { ...EMPTY_RENT, ...c } : { ...EMPTY_RENT })
+  const setRM = (k, v) => setRentModal((x) => ({ ...x, [k]: v }))
+  const submitRent = () => {
+    const c = rentModal
+    if (c.id) setForm((f) => ({ ...f, rentComps: f.rentComps.map((x) => (x.id === c.id ? c : x)) }))
+    else setForm((f) => ({ ...f, rentComps: [...(f.rentComps || []), { ...c, id: uid() }] }))
+    setRentModal(null)
+    notify(c.id ? 'Comparable updated' : 'Comparable added')
+  }
+  const delRent = (id) => setForm((f) => ({ ...f, rentComps: f.rentComps.filter((x) => x.id !== id) }))
   const maps = form.maps || []
   const addMap = () => setForm((f) => ({ ...f, maps: [...(f.maps || []), { id: uid(), title: `Map ${(f.maps?.length || 0) + 1}`, lat: f.lat, lng: f.lng }] }))
   const updMap = (id, title) => setForm((f) => ({ ...f, maps: f.maps.map((m) => (m.id === id ? { ...m, title } : m)) }))
@@ -4231,6 +4247,57 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                               <span className="font-bold text-brand">{c.salePrice ? currency(c.salePrice) : '—'}</span>
                               <span className="text-xs text-slate-400">Sold</span>
                               <span className="font-bold text-slate-900">{soldLabel(c.saleDate)}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              ) : isRentalComps ? (
+                <div>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-500"><Home className="h-5 w-5" /></div>
+                      <div>
+                        <h2 className="text-2xl font-extrabold text-slate-900">Rental Comparables</h2>
+                        <p className="mt-1 text-sm text-slate-500">Add comparable rental properties to support your market rent analysis.</p>
+                      </div>
+                    </div>
+                    <button onClick={() => openRentModal()} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"><Plus className="h-4 w-4" /> Add Comparable</button>
+                  </div>
+                  {rentComps.length === 0 ? (
+                    <div className="mt-4 flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-slate-200 py-16 text-center">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-400"><MapPin className="h-6 w-6" /></div>
+                      <p className="text-sm text-slate-400">No comparables added yet.</p>
+                      <button onClick={() => openRentModal()} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"><Plus className="h-4 w-4" /> Add First Comparable</button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="mt-4 flex flex-wrap items-center gap-2">
+                        <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">{rentComps.length} Comp{rentComps.length === 1 ? '' : 's'}</span>
+                      </div>
+                      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {rentComps.map((c) => (
+                          <div key={c.id} className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md">
+                            <div className="flex aspect-[16/10] items-center justify-center overflow-hidden bg-slate-100 text-slate-300">
+                              {c.photo ? <img src={c.photo} alt="" className="h-full w-full object-cover" /> : <ImageIcon className="h-9 w-9" />}
+                            </div>
+                            <div className="flex items-start justify-between gap-2 px-4 pt-3">
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-bold text-slate-900">{c.propertyName || 'Untitled Comparable'}</p>
+                                {(c.city || c.state) && <p className="truncate text-xs text-slate-400">{[c.city, c.state].filter(Boolean).join(', ')}</p>}
+                              </div>
+                              <div className="flex shrink-0 items-center gap-1">
+                                <button onClick={() => openRentModal(c)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-50 text-slate-500 ring-1 ring-slate-200 transition hover:bg-slate-100 hover:text-brand"><Pencil className="h-3.5 w-3.5" /></button>
+                                <button onClick={() => setRentDel(c)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-50 text-rose-400 ring-1 ring-slate-200 transition hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" /></button>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between px-4 py-3 text-sm">
+                              <span className="text-xs text-slate-400">Market Rent</span>
+                              <span className="font-bold text-brand">{c.marketRent ? `$${c.marketRent}/SF` : '—'}</span>
+                              <span className="text-xs text-slate-400">SF</span>
+                              <span className="font-bold text-slate-900">{c.buildingSf ? Number(c.buildingSf).toLocaleString() : '—'}</span>
                             </div>
                           </div>
                         ))}
@@ -5177,6 +5244,24 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
       })()}
 
       {/* Delete tenant/vacancy confirm */}
+      {rentDel && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => setRentDel(null)}>
+          <div className="w-full max-w-sm overflow-hidden rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-50 text-rose-500"><Trash2 className="h-5 w-5" /></div>
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900">Delete this comparable?</h3>
+                <p className="mt-1 text-sm text-slate-400">{rentDel.propertyName ? `"${rentDel.propertyName}" will be permanently removed.` : 'This comparable will be permanently removed.'} This action cannot be undone.</p>
+              </div>
+            </div>
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <button onClick={() => setRentDel(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
+              <button onClick={() => { delRent(rentDel.id); setRentDel(null); notify('Comparable deleted') }} className="rounded-lg bg-rose-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-600">Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {compDel && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => setCompDel(null)}>
           <div className="w-full max-w-sm overflow-hidden rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
@@ -5256,6 +5341,100 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
               >
                 Change Scope
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add / Edit Rental Comparable modal */}
+      {rentModal && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => setRentModal(null)}>
+          <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+              <h3 className="text-lg font-extrabold text-slate-900">{rentModal.id ? 'Edit Rental Comparable' : 'Add Rental Comparable'}</h3>
+              <button onClick={() => setRentModal(null)} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="scrollbar-slim grid flex-1 gap-x-8 gap-y-4 overflow-y-auto p-5 md:grid-cols-2">
+              {/* Left */}
+              <div>
+                <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">Photo</p>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-16 w-20 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-100 text-slate-400">
+                    {rentModal.photo ? <img src={rentModal.photo} alt="" className="h-full w-full object-cover" /> : <Camera className="h-6 w-6" />}
+                  </div>
+                  <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50">
+                    <Upload className="h-4 w-4" /> Upload Photo
+                    <input type="file" accept="image/*" className="hidden" onChange={async (e) => { if (!e.target.files?.length) return; const [img] = await readFiles([e.target.files[0]]); setRM('photo', img.url) }} />
+                  </label>
+                </div>
+
+                <p className="mb-2 mt-5 text-[11px] font-bold uppercase tracking-wide text-slate-400">Property Information</p>
+                <label className="mb-1 block text-sm font-semibold text-slate-700">Property Name</label>
+                <input value={rentModal.propertyName} onChange={(e) => setRM('propertyName', e.target.value)} placeholder="e.g. Sunset Plaza" className={inputCls} />
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1 block text-sm font-semibold text-slate-700">Street Address</label>
+                    <input value={rentModal.street} onChange={(e) => setRM('street', e.target.value)} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-semibold text-slate-700">City</label>
+                    <input value={rentModal.city} onChange={(e) => setRM('city', e.target.value)} className={inputCls} />
+                  </div>
+                </div>
+                <div className="mt-3 grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="mb-1 block text-sm font-semibold text-slate-700">State</label>
+                    <input value={rentModal.state} onChange={(e) => setRM('state', e.target.value)} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-semibold text-slate-700">Zip Code</label>
+                    <input value={rentModal.zip} onChange={(e) => setRM('zip', e.target.value)} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-semibold text-slate-700">Year Built</label>
+                    <input value={rentModal.yearBuilt} onChange={(e) => setRM('yearBuilt', e.target.value)} placeholder="e.g. 2005" className={inputCls} />
+                  </div>
+                </div>
+                <label className="mb-1 mt-3 block text-sm font-semibold text-slate-700">Description</label>
+                <textarea value={rentModal.description} onChange={(e) => setRM('description', e.target.value)} rows={3} placeholder="Brief description of the comparable…" className="w-full rounded-lg border border-slate-200 p-3 text-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100" />
+              </div>
+
+              {/* Right */}
+              <div>
+                <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">Rental Details</p>
+                <label className="mb-1 block text-sm font-semibold text-slate-700">Market Rent ($/SF)</label>
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">$</span>
+                  <input value={rentModal.marketRent} onChange={(e) => setRM('marketRent', e.target.value)} placeholder="0" className={`${inputCls} pl-6`} />
+                </div>
+
+                <p className="mb-2 mt-5 text-[11px] font-bold uppercase tracking-wide text-slate-400">Building Details</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1 block text-sm font-semibold text-slate-700">Building Size (SF)</label>
+                    <input value={rentModal.buildingSf} onChange={(e) => setRM('buildingSf', e.target.value)} placeholder="0" className={inputCls} />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-semibold text-slate-700"># of Tenants</label>
+                    <input value={rentModal.tenants} onChange={(e) => setRM('tenants', e.target.value)} placeholder="0" className={inputCls} />
+                  </div>
+                </div>
+                <label className="mb-1 mt-3 block text-sm font-semibold text-slate-700"># of Bedrooms</label>
+                <input value={rentModal.bedrooms} onChange={(e) => setRM('bedrooms', e.target.value)} placeholder="e.g. 70" className={inputCls} />
+                <label className="mb-1 mt-3 block text-sm font-semibold text-slate-700">Occupancy %</label>
+                <input value={rentModal.occupancy} onChange={(e) => setRM('occupancy', e.target.value)} placeholder="0" className={inputCls} />
+                <label className="mb-1 mt-3 block text-sm font-semibold text-slate-700">Unit Mix</label>
+                <input value={rentModal.unitMix} onChange={(e) => setRM('unitMix', e.target.value)} placeholder="e.g. 10 Studio; 4 One Bed; 1 Commercial" className={inputCls} />
+
+                <p className="mb-2 mt-5 text-[11px] font-bold uppercase tracking-wide text-slate-400">Options</p>
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                  <input type="checkbox" checked={rentModal.active} onChange={(e) => setRM('active', e.target.checked)} className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-orange-300" /> Property is currently active
+                </label>
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-3">
+              <button onClick={() => setRentModal(null)} className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 transition hover:text-slate-900">Cancel</button>
+              <button onClick={submitRent} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600">{rentModal.id ? 'Save Changes' : 'Add Comparable'}</button>
             </div>
           </div>
         </div>
