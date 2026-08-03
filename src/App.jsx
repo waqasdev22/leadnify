@@ -8865,9 +8865,31 @@ function SettingRow({ label, children }) {
 
 // Property "hub" — opened from the deal-room address; links the listing,
 // deal room, leads and outreach for a single property.
-function DocumentHubView({ room, onBack, notify }) {
+function DocumentHubView({ room, onBack, notify, onEditDocument }) {
   const [listed, setListed] = useState(true)
   const [access, setAccess] = useState(room.access || 'Free Access')
+
+  // Open the full Document Builder pre-filled with this property.
+  const editDocument = () => {
+    if (!onEditDocument) { notify('Editing is unavailable here'); return }
+    const parts = (room.address || '').split(',').map((s) => s.trim())
+    onEditDocument({
+      id: 'room-' + room.id,
+      docType: 'Offering Memorandum',
+      propertyType: 'Net Lease',
+      template: null,
+      brandColor: null,
+      step: 0,
+      form: {
+        name: room.name || '',
+        street: parts[0] || '',
+        city: parts[1] || '',
+        state: (parts[2] || '').split(' ')[0] || '',
+        zip: (parts[2] || '').split(' ')[1] || '',
+        sections: {},
+      },
+    })
+  }
   const publicUrl = `https://www.crebuilder.com/listings/valuereis/${room.id}${room.id}195`.slice(0, 46)
   const stat = (Icon, value, label, color) => (
     <div className="flex items-center gap-3 px-4 py-3">
@@ -8897,7 +8919,7 @@ function DocumentHubView({ room, onBack, notify }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <PrimaryButton icon={Pencil} onClick={() => notify('Opening the document builder…')}>Edit Document</PrimaryButton>
+            <PrimaryButton icon={Pencil} onClick={editDocument}>Edit Document</PrimaryButton>
             <button onClick={() => notify('Generating PDF…')} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"><Download className="h-4 w-4" /> PDF</button>
             <button onClick={() => notify('Opening public page…')} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"><ExternalLink className="h-4 w-4" /> View Public Page</button>
           </div>
@@ -8987,7 +9009,7 @@ function DocumentHubView({ room, onBack, notify }) {
   )
 }
 
-function DealRoomDetail({ room, onBack, notify }) {
+function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
   const [hubOpen, setHubOpen] = useState(false)
   const [files, setFiles] = useState(DEFAULT_ROOM_FILES)
   const [prospects, setProspects] = useState(DEFAULT_ROOM_PROSPECTS)
@@ -9085,7 +9107,7 @@ function DealRoomDetail({ room, onBack, notify }) {
         ? 'bg-teal-50 text-teal-700'
         : 'bg-slate-100 text-slate-600'
 
-  if (hubOpen) return <DocumentHubView room={room} onBack={() => setHubOpen(false)} notify={notify} />
+  if (hubOpen) return <DocumentHubView room={room} onBack={() => setHubOpen(false)} notify={notify} onEditDocument={onEditDocument} />
 
   return (
     <div>
@@ -9348,7 +9370,7 @@ function DealRoomDetail({ room, onBack, notify }) {
   )
 }
 
-function DealRoomsPage({ dealRooms, setDealRooms }) {
+function DealRoomsPage({ dealRooms, setDealRooms, onEditDocument }) {
   const notify = useToast()
   const [modalOpen, setModalOpen] = useState(false)
   const [confirm, setConfirm] = useState(null)
@@ -9371,7 +9393,7 @@ function DealRoomsPage({ dealRooms, setDealRooms }) {
   if (openRoom) {
     return (
       <div className="p-6">
-        <DealRoomDetail room={openRoom} onBack={() => setOpenRoom(null)} notify={notify} />
+        <DealRoomDetail room={openRoom} onBack={() => setOpenRoom(null)} notify={notify} onEditDocument={onEditDocument} />
       </div>
     )
   }
@@ -9831,7 +9853,7 @@ export default function App() {
       case 'listings':
         return <ListingHubPage listings={listings} setListings={setListings} globalQuery={query} onCreateNew={startCreate} onResumeDraft={resumeDraft} can={can} />
       case 'deals':
-        return <DealRoomsPage dealRooms={dealRooms} setDealRooms={setDealRooms} />
+        return <DealRoomsPage dealRooms={dealRooms} setDealRooms={setDealRooms} onEditDocument={resumeDraft} />
       case 'team':
         return <TeamPermissionsPage myUid={myUid} />
       case 'documents':
