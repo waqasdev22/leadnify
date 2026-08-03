@@ -3123,6 +3123,11 @@ function GoogleMapEditor({ open, map, onSave, onClose, notify }) {
   const [title, setTitle] = useState('')
   const [style, setStyle] = useState('Clean')
   const [styleOpen, setStyleOpen] = useState(false)
+  const [panel, setPanel] = useState(null) // 'nearby' | 'logo'
+  const [q, setQ] = useState('')
+  const [drawing, setDrawing] = useState(false)
+  const fileRef = useRef(null)
+  const drawMgrRef = useRef(null)
 
   useEffect(() => {
     if (!open || !map) return
@@ -3151,7 +3156,7 @@ function GoogleMapEditor({ open, map, onSave, onClose, notify }) {
       markerRef.current = marker
       // Restore saved label overlays
       overlaysRef.current = []
-      ;(map.overlays || []).forEach((ov) => addLabel(g, gmap, ov))
+      ;(map.overlays || []).forEach((ov) => (ov.type === 'image' ? addImage(g, gmap, ov) : addLabel(g, gmap, ov)))
       setReady(true)
     }).catch((e) => { if (!cancelled) setErr(e.message === 'missing-key' ? 'no-key' : 'load-failed') })
     return () => { cancelled = true; mapRef.current = null; markerRef.current = null; overlaysRef.current = [] }
@@ -3201,24 +3206,109 @@ function GoogleMapEditor({ open, map, onSave, onClose, notify }) {
     overlaysRef.current.push(o)
   }
 
+  // A draggable image (logo or custom upload) rendered as an OverlayView.
+  const addImage = (g, gmap, data) => {
+    const d = { id: data.id || uid(), type: 'image', url: data.url, lat: data.lat, lng: data.lng, w: data.w || 90 }
+    if (typeof d.lat !== 'number') { const c = gmap.getCenter(); d.lat = c.lat(); d.lng = c.lng() }
+    const self = { }
+    class ImgOverlay extends g.OverlayView {
+      onAdd() {
+        const div = document.createElement('div')
+        div.style.cssText = 'position:absolute;transform:translate(-50%,-50%);cursor:move;user-select:none'
+        div.title = 'Drag to move · double-click to remove'
+        const img = document.createElement('img')
+        img.src = d.url; img.referrerPolicy = 'no-referrer'
+        img.style.cssText = `width:${d.w}px;height:auto;display:block;pointer-events:none;border-radius:6px;filter:drop-shadow(0 1px 4px rgba(0,0,0,.3))`
+        img.onerror = () => { div.style.cssText += ';background:#fee2e2;padding:6px;border-radius:6px;font:600 11px Arial;color:#b91c1c'; div.textContent = 'logo not found' }
+        div.appendChild(img)
+        div.addEventListener('dblclick', (e) => { e.stopPropagation(); this.setMap(null); overlaysRef.current = overlaysRef.current.filter((o) => o !== this); notify?.('Image removed') })
+        let dragging = false
+        div.addEventListener('mousedown', (e) => { e.stopPropagation(); dragging = true; gmap.setOptions({ draggable: false }) })
+        const move = (e) => { if (!dragging) return; const proj = this.getProjection(); if (!proj) return; const box = elRef.current.getBoundingClientRect(); const pt = new g.Point(e.clientX - box.left, e.clientY - box.top); const ll = proj.fromContainerPixelToLatLng(pt); d.lat = ll.lat(); d.lng = ll.lng(); this.draw() }
+        const up = () => { if (dragging) { dragging = false; gmap.setOptions({ draggable: true }) } }
+        window.addEventListener('mousemove', move); window.addEventListener('mouseup', up)
+        this._cleanup = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up) }
+        this._div = div
+        this.getPanes().overlayMouseTarget.appendChild(div)
+      }
+      draw() { const proj = this.getProjection(); if (!proj || !this._div) return; const p = proj.fromLatLngToDivPixel(new g.LatLng(d.lat, d.lng)); this._div.style.left = p.x + 'px'; this._div.style.top = p.y + 'px' }
+      onRemove() { this._cleanup?.(); this._div?.remove(); this._div = null }
+    }
+    const o = new ImgOverlay(); o.setMap(gmap); o._data = d
+    overlaysRef.current.push(o)
+  }
+
   const applyStyle = (name) => { setStyle(name); setStyleOpen(false); mapRef.current?.setOptions({ styles: GMAP_STYLES[name] || [] }) }
+
+  // Nearby Places — Google Places text search within the current view.
+  const searchNearby = () => {
+    const g = window.google?.maps; const gmap = mapRef.current
+    if (!g || !gmap || !q.trim()) return
+    if (!g.places) { notify?.('Places library not loaded'); return }
+    const svc = new g.places.PlacesService(gmap)
+    svc.textSearch({ query: q, bounds: gmap.getBounds() }, (res, status) => {
+      if (status === g.places.PlacesServiceStatus.OK && res?.[0]) {
+        const p = res[0]; const loc = p.geometry.location
+        new g.Marker({ position: loc, map: gmap, title: p.name })
+        const off = 0.12 / Math.pow(2, gmap.getZoom() - 12)
+        addLabel(g, gmap, { text: p.name, lat: loc.lat() + off, lng: loc.lng() })
+        gmap.panTo(loc); notify?.(`Added ${p.name}`); setPanel(null); setQ('')
+      } else notify?.('No place found', 'error')
+    })
+  }
+
+  // Brand Logo — Clearbit logo for a company/domain, added as a draggable image.
+  const addLogo = () => {
+    const g = window.google?.maps; const gmap = mapRef.current
+    if (!g || !gmap || !q.trim()) return
+    const clean = q.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/\s+/g, '')
+    const dom = clean.includes('.') ? clean : `${clean}.com`
+    addImage(g, gmap, { url: `https://logo.clearbit.com/${dom}`, w: 70 })
+    notify?.(`Added logo for ${dom}`); setPanel(null); setQ('')
+  }
+
+  const onUpload = async (e) => {
+    const f = e.target.files?.[0]; if (!f) return
+    const [img] = await readFiles([f])
+    const g = window.google?.maps; const gmap = mapRef.current
+    if (g && gmap) addImage(g, gmap, { url: img.url, w: 120 })
+    e.target.value = ''
+    notify?.('Image added — drag to position, double-click to remove')
+  }
+
+  const toggleDraw = () => {
+    const g = window.google?.maps; const gmap = mapRef.current
+    if (!g || !gmap) return
+    if (!g.drawing) { notify?.('Drawing library not loaded'); return }
+    if (drawing) { drawMgrRef.current?.setMap(null); drawMgrRef.current = null; setDrawing(false); notify?.('Draw mode off'); return }
+    const shape = { fillColor: '#F97316', fillOpacity: 0.18, strokeColor: '#F97316', strokeWeight: 2, editable: true, draggable: true }
+    const dm = new g.drawing.DrawingManager({
+      drawingControl: true,
+      drawingControlOptions: { position: g.ControlPosition.TOP_CENTER, drawingModes: ['marker', 'polyline', 'polygon', 'rectangle', 'circle'] },
+      polygonOptions: shape, rectangleOptions: shape, circleOptions: shape, polylineOptions: { strokeColor: '#F97316', strokeWeight: 3, editable: true, draggable: true },
+    })
+    dm.setMap(gmap); drawMgrRef.current = dm; setDrawing(true); notify?.('Draw mode on — pick a shape and draw on the map')
+  }
 
   const handleTool = (key) => {
     const g = window.google?.maps; const gmap = mapRef.current
     if (!g || !gmap) return
+    setPanel(null)
     if (key === 'center') { if (markerRef.current) gmap.panTo(markerRef.current.getPosition()) }
     else if (key === 'style') { setStyleOpen((v) => !v) }
     else if (key === 'label') { addLabel(g, gmap, { text: 'New Label' }); notify?.('Label added — double-click to edit') }
     else if (key === 'property') { if (markerRef.current) { gmap.panTo(markerRef.current.getPosition()); notify?.('Drag the pin to reposition the property') } }
-    else if (key === 'upload') { notify?.('Image upload arrives in the next step') }
-    else notify?.(`${GMAP_TOOLS.find((t) => t.key === key)?.label} — coming next`)
+    else if (key === 'nearby') { setPanel((p) => (p === 'nearby' ? null : 'nearby')); setQ('') }
+    else if (key === 'logo') { setPanel((p) => (p === 'logo' ? null : 'logo')); setQ('') }
+    else if (key === 'upload') { fileRef.current?.click() }
+    else if (key === 'draw') { toggleDraw() }
   }
 
   const save = () => {
     const gmap = mapRef.current, mk = markerRef.current
     if (!gmap || !mk) { onClose?.(); return }
     const c = mk.getPosition()
-    const overlays = overlaysRef.current.map((o) => ({ id: o._data.id, text: o._data.text, lat: o._data.lat, lng: o._data.lng }))
+    const overlays = overlaysRef.current.map((o) => ({ id: o._data.id, type: o._data.type || 'label', text: o._data.text, url: o._data.url, lat: o._data.lat, lng: o._data.lng, w: o._data.w }))
     onSave({ ...map, lat: c.lat(), lng: c.lng(), zoom: gmap.getZoom(), style, title, overlays })
   }
 
@@ -3228,19 +3318,31 @@ function GoogleMapEditor({ open, map, onSave, onClose, notify }) {
       <div className="flex flex-1 overflow-hidden">
         {/* Left tool panel */}
         <div className="w-56 shrink-0 space-y-1 overflow-y-auto border-r border-neutral-800 bg-neutral-900 p-3">
-          {GMAP_TOOLS.map((t) => (
-            <button key={t.key} onClick={() => handleTool(t.key)} className={`flex w-full items-center gap-2.5 rounded-md p-2 text-left transition ${style && t.key === 'style' && styleOpen ? 'bg-neutral-800 text-white' : 'text-neutral-300 hover:bg-neutral-800 hover:text-white'}`}>
-              <t.icon className="h-4 w-4 shrink-0" />
-              <span><span className="block text-sm font-medium leading-tight">{t.label}</span>{t.desc && <span className="block text-xs leading-snug text-neutral-400">{t.desc}</span>}</span>
-            </button>
-          ))}
-          {styleOpen && (
-            <div className="mt-1 space-y-1 rounded-md bg-neutral-800 p-2">
-              {Object.keys(GMAP_STYLES).map((s) => (
-                <button key={s} onClick={() => applyStyle(s)} className={`block w-full rounded px-2 py-1.5 text-left text-sm ${style === s ? 'bg-brand text-white' : 'text-neutral-300 hover:bg-neutral-700'}`}>{s}</button>
-              ))}
-            </div>
-          )}
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onUpload} />
+          {GMAP_TOOLS.map((t) => {
+            const active = (t.key === 'style' && styleOpen) || (t.key === panel) || (t.key === 'draw' && drawing)
+            return (
+              <div key={t.key}>
+                <button onClick={() => handleTool(t.key)} className={`flex w-full items-center gap-2.5 rounded-md p-2 text-left transition ${active ? 'bg-neutral-800 text-white' : 'text-neutral-300 hover:bg-neutral-800 hover:text-white'}`}>
+                  <t.icon className="h-4 w-4 shrink-0" />
+                  <span><span className="block text-sm font-medium leading-tight">{t.label}</span>{t.desc && <span className="block text-xs leading-snug text-neutral-400">{t.desc}</span>}</span>
+                </button>
+                {t.key === 'style' && styleOpen && (
+                  <div className="mt-1 space-y-1 rounded-md bg-neutral-800 p-2">
+                    {Object.keys(GMAP_STYLES).map((s) => (
+                      <button key={s} onClick={() => applyStyle(s)} className={`block w-full rounded px-2 py-1.5 text-left text-sm ${style === s ? 'bg-brand text-white' : 'text-neutral-300 hover:bg-neutral-700'}`}>{s}</button>
+                    ))}
+                  </div>
+                )}
+                {((t.key === 'nearby' && panel === 'nearby') || (t.key === 'logo' && panel === 'logo')) && (
+                  <div className="mt-1 rounded-md bg-neutral-800 p-2">
+                    <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') (panel === 'nearby' ? searchNearby() : addLogo()) }} placeholder={panel === 'nearby' ? 'e.g. Starbucks, park…' : 'e.g. apple.com'} className="w-full rounded bg-neutral-900 px-2 py-1.5 text-sm text-white outline-none ring-1 ring-neutral-700 placeholder:text-neutral-500" />
+                    <button onClick={() => (panel === 'nearby' ? searchNearby() : addLogo())} className="mt-2 w-full rounded bg-brand px-2 py-1.5 text-sm font-semibold text-white transition hover:bg-orange-600">{panel === 'nearby' ? 'Search & add' : 'Add logo'}</button>
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
 
         {/* Map canvas */}
