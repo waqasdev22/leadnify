@@ -78,6 +78,8 @@ import {
   ImagePlus,
   Type,
   Save,
+  FilePlus,
+  Columns2,
   ShoppingCart,
   Utensils,
   GraduationCap,
@@ -4075,6 +4077,13 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
   const maps = form.maps || []
   const [mapEditor, setMapEditor] = useState(null)
   const [reviewMode, setReviewMode] = useState(initial?.reviewMode || false)
+  const [addPageOpen, setAddPageOpen] = useState(false)
+  const addCustomPage = (layout) => {
+    const titles = { media: 'Full Page Media', titleMedia: 'Title + Media', titleText: 'Title + Text', mediaText: 'Media & Text' }
+    setForm((f) => ({ ...f, customPages: [...(f.customPages || []), { id: uid(), layout, title: titles[layout] || 'Custom Page', heading: '', body: '', image: null }] }))
+    setAddPageOpen(false)
+    notify('Custom page added')
+  }
   const [rc, setRc] = useState({
     primary: '#1e293b', secondary: '#3b82f6', preset: 'Brokerage Presets', scheme: 'Color Schemes',
     logo: true, logoSize: 90, companyInfo: true, contactInfo: true, price: true, capRate: true, noi: true, capNoiMode: 'Auto',
@@ -4223,6 +4232,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
       ...(maps || []).map((m) => ({ key: m.id, title: m.title || 'Map', map: m })),
       { key: 'tenants', title: 'Tenant Profiles' },
       { key: 'demographics', title: 'Demographics' },
+      ...(form.customPages || []).map((c) => ({ key: c.id, title: c.title, custom: c })),
       { key: 'closing', title: 'Closing' },
     ]
     const visiblePages = reviewPages.filter((p) => !rc.hidden[p.key])
@@ -4247,7 +4257,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
           </div>
           <div className="flex items-center gap-2">
             <button onClick={() => notify('Template gallery coming soon')} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"><Repeat2 className="h-4 w-4" /> Swap Template</button>
-            <button onClick={() => { notify('Generating PDF…'); onSave(form, step, true) }} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"><Download className="h-4 w-4" /> Download PDF</button>
+            <button onClick={() => { notify('Generating PDF…'); downloadPdf({ title: docName, name: docName, address: fullAddress, docType: config.docType, propertyType: config.propertyType, price: form.price, tags: [config.docType, config.propertyType] }, notify) }} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"><Download className="h-4 w-4" /> Download PDF</button>
           </div>
         </header>
 
@@ -4415,13 +4425,47 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                 </div>
               )
             })}
-            <button onClick={() => notify('Add a custom page')} className="flex h-24 w-40 shrink-0 flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-orange-300 text-brand transition hover:bg-orange-50">
+            <button onClick={() => setAddPageOpen(true)} className="flex h-24 w-40 shrink-0 flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-orange-300 text-brand transition hover:bg-orange-50">
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-100"><Plus className="h-4 w-4" /></span>
               <span className="text-xs font-bold">Add Page</span>
             </button>
           </div>
         </div>
         </div>
+
+        {/* Add Custom Page modal */}
+        {addPageOpen && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => setAddPageOpen(false)}>
+            <div className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-start justify-between border-b border-slate-200 px-5 py-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-orange-50 text-brand"><FilePlus className="h-5 w-5" /></div>
+                  <div>
+                    <h3 className="text-lg font-extrabold text-slate-900">Add Custom Page</h3>
+                    <p className="text-sm text-slate-500">Choose a layout, then add images, PDFs, or rich text content.</p>
+                  </div>
+                </div>
+                <button onClick={() => setAddPageOpen(false)} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"><X className="h-5 w-5" /></button>
+              </div>
+              <div className="grid gap-3 p-5 sm:grid-cols-2">
+                {[
+                  { k: 'media', icon: Maximize2, c: 'bg-violet-50 text-violet-500', t: 'Full Page Media', d: 'Edge-to-edge photo, floorplan, or PDF page' },
+                  { k: 'titleMedia', icon: ImageIcon, c: 'bg-blue-50 text-blue-500', t: 'Title + Media', d: 'Branded header with image, PDF, or site plan' },
+                  { k: 'titleText', icon: FileText, c: 'bg-emerald-50 text-emerald-500', t: 'Title + Text', d: 'Branded header with rich text content' },
+                  { k: 'mediaText', icon: Columns2, c: 'bg-amber-50 text-amber-500', t: 'Media & Text', d: 'Photo or PDF alongside text, side by side' },
+                ].map((o) => (
+                  <button key={o.k} onClick={() => addCustomPage(o.k)} className="flex items-start gap-3 rounded-xl border border-slate-200 p-4 text-left transition hover:border-orange-300 hover:bg-orange-50/40">
+                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${o.c}`}><o.icon className="h-5 w-5" /></div>
+                    <div><p className="text-sm font-bold text-slate-900">{o.t}</p><p className="mt-0.5 text-xs text-slate-500">{o.d}</p></div>
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center justify-end border-t border-slate-200 px-5 py-3">
+                <button onClick={() => setAddPageOpen(false)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     )
   }
