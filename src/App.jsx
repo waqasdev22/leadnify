@@ -5128,9 +5128,9 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                           <div key={m.id} className="rounded-xl border border-slate-200 p-2">
                             <div className="relative">
                               <MiniMap lat={m.lat} lng={m.lng} zoom={m.zoom} className="h-52 w-full overflow-hidden rounded-lg bg-slate-100" />
-                              <div className="absolute right-2 top-2 flex gap-1">
-                                <button onClick={() => setMapEditor(m)} className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-brand shadow ring-1 ring-slate-200 transition hover:bg-orange-50"><Pencil className="h-4 w-4" /></button>
-                                <button onClick={() => setMapDel(m)} className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-rose-500 shadow ring-1 ring-slate-200 transition hover:bg-rose-50"><Trash2 className="h-4 w-4" /></button>
+                              <div className="absolute right-2 top-2 z-[900] flex gap-1">
+                                <button onClick={() => setMapEditor(m)} className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-brand shadow-md ring-1 ring-slate-200 transition hover:bg-orange-50"><Pencil className="h-4 w-4" /></button>
+                                <button onClick={() => setMapDel(m)} className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-rose-500 shadow-md ring-1 ring-slate-200 transition hover:bg-rose-50"><Trash2 className="h-4 w-4" /></button>
                               </div>
                             </div>
                             <div className="mt-2 flex items-center gap-1 px-1">
