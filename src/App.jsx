@@ -4451,7 +4451,6 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                         <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/20 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-blue-300"><Crown className="h-3 w-3" /> Primary Contact</span>
                         <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2.5 py-1 text-[11px] font-bold text-emerald-300"><CheckCircle2 className="h-3 w-3" /> Synced</span>
                       </div>
-                      <button onClick={() => setEditProfileOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/90 transition hover:bg-white/20"><ExternalLink className="h-3.5 w-3.5" /> Edit Profile</button>
                     </div>
                     <div className="mt-4 flex items-center gap-4">
                       <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-700 ring-2 ring-orange-400/60">
