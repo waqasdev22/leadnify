@@ -63,6 +63,7 @@ import {
   BarChart3,
   Camera,
   Image as ImageIcon,
+  ListChecks,
   PieChart,
   Scale,
   Users,
@@ -2481,7 +2482,7 @@ const US_STATE_ABBR = { Alabama: 'AL', Alaska: 'AK', Arizona: 'AZ', Arkansas: 'A
 const BUILDER_SECTIONS = [
   'Property Details', 'Property Data', 'Executive Summary', 'Investment Highlights',
   'Location Highlights', 'Images & Media', 'Financials', 'Rent Roll',
-  'Income & Expenses', 'Valuation', 'Tenant Profiles', 'Sales Comparables', 'Rental Comparables', 'Maps',
+  'Income & Expenses', 'Valuation', 'Tenant Profiles', 'Sales Comparables', 'Rental Comparables', 'Market Overview', 'Maps',
 ]
 
 // Suggested "Property Data" fields per property type (shown as one-tap pills).
@@ -3095,6 +3096,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
   const [viewerIdx, setViewerIdx] = useState(null)
   // Rich-text draft editor (content sections, step >= 2)
   const draftRef = useRef(null)
+  const moRef = useRef(null)
   const [charCount, setCharCount] = useState(0)
   const [copyCat, setCopyCat] = useState(0)
   const [catOpen, setCatOpen] = useState(false)
@@ -3534,6 +3536,14 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
     notify(c.id ? 'Comparable updated' : 'Comparable added')
   }
   const delRent = (id) => setForm((f) => ({ ...f, rentComps: f.rentComps.filter((x) => x.id !== id) }))
+  // Market Overview
+  const isMarket = BUILDER_SECTIONS[step] === 'Market Overview'
+  const moFacts = form.moFacts || []
+  const moExec = (cmd, val) => { moRef.current?.focus(); document.execCommand(cmd, false, val); setForm((f) => ({ ...f, moAbout: moRef.current?.innerHTML || '' })) }
+  const moLink = () => { const url = window.prompt('Link URL'); if (url) moExec('createLink', url) }
+  const addFact = () => setForm((f) => ({ ...f, moFacts: [...(f.moFacts || []), { id: uid(), label: '', value: '' }] }))
+  const updFact = (id, k, v) => setForm((f) => ({ ...f, moFacts: f.moFacts.map((x) => (x.id === id ? { ...x, [k]: v } : x)) }))
+  const delFact = (id) => setForm((f) => ({ ...f, moFacts: f.moFacts.filter((x) => x.id !== id) }))
   const maps = form.maps || []
   const addMap = () => setForm((f) => ({ ...f, maps: [...(f.maps || []), { id: uid(), title: `Map ${(f.maps?.length || 0) + 1}`, lat: f.lat, lng: f.lng }] }))
   const updMap = (id, title) => setForm((f) => ({ ...f, maps: f.maps.map((m) => (m.id === id ? { ...m, title } : m)) }))
@@ -3604,6 +3614,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
       setCopyCat(0)
       setCatOpen(false)
     }
+    if (isMarket && moRef.current) moRef.current.innerHTML = form.moAbout || ''
     // On the Location Highlights step: seed the location card and auto-fetch nearby places.
     if (isLocation) {
       setForm((f) => (f.locCard ? f : { ...f, locCard: { address: f.street, city: f.city, state: f.state, zip: f.zip } }))
@@ -3674,7 +3685,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
         {/* Left: form + footer */}
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="scrollbar-slim flex-1 overflow-y-auto">
-            <div className={`mx-auto px-6 py-8 ${isMedia || isFinancials ? 'max-w-5xl' : 'max-w-none'}`}>
+            <div className={`mx-auto px-6 py-8 ${isMedia || isFinancials ? 'max-w-5xl' : isMarket ? 'max-w-6xl' : 'max-w-none'}`}>
               {step === 0 ? (
                 <>
                   <h2 className="text-2xl font-extrabold text-slate-900">Property Details</h2>
@@ -4304,6 +4315,103 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                       </div>
                     </>
                   )}
+                </div>
+              ) : isMarket ? (
+                <div>
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-500"><Globe className="h-5 w-5" /></div>
+                    <div>
+                      <h2 className="text-2xl font-extrabold text-slate-900">Market Overview</h2>
+                      <p className="mt-1 text-sm text-slate-500">Market information and key demographics for your document</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 grid gap-8 lg:grid-cols-2">
+                    {/* Left column */}
+                    <div>
+                      <label className="mb-1 block text-sm font-semibold text-slate-700">Page Title</label>
+                      <input value={form.moTitle || ''} onChange={(e) => setForm((f) => ({ ...f, moTitle: e.target.value }))} placeholder="e.g., Market Overview: The Greater Houston Metropolitan Area" className={inputCls} />
+                      <p className="mt-1 text-xs text-slate-400">Appears as the heading on the PDF page</p>
+
+                      <label className="mb-1 mt-4 block text-sm font-semibold text-slate-700">About Text</label>
+                      <div className="overflow-hidden rounded-xl border border-slate-200">
+                        <div className="flex items-center gap-0.5 border-b border-slate-100 bg-slate-50/60 px-2 py-1.5">
+                          <button onClick={() => moExec('bold')} className="rounded p-1.5 text-slate-500 transition hover:bg-slate-200/70 hover:text-slate-800"><Bold className="h-4 w-4" /></button>
+                          <button onClick={() => moExec('italic')} className="rounded p-1.5 text-slate-500 transition hover:bg-slate-200/70 hover:text-slate-800"><Italic className="h-4 w-4" /></button>
+                          <button onClick={() => moExec('underline')} className="rounded p-1.5 text-slate-500 transition hover:bg-slate-200/70 hover:text-slate-800"><Underline className="h-4 w-4" /></button>
+                          <span className="mx-1 h-5 w-px bg-slate-200" />
+                          <button onClick={() => moExec('insertUnorderedList')} className="rounded p-1.5 text-slate-500 transition hover:bg-slate-200/70 hover:text-slate-800"><List className="h-4 w-4" /></button>
+                          <button onClick={() => moExec('insertOrderedList')} className="rounded p-1.5 text-slate-500 transition hover:bg-slate-200/70 hover:text-slate-800"><ListOrdered className="h-4 w-4" /></button>
+                          <button onClick={moLink} className="rounded p-1.5 text-slate-500 transition hover:bg-slate-200/70 hover:text-slate-800"><Link2 className="h-4 w-4" /></button>
+                          <span className="mx-1 h-5 w-px bg-slate-200" />
+                          <button onClick={() => moExec('undo')} className="rounded p-1.5 text-slate-500 transition hover:bg-slate-200/70 hover:text-slate-800"><Undo2 className="h-4 w-4" /></button>
+                          <button onClick={() => moExec('redo')} className="rounded p-1.5 text-slate-500 transition hover:bg-slate-200/70 hover:text-slate-800"><Redo2 className="h-4 w-4" /></button>
+                        </div>
+                        <div className="relative">
+                          <div
+                            ref={moRef}
+                            contentEditable
+                            suppressContentEditableWarning
+                            onInput={() => setForm((f) => ({ ...f, moAbout: moRef.current?.innerHTML || '' }))}
+                            className="scrollbar-slim min-h-[300px] max-h-[420px] overflow-y-auto p-4 text-sm leading-relaxed text-slate-700 outline-none [&_a]:text-brand [&_a]:underline"
+                          />
+                          {!(form.moAbout && form.moAbout.replace(/<[^>]*>/g, '').trim()) && (
+                            <span className="pointer-events-none absolute left-4 top-4 text-sm text-slate-400">Enter city / market information here…</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right column */}
+                    <div>
+                      <label className="mb-1 block text-sm font-semibold text-slate-700">Market Image</label>
+                      <div className="flex min-h-[200px] flex-col items-center justify-center rounded-xl border border-slate-200 bg-white p-6 text-center">
+                        {form.moImage ? (
+                          <img src={form.moImage} alt="" className="max-h-64 w-full rounded-lg object-cover" />
+                        ) : (
+                          <>
+                            <ImageIcon className="h-8 w-8 text-slate-300" />
+                            <p className="mt-2 text-sm text-slate-400">No photos available</p>
+                            <label className="mt-1 cursor-pointer text-sm font-semibold text-brand hover:underline">
+                              Upload your own
+                              <input type="file" accept="image/*" className="hidden" onChange={async (e) => { if (!e.target.files?.length) return; const [img] = await readFiles([e.target.files[0]]); setForm((f) => ({ ...f, moImage: img.url })) }} />
+                            </label>
+                          </>
+                        )}
+                      </div>
+                      <label className="mt-3 flex h-11 w-14 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-orange-300 text-orange-400 transition hover:bg-orange-50">
+                        <Upload className="h-4 w-4" />
+                        <input type="file" accept="image/*" className="hidden" onChange={async (e) => { if (!e.target.files?.length) return; const [img] = await readFiles([e.target.files[0]]); setForm((f) => ({ ...f, moImage: img.url })) }} />
+                      </label>
+
+                      <div className="mt-6 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-indigo-500"><ListChecks className="h-4 w-4" /></div>
+                          <p className="text-sm font-bold text-slate-900">Key Facts</p>
+                        </div>
+                        <span className="text-xs text-slate-400">Drag to reorder</span>
+                      </div>
+                      <div className="mt-2 rounded-xl border border-slate-200 bg-white p-4">
+                        {moFacts.length === 0 ? (
+                          <p className="py-6 text-center text-sm text-slate-400">No key facts yet. Add facts about this market.</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {moFacts.map((k) => (
+                              <div key={k.id} className="group flex items-center gap-2">
+                                <input value={k.label} onChange={(e) => updFact(k.id, 'label', e.target.value)} placeholder="Label (e.g. Population)" className="w-1/2 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100" />
+                                <input value={k.value} onChange={(e) => updFact(k.id, 'value', e.target.value)} placeholder="Value (e.g. 7.1M)" className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100" />
+                                <button onClick={() => delFact(k.id)} className="rounded-lg p-1.5 text-slate-300 transition hover:bg-rose-50 hover:text-rose-500"><Trash2 className="h-4 w-4" /></button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div className="mt-3 flex items-center justify-between">
+                        <button onClick={addFact} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"><Plus className="h-4 w-4" /> Add Key Fact</button>
+                        <span className="text-xs text-slate-400">Empty rows won't appear in the PDF</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ) : isMaps ? (
                 <div>
