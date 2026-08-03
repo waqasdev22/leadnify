@@ -3148,6 +3148,7 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
   // "Create Custom Metric" form
   const [metricForm, setMetricForm] = useState({ open: false, icon: 'DollarSign', name: '', value: '' })
   const [iconPickerOpen, setIconPickerOpen] = useState(false)
+  const [editIconFor, setEditIconFor] = useState(null) // id of the metric whose icon picker is open
   const openMetricForm = () => {
     setLibOpen(false)
     setIconPickerOpen(false)
@@ -3826,10 +3827,45 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
                             {metrics.map((m, i) => (
                               <div key={m.id} className={`group py-2.5 ${m.hidden ? 'opacity-40' : ''}`}>
                                 {m.editing ? (
-                                  <div className="flex items-center gap-2">
-                                    <input autoFocus value={m.label} onChange={(e) => updMetric(m.id, 'label', e.target.value)} placeholder="Metric name" className={`${inputCls} h-9 flex-1`} />
-                                    <input value={m.value} onChange={(e) => updMetric(m.id, 'value', e.target.value)} placeholder="Value" className={`${inputCls} h-9 w-20`} />
-                                    <button onClick={() => updMetric(m.id, 'editing', false)} className="rounded-lg bg-emerald-600 p-2 text-white transition hover:bg-emerald-700"><Check className="h-4 w-4" /></button>
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <div className="relative">
+                                        <button
+                                          onClick={() => setEditIconFor((id) => (id === m.id ? null : m.id))}
+                                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-orange-300 hover:text-brand"
+                                          title="Choose icon"
+                                        >
+                                          <MetricIcon name={m.icon} className="h-5 w-5" />
+                                        </button>
+                                        {editIconFor === m.id && (
+                                          <div className="absolute z-40 mt-1 w-56 rounded-lg border border-slate-200 bg-white p-2 shadow-lg">
+                                            <div className="grid grid-cols-6 gap-1">
+                                              {ICON_NAMES.map((n) => (
+                                                <button
+                                                  key={n}
+                                                  onClick={() => { updMetric(m.id, 'icon', n); setEditIconFor(null) }}
+                                                  className={`flex h-8 w-8 items-center justify-center rounded-md transition hover:bg-orange-50 ${m.icon === n ? 'bg-orange-100 text-brand ring-1 ring-orange-300' : 'text-slate-500'}`}
+                                                  title={n}
+                                                >
+                                                  <MetricIcon name={n} className="h-4 w-4" />
+                                                </button>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                      <input autoFocus value={m.label} onChange={(e) => updMetric(m.id, 'label', e.target.value)} placeholder="Metric name" className={`${inputCls} h-10 flex-1`} />
+                                    </div>
+                                    <div className="mt-2 flex items-center gap-2">
+                                      <input
+                                        value={m.value}
+                                        onChange={(e) => updMetric(m.id, 'value', e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && updMetric(m.id, 'editing', false)}
+                                        placeholder="Value (e.g. $500,000)"
+                                        className={`${inputCls} h-10 flex-1`}
+                                      />
+                                      <button onClick={() => updMetric(m.id, 'editing', false)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand text-white shadow-sm transition hover:bg-orange-600"><Check className="h-4 w-4" /></button>
+                                    </div>
                                   </div>
                                 ) : (
                                   <div className="flex items-center gap-3">
