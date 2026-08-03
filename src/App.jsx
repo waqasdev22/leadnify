@@ -3008,12 +3008,12 @@ function PageViewerModal({ index, data, onClose, onIndex }) {
 }
 
 // Read-only mini map preview (used on the Maps step).
-function MiniMap({ lat, lng }) {
+function MiniMap({ lat, lng, zoom, className }) {
   const elRef = useRef(null)
   useEffect(() => {
     if (!elRef.current) return
     const has = typeof lat === 'number' && !Number.isNaN(lat)
-    const map = L.map(elRef.current, { zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false }).setView(has ? [lat, lng] : [39.8, -98.5], has ? 14 : 4)
+    const map = L.map(elRef.current, { zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false }).setView(has ? [lat, lng] : [39.8, -98.5], has ? (zoom || 14) : 4)
     // Standard OpenStreetMap tiles — render business/POI names, highway shields and
     // town labels, giving a Google-Maps-style branded look.
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { subdomains: 'abc', maxZoom: 19 }).addTo(map)
@@ -3023,8 +3023,55 @@ function MiniMap({ lat, lng }) {
     }
     const t = setTimeout(() => map.invalidateSize(), 150)
     return () => { clearTimeout(t); map.remove() }
-  }, [lat, lng])
-  return <div ref={elRef} className="h-40 w-full overflow-hidden rounded-lg bg-slate-100" />
+  }, [lat, lng, zoom])
+  return <div ref={elRef} className={className || 'h-40 w-full overflow-hidden rounded-lg bg-slate-100'} />
+}
+
+// Interactive editor for a single map slide — pan/zoom/drag the pin, then save.
+function MapEditorModal({ open, map, onSave, onClose }) {
+  const elRef = useRef(null)
+  const stateRef = useRef(null)
+  const [title, setTitle] = useState('')
+
+  useEffect(() => {
+    if (!open || !elRef.current || !map) return
+    setTitle(map.title || '')
+    const has = typeof map.lat === 'number' && !Number.isNaN(map.lat)
+    const start = has ? [map.lat, map.lng] : [39.8, -98.5]
+    const startZoom = map.zoom || (has ? 14 : 4)
+    stateRef.current = { lat: start[0], lng: start[1], zoom: startZoom }
+    const lm = L.map(elRef.current, { scrollWheelZoom: true }).setView(start, startZoom)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { subdomains: 'abc', maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(lm)
+    const pinIcon = L.divIcon({ className: '', html: `<svg width="34" height="34" viewBox="0 0 24 24" fill="#ef4444" stroke="white" stroke-width="1.5"><path d="M12 2C8 2 5 5 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-4-3-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="white" stroke="none"/></svg>`, iconSize: [34, 34], iconAnchor: [17, 34] })
+    const marker = L.marker(start, { draggable: true, icon: pinIcon }).addTo(lm)
+    marker.on('dragend', () => { const p = marker.getLatLng(); stateRef.current.lat = p.lat; stateRef.current.lng = p.lng })
+    lm.on('click', (e) => { marker.setLatLng(e.latlng); stateRef.current.lat = e.latlng.lat; stateRef.current.lng = e.latlng.lng })
+    lm.on('zoomend', () => { stateRef.current.zoom = lm.getZoom() })
+    const t = setTimeout(() => lm.invalidateSize(), 120)
+    return () => { clearTimeout(t); lm.remove() }
+  }, [open, map])
+
+  if (!open || !map) return null
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+      <div className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+          <h3 className="text-lg font-extrabold text-slate-900">Edit Map</h3>
+          <button onClick={onClose} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"><X className="h-5 w-5" /></button>
+        </div>
+        <div className="p-5">
+          <label className="mb-1 block text-sm font-semibold text-slate-700">Map Title</label>
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Regional Overview" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100" />
+          <p className="mb-2 mt-4 text-xs text-slate-400">Drag the map to pan, scroll to zoom, and click to move the pin. Set it exactly how you want it to appear.</p>
+          <div ref={elRef} className="h-80 w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100" />
+        </div>
+        <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-3">
+          <button onClick={onClose} className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 transition hover:text-slate-900">Cancel</button>
+          <button onClick={() => onSave({ ...map, ...stateRef.current, title })} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600">Save Map</button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 // Confirm-location modal: draggable Leaflet pin, opens after Property Details.
@@ -3568,8 +3615,14 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
   // Confidentiality Statement (read-only, admin-managed)
   const isConfidentiality = BUILDER_SECTIONS[step] === 'Confidentiality Statement'
   const maps = form.maps || []
-  const addMap = () => setForm((f) => ({ ...f, maps: [...(f.maps || []), { id: uid(), title: `Map ${(f.maps?.length || 0) + 1}`, lat: f.lat, lng: f.lng }] }))
+  const [mapEditor, setMapEditor] = useState(null)
+  const addMap = () => {
+    const m = { id: uid(), title: `Map ${(form.maps?.length || 0) + 1}`, lat: form.lat, lng: form.lng, zoom: 14 }
+    setForm((f) => ({ ...f, maps: [...(f.maps || []), m] }))
+    setMapEditor(m)
+  }
   const updMap = (id, title) => setForm((f) => ({ ...f, maps: f.maps.map((m) => (m.id === id ? { ...m, title } : m)) }))
+  const saveMap = (m) => { setForm((f) => ({ ...f, maps: f.maps.map((x) => (x.id === m.id ? m : x)) })); setMapEditor(null); notify('Map updated') }
   const delMap = (id) => setForm((f) => ({ ...f, maps: f.maps.filter((m) => m.id !== id) }))
   const charLimit = isInvest || isLocation ? 2500 : 3000
 
@@ -4053,19 +4106,19 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                         <p className="text-sm text-slate-400">No maps yet — click "Create Map" to add a full-page map slide.</p>
                       </div>
                     ) : (
-                      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      <div className="mt-4 grid gap-4 sm:grid-cols-2">
                         {maps.map((m) => (
                           <div key={m.id} className="rounded-xl border border-slate-200 p-2">
                             <div className="relative">
-                              <MiniMap lat={m.lat} lng={m.lng} />
+                              <MiniMap lat={m.lat} lng={m.lng} zoom={m.zoom} className="h-56 w-full overflow-hidden rounded-lg bg-slate-100" />
                               <div className="absolute right-2 top-2 flex gap-1">
-                                <button onClick={() => document.getElementById(`maptitle-skip-${m.id}`)?.focus()} className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-slate-500 shadow ring-1 ring-slate-200 transition hover:text-brand"><Pencil className="h-3.5 w-3.5" /></button>
+                                <button onClick={() => setMapEditor(m)} className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-slate-500 shadow ring-1 ring-slate-200 transition hover:text-brand"><Pencil className="h-3.5 w-3.5" /></button>
                                 <button onClick={() => delMap(m.id)} className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-rose-400 shadow ring-1 ring-slate-200 transition hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" /></button>
                               </div>
                             </div>
                             <div className="mt-2 flex items-center gap-1 px-1">
                               <input id={`maptitle-skip-${m.id}`} value={m.title} onChange={(e) => updMap(m.id, e.target.value)} className="min-w-0 flex-1 border-none bg-transparent text-sm font-bold text-slate-800 outline-none" />
-                              <Pencil className="h-3 w-3 shrink-0 text-slate-300" />
+                              <button onClick={() => setMapEditor(m)} className="shrink-0 text-slate-300 transition hover:text-brand"><Pencil className="h-3 w-3" /></button>
                             </div>
                             <p className="px-1 text-xs text-slate-400">Shown as the page header</p>
                           </div>
@@ -4636,19 +4689,19 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                         <p className="text-sm text-slate-400">No maps yet — click "Create Map" to add a full-page map slide.</p>
                       </div>
                     ) : (
-                      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      <div className="mt-4 grid gap-4 sm:grid-cols-2">
                         {maps.map((m) => (
                           <div key={m.id} className="rounded-xl border border-slate-200 p-2">
                             <div className="relative">
-                              <MiniMap lat={m.lat} lng={m.lng} />
+                              <MiniMap lat={m.lat} lng={m.lng} zoom={m.zoom} className="h-56 w-full overflow-hidden rounded-lg bg-slate-100" />
                               <div className="absolute right-2 top-2 flex gap-1">
-                                <button onClick={() => document.getElementById(`maptitle-${m.id}`)?.focus()} className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-slate-500 shadow ring-1 ring-slate-200 transition hover:text-brand"><Pencil className="h-3.5 w-3.5" /></button>
+                                <button onClick={() => setMapEditor(m)} className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-slate-500 shadow ring-1 ring-slate-200 transition hover:text-brand"><Pencil className="h-3.5 w-3.5" /></button>
                                 <button onClick={() => delMap(m.id)} className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-rose-400 shadow ring-1 ring-slate-200 transition hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" /></button>
                               </div>
                             </div>
                             <div className="mt-2 flex items-center gap-1 px-1">
                               <input id={`maptitle-${m.id}`} value={m.title} onChange={(e) => updMap(m.id, e.target.value)} className="min-w-0 flex-1 border-none bg-transparent text-sm font-bold text-slate-800 outline-none" />
-                              <Pencil className="h-3 w-3 shrink-0 text-slate-300" />
+                              <button onClick={() => setMapEditor(m)} className="shrink-0 text-slate-300 transition hover:text-brand"><Pencil className="h-3 w-3" /></button>
                             </div>
                             <p className="px-1 text-xs text-slate-400">Shown as the page header</p>
                           </div>
@@ -5343,6 +5396,13 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
         address={fullAddress || docName}
         onConfirm={confirmLocation}
         onClose={() => setMapOpen(false)}
+      />
+
+      <MapEditorModal
+        open={!!mapEditor}
+        map={mapEditor}
+        onSave={saveMap}
+        onClose={() => setMapEditor(null)}
       />
 
       <PageViewerModal
