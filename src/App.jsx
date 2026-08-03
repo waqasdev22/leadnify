@@ -2993,6 +2993,24 @@ function PageViewerModal({ index, data, onClose, onIndex }) {
   )
 }
 
+// Read-only mini map preview (used on the Maps step).
+function MiniMap({ lat, lng }) {
+  const elRef = useRef(null)
+  useEffect(() => {
+    if (!elRef.current) return
+    const has = typeof lat === 'number' && !Number.isNaN(lat)
+    const map = L.map(elRef.current, { zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false }).setView(has ? [lat, lng] : [39.8, -98.5], has ? 13 : 4)
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 19 }).addTo(map)
+    if (has) {
+      const pin = L.divIcon({ className: '', html: `<svg width="30" height="30" viewBox="0 0 24 24" fill="#ef4444" stroke="white" stroke-width="1.5"><path d="M12 2C8 2 5 5 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-4-3-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="white" stroke="none"/></svg>`, iconSize: [30, 30], iconAnchor: [15, 30] })
+      L.marker([lat, lng], { icon: pin }).addTo(map)
+    }
+    const t = setTimeout(() => map.invalidateSize(), 150)
+    return () => { clearTimeout(t); map.remove() }
+  }, [lat, lng])
+  return <div ref={elRef} className="h-40 w-full overflow-hidden rounded-lg bg-slate-100" />
+}
+
 // Confirm-location modal: draggable Leaflet pin, opens after Property Details.
 function LocationPickerModal({ open, initial, address, onConfirm, onClose }) {
   const elRef = useRef(null)
@@ -3458,6 +3476,11 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
   const isMedia = BUILDER_SECTIONS[step] === 'Images & Media'
   const isFinancials = BUILDER_SECTIONS[step] === 'Financials'
   const isRentRoll = BUILDER_SECTIONS[step] === 'Rent Roll'
+  const isMaps = BUILDER_SECTIONS[step] === 'Maps'
+  const maps = form.maps || []
+  const addMap = () => setForm((f) => ({ ...f, maps: [...(f.maps || []), { id: uid(), title: `Map ${(f.maps?.length || 0) + 1}`, lat: f.lat, lng: f.lng }] }))
+  const updMap = (id, title) => setForm((f) => ({ ...f, maps: f.maps.map((m) => (m.id === id ? { ...m, title } : m)) }))
+  const delMap = (id) => setForm((f) => ({ ...f, maps: f.maps.filter((m) => m.id !== id) }))
   const charLimit = isInvest || isLocation ? 2500 : 3000
 
   // Financials + Rent Roll state
@@ -4078,6 +4101,45 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                       className="mt-2 w-full rounded-lg border border-slate-200 p-3 text-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
                     />
                     <p className="mt-1 text-right text-xs text-slate-400">{(form.rrNotes || '').length}/500</p>
+                  </div>
+                </div>
+              ) : isMaps ? (
+                <div>
+                  <h2 className="text-2xl font-extrabold text-slate-900">Maps</h2>
+                  <p className="mt-1 text-sm text-slate-500">Create branded maps with business logos, labels, and styled overlays for your document.</p>
+                  <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-bold text-slate-900">Maps</p>
+                        <p className="text-xs text-slate-400">Each map becomes a full-page slide in your document</p>
+                      </div>
+                      <button onClick={addMap} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"><Plus className="h-4 w-4" /> Create Map</button>
+                    </div>
+                    {maps.length === 0 ? (
+                      <div className="mt-4 flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 py-12 text-center">
+                        <Map className="h-8 w-8 text-slate-300" />
+                        <p className="text-sm text-slate-400">No maps yet — click "Create Map" to add a full-page map slide.</p>
+                      </div>
+                    ) : (
+                      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {maps.map((m) => (
+                          <div key={m.id} className="rounded-xl border border-slate-200 p-2">
+                            <div className="relative">
+                              <MiniMap lat={m.lat} lng={m.lng} />
+                              <div className="absolute right-2 top-2 flex gap-1">
+                                <button onClick={() => document.getElementById(`maptitle-${m.id}`)?.focus()} className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-slate-500 shadow ring-1 ring-slate-200 transition hover:text-brand"><Pencil className="h-3.5 w-3.5" /></button>
+                                <button onClick={() => delMap(m.id)} className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-rose-400 shadow ring-1 ring-slate-200 transition hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" /></button>
+                              </div>
+                            </div>
+                            <div className="mt-2 flex items-center gap-1 px-1">
+                              <input id={`maptitle-${m.id}`} value={m.title} onChange={(e) => updMap(m.id, e.target.value)} className="min-w-0 flex-1 border-none bg-transparent text-sm font-bold text-slate-800 outline-none" />
+                              <Pencil className="h-3 w-3 shrink-0 text-slate-300" />
+                            </div>
+                            <p className="px-1 text-xs text-slate-400">Shown as the page header</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : isMedia ? (
