@@ -3641,6 +3641,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
   const updMap = (id, title) => setForm((f) => ({ ...f, maps: f.maps.map((m) => (m.id === id ? { ...m, title } : m)) }))
   const saveMap = (m) => { setForm((f) => ({ ...f, maps: f.maps.map((x) => (x.id === m.id ? m : x)) })); setMapEditor(null); notify('Map updated') }
   const delMap = (id) => setForm((f) => ({ ...f, maps: f.maps.filter((m) => m.id !== id) }))
+  const [mapDel, setMapDel] = useState(null)
   const charLimit = isInvest || isLocation ? 2500 : 3000
 
   // Financials + Rent Roll state
@@ -4902,7 +4903,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                               <MiniMap lat={m.lat} lng={m.lng} zoom={m.zoom} className="h-52 w-full overflow-hidden rounded-lg bg-slate-100" />
                               <div className="absolute right-2 top-2 flex gap-1">
                                 <button onClick={() => setMapEditor(m)} className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-brand shadow ring-1 ring-slate-200 transition hover:bg-orange-50"><Pencil className="h-4 w-4" /></button>
-                                <button onClick={() => delMap(m.id)} className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-rose-500 shadow ring-1 ring-slate-200 transition hover:bg-rose-50"><Trash2 className="h-4 w-4" /></button>
+                                <button onClick={() => setMapDel(m)} className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-rose-500 shadow ring-1 ring-slate-200 transition hover:bg-rose-50"><Trash2 className="h-4 w-4" /></button>
                               </div>
                             </div>
                             <div className="mt-2 flex items-center gap-1 px-1">
@@ -5834,6 +5835,22 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
             <div className="flex items-center justify-end gap-2 px-5 pb-5">
               <button onClick={() => setEditProfileOpen(false)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Keep Editing Here</button>
               <button onClick={() => { setEditProfileOpen(false); notify('Progress saved — opening profile settings'); onSave(form, step, false) }} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600">Go to Profile</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {mapDel && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => setMapDel(null)}>
+          <div className="w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+              <h3 className="text-lg font-extrabold text-slate-900">Delete this map?</h3>
+              <button onClick={() => setMapDel(null)} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"><X className="h-5 w-5" /></button>
+            </div>
+            <p className="px-5 py-4 text-sm text-slate-500">{mapDel.title ? `"${mapDel.title}"` : 'This map'} will be permanently removed from your document. This action cannot be undone.</p>
+            <div className="flex items-center justify-end gap-2 px-5 pb-5">
+              <button onClick={() => setMapDel(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
+              <button onClick={() => { delMap(mapDel.id); setMapDel(null); notify('Map deleted') }} className="rounded-lg bg-rose-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-600">Delete</button>
             </div>
           </div>
         </div>
