@@ -2672,6 +2672,36 @@ const METRIC_CATALOG = {
   ],
 }
 const METRIC_CATS = Object.keys(METRIC_CATALOG)
+
+// Financials step: what to include
+const FIN_TYPES = [
+  { key: 'Full Financials', icon: BarChart3, desc: 'Rent roll, income & expenses, and cash flow projections' },
+  { key: 'Rent Roll Only', icon: LayoutGrid, desc: 'Tenant and vacancy data only' },
+  { key: 'Cap Rate & NOI', icon: Percent, desc: 'Simple valuation triangle' },
+  { key: 'Skip Financials', icon: EyeOff, desc: 'No financial pages in document' },
+]
+
+// Rent Roll step: type selector (families × modes)
+const RR_FAMILIES = [
+  {
+    family: 'Multi-Year Cash Flow', tone: 'emerald', icon: TrendingUp,
+    blurb: 'Projects income & expenses for up to 10 years with annual growth rates.',
+    modes: [
+      { mode: 'Unit-by-Unit', desc: 'Lists each tenant individually with lease terms, rent, and expense reimbursements. Generates an up to 10-year cash flow projection showing how income grows annually.', bestFor: 'Office, retail, and industrial with named tenants', points: ['Individual tenant rows with lease details', 'Up to 10-year income & expense projection', 'Per-tenant growth rate overrides'] },
+      { mode: 'Unit Mix', desc: 'Groups units by type (e.g., Studio, 1BR, 2BR) with unit counts and average rents. Generates an up to 10-year cash flow projection with aggregate income growth.', bestFor: 'Multifamily, student housing, and large unit counts', points: ['Units grouped by type with counts', 'Up to 10-year income & expense projection', 'Aggregate totals per unit type'] },
+    ],
+  },
+  {
+    family: 'Pro Forma', tone: 'violet', icon: Layers,
+    blurb: 'Compares in-place rents with projected stabilized rents side by side.',
+    modes: [
+      { mode: 'Unit-by-Unit', desc: "Shows each unit's current in-place rent side by side with projected stabilized rents. Highlights income upside from renovations, lease-ups, or rent bumps.", bestFor: 'Value-add properties with rent increase potential', points: ['In-place vs projected rent comparison', 'Per-unit upside visibility', 'Expense reimbursement detail'] },
+      { mode: 'Unit Mix', desc: 'Groups units by type with both current and projected rent columns. Shows aggregate income upside at a glance for large portfolios.', bestFor: 'Value-add multifamily or large mixed-use properties', points: ['In-place vs projected by unit type', 'Aggregate totals & upside', 'Concise format for many units'] },
+    ],
+  },
+]
+const RR_COLUMNS = ['Unit', 'Tenant', 'SF', 'Rent/SF', 'Monthly', 'Annual', 'Incr %', 'Reimb/SF', 'Ann. Reimb.', 'Start', 'End', 'Notes']
+const RR_KEYS = ['unit', 'tenant', 'sf', 'rentSf', 'monthly', 'annual', 'incr', 'reimbSf', 'annReimb', 'start', 'end', 'notes']
 const ICON_NAMES = Object.keys(ICON_LIBRARY)
 const MetricIcon = ({ name, className }) => {
   const I = ICON_LIBRARY[name] || DollarSign
@@ -3297,7 +3327,18 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
   const isInvest = BUILDER_SECTIONS[step] === 'Investment Highlights'
   const isLocation = BUILDER_SECTIONS[step] === 'Location Highlights'
   const isMedia = BUILDER_SECTIONS[step] === 'Images & Media'
+  const isFinancials = BUILDER_SECTIONS[step] === 'Financials'
+  const isRentRoll = BUILDER_SECTIONS[step] === 'Rent Roll'
   const charLimit = isInvest || isLocation ? 2500 : 3000
+
+  // Financials + Rent Roll state
+  const finType = form.finType || 'Full Financials'
+  const rrSel = form.rrSel || { family: 'Multi-Year Cash Flow', mode: 'Unit-by-Unit' }
+  const rentRoll = form.rentRoll || []
+  const addRentRow = (kind) =>
+    setForm((f) => ({ ...f, rentRoll: [...(f.rentRoll || []), { id: uid(), kind, unit: '', tenant: kind === 'vacancy' ? 'VACANT' : '', sf: '', rentSf: '', monthly: '', annual: '', incr: '', reimbSf: '', annReimb: '', start: '', end: '', notes: '' }] }))
+  const updRentRow = (id, key, val) => setForm((f) => ({ ...f, rentRoll: f.rentRoll.map((r) => (r.id === id ? { ...r, [key]: val } : r)) }))
+  const delRentRow = (id) => setForm((f) => ({ ...f, rentRoll: f.rentRoll.filter((r) => r.id !== id) }))
 
   // Calculated Key Metrics — auto-fill from price & property data where possible.
   const dpVal = (...labels) => {
@@ -3625,6 +3666,146 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
                     </span>
                   </div>
                 </>
+              ) : isFinancials ? (
+                <div className="mx-auto max-w-4xl">
+                  <div className="text-center">
+                    <h2 className="text-2xl font-extrabold text-slate-900">What financial data would you like to include?</h2>
+                    <p className="mt-1 text-slate-500">We'll customize the remaining steps based on your selection.</p>
+                  </div>
+                  <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                    {FIN_TYPES.map((t) => {
+                      const sel = finType === t.key
+                      return (
+                        <button
+                          key={t.key}
+                          onClick={() => setForm((f) => ({ ...f, finType: t.key }))}
+                          className={`relative rounded-2xl border-2 p-5 text-center transition ${sel ? 'border-orange-400 bg-orange-50/50' : 'border-slate-200 bg-white hover:border-slate-300'}`}
+                        >
+                          {sel && (
+                            <span className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-brand text-white"><Check className="h-3 w-3" /></span>
+                          )}
+                          <div className={`mx-auto flex h-12 w-12 items-center justify-center rounded-xl ${sel ? 'bg-orange-100 text-brand' : 'bg-slate-100 text-slate-400'}`}>
+                            <t.icon className="h-6 w-6" />
+                          </div>
+                          <p className={`mt-3 font-bold ${sel ? 'text-brand' : 'text-slate-800'}`}>{t.key}</p>
+                          <p className="mt-1 text-sm text-slate-500">{t.desc}</p>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              ) : isRentRoll ? (
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-2xl font-extrabold text-slate-900">Rent Roll</h2>
+                    <span className="inline-flex items-center gap-1 rounded-md bg-orange-50 px-2 py-1 text-xs font-semibold text-brand"><BarChart3 className="h-3.5 w-3.5" /> {finType}</span>
+                    <button onClick={() => setStep(6)} className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"><Repeat2 className="h-3.5 w-3.5" /> Change</button>
+                  </div>
+                  <p className="mt-1 text-sm text-slate-500">Select a rent roll type and enter your property's tenant and vacancy data.</p>
+
+                  <p className="mt-5 text-xs font-bold uppercase tracking-wide text-slate-500">Select Rent Roll Type</p>
+                  <div className="mt-2 grid gap-4 lg:grid-cols-2">
+                    {RR_FAMILIES.map((fam) => (
+                      <div key={fam.family} className={`rounded-2xl border p-3 ${fam.tone === 'emerald' ? 'border-emerald-200 bg-emerald-50/40' : 'border-violet-200 bg-violet-50/40'}`}>
+                        <div className="flex items-start gap-2 px-1 pb-2">
+                          <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${fam.tone === 'emerald' ? 'bg-emerald-100 text-emerald-600' : 'bg-violet-100 text-violet-600'}`}>
+                            <fam.icon className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <p className={`text-sm font-extrabold ${fam.tone === 'emerald' ? 'text-emerald-700' : 'text-violet-700'}`}>{fam.family}</p>
+                            <p className={`text-xs ${fam.tone === 'emerald' ? 'text-emerald-600' : 'text-violet-600'}`}>{fam.blurb}</p>
+                          </div>
+                        </div>
+                        <div className="space-y-3">
+                          {fam.modes.map((m) => {
+                            const sel = rrSel.family === fam.family && rrSel.mode === m.mode
+                            return (
+                              <button
+                                key={m.mode}
+                                onClick={() => setForm((f) => ({ ...f, rrSel: { family: fam.family, mode: m.mode } }))}
+                                className={`w-full rounded-xl border-2 bg-white p-3 text-left transition ${sel ? 'border-orange-400' : 'border-slate-200 hover:border-slate-300'}`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <p className="font-bold text-slate-900">{m.mode}</p>
+                                  {sel && <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand text-white"><Check className="h-3 w-3" /></span>}
+                                </div>
+                                <p className="mt-1 text-xs leading-snug text-slate-500">{m.desc}</p>
+                                <p className="mt-2 text-xs text-slate-500"><b className="text-slate-700">Best for:</b> {m.bestFor}</p>
+                                <ul className="mt-1.5 space-y-1">
+                                  {m.points.map((p) => (
+                                    <li key={p} className="flex items-center gap-1.5 text-xs text-slate-500"><Check className="h-3.5 w-3.5 shrink-0 text-emerald-500" /> {p}</li>
+                                  ))}
+                                </ul>
+                                <span onClick={(e) => { e.stopPropagation(); notify('Sample opened') }} className="mt-2 inline-flex cursor-pointer items-center gap-1 text-xs font-semibold text-brand hover:underline"><Eye className="h-3.5 w-3.5" /> View Sample</span>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Tenant / vacancy table */}
+                  <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
+                    <div className="scrollbar-slim overflow-x-auto">
+                      <table className="w-full min-w-[900px] text-left text-xs">
+                        <thead>
+                          <tr className="border-b border-slate-100 bg-slate-50 uppercase tracking-wide text-slate-400">
+                            {RR_COLUMNS.map((c) => <th key={c} className="px-2 py-2 font-semibold">{c}</th>)}
+                            <th className="px-2 py-2" />
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {rentRoll.length === 0 ? (
+                            <tr>
+                              <td colSpan={RR_COLUMNS.length + 1} className="py-10 text-center">
+                                <Users className="mx-auto h-7 w-7 text-slate-300" />
+                                <p className="mt-2 text-sm text-slate-400">No tenants or vacancies yet</p>
+                                <div className="mt-3 flex justify-center gap-2">
+                                  <button onClick={() => addRentRow('tenant')} className="inline-flex items-center gap-1 rounded-lg border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-semibold text-brand transition hover:bg-orange-100"><Plus className="h-3.5 w-3.5" /> Add Tenant</button>
+                                  <button onClick={() => addRentRow('vacancy')} className="inline-flex items-center gap-1 rounded-lg border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-semibold text-brand transition hover:bg-orange-100"><Plus className="h-3.5 w-3.5" /> Add Vacancy</button>
+                                </div>
+                              </td>
+                            </tr>
+                          ) : (
+                            rentRoll.map((r) => (
+                              <tr key={r.id} className={`border-b border-slate-50 ${r.kind === 'vacancy' ? 'bg-rose-50/30' : ''}`}>
+                                {RR_KEYS.map((k) => (
+                                  <td key={k} className="px-1 py-1">
+                                    <input value={r[k]} onChange={(e) => updRentRow(r.id, k, e.target.value)} className="w-full min-w-[64px] rounded border border-slate-200 px-1.5 py-1 text-xs outline-none focus:border-orange-400" />
+                                  </td>
+                                ))}
+                                <td className="px-1 py-1">
+                                  <button onClick={() => delRentRow(r.id)} className="rounded p-1 text-slate-400 transition hover:bg-rose-50 hover:text-rose-500"><Trash2 className="h-3.5 w-3.5" /></button>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  {rentRoll.length > 0 && (
+                    <div className="mt-2 flex gap-2">
+                      <button onClick={() => addRentRow('tenant')} className="inline-flex items-center gap-1 rounded-lg border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-semibold text-brand transition hover:bg-orange-100"><Plus className="h-3.5 w-3.5" /> Add Tenant</button>
+                      <button onClick={() => addRentRow('vacancy')} className="inline-flex items-center gap-1 rounded-lg border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-semibold text-brand transition hover:bg-orange-100"><Plus className="h-3.5 w-3.5" /> Add Vacancy</button>
+                    </div>
+                  )}
+
+                  {/* Rent roll notes */}
+                  <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+                    <p className="flex items-center gap-1.5 text-sm font-bold text-slate-800"><FileText className="h-4 w-4 text-slate-400" /> Rent Roll Notes</p>
+                    <p className="mt-0.5 text-xs text-slate-500">General notes that will appear on the rent roll page of your document. Use for lease structure explanations, market context, or other commentary.</p>
+                    <textarea
+                      value={form.rrNotes || ''}
+                      onChange={(e) => setForm((f) => ({ ...f, rrNotes: e.target.value.slice(0, 500) }))}
+                      rows={3}
+                      placeholder="e.g. All leases are triple net with annual CPI adjustments. Rents shown reflect current in-place rates as of March 2026."
+                      className="mt-2 w-full rounded-lg border border-slate-200 p-3 text-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                    />
+                    <p className="mt-1 text-right text-xs text-slate-400">{(form.rrNotes || '').length}/500</p>
+                  </div>
+                </div>
               ) : isMedia ? (
                 <div>
                   <div className="flex items-start gap-3">
