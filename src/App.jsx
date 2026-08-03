@@ -2582,6 +2582,20 @@ const BUILDER_SECTIONS = [
   'Income & Expenses', 'Valuation', 'Tenant Profiles', 'Sales Comparables', 'Rental Comparables', 'Market Overview', 'Contact Information', 'Confidentiality Statement', 'Maps',
 ]
 
+// Curated set shown in the Document Sections panel while EDITING an existing
+// document (review + jump-back) — the core content sections, not every step.
+const EDIT_SECTIONS = [
+  { label: 'Property Details', i: 0 },
+  { label: 'Property Data', i: 1 },
+  { label: 'Contact Info', i: 14 },
+  { label: 'Executive Summary', i: 2 },
+  { label: 'Property Highlights', i: 3 },
+  { label: 'Market Overview', i: 13 },
+  { label: 'Images & Media', i: 5 },
+  { label: 'Maps', i: 16 },
+  { label: 'Confidentiality', i: 15 },
+]
+
 // Suggested "Property Data" fields per property type (shown as one-tap pills).
 const DATA_SUGGESTIONS = {
   Retail: ['Traffic Count (VPD)', 'Parking Ratio', 'Frontage', 'Anchor Tenants', 'GLA'],
@@ -4425,17 +4439,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
             <div className="border-l-4 border-brand pl-2 text-sm font-extrabold text-slate-900">Document Sections</div>
             <p className="mt-1 pl-2 text-xs text-slate-500">Click any section below to jump back and edit it.</p>
             <div className="mt-3 space-y-0.5">
-              {[
-                { label: 'Property Details', i: 0 },
-                { label: 'Property Data', i: 1 },
-                { label: 'Contact Info', i: 14 },
-                { label: 'Executive Summary', i: 2 },
-                { label: 'Property Highlights', i: 3 },
-                { label: 'Market Overview', i: 13 },
-                { label: 'Images & Media', i: 5 },
-                { label: 'Maps', i: 16 },
-                { label: 'Confidentiality', i: 15 },
-              ].map((s) => (
+              {EDIT_SECTIONS.map((s) => (
                 <button key={s.i} onClick={() => { setReviewMode(false); setStep(s.i) }} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-50">
                   <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
                   <span className="min-w-0 flex-1 truncate">{s.label}</span>
@@ -4443,7 +4447,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                 </button>
               ))}
               <div className="mt-1 flex items-center gap-2 rounded-lg bg-orange-50 px-2 py-2">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-white">10</span>
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-white">{EDIT_SECTIONS.length + 1}</span>
                 <span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-slate-900">Review &amp; Customize</span><span className="block text-xs font-medium text-brand">Editing</span></span>
               </div>
             </div>
@@ -6222,7 +6226,25 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
           </p>
           <p className="mt-1 text-xs text-slate-400">Click any completed section to jump back and edit.</p>
           <div className="mt-3 space-y-1">
-            {BUILDER_SECTIONS.map((s, i) => {
+            {initial?.reviewMode ? (
+              <>
+                {EDIT_SECTIONS.map((sec, n) => {
+                  const isActive = sec.i === step
+                  return (
+                    <button key={sec.i} onClick={() => setStep(sec.i)} className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium transition ${isActive ? 'bg-orange-50 text-brand' : 'text-slate-600 hover:bg-slate-50'}`}>
+                      <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${isActive ? 'bg-brand text-white' : 'bg-emerald-100 text-emerald-600'}`}>
+                        {isActive ? n + 1 : <Check className="h-3.5 w-3.5" />}
+                      </span>
+                      <span className="min-w-0"><span className="block truncate">{sec.label}</span>{isActive && <span className="text-[11px] font-normal text-brand">Editing</span>}</span>
+                    </button>
+                  )
+                })}
+                <button onClick={() => setReviewMode(true)} className="flex w-full items-center gap-3 rounded-lg bg-orange-50 px-3 py-2 text-left text-sm font-medium text-brand transition">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-bold text-white">{EDIT_SECTIONS.length + 1}</span>
+                  <span className="min-w-0"><span className="block truncate">Review &amp; Customize</span></span>
+                </button>
+              </>
+            ) : BUILDER_SECTIONS.map((s, i) => {
               const isActive = i === step
               const isDone = done[i]
               // Only completed sections (or the current one) can be jumped to.
