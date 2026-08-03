@@ -3591,7 +3591,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
         {/* Left: form + footer */}
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="scrollbar-slim flex-1 overflow-y-auto">
-            <div className="mx-auto max-w-none px-6 py-8">
+            <div className={`mx-auto px-6 py-8 ${isMedia || isFinancials ? 'max-w-5xl' : 'max-w-none'}`}>
               {step === 0 ? (
                 <>
                   <h2 className="text-2xl font-extrabold text-slate-900">Property Details</h2>
@@ -3807,7 +3807,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                   </div>
                 </>
               ) : isFinancials ? (
-                <div className="mx-auto max-w-4xl">
+                <div className="mx-auto">
                   <div className="text-center">
                     <h2 className="text-2xl font-extrabold text-slate-900">What financial data would you like to include?</h2>
                     <p className="mt-1 text-slate-500">We'll customize the remaining steps based on your selection.</p>
