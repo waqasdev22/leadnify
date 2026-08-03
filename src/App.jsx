@@ -3013,8 +3013,10 @@ function MiniMap({ lat, lng }) {
   useEffect(() => {
     if (!elRef.current) return
     const has = typeof lat === 'number' && !Number.isNaN(lat)
-    const map = L.map(elRef.current, { zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false }).setView(has ? [lat, lng] : [39.8, -98.5], has ? 13 : 4)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 19 }).addTo(map)
+    const map = L.map(elRef.current, { zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false }).setView(has ? [lat, lng] : [39.8, -98.5], has ? 14 : 4)
+    // Standard OpenStreetMap tiles — render business/POI names, highway shields and
+    // town labels, giving a Google-Maps-style branded look.
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { subdomains: 'abc', maxZoom: 19 }).addTo(map)
     if (has) {
       const pin = L.divIcon({ className: '', html: `<svg width="30" height="30" viewBox="0 0 24 24" fill="#ef4444" stroke="white" stroke-width="1.5"><path d="M12 2C8 2 5 5 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-4-3-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="white" stroke="none"/></svg>`, iconSize: [30, 30], iconAnchor: [15, 30] })
       L.marker([lat, lng], { icon: pin }).addTo(map)
