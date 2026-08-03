@@ -3014,15 +3014,16 @@ function MiniMap({ lat, lng, zoom, className }) {
     if (!elRef.current) return
     const has = typeof lat === 'number' && !Number.isNaN(lat)
     const map = L.map(elRef.current, { zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false }).setView(has ? [lat, lng] : [39.8, -98.5], has ? (zoom || 14) : 4)
-    // Standard OpenStreetMap tiles — render business/POI names, highway shields and
-    // town labels, giving a Google-Maps-style branded look.
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { subdomains: 'abc', maxZoom: 19 }).addTo(map)
+    // CARTO Voyager — labeled streets/POIs with a reliable app-friendly CDN
+    // (OSM's own tile server blocks bulk app usage, which leaves the map blank).
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 20 }).addTo(map)
     if (has) {
       const pin = L.divIcon({ className: '', html: `<svg width="30" height="30" viewBox="0 0 24 24" fill="#ef4444" stroke="white" stroke-width="1.5"><path d="M12 2C8 2 5 5 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-4-3-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="white" stroke="none"/></svg>`, iconSize: [30, 30], iconAnchor: [15, 30] })
       L.marker([lat, lng], { icon: pin }).addTo(map)
     }
-    const t = setTimeout(() => map.invalidateSize(), 150)
-    return () => { clearTimeout(t); map.remove() }
+    const t1 = setTimeout(() => map.invalidateSize(), 150)
+    const t2 = setTimeout(() => map.invalidateSize(), 500)
+    return () => { clearTimeout(t1); clearTimeout(t2); map.remove() }
   }, [lat, lng, zoom])
   return <div ref={elRef} className={className || 'h-40 w-full overflow-hidden rounded-lg bg-slate-100'} />
 }
@@ -3041,7 +3042,7 @@ function MapEditorModal({ open, map, onSave, onClose }) {
     const startZoom = map.zoom || (has ? 14 : 4)
     stateRef.current = { lat: start[0], lng: start[1], zoom: startZoom }
     const lm = L.map(elRef.current, { scrollWheelZoom: true }).setView(start, startZoom)
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { subdomains: 'abc', maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(lm)
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 20, attribution: '&copy; OpenStreetMap contributors &copy; CARTO' }).addTo(lm)
     const pinIcon = L.divIcon({ className: '', html: `<svg width="34" height="34" viewBox="0 0 24 24" fill="#ef4444" stroke="white" stroke-width="1.5"><path d="M12 2C8 2 5 5 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-4-3-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="white" stroke="none"/></svg>`, iconSize: [34, 34], iconAnchor: [17, 34] })
     const marker = L.marker(start, { draggable: true, icon: pinIcon }).addTo(lm)
     marker.on('dragend', () => { const p = marker.getLatLng(); stateRef.current.lat = p.lat; stateRef.current.lng = p.lng })
