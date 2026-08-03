@@ -3591,7 +3591,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
         {/* Left: form + footer */}
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="scrollbar-slim flex-1 overflow-y-auto">
-            <div className="mx-auto max-w-6xl px-6 py-8">
+            <div className={`mx-auto px-6 py-8 ${isRentRoll ? 'max-w-none' : 'max-w-6xl'}`}>
               {step === 0 ? (
                 <>
                   <h2 className="text-2xl font-extrabold text-slate-900">Property Details</h2>
@@ -3909,7 +3909,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                       <table className="w-full min-w-[900px] text-left text-xs">
                         <thead>
                           <tr className="border-b border-slate-100 bg-slate-50 uppercase tracking-wide text-slate-400">
-                            {rrCols.map((c) => <th key={c} className="px-2 py-2 font-semibold">{c}</th>)}
+                            {rrCols.map((c) => <th key={c} className="whitespace-nowrap px-2 py-2 font-semibold">{c}</th>)}
                             <th className="px-2 py-2" />
                           </tr>
                         </thead>
