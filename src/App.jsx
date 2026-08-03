@@ -3483,6 +3483,11 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
   const isCapRate = step === 8 && form.finType === 'Cap Rate & NOI'
   const isSkipFin = step === 9 && form.finType === 'Skip Financials'
   const isMaps = BUILDER_SECTIONS[step] === 'Maps'
+  const isTenantProfiles = BUILDER_SECTIONS[step] === 'Tenant Profiles'
+  const tenantProfiles = form.tenantProfiles || []
+  const addProfile = () => setForm((f) => ({ ...f, tenantProfiles: [...(f.tenantProfiles || []), { id: uid(), name: '', credit: '', industry: '', sf: '', description: '', logo: null }] }))
+  const updProfile = (id, k, v) => setForm((f) => ({ ...f, tenantProfiles: f.tenantProfiles.map((p) => (p.id === id ? { ...p, [k]: v } : p)) }))
+  const delProfile = (id) => setForm((f) => ({ ...f, tenantProfiles: f.tenantProfiles.filter((p) => p.id !== id) }))
   const maps = form.maps || []
   const addMap = () => setForm((f) => ({ ...f, maps: [...(f.maps || []), { id: uid(), title: `Map ${(f.maps?.length || 0) + 1}`, lat: f.lat, lng: f.lng }] }))
   const updMap = (id, title) => setForm((f) => ({ ...f, maps: f.maps.map((m) => (m.id === id ? { ...m, title } : m)) }))
@@ -4108,6 +4113,48 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                     />
                     <p className="mt-1 text-right text-xs text-slate-400">{(form.rrNotes || '').length}/500</p>
                   </div>
+                </div>
+              ) : isTenantProfiles ? (
+                <div>
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h2 className="text-2xl font-extrabold text-slate-900">Tenant Profiles</h2>
+                      <p className="mt-1 text-sm text-slate-500">Add profiles for each major tenant. Include their logo, credit rating, and key business details.</p>
+                    </div>
+                    <button onClick={addProfile} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"><Plus className="h-4 w-4" /> Add Tenant</button>
+                  </div>
+                  {tenantProfiles.length === 0 ? (
+                    <div className="mt-4 flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-slate-200 py-16 text-center">
+                      <Building2 className="h-8 w-8 text-slate-300" />
+                      <p className="text-sm text-slate-400">No tenant profiles yet.</p>
+                      <button onClick={addProfile} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"><Plus className="h-4 w-4" /> Add First Tenant</button>
+                    </div>
+                  ) : (
+                    <div className="mt-4 grid gap-4 md:grid-cols-2">
+                      {tenantProfiles.map((p) => (
+                        <div key={p.id} className="rounded-2xl border border-slate-200 bg-white p-4">
+                          <div className="flex items-start gap-3">
+                            <label className="flex h-16 w-16 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-dashed border-slate-300 bg-slate-50 text-slate-400 transition hover:border-orange-300">
+                              {p.logo ? <img src={p.logo} alt="logo" className="h-full w-full object-contain" /> : <Camera className="h-5 w-5" />}
+                              <input type="file" accept="image/*" className="hidden" onChange={async (e) => { if (!e.target.files?.length) return; const [img] = await readFiles([e.target.files[0]]); updProfile(p.id, 'logo', img.url) }} />
+                            </label>
+                            <div className="min-w-0 flex-1 space-y-2">
+                              <input value={p.name} onChange={(e) => updProfile(p.id, 'name', e.target.value)} placeholder="Company / Tenant name" className={`${inputCls} font-semibold`} />
+                              <div className="grid grid-cols-2 gap-2">
+                                <input value={p.credit} onChange={(e) => updProfile(p.id, 'credit', e.target.value)} placeholder="Credit rating (e.g. A-)" className={inputCls} />
+                                <input value={p.industry} onChange={(e) => updProfile(p.id, 'industry', e.target.value)} placeholder="Industry" className={inputCls} />
+                              </div>
+                            </div>
+                            <button onClick={() => delProfile(p.id)} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-500"><Trash2 className="h-4 w-4" /></button>
+                          </div>
+                          <div className="mt-2 grid grid-cols-2 gap-2">
+                            <input value={p.sf} onChange={(e) => updProfile(p.id, 'sf', e.target.value)} placeholder="Leased SF" className={inputCls} />
+                          </div>
+                          <textarea value={p.description} onChange={(e) => updProfile(p.id, 'description', e.target.value)} rows={3} placeholder="Key business details, lease terms, tenant strength…" className="mt-2 w-full rounded-lg border border-slate-200 p-3 text-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ) : isMaps ? (
                 <div>
