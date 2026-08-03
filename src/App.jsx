@@ -7670,7 +7670,22 @@ function MicrositePreview({ open, onClose, listings, primary }) {
 
 // Builds a fully self-contained microsite HTML page (Leaflet via CDN, data baked
 // in) so "Preview" can open the live listings site in a brand-new browser tab.
-export function buildMicrositeHtml(items, primary) {
+export function buildMicrositeHtml(items, brandColor, template = 'Modern') {
+  // Each microsite theme drives the accent colour + heading font. Because every
+  // accent in the CSS below reads ${primary}, reassigning it themes the whole page.
+  const THEMES = {
+    Modern: { accent: brandColor || '#F97316', font: "Inter,system-ui,-apple-system,sans-serif", hero: brandColor || '#F97316' },
+    Executive: { accent: '#1f2937', font: "Georgia,'Times New Roman',serif", hero: '#111827' },
+    Metro: { accent: '#2563eb', font: "Inter,system-ui,sans-serif", hero: '#1d4ed8' },
+    Gold: { accent: '#c2900f', font: "Georgia,serif", hero: '#b8860b' },
+    Cypress: { accent: '#0f766e', font: "Inter,system-ui,sans-serif", hero: '#0f766e' },
+    Vail: { accent: '#334155', font: "Inter,system-ui,sans-serif", hero: '#1e293b' },
+    Evergreen: { accent: '#166534', font: "Georgia,serif", hero: '#14532d' },
+  }
+  const th = THEMES[template] || THEMES.Modern
+  const primary = th.accent
+  const bodyFont = th.font
+  const hero = th.hero
   return `<!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8"/>
@@ -7679,8 +7694,8 @@ export function buildMicrositeHtml(items, primary) {
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Inter,system-ui,-apple-system,sans-serif;background:#f8fafc;color:#0f172a}
-.hero{position:relative;height:200px;overflow:hidden;color:#fff;background:${primary}}
+body{font-family:${bodyFont};background:#f8fafc;color:#0f172a}
+.hero{position:relative;height:200px;overflow:hidden;color:#fff;background:${hero}}
 .hero .cut{position:absolute;inset:0;background:linear-gradient(115deg,transparent 55%,rgba(0,0,0,.28) 55%)}
 .hero .inner{position:relative;height:100%;display:flex;align-items:center;justify-content:space-between;padding:0 40px}
 .logo{height:96px;width:160px;border-radius:12px;background:rgba(255,255,255,.15)}
@@ -8080,12 +8095,12 @@ function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onRes
     try {
       localStorage.setItem(
         'crebuilder_hub',
-        JSON.stringify({ items: toMicrositeItems(rows), primary }),
+        JSON.stringify({ items: toMicrositeItems(rows), primary, template: micrositeTpl }),
       )
     } catch {
       /* ignore storage errors */
     }
-  }, [listings, primary])
+  }, [listings, primary, micrositeTpl])
 
   const listedCount = rows.filter((l) => l.listed).length
   const unlistedCount = rows.length - listedCount

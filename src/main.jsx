@@ -27,9 +27,10 @@ if (params.get('hub') !== null) {
   const primary =
     (saved && saved.primary) ||
     (params.get('c') ? '#' + params.get('c') : '#F97316')
+  const template = (saved && saved.template) || params.get('t') || 'Modern'
 
   document.open()
-  document.write(buildMicrositeHtml(items, primary))
+  document.write(buildMicrositeHtml(items, primary, template))
   document.close()
 } else if (params.get('room') !== null) {
   const id = params.get('room')
