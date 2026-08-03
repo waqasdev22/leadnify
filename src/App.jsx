@@ -3601,11 +3601,13 @@ const BUILDER_SESSION_KEY = 'crebuilder_builder_session'
 function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSave, notify, onNavigate, onSignOut, user }) {
   // Clicking a nav icon in the builder rail exits the builder and jumps to that section.
   const navFromBuilder = (key) => { if (onExit) onExit(); if (onNavigate) onNavigate(key) }
-  const [step, setStep] = useState(initial?.step || 0)
-  // Mark every step before the resume point as completed.
+  const [step, setStep] = useState(initial?.reviewMode ? BUILDER_SECTIONS.length - 1 : initial?.step || 0)
+  // Mark every step before the resume point as completed (all, when editing a
+  // finished document straight into Review & Customize).
   const [done, setDone] = useState(() => {
     const d = {}
-    for (let i = 0; i < (initial?.step || 0); i++) d[i] = true
+    const upto = initial?.reviewMode ? BUILDER_SECTIONS.length : initial?.step || 0
+    for (let i = 0; i < upto; i++) d[i] = true
     return d
   })
   const [mapOpen, setMapOpen] = useState(false)
@@ -4072,7 +4074,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
   const isConfidentiality = BUILDER_SECTIONS[step] === 'Confidentiality Statement'
   const maps = form.maps || []
   const [mapEditor, setMapEditor] = useState(null)
-  const [reviewMode, setReviewMode] = useState(false)
+  const [reviewMode, setReviewMode] = useState(initial?.reviewMode || false)
   const [rc, setRc] = useState({
     primary: '#1e293b', secondary: '#3b82f6', preset: 'Brokerage Presets', scheme: 'Color Schemes',
     logo: true, logoSize: 90, companyInfo: true, contactInfo: true, price: true, capRate: true, noi: true, capNoiMode: 'Auto',
@@ -6799,7 +6801,7 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
     if (resume?.draft) {
       const d = resume.draft
       setBuilderCfg({ docType: d.docType, propertyType: d.propertyType, template: d.template, brandColor: d.brandColor })
-      setBuilderInitial({ form: d.form, step: d.step })
+      setBuilderInitial({ form: d.form, step: d.step, reviewMode: d.reviewMode })
       setBuilderDraftId(d.id)
       setBuilderNonce((n) => n + 1)
       setBuilderOpen(true)
@@ -8879,6 +8881,7 @@ function DocumentHubView({ room, onBack, notify, onEditDocument }) {
       propertyType: 'Net Lease',
       template: null,
       brandColor: null,
+      reviewMode: true,
       step: 0,
       form: {
         name: room.name || '',
