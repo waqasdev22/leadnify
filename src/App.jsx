@@ -102,6 +102,10 @@ import {
   Calendar,
   Library,
   Car,
+  Navigation,
+  RefreshCw,
+  Train,
+  Plane,
 } from 'lucide-react'
 
 /* -------------------------------------------------------------------------- */
@@ -3161,6 +3165,57 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
     setIconPickerOpen(false)
   }
 
+  // Accessibility helpers (Location Highlights sidebar)
+  const [accessLoading, setAccessLoading] = useState(false)
+  const access = form.access
+  const manualTransit = form.manualTransit || []
+  const haversineMi = (a1, o1, a2, o2) => {
+    const R = 6371
+    const toRad = (d) => (d * Math.PI) / 180
+    const dLat = toRad(a2 - a1)
+    const dLon = toRad(o2 - o1)
+    const x = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a1)) * Math.cos(toRad(a2)) * Math.sin(dLon / 2) ** 2
+    return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x)) * 0.621371
+  }
+  const refreshAccess = async () => {
+    if (!form.lat) {
+      notify('Add the property address first', 'error')
+      return
+    }
+    setAccessLoading(true)
+    try {
+      const { lat, lng } = form
+      const q = `[out:json][timeout:25];(node["aeroway"="aerodrome"](around:70000,${lat},${lng});way["aeroway"="aerodrome"](around:70000,${lat},${lng});node["railway"="station"](around:9000,${lat},${lng});node["public_transport"="station"](around:9000,${lat},${lng}););out center 40;`
+      const res = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: q })
+      const data = await res.json()
+      const airports = []
+      const transit = []
+      const seenA = new Set()
+      const seenT = new Set()
+      for (const el of data.elements || []) {
+        const elat = el.lat ?? el.center?.lat
+        const elng = el.lon ?? el.center?.lon
+        const name = el.tags?.name
+        if (elat == null || !name) continue
+        const dist = haversineMi(lat, lng, elat, elng)
+        if (el.tags.aeroway === 'aerodrome') {
+          if (!seenA.has(name)) { seenA.add(name); airports.push({ name, dist }) }
+        } else if (!seenT.has(name)) { seenT.add(name); transit.push({ name, dist }) }
+      }
+      airports.sort((a, b) => a.dist - b.dist)
+      transit.sort((a, b) => a.dist - b.dist)
+      setForm((f) => ({ ...f, access: { airports: airports.slice(0, 8), transit: transit.slice(0, 8) } }))
+      notify('Accessibility refreshed')
+    } catch {
+      notify('Could not fetch nearby places — try again', 'error')
+    }
+    setAccessLoading(false)
+  }
+  const addTransitStop = () => setForm((f) => ({ ...f, manualTransit: [...(f.manualTransit || []), { id: uid(), name: '' }] }))
+  const updTransit = (id, name) => setForm((f) => ({ ...f, manualTransit: f.manualTransit.map((t) => (t.id === id ? { ...t, name } : t)) }))
+  const delTransit = (id) => setForm((f) => ({ ...f, manualTransit: f.manualTransit.filter((t) => t.id !== id) }))
+  const updLc = (key, val) => setForm((f) => ({ ...f, locCard: { ...(f.locCard || {}), [key]: val } }))
+
   const locLabel = [form.countryName || (form.country === 'CA' ? 'Canada' : 'United States'), form.city, form.state].filter(Boolean).join(', ')
   const fullAddress = [form.street, form.city, form.state, form.zip].filter(Boolean).join(', ')
   const brand = config.brandColor || '#0f172a'
@@ -3192,7 +3247,8 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
   const groups = copyGroups(BUILDER_SECTIONS[step], config.docType)
   const curGroup = groups[Math.min(copyCat, groups.length - 1)] || groups[0]
   const isInvest = BUILDER_SECTIONS[step] === 'Investment Highlights'
-  const charLimit = isInvest ? 2500 : 3000
+  const isLocation = BUILDER_SECTIONS[step] === 'Location Highlights'
+  const charLimit = isInvest || isLocation ? 2500 : 3000
 
   // Calculated Key Metrics — auto-fill from price & property data where possible.
   const dpVal = (...labels) => {
@@ -3242,6 +3298,11 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
       setCharCount(draftRef.current.textContent.length)
       setCopyCat(0)
       setCatOpen(false)
+    }
+    // On the Location Highlights step: seed the location card and auto-fetch nearby places.
+    if (isLocation) {
+      setForm((f) => (f.locCard ? f : { ...f, locCard: { address: f.street, city: f.city, state: f.state, zip: f.zip } }))
+      if (!form.access && form.lat) refreshAccess()
     }
     // Intentionally keyed on step only — must not reset while typing.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -3895,6 +3956,99 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
                     </div>
                   </aside>
                 )}
+
+                {/* Accessibility side panel (Location Highlights only) */}
+                {isLocation && (
+                  <aside className="w-full shrink-0 rounded-2xl border border-slate-200 bg-white shadow-sm xl:w-80">
+                    <div className="flex items-start justify-between gap-2 border-b border-slate-100 p-4">
+                      <div className="flex items-start gap-2">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-rose-50 text-rose-500">
+                          <Navigation className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-extrabold text-slate-900">Accessibility</p>
+                          <p className="text-xs text-slate-400">Transit, airports &amp; highways</p>
+                        </div>
+                      </div>
+                      <button onClick={refreshAccess} disabled={accessLoading} className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-brand transition hover:underline disabled:opacity-50">
+                        <RefreshCw className={`h-3.5 w-3.5 ${accessLoading ? 'animate-spin' : ''}`} /> Refresh
+                      </button>
+                    </div>
+
+                    <div className="scrollbar-slim max-h-[480px] overflow-y-auto p-4">
+                      {/* Transit */}
+                      <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                        <Train className="h-3.5 w-3.5" /> Transit
+                      </div>
+                      {access?.transit?.length || manualTransit.length ? (
+                        <div className="space-y-1.5">
+                          {(access?.transit || []).map((t, i) => (
+                            <div key={`t${i}`} className="flex items-center justify-between gap-2 text-sm">
+                              <span className="truncate text-slate-700">{t.name}</span>
+                              <span className="shrink-0 text-slate-400">{t.dist.toFixed(1)} mi</span>
+                            </div>
+                          ))}
+                          {manualTransit.map((t) => (
+                            <div key={t.id} className="flex items-center gap-1">
+                              <input value={t.name} onChange={(e) => updTransit(t.id, e.target.value)} placeholder="Transit stop name" className={`${inputCls} h-8 flex-1`} />
+                              <button onClick={() => delTransit(t.id)} className="rounded p-1 text-slate-400 transition hover:bg-rose-50 hover:text-rose-500"><X className="h-3.5 w-3.5" /></button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm italic text-slate-400">{accessLoading ? 'Searching…' : 'None found nearby'}</p>
+                      )}
+                      <button onClick={addTransitStop} className="mt-2 inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100">
+                        <Plus className="h-3.5 w-3.5" /> Add transit stop
+                      </button>
+
+                      {/* Airports */}
+                      <div className="mb-1.5 mt-4 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                        <Plane className="h-3.5 w-3.5" /> Airports
+                      </div>
+                      {access?.airports?.length ? (
+                        <div className="space-y-1.5">
+                          {access.airports.map((a, i) => (
+                            <div key={`a${i}`} className="flex items-center justify-between gap-2 text-sm">
+                              <span className="truncate text-slate-700">{a.name}</span>
+                              <span className="shrink-0 text-slate-400">{a.dist.toFixed(1)} mi</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm italic text-slate-400">{accessLoading ? 'Searching…' : 'None found nearby'}</p>
+                      )}
+
+                      <p className="mt-3 border-t border-slate-100 pt-2 text-[11px] text-slate-400">Appears on highlights pages in your document.</p>
+
+                      {/* Location card */}
+                      <div className="mb-1.5 mt-4 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                        <MapPin className="h-3.5 w-3.5" /> Location Card
+                      </div>
+                      <p className="mb-2 text-[11px] leading-snug text-slate-400">Shown beside the map on the Location Highlights page. Blank fields use the property record; coordinates stay automatic.</p>
+                      <div className="space-y-2">
+                        <div>
+                          <label className="mb-0.5 block text-xs font-medium text-slate-500">Address</label>
+                          <input value={form.locCard?.address ?? ''} onChange={(e) => updLc('address', e.target.value)} className={`${inputCls} h-9`} />
+                        </div>
+                        <div>
+                          <label className="mb-0.5 block text-xs font-medium text-slate-500">City</label>
+                          <input value={form.locCard?.city ?? ''} onChange={(e) => updLc('city', e.target.value)} className={`${inputCls} h-9`} />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="mb-0.5 block text-xs font-medium text-slate-500">State</label>
+                            <input value={form.locCard?.state ?? ''} onChange={(e) => updLc('state', e.target.value)} className={`${inputCls} h-9`} />
+                          </div>
+                          <div>
+                            <label className="mb-0.5 block text-xs font-medium text-slate-500">Zip Code</label>
+                            <input value={form.locCard?.zip ?? ''} onChange={(e) => updLc('zip', e.target.value)} className={`${inputCls} h-9`} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </aside>
+                )}
                 </div>
               )}
             </div>
@@ -3903,9 +4057,8 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
           {/* Footer */}
           <div className="flex items-center justify-between border-t border-slate-200 bg-white px-6 py-3">
             <button
-              onClick={() => step > 0 && setStep(step - 1)}
-              disabled={step === 0}
-              className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-500 transition enabled:hover:text-slate-800 disabled:opacity-40"
+              onClick={() => (step > 0 ? setStep(step - 1) : onExit())}
+              className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-500 transition hover:text-slate-800"
             >
               <ArrowLeft className="h-4 w-4" /> Back
             </button>
