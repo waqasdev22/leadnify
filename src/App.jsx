@@ -3030,7 +3030,9 @@ function MiniMap({ lat, lng, zoom, className }) {
     const t2 = setTimeout(() => map.invalidateSize(), 500)
     return () => { clearTimeout(t1); clearTimeout(t2); map.remove() }
   }, [lat, lng, zoom])
-  return <div ref={elRef} className={className || 'h-40 w-full overflow-hidden rounded-lg bg-slate-100'} />
+  // `isolate` (isolation: isolate) contains Leaflet's internal z-index stack
+  // (panes/controls up to z-800) so the map can never paint over app modals.
+  return <div ref={elRef} className={`relative isolate ${className || 'h-40 w-full overflow-hidden rounded-lg bg-slate-100'}`} />
 }
 
 // Interactive editor for a single map slide — pan/zoom/drag the pin, then save.
