@@ -2987,9 +2987,11 @@ function LocationPickerModal({ open, initial, address, onConfirm, onClose }) {
     const start = hasInit ? initial : [30.3753, 69.3451] // fallback: center of Pakistan
     posRef.current = start
     const map = L.map(elRef.current, { scrollWheelZoom: true }).setView(start, hasInit ? 15 : 5)
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
-      maxZoom: 19,
+    // CARTO Voyager — clean tiles with English/Latin place labels, reliable CDN.
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      subdomains: 'abcd',
+      maxZoom: 20,
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
     }).addTo(map)
     const pinIcon = L.divIcon({
       className: '',
@@ -3043,7 +3045,8 @@ function LocationPickerModal({ open, initial, address, onConfirm, onClose }) {
   )
 }
 
-function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify }) {
+const BUILDER_SESSION_KEY = 'crebuilder_builder_session'
+function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSave, notify }) {
   const [step, setStep] = useState(initial?.step || 0)
   // Mark every step before the resume point as completed.
   const [done, setDone] = useState(() => {
@@ -3339,6 +3342,70 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
   const [videoModal, setVideoModal] = useState(false)
   const [videoDraft, setVideoDraft] = useState('')
 
+  // New Tenant / Vacancy modal (Rent Roll)
+  const [tenantModal, setTenantModal] = useState(null)
+  const openTenantModal = (mode) =>
+    setTenantModal({ mode, unit: '', tenant: '', unitType: '', sf: '', rent: '', rentPer: 'Per SF / Year', incMode: 'Annual increase', incPerYear: '', reimbAmount: '', reimbPer: 'Per SF / Year', reimbInc: '', inPlace: '', proForma: '', reimbInPlace: '', reimbProForma: '', leaseType: '', leaseStart: '', leaseEnd: '', notes: '' })
+  const setTM = (k, v) => setTenantModal((t) => ({ ...t, [k]: v }))
+  const computeRent = (rent, per, sf) => {
+    const r = parseFloat(rent) || 0
+    const s = parseFloat(sf) || 0
+    let annual = 0
+    if (per === 'Per SF / Year') annual = r * s
+    else if (per === 'Per SF / Month') annual = r * s * 12
+    else if (per === 'Monthly') annual = r * 12
+    else annual = r // Annual
+    const monthly = annual / 12
+    const perSf = s ? annual / s : per.startsWith('Per SF') ? r : 0
+    return { annual, monthly, perSf }
+  }
+  const money = (n) => `$${(Math.round(n * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  const openEditTenant = (row) =>
+    setTenantModal({
+      mode: row.kind, editId: row.id,
+      unit: row.unit || '', tenant: row.kind === 'vacancy' ? '' : row.tenant || '', unitType: '', sf: row.sf || '',
+      rent: '', rentPer: 'Per SF / Year', incMode: 'Annual increase', incPerYear: (row.incr || '').replace('%', ''),
+      reimbAmount: '', reimbPer: 'Per SF / Year', reimbInc: '', inPlace: '', proForma: '', reimbInPlace: '', reimbProForma: '',
+      leaseType: '', leaseStart: row.start || '', leaseEnd: row.end || '', notes: row.notes || '',
+      ...(row._src || {}),
+    })
+  const submitTenant = () => {
+    const t = tenantModal
+    let row
+    if (t.mode === 'vacancy') {
+      const ip = computeRent(t.inPlace, t.rentPer, t.sf)
+      const reimb = computeRent(t.reimbInPlace, t.reimbPer, t.sf)
+      row = {
+        kind: 'vacancy', unit: t.unit, tenant: 'VACANT', sf: t.sf,
+        rentSf: ip.perSf ? money(ip.perSf) : '', monthly: ip.monthly ? money(ip.monthly) : '', annual: ip.annual ? money(ip.annual) : '',
+        incr: '', reimbSf: t.reimbInPlace ? money(reimb.perSf) : '', annReimb: reimb.annual ? money(reimb.annual) : '',
+        start: '', end: '', notes: [t.unitType && `Type: ${t.unitType}`, t.proForma && `Pro Forma: ${t.proForma}`, t.notes].filter(Boolean).join(' · '),
+        nSf: parseFloat(t.sf) || 0, nMonthly: ip.monthly, nAnnual: ip.annual, nReimb: reimb.annual,
+      }
+    } else {
+      const rent = computeRent(t.rent, t.rentPer, t.sf)
+      const reimb = computeRent(t.reimbAmount, t.reimbPer, t.sf)
+      row = {
+        kind: 'tenant', unit: t.unit, tenant: t.tenant, sf: t.sf,
+        rentSf: rent.perSf ? money(rent.perSf) : '', monthly: rent.monthly ? money(rent.monthly) : '', annual: rent.annual ? money(rent.annual) : '',
+        incr: t.incPerYear ? `${t.incPerYear}%` : '', reimbSf: t.reimbAmount ? money(reimb.perSf) : '', annReimb: reimb.annual ? money(reimb.annual) : '',
+        start: t.leaseStart, end: t.leaseEnd, notes: t.notes,
+        nSf: parseFloat(t.sf) || 0, nMonthly: rent.monthly, nAnnual: rent.annual, nReimb: reimb.annual,
+      }
+    }
+    row._src = t // keep raw inputs so Edit re-populates the form
+    if (t.editId) {
+      setForm((f) => ({ ...f, rentRoll: f.rentRoll.map((r) => (r.id === t.editId ? { ...row, id: t.editId } : r)) }))
+      notify('Changes saved')
+    } else {
+      row.id = uid()
+      setForm((f) => ({ ...f, rentRoll: [...(f.rentRoll || []), row] }))
+      notify(t.mode === 'vacancy' ? 'Vacancy added' : 'Tenant added')
+    }
+    setTenantModal(null)
+  }
+  const [deleteRow, setDeleteRow] = useState(null)
+
   const locLabel = [form.countryName || (form.country === 'CA' ? 'Canada' : 'United States'), form.city, form.state].filter(Boolean).join(', ')
   const fullAddress = [form.street, form.city, form.state, form.zip].filter(Boolean).join(', ')
   const brand = config.brandColor || '#0f172a'
@@ -3379,6 +3446,7 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
   // Financials + Rent Roll state
   const finType = form.finType || 'Full Financials'
   const [scopeConfirm, setScopeConfirm] = useState(null) // pending finType change awaiting confirm
+  const [rrConfirm, setRrConfirm] = useState(null) // pending rent-roll type change awaiting confirm
   const rrSel = form.rrSel || { family: 'Multi-Year Cash Flow', mode: 'Unit-by-Unit' }
   const rentRoll = form.rentRoll || []
   const addRentRow = (kind) =>
@@ -3443,6 +3511,14 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
     // Intentionally keyed on step only — must not reset while typing.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step])
+
+  // Auto-save the whole in-progress builder session so a page refresh keeps the data.
+  useEffect(() => {
+    try {
+      localStorage.setItem(BUILDER_SESSION_KEY, JSON.stringify({ form, step, config, draftId }))
+    } catch { /* quota exceeded (e.g. many large images) — skip */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, step])
 
   const saveDraft = () => {
     if (!draftRef.current) return
@@ -3724,7 +3800,10 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
                       return (
                         <button
                           key={t.key}
-                          onClick={() => (t.key === finType ? null : setScopeConfirm(t.key))}
+                          onClick={() => {
+                            if (t.key === finType) { setDone((d) => ({ ...d, [step]: true })); setStep(step + 1) }
+                            else setScopeConfirm(t.key)
+                          }}
                           className={`relative rounded-2xl border-2 p-5 text-center transition ${sel ? 'border-orange-400 bg-orange-50/50' : 'border-slate-200 bg-white hover:border-slate-300'}`}
                         >
                           {sel && (
@@ -3768,7 +3847,7 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
                             return (
                               <button
                                 key={m.mode}
-                                onClick={() => setForm((f) => ({ ...f, rrSel: { family: fam.family, mode: m.mode } }))}
+                                onClick={() => (sel ? null : setRrConfirm({ family: fam.family, mode: m.mode }))}
                                 className={`w-full rounded-xl border-2 bg-white p-3 text-left transition ${sel ? 'border-orange-400' : 'border-slate-200 hover:border-slate-300'}`}
                               >
                                 <div className="flex items-center justify-between">
@@ -3808,8 +3887,8 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
                                 <Users className="mx-auto h-7 w-7 text-slate-300" />
                                 <p className="mt-2 text-sm text-slate-400">No tenants or vacancies yet</p>
                                 <div className="mt-3 flex justify-center gap-2">
-                                  <button onClick={() => addRentRow('tenant')} className="inline-flex items-center gap-1 rounded-lg border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-semibold text-brand transition hover:bg-orange-100"><Plus className="h-3.5 w-3.5" /> Add Tenant</button>
-                                  <button onClick={() => addRentRow('vacancy')} className="inline-flex items-center gap-1 rounded-lg border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-semibold text-brand transition hover:bg-orange-100"><Plus className="h-3.5 w-3.5" /> Add Vacancy</button>
+                                  <button onClick={() => openTenantModal('tenant')} className="inline-flex items-center gap-1 rounded-lg border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-semibold text-brand transition hover:bg-orange-100"><Plus className="h-3.5 w-3.5" /> Add Tenant</button>
+                                  <button onClick={() => openTenantModal('vacancy')} className="inline-flex items-center gap-1 rounded-lg border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-semibold text-brand transition hover:bg-orange-100"><Plus className="h-3.5 w-3.5" /> Add Vacancy</button>
                                 </div>
                               </td>
                             </tr>
@@ -3822,19 +3901,40 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
                                   </td>
                                 ))}
                                 <td className="px-1 py-1">
-                                  <button onClick={() => delRentRow(r.id)} className="rounded p-1 text-slate-400 transition hover:bg-rose-50 hover:text-rose-500"><Trash2 className="h-3.5 w-3.5" /></button>
+                                  <div className="flex items-center gap-1">
+                                    <button onClick={() => openEditTenant(r)} className="inline-flex items-center gap-1 rounded-lg border border-orange-200 px-2 py-1 text-xs font-semibold text-brand transition hover:bg-orange-50"><Pencil className="h-3 w-3" /> Edit</button>
+                                    <button onClick={() => setDeleteRow(r)} className="rounded p-1 text-rose-400 transition hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" /></button>
+                                  </div>
                                 </td>
                               </tr>
                             ))
                           )}
                         </tbody>
+                        {rentRoll.length > 0 && (() => {
+                          const tenants = rentRoll.filter((r) => r.kind !== 'vacancy').length
+                          const sum = (k) => rentRoll.reduce((a, r) => a + (r[k] || 0), 0)
+                          return (
+                            <tfoot>
+                              <tr className="border-t border-slate-200 bg-orange-50/50 text-xs font-bold text-slate-700">
+                                <td className="px-2 py-2" colSpan={2}><span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {tenants} tenant{tenants === 1 ? '' : 's'}</span></td>
+                                <td className="px-2 py-2">{sum('nSf').toLocaleString()}</td>
+                                <td />
+                                <td className="px-2 py-2">{money(sum('nMonthly'))}</td>
+                                <td className="px-2 py-2">{money(sum('nAnnual'))}</td>
+                                <td /><td />
+                                <td className="px-2 py-2">{money(sum('nReimb'))}</td>
+                                <td /><td /><td /><td />
+                              </tr>
+                            </tfoot>
+                          )
+                        })()}
                       </table>
                     </div>
                   </div>
                   {rentRoll.length > 0 && (
                     <div className="mt-2 flex gap-2">
-                      <button onClick={() => addRentRow('tenant')} className="inline-flex items-center gap-1 rounded-lg border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-semibold text-brand transition hover:bg-orange-100"><Plus className="h-3.5 w-3.5" /> Add Tenant</button>
-                      <button onClick={() => addRentRow('vacancy')} className="inline-flex items-center gap-1 rounded-lg border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-semibold text-brand transition hover:bg-orange-100"><Plus className="h-3.5 w-3.5" /> Add Vacancy</button>
+                      <button onClick={() => openTenantModal('tenant')} className="inline-flex items-center gap-1 rounded-lg border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-semibold text-brand transition hover:bg-orange-100"><Plus className="h-3.5 w-3.5" /> Add Tenant</button>
+                      <button onClick={() => openTenantModal('vacancy')} className="inline-flex items-center gap-1 rounded-lg border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-semibold text-brand transition hover:bg-orange-100"><Plus className="h-3.5 w-3.5" /> Add Vacancy</button>
                     </div>
                   )}
 
@@ -4603,6 +4703,191 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
         </div>
       )}
 
+      {/* New Tenant / Vacancy modal */}
+      {tenantModal && (() => {
+        const t = tenantModal
+        const rent = computeRent(t.rent, t.rentPer, t.sf)
+        const perOpts = ['Per SF / Year', 'Per SF / Month', 'Monthly', 'Annual']
+        return (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => setTenantModal(null)}>
+            <div className="flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+                <h3 className="text-lg font-extrabold text-slate-900">{t.editId ? (t.mode === 'vacancy' ? 'Edit Vacancy' : 'Edit Tenant') : t.mode === 'vacancy' ? 'New Vacancy' : 'New Tenant'}</h3>
+                <button onClick={() => setTenantModal(null)} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"><X className="h-5 w-5" /></button>
+              </div>
+              <div className="scrollbar-slim flex-1 overflow-y-auto p-5">
+                {t.mode === 'vacancy' ? (() => {
+                  const ip = computeRent(t.inPlace, t.rentPer, t.sf)
+                  const pf = computeRent(t.proForma, t.rentPer, t.sf)
+                  return (
+                    <>
+                      {/* Basic info */}
+                      <p className="mb-2 inline-block rounded bg-orange-50 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-brand">Basic Info</p>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <Field label="Unit / Space"><TextInput value={t.unit} onChange={(e) => setTM('unit', e.target.value)} placeholder="e.g. Suite 100" /></Field>
+                        <Field label="Unit Type"><TextInput value={t.unitType} onChange={(e) => setTM('unitType', e.target.value)} placeholder="e.g. Retail, 2BR" /></Field>
+                        <Field label="Square Feet"><TextInput value={t.sf} onChange={(e) => setTM('sf', e.target.value)} placeholder="e.g. 2500" /></Field>
+                      </div>
+
+                      {/* Rent */}
+                      <p className="mb-2 mt-5 inline-block rounded bg-orange-50 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-brand">Rent</p>
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <Field label="In-Place"><TextInput value={t.inPlace} onChange={(e) => setTM('inPlace', e.target.value)} placeholder="0.00" /></Field>
+                        <Field label="Pro Forma"><TextInput value={t.proForma} onChange={(e) => setTM('proForma', e.target.value)} placeholder="0.00" /></Field>
+                        <Field label="Per"><SelectInput value={t.rentPer} onChange={(e) => setTM('rentPer', e.target.value)} options={perOpts} /></Field>
+                      </div>
+                      <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                        <div className="rounded-lg bg-slate-50 p-3">
+                          <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-slate-500">In-Place</p>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div><p className="text-[11px] text-slate-400">Annual</p><p className="text-sm font-bold text-slate-800">{money(ip.annual)}</p></div>
+                            <div><p className="text-[11px] text-slate-400">Monthly</p><p className="text-sm font-bold text-slate-800">{money(ip.monthly)}</p></div>
+                            <div><p className="text-[11px] text-slate-400">Per SF</p><p className="text-sm font-bold text-slate-800">{money(ip.perSf)}</p></div>
+                          </div>
+                        </div>
+                        <div className="rounded-lg bg-orange-50/60 p-3">
+                          <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-brand">Pro Forma</p>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div><p className="text-[11px] text-slate-400">Annual</p><p className="text-sm font-bold text-slate-800">{money(pf.annual)}</p></div>
+                            <div><p className="text-[11px] text-slate-400">Monthly</p><p className="text-sm font-bold text-slate-800">{money(pf.monthly)}</p></div>
+                            <div><p className="text-[11px] text-slate-400">Per SF</p><p className="text-sm font-bold text-slate-800">{money(pf.perSf)}</p></div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Expense reimbursement */}
+                      <p className="mb-2 mt-5 inline-block rounded bg-orange-50 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-brand">Expense Reimbursement</p>
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <Field label="In-Place"><TextInput value={t.reimbInPlace} onChange={(e) => setTM('reimbInPlace', e.target.value)} placeholder="0.00" /></Field>
+                        <Field label="Pro Forma"><TextInput value={t.reimbProForma} onChange={(e) => setTM('reimbProForma', e.target.value)} placeholder="0.00" /></Field>
+                        <Field label="Per"><SelectInput value={t.reimbPer} onChange={(e) => setTM('reimbPer', e.target.value)} options={perOpts} /></Field>
+                      </div>
+
+                      {/* Notes */}
+                      <p className="mb-2 mt-5 inline-block rounded bg-orange-50 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-brand">Notes</p>
+                      <textarea value={t.notes} onChange={(e) => setTM('notes', e.target.value.slice(0, 500))} rows={3} placeholder="Optional notes…" className="w-full rounded-lg border border-slate-200 p-3 text-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100" />
+                      <p className="mt-1 text-right text-xs text-slate-400">{t.notes.length}/500</p>
+                    </>
+                  )
+                })() : (
+                <>
+                {/* Basic info */}
+                <p className="mb-2 inline-block rounded bg-orange-50 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-brand">Basic Info</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field label="Unit / Space"><TextInput value={t.unit} onChange={(e) => setTM('unit', e.target.value)} placeholder="e.g. Suite 100" /></Field>
+                  <Field label="Tenant Name"><TextInput value={t.tenant} onChange={(e) => setTM('tenant', e.target.value)} placeholder="Tenant name" /></Field>
+                  <Field label="Square Feet"><TextInput value={t.sf} onChange={(e) => setTM('sf', e.target.value)} placeholder="e.g. 2500" /></Field>
+                </div>
+
+                {/* Base rent */}
+                <p className="mb-2 mt-5 inline-block rounded bg-orange-50 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-brand">Base Rent</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field label="Rent"><TextInput value={t.rent} onChange={(e) => setTM('rent', e.target.value)} placeholder="0.00" /></Field>
+                  <Field label="Rent Per"><SelectInput value={t.rentPer} onChange={(e) => setTM('rentPer', e.target.value)} options={perOpts} /></Field>
+                </div>
+                <div className="mt-2 grid grid-cols-3 gap-3 rounded-lg bg-slate-50 p-3">
+                  <div><p className="text-[11px] text-slate-400">Annual</p><p className="font-bold text-slate-800">{money(rent.annual)}</p></div>
+                  <div><p className="text-[11px] text-slate-400">Monthly</p><p className="font-bold text-slate-800">{money(rent.monthly)}</p></div>
+                  <div><p className="text-[11px] text-slate-400">Per SF</p><p className="font-bold text-slate-800">{money(rent.perSf)}</p></div>
+                </div>
+
+                {/* Rent increases */}
+                <p className="mb-2 mt-5 inline-block rounded bg-orange-50 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-brand">Rent Increases</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {[{ k: 'Annual increase', icon: TrendingUp, d: 'Same % every year, compounding' }, { k: 'Custom schedule', icon: Calendar, d: 'Steps in specific years, flat in between' }].map((o) => (
+                    <button key={o.k} onClick={() => setTM('incMode', o.k)} className={`flex items-start gap-2 rounded-xl border-2 p-3 text-left transition ${t.incMode === o.k ? 'border-orange-400 bg-orange-50/50' : 'border-slate-200 hover:border-slate-300'}`}>
+                      <o.icon className={`mt-0.5 h-4 w-4 shrink-0 ${t.incMode === o.k ? 'text-brand' : 'text-slate-400'}`} />
+                      <div><p className="text-sm font-bold text-slate-800">{o.k}</p><p className="text-xs text-slate-500">{o.d}</p></div>
+                    </button>
+                  ))}
+                </div>
+                {t.incMode === 'Annual increase' && (
+                  <div className="mt-3">
+                    <label className="mb-1 block text-sm font-semibold text-slate-700">Increase per year</label>
+                    <div className="flex items-center gap-2">
+                      <input value={t.incPerYear} onChange={(e) => setTM('incPerYear', e.target.value)} placeholder="0" className={`${inputCls} max-w-[140px]`} />
+                      <span className="text-sm text-slate-400">%/yr</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Expense reimbursement */}
+                <p className="mb-2 mt-5 inline-block rounded bg-orange-50 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-brand">Expense Reimbursement</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field label="Amount"><TextInput value={t.reimbAmount} onChange={(e) => setTM('reimbAmount', e.target.value)} placeholder="0.00" /></Field>
+                  <Field label="Per"><SelectInput value={t.reimbPer} onChange={(e) => setTM('reimbPer', e.target.value)} options={perOpts} /></Field>
+                </div>
+                <div className="mt-3">
+                  <label className="mb-1 block text-sm font-semibold text-slate-700">Increase per year</label>
+                  <div className="flex items-center gap-2">
+                    <input value={t.reimbInc} onChange={(e) => setTM('reimbInc', e.target.value)} placeholder="0" className={`${inputCls} max-w-[140px]`} />
+                    <span className="text-sm text-slate-400">%/yr</span>
+                  </div>
+                </div>
+
+                {/* Lease details */}
+                <p className="mb-2 mt-5 inline-block rounded bg-orange-50 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-brand">Lease Details</p>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <Field label="Lease Type"><SelectInput value={t.leaseType} onChange={(e) => setTM('leaseType', e.target.value)} options={['Select...', 'NNN', 'Modified Gross', 'Full Service', 'Gross', 'Ground Lease']} /></Field>
+                  <Field label="Lease Start"><input type="date" value={t.leaseStart} onChange={(e) => setTM('leaseStart', e.target.value)} className={inputCls} /></Field>
+                  <Field label="Lease End"><input type="date" value={t.leaseEnd} onChange={(e) => setTM('leaseEnd', e.target.value)} className={inputCls} /></Field>
+                </div>
+
+                {/* Notes */}
+                <p className="mb-2 mt-5 inline-block rounded bg-orange-50 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-brand">Notes</p>
+                <textarea value={t.notes} onChange={(e) => setTM('notes', e.target.value.slice(0, 500))} rows={3} placeholder="Optional notes…" className="w-full rounded-lg border border-slate-200 p-3 text-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100" />
+                <p className="mt-1 text-right text-xs text-slate-400">{t.notes.length}/500</p>
+                </>
+                )}
+              </div>
+              <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-3">
+                <button onClick={() => setTenantModal(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
+                <button onClick={submitTenant} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600">{t.editId ? 'Save Changes' : t.mode === 'vacancy' ? 'Add Vacancy' : 'Add Tenant'}</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Delete tenant/vacancy confirm */}
+      {deleteRow && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => setDeleteRow(null)}>
+          <div className="w-full max-w-sm overflow-hidden rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-50 text-rose-500"><Trash2 className="h-5 w-5" /></div>
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900">Delete this {deleteRow.kind === 'vacancy' ? 'vacancy' : 'tenant'}?</h3>
+                <p className="mt-1 text-sm text-slate-400">This action cannot be undone. All data for this entry will be permanently removed.</p>
+              </div>
+            </div>
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <button onClick={() => setDeleteRow(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
+              <button onClick={() => { delRentRow(deleteRow.id); setDeleteRow(null); notify('Deleted') }} className="rounded-lg bg-rose-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-600">Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Change Rent Roll Type confirm */}
+      {rrConfirm && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => setRrConfirm(null)}>
+          <div className="w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+              <h3 className="text-base font-extrabold text-slate-900">Change Rent Roll Type?</h3>
+              <button onClick={() => setRrConfirm(null)} className="rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="flex gap-3 p-5">
+              <AlertTriangle className="h-5 w-5 shrink-0 text-amber-500" />
+              <p className="text-sm text-slate-500">Changing the rent roll type will adjust the available columns. Your existing data will be preserved where possible — only fields that don't exist in the new type will be cleared.</p>
+            </div>
+            <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-3">
+              <button onClick={() => setRrConfirm(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
+              <button onClick={() => { setForm((f) => ({ ...f, rrSel: rrConfirm })); setRrConfirm(null) }} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600">Change Type</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Change Financial Scope confirm */}
       {scopeConfirm && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => setScopeConfirm(null)}>
@@ -4621,7 +4906,7 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
             <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-3">
               <button onClick={() => setScopeConfirm(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
               <button
-                onClick={() => { setForm((f) => ({ ...f, finType: scopeConfirm })); notify(`Financial scope changed to ${scopeConfirm}`); setScopeConfirm(null) }}
+                onClick={() => { setForm((f) => ({ ...f, finType: scopeConfirm })); notify(`Financial scope changed to ${scopeConfirm}`); setScopeConfirm(null); setDone((d) => ({ ...d, [step]: true })); setStep(step + 1) }}
                 className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
               >
                 Change Scope
@@ -4716,6 +5001,21 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
     }
   }, [resume])
 
+  // Restore an in-progress builder session after a page refresh.
+  useEffect(() => {
+    try {
+      const s = JSON.parse(localStorage.getItem(BUILDER_SESSION_KEY) || 'null')
+      if (s && s.config && s.form) {
+        setBuilderCfg(s.config)
+        setBuilderInitial({ form: s.form, step: s.step || 0 })
+        setBuilderDraftId(s.draftId || null)
+        setBuilderNonce((n) => n + 1)
+        setBuilderOpen(true)
+      }
+    } catch { /* ignore */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Bulk-select mode (toggled by the "Select" button).
   const [selectMode, setSelectMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState([])
@@ -4725,10 +5025,13 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
     setSelectMode(false)
     setSelectedIds([])
   }
+  const [bulkConfirm, setBulkConfirm] = useState(false)
   const bulkDelete = () => {
+    const n = selectedIds.length
     setPackages((list) => list.filter((p) => !selectedIds.includes(p.id)))
-    notify(`${selectedIds.length} package(s) deleted`, 'error')
+    notify(`${n} package(s) deleted`, 'error')
     exitSelect()
+    setBulkConfirm(false)
   }
 
   const effectiveSearch = (globalQuery || search).toLowerCase()
@@ -4845,6 +5148,7 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
     setBuilderOpen(false)
     setBuilderInitial(null)
     setBuilderDraftId(null)
+    try { localStorage.removeItem(BUILDER_SESSION_KEY) } catch { /* ignore */ }
   }
   const openEdit = (pkg) => {
     setEditing(pkg)
@@ -5004,7 +5308,7 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
             {selectedIds.length} selected
           </span>
           <button
-            onClick={bulkDelete}
+            onClick={() => selectedIds.length && setBulkConfirm(true)}
             className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-rose-700"
           >
             <Trash2 className="h-4 w-4" />
@@ -5053,8 +5357,9 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
           key={builderNonce}
           config={builderCfg}
           initial={builderInitial}
+          draftId={builderDraftId}
           notify={notify}
-          onExit={() => setBuilderOpen(false)}
+          onExit={() => { setBuilderOpen(false); try { localStorage.removeItem(BUILDER_SESSION_KEY) } catch { /* ignore */ } }}
           onChangeType={() => {
             setBuilderOpen(false)
             setWizardOpen(true)
@@ -5083,6 +5388,13 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
         onConfirm={doDelete}
         title="Delete package?"
         message={`"${confirm?.title}" will be permanently removed. This cannot be undone.`}
+      />
+      <ConfirmDialog
+        open={bulkConfirm}
+        onClose={() => setBulkConfirm(false)}
+        onConfirm={bulkDelete}
+        title={`Delete ${selectedIds.length} package${selectedIds.length === 1 ? '' : 's'}?`}
+        message="This action cannot be undone. All selected packages will be permanently removed."
       />
     </div>
   )
