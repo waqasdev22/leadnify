@@ -2703,6 +2703,20 @@ const RR_FAMILIES = [
 ]
 const RR_COLUMNS = ['Unit', 'Tenant', 'SF', 'Rent/SF', 'Monthly', 'Annual', 'Incr %', 'Reimb/SF', 'Ann. Reimb.', 'Start', 'End', 'Notes']
 const RR_KEYS = ['unit', 'tenant', 'sf', 'rentSf', 'monthly', 'annual', 'incr', 'reimbSf', 'annReimb', 'start', 'end', 'notes']
+// Pro Forma layout swaps "Incr %" for in-place vs projected columns.
+const RR_COLUMNS_PF = ['Unit', 'Tenant', 'SF', 'Rent/SF', 'Monthly', 'Annual', 'Reimb/SF', 'Ann. Reimb.', 'Start', 'End', 'Pro-Forma / SF', 'Pro-Forma / Yr', 'Pro-Forma Exp. Reimb.', 'Notes']
+const RR_KEYS_PF = ['unit', 'tenant', 'sf', 'rentSf', 'monthly', 'annual', 'reimbSf', 'annReimb', 'start', 'end', 'pfSf', 'pfYr', 'pfReimb', 'notes']
+// Unit Mix groups units by type instead of listing each tenant.
+const RR_COLUMNS_MIX = ['Unit', 'Unit Type', '# Units', 'Avg SF', 'Rent/SF', 'Annual', 'Total Annual', 'Incr %', 'Reimb/SF', 'Ann. Reimb.', 'Notes']
+const RR_KEYS_MIX = ['unit', 'unitType', 'numUnits', 'avgSf', 'rentSf', 'annual', 'totalAnnual', 'incr', 'reimbSf', 'annReimb', 'notes']
+const RR_COLUMNS_MIX_PF = ['Unit', 'Unit Type', '# Units', 'Avg SF', 'Rent/SF', 'Annual', 'Total Annual', 'Reimb/SF', 'Ann. Reimb.', 'Pro-Forma / SF', 'Pro-Forma / Yr', 'Pro-Forma Exp. Reimb.', 'Notes']
+const RR_KEYS_MIX_PF = ['unit', 'unitType', 'numUnits', 'avgSf', 'rentSf', 'annual', 'totalAnnual', 'reimbSf', 'annReimb', 'pfSf', 'pfYr', 'pfReimb', 'notes']
+const RR_LAYOUTS = {
+  'Multi-Year Cash Flow|Unit-by-Unit': { cols: RR_COLUMNS, keys: RR_KEYS },
+  'Multi-Year Cash Flow|Unit Mix': { cols: RR_COLUMNS_MIX, keys: RR_KEYS_MIX },
+  'Pro Forma|Unit-by-Unit': { cols: RR_COLUMNS_PF, keys: RR_KEYS_PF },
+  'Pro Forma|Unit Mix': { cols: RR_COLUMNS_MIX_PF, keys: RR_KEYS_MIX_PF },
+}
 const ICON_NAMES = Object.keys(ICON_LIBRARY)
 const MetricIcon = ({ name, className }) => {
   const I = ICON_LIBRARY[name] || DollarSign
@@ -3448,6 +3462,10 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
   const [scopeConfirm, setScopeConfirm] = useState(null) // pending finType change awaiting confirm
   const [rrConfirm, setRrConfirm] = useState(null) // pending rent-roll type change awaiting confirm
   const rrSel = form.rrSel || { family: 'Multi-Year Cash Flow', mode: 'Unit-by-Unit' }
+  const rrLayout = RR_LAYOUTS[`${rrSel.family}|${rrSel.mode}`] || RR_LAYOUTS['Multi-Year Cash Flow|Unit-by-Unit']
+  const rrCols = rrLayout.cols
+  const rrKeys = rrLayout.keys
+  const rrSelLabel = `${rrSel.mode}${rrSel.mode === 'Unit Mix' ? ' (Grouped)' : ''} · ${rrSel.family}`
   const rentRoll = form.rentRoll || []
   const addRentRow = (kind) =>
     setForm((f) => ({ ...f, rentRoll: [...(f.rentRoll || []), { id: uid(), kind, unit: '', tenant: kind === 'vacancy' ? 'VACANT' : '', sf: '', rentSf: '', monthly: '', annual: '', incr: '', reimbSf: '', annReimb: '', start: '', end: '', notes: '' }] }))
@@ -3828,47 +3846,62 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                   </div>
                   <p className="mt-1 text-sm text-slate-500">Select a rent roll type and enter your property's tenant and vacancy data.</p>
 
-                  <p className="mt-5 text-xs font-bold uppercase tracking-wide text-slate-500">Select Rent Roll Type</p>
-                  <div className="mt-2 grid gap-4 lg:grid-cols-2">
-                    {RR_FAMILIES.map((fam) => (
-                      <div key={fam.family} className={`rounded-2xl border p-3 ${fam.tone === 'emerald' ? 'border-emerald-200 bg-emerald-50/40' : 'border-violet-200 bg-violet-50/40'}`}>
-                        <div className="flex items-start gap-2 px-1 pb-2">
-                          <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${fam.tone === 'emerald' ? 'bg-emerald-100 text-emerald-600' : 'bg-violet-100 text-violet-600'}`}>
-                            <fam.icon className="h-5 w-5" />
+                  {form.rrChosen ? (
+                    /* Collapsed: compact selected-type bar */
+                    <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
+                      <span className="inline-flex items-center gap-2 text-sm font-bold text-slate-800">
+                        <span className="h-2 w-2 rounded-full bg-brand" /> {rrSelLabel}
+                      </span>
+                      <span className="text-slate-300">|</span>
+                      <button onClick={() => setRrConfirm(true)} className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-50">
+                        <Repeat2 className="h-3.5 w-3.5" /> Change Rent Roll Type
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="mt-5 text-xs font-bold uppercase tracking-wide text-slate-500">Select Rent Roll Type</p>
+                      <div className="mt-2 grid gap-4 lg:grid-cols-2">
+                        {RR_FAMILIES.map((fam) => (
+                          <div key={fam.family} className={`rounded-2xl border p-3 ${fam.tone === 'emerald' ? 'border-emerald-200 bg-emerald-50/40' : 'border-violet-200 bg-violet-50/40'}`}>
+                            <div className="flex items-start gap-2 px-1 pb-2">
+                              <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${fam.tone === 'emerald' ? 'bg-emerald-100 text-emerald-600' : 'bg-violet-100 text-violet-600'}`}>
+                                <fam.icon className="h-5 w-5" />
+                              </div>
+                              <div>
+                                <p className={`text-sm font-extrabold ${fam.tone === 'emerald' ? 'text-emerald-700' : 'text-violet-700'}`}>{fam.family}</p>
+                                <p className={`text-xs ${fam.tone === 'emerald' ? 'text-emerald-600' : 'text-violet-600'}`}>{fam.blurb}</p>
+                              </div>
+                            </div>
+                            <div className="space-y-3">
+                              {fam.modes.map((m) => {
+                                const sel = rrSel.family === fam.family && rrSel.mode === m.mode
+                                return (
+                                  <button
+                                    key={m.mode}
+                                    onClick={() => setForm((f) => ({ ...f, rrSel: { family: fam.family, mode: m.mode }, rrChosen: true }))}
+                                    className={`w-full rounded-xl border-2 bg-white p-3 text-left transition ${sel ? 'border-orange-400' : 'border-slate-200 hover:border-slate-300'}`}
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <p className="font-bold text-slate-900">{m.mode}</p>
+                                      {sel && <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand text-white"><Check className="h-3 w-3" /></span>}
+                                    </div>
+                                    <p className="mt-1 text-xs leading-snug text-slate-500">{m.desc}</p>
+                                    <p className="mt-2 text-xs text-slate-500"><b className="text-slate-700">Best for:</b> {m.bestFor}</p>
+                                    <ul className="mt-1.5 space-y-1">
+                                      {m.points.map((p) => (
+                                        <li key={p} className="flex items-center gap-1.5 text-xs text-slate-500"><Check className="h-3.5 w-3.5 shrink-0 text-emerald-500" /> {p}</li>
+                                      ))}
+                                    </ul>
+                                    <span onClick={(e) => { e.stopPropagation(); notify('Sample opened') }} className="mt-2 inline-flex cursor-pointer items-center gap-1 text-xs font-semibold text-brand hover:underline"><Eye className="h-3.5 w-3.5" /> View Sample</span>
+                                  </button>
+                                )
+                              })}
+                            </div>
                           </div>
-                          <div>
-                            <p className={`text-sm font-extrabold ${fam.tone === 'emerald' ? 'text-emerald-700' : 'text-violet-700'}`}>{fam.family}</p>
-                            <p className={`text-xs ${fam.tone === 'emerald' ? 'text-emerald-600' : 'text-violet-600'}`}>{fam.blurb}</p>
-                          </div>
-                        </div>
-                        <div className="space-y-3">
-                          {fam.modes.map((m) => {
-                            const sel = rrSel.family === fam.family && rrSel.mode === m.mode
-                            return (
-                              <button
-                                key={m.mode}
-                                onClick={() => (sel ? null : setRrConfirm({ family: fam.family, mode: m.mode }))}
-                                className={`w-full rounded-xl border-2 bg-white p-3 text-left transition ${sel ? 'border-orange-400' : 'border-slate-200 hover:border-slate-300'}`}
-                              >
-                                <div className="flex items-center justify-between">
-                                  <p className="font-bold text-slate-900">{m.mode}</p>
-                                  {sel && <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand text-white"><Check className="h-3 w-3" /></span>}
-                                </div>
-                                <p className="mt-1 text-xs leading-snug text-slate-500">{m.desc}</p>
-                                <p className="mt-2 text-xs text-slate-500"><b className="text-slate-700">Best for:</b> {m.bestFor}</p>
-                                <ul className="mt-1.5 space-y-1">
-                                  {m.points.map((p) => (
-                                    <li key={p} className="flex items-center gap-1.5 text-xs text-slate-500"><Check className="h-3.5 w-3.5 shrink-0 text-emerald-500" /> {p}</li>
-                                  ))}
-                                </ul>
-                                <span onClick={(e) => { e.stopPropagation(); notify('Sample opened') }} className="mt-2 inline-flex cursor-pointer items-center gap-1 text-xs font-semibold text-brand hover:underline"><Eye className="h-3.5 w-3.5" /> View Sample</span>
-                              </button>
-                            )
-                          })}
-                        </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    </>
+                  )}
 
                   {/* Tenant / vacancy table */}
                   <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
@@ -3876,14 +3909,14 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                       <table className="w-full min-w-[900px] text-left text-xs">
                         <thead>
                           <tr className="border-b border-slate-100 bg-slate-50 uppercase tracking-wide text-slate-400">
-                            {RR_COLUMNS.map((c) => <th key={c} className="px-2 py-2 font-semibold">{c}</th>)}
+                            {rrCols.map((c) => <th key={c} className="px-2 py-2 font-semibold">{c}</th>)}
                             <th className="px-2 py-2" />
                           </tr>
                         </thead>
                         <tbody>
                           {rentRoll.length === 0 ? (
                             <tr>
-                              <td colSpan={RR_COLUMNS.length + 1} className="py-10 text-center">
+                              <td colSpan={rrCols.length + 1} className="py-10 text-center">
                                 <Users className="mx-auto h-7 w-7 text-slate-300" />
                                 <p className="mt-2 text-sm text-slate-400">No tenants or vacancies yet</p>
                                 <div className="mt-3 flex justify-center gap-2">
@@ -3895,9 +3928,9 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                           ) : (
                             rentRoll.map((r) => (
                               <tr key={r.id} className={`border-b border-slate-50 ${r.kind === 'vacancy' ? 'bg-rose-50/30' : ''}`}>
-                                {RR_KEYS.map((k) => (
+                                {rrKeys.map((k) => (
                                   <td key={k} className="px-1 py-1">
-                                    <input value={r[k]} onChange={(e) => updRentRow(r.id, k, e.target.value)} className="w-full min-w-[64px] rounded border border-slate-200 px-1.5 py-1 text-xs outline-none focus:border-orange-400" />
+                                    <input value={r[k] || ''} onChange={(e) => updRentRow(r.id, k, e.target.value)} className="w-full min-w-[64px] rounded border border-slate-200 px-1.5 py-1 text-xs outline-none focus:border-orange-400" />
                                   </td>
                                 ))}
                                 <td className="px-1 py-1">
@@ -3913,17 +3946,13 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                         {rentRoll.length > 0 && (() => {
                           const tenants = rentRoll.filter((r) => r.kind !== 'vacancy').length
                           const sum = (k) => rentRoll.reduce((a, r) => a + (r[k] || 0), 0)
+                          const totalFor = (k) => (k === 'sf' ? sum('nSf').toLocaleString() : k === 'monthly' ? money(sum('nMonthly')) : k === 'annual' ? money(sum('nAnnual')) : k === 'annReimb' ? money(sum('nReimb')) : '')
                           return (
                             <tfoot>
                               <tr className="border-t border-slate-200 bg-orange-50/50 text-xs font-bold text-slate-700">
                                 <td className="px-2 py-2" colSpan={2}><span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {tenants} tenant{tenants === 1 ? '' : 's'}</span></td>
-                                <td className="px-2 py-2">{sum('nSf').toLocaleString()}</td>
+                                {rrKeys.slice(2).map((k) => <td key={k} className="px-2 py-2">{totalFor(k)}</td>)}
                                 <td />
-                                <td className="px-2 py-2">{money(sum('nMonthly'))}</td>
-                                <td className="px-2 py-2">{money(sum('nAnnual'))}</td>
-                                <td /><td />
-                                <td className="px-2 py-2">{money(sum('nReimb'))}</td>
-                                <td /><td /><td /><td />
                               </tr>
                             </tfoot>
                           )
@@ -4882,7 +4911,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
             </div>
             <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-3">
               <button onClick={() => setRrConfirm(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
-              <button onClick={() => { setForm((f) => ({ ...f, rrSel: rrConfirm })); setRrConfirm(null) }} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600">Change Type</button>
+              <button onClick={() => { setForm((f) => ({ ...f, rrChosen: false })); setRrConfirm(null) }} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600">Change Type</button>
             </div>
           </div>
         </div>
