@@ -2619,6 +2619,19 @@ function CopyText({ text, fill }) {
   })
 }
 
+// Icon library the user can pick from when creating a custom Key Metric.
+const ICON_LIBRARY = {
+  DollarSign, Percent, Scale, TrendingUp, BarChart3, PieChart,
+  Building2, Home, Warehouse, Store, Factory, Container,
+  MapPin, Map, Users, Calendar, Clock, Star,
+  Zap, Target, BadgeCheck, Globe, Layers, Camera,
+}
+const ICON_NAMES = Object.keys(ICON_LIBRARY)
+const MetricIcon = ({ name, className }) => {
+  const I = ICON_LIBRARY[name] || DollarSign
+  return <I className={className} />
+}
+
 // ── Live-preview document pages ──────────────────────────────────────────────
 // Every page renders at a fixed 640×828 "sheet" so thumbnails and the full-size
 // popup share exactly the same layout (just scaled with a CSS transform).
@@ -3064,8 +3077,8 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
 
   // Key Metrics helpers (Investment Highlights sidebar)
   const metrics = form.metrics || []
-  const addMetric = (label = '', value = '') =>
-    setForm((f) => ({ ...f, metrics: [...(f.metrics || []), { id: uid(), label, value, hidden: false, editing: !label }] }))
+  const addMetric = (label = '', value = '', icon = 'DollarSign') =>
+    setForm((f) => ({ ...f, metrics: [...(f.metrics || []), { id: uid(), label, value, icon, hidden: false }] }))
   const updMetric = (id, key, val) =>
     setForm((f) => ({ ...f, metrics: f.metrics.map((m) => (m.id === id ? { ...m, [key]: val } : m)) }))
   const delMetric = (id) =>
@@ -3080,6 +3093,25 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
       return { ...f, metrics: arr }
     })
   const METRIC_LIBRARY = ['GLA', 'DSCR', 'GOPPAR', 'Parking Ratio', 'Clear Height', 'Loan-to-Value', 'Debt Yield', 'Break-Even Occupancy', 'Price/Unit', 'Expense Ratio']
+
+  // Calculated-metric visibility + ordering (persisted in the draft).
+  const toggleCalcHidden = (label) =>
+    setForm((f) => ({ ...f, calcHidden: { ...(f.calcHidden || {}), [label]: !(f.calcHidden?.[label]) } }))
+
+  // "Create Custom Metric" form
+  const [metricForm, setMetricForm] = useState({ open: false, icon: 'DollarSign', name: '', value: '' })
+  const [iconPickerOpen, setIconPickerOpen] = useState(false)
+  const openMetricForm = () => {
+    setLibOpen(false)
+    setIconPickerOpen(false)
+    setMetricForm({ open: true, icon: 'DollarSign', name: '', value: '' })
+  }
+  const submitMetricForm = () => {
+    if (!metricForm.name.trim()) return
+    addMetric(metricForm.name.trim(), metricForm.value.trim(), metricForm.icon)
+    setMetricForm({ open: false, icon: 'DollarSign', name: '', value: '' })
+    setIconPickerOpen(false)
+  }
 
   const locLabel = [form.countryName || (form.country === 'CA' ? 'Canada' : 'United States'), form.city, form.state].filter(Boolean).join(', ')
   const fullAddress = [form.street, form.city, form.state, form.zip].filter(Boolean).join(', ')
@@ -3136,6 +3168,24 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
     { label: 'Building SF', icon: Building, value: dpVal('Building SF', 'GLA', 'Rentable SF') },
     { label: 'Year Built', icon: Calendar, value: dpVal('Year Built') },
   ]
+  // Apply the user's saved ordering, keeping any new labels at the end.
+  const calcDefaultOrder = calcMetrics.map((m) => m.label)
+  const calcOrder =
+    form.calcOrder && form.calcOrder.length
+      ? [...form.calcOrder.filter((l) => calcDefaultOrder.includes(l)), ...calcDefaultOrder.filter((l) => !form.calcOrder.includes(l))]
+      : calcDefaultOrder
+  const orderedCalc = calcOrder.map((l) => calcMetrics.find((m) => m.label === l)).filter(Boolean)
+  const moveCalc = (label, dir) =>
+    setForm((f) => {
+      const cur = f.calcOrder && f.calcOrder.length ? [...f.calcOrder] : calcDefaultOrder
+      // ensure all labels present
+      calcDefaultOrder.forEach((l) => { if (!cur.includes(l)) cur.push(l) })
+      const i = cur.indexOf(label)
+      const j = i + dir
+      if (i < 0 || j < 0 || j >= cur.length) return f
+      ;[cur[i], cur[j]] = [cur[j], cur[i]]
+      return { ...f, calcOrder: cur }
+    })
 
   // Load the saved HTML into the editor whenever the section changes.
   useEffect(() => {
@@ -3578,10 +3628,66 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
                           </div>
                         )}
                       </div>
-                      <button onClick={() => addMetric('', '')} className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100">
+                      <button onClick={openMetricForm} className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100">
                         <Plus className="h-3.5 w-3.5" /> Custom Metric
                       </button>
                     </div>
+
+                    {/* Create Custom Metric form */}
+                    {metricForm.open && (
+                      <div className="mx-4 mt-3 rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+                        <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">Create Custom Metric</p>
+                        <div className="flex items-center gap-2">
+                          <div className="relative">
+                            <button
+                              onClick={() => setIconPickerOpen((o) => !o)}
+                              className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-orange-300 hover:text-brand"
+                              title="Choose icon"
+                            >
+                              <MetricIcon name={metricForm.icon} className="h-5 w-5" />
+                            </button>
+                            {iconPickerOpen && (
+                              <div className="absolute z-40 mt-1 w-56 rounded-lg border border-slate-200 bg-white p-2 shadow-lg">
+                                <div className="grid grid-cols-6 gap-1">
+                                  {ICON_NAMES.map((n) => (
+                                    <button
+                                      key={n}
+                                      onClick={() => { setMetricForm((mf) => ({ ...mf, icon: n })); setIconPickerOpen(false) }}
+                                      className={`flex h-8 w-8 items-center justify-center rounded-md transition hover:bg-orange-50 ${metricForm.icon === n ? 'bg-orange-100 text-brand ring-1 ring-orange-300' : 'text-slate-500'}`}
+                                      title={n}
+                                    >
+                                      <MetricIcon name={n} className="h-4 w-4" />
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          <input
+                            autoFocus
+                            value={metricForm.name}
+                            onChange={(e) => setMetricForm((mf) => ({ ...mf, name: e.target.value }))}
+                            placeholder="Metric name"
+                            className={`${inputCls} h-10 flex-1`}
+                          />
+                        </div>
+                        <input
+                          value={metricForm.value}
+                          onChange={(e) => setMetricForm((mf) => ({ ...mf, value: e.target.value }))}
+                          onKeyDown={(e) => e.key === 'Enter' && submitMetricForm()}
+                          placeholder="Value (e.g. $500,000)"
+                          className={`${inputCls} mt-2 h-10 w-full`}
+                        />
+                        <div className="mt-2 flex items-center justify-end gap-2">
+                          <button onClick={() => { setMetricForm({ open: false, icon: 'DollarSign', name: '', value: '' }); setIconPickerOpen(false) }} className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:text-slate-800">
+                            Cancel
+                          </button>
+                          <button onClick={submitMetricForm} disabled={!metricForm.name.trim()} className="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-orange-600 disabled:opacity-40">
+                            Add Metric
+                          </button>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="scrollbar-slim mt-3 max-h-[460px] overflow-y-auto px-4 pb-4">
                       {/* Calculated */}
@@ -3596,17 +3702,25 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
                         <span>These auto-fill once you complete the <b className="text-slate-600">Financials</b> and <b className="text-slate-600">Rent Roll</b> steps.</span>
                       </div>
                       <div className="divide-y divide-slate-100">
-                        {calcMetrics.map((m) => (
-                          <div key={m.label} className="flex items-center gap-3 py-2.5">
-                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-500">
-                              <m.icon className="h-4 w-4" />
+                        {orderedCalc.map((m, i) => {
+                          const hidden = form.calcHidden?.[m.label]
+                          return (
+                            <div key={m.label} className={`group flex items-center gap-3 py-2.5 ${hidden ? 'opacity-40' : ''}`}>
+                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-500">
+                                <m.icon className="h-4 w-4" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm text-slate-500">{m.label}</p>
+                                <p className={`text-sm font-bold ${m.value ? 'text-slate-900' : 'text-slate-300'}`}>{m.value || '—'}</p>
+                              </div>
+                              <div className="flex items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
+                                <button onClick={() => moveCalc(m.label, -1)} disabled={i === 0} className="rounded p-1 text-slate-400 hover:bg-slate-100 disabled:opacity-30"><ChevronUp className="h-3.5 w-3.5" /></button>
+                                <button onClick={() => moveCalc(m.label, 1)} disabled={i === orderedCalc.length - 1} className="rounded p-1 text-slate-400 hover:bg-slate-100 disabled:opacity-30"><ChevronDown className="h-3.5 w-3.5" /></button>
+                                <button onClick={() => toggleCalcHidden(m.label)} className="rounded p-1 text-slate-400 hover:bg-slate-100" title={hidden ? 'Show' : 'Hide'}>{hidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}</button>
+                              </div>
                             </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-sm text-slate-500">{m.label}</p>
-                              <p className={`text-sm font-bold ${m.value ? 'text-slate-900' : 'text-slate-300'}`}>{m.value || '—'}</p>
-                            </div>
-                          </div>
-                        ))}
+                          )
+                        })}
                       </div>
 
                       {/* Additional (custom) */}
@@ -3617,7 +3731,7 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
                           </div>
                           <div className="divide-y divide-slate-100">
                             {metrics.map((m, i) => (
-                              <div key={m.id} className={`group py-2.5 ${m.hidden ? 'opacity-50' : ''}`}>
+                              <div key={m.id} className={`group py-2.5 ${m.hidden ? 'opacity-40' : ''}`}>
                                 {m.editing ? (
                                   <div className="flex items-center gap-2">
                                     <input autoFocus value={m.label} onChange={(e) => updMetric(m.id, 'label', e.target.value)} placeholder="Metric name" className={`${inputCls} h-9 flex-1`} />
@@ -3627,7 +3741,7 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
                                 ) : (
                                   <div className="flex items-center gap-3">
                                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
-                                      <DollarSign className="h-4 w-4" />
+                                      <MetricIcon name={m.icon} className="h-4 w-4" />
                                     </div>
                                     <div className="min-w-0 flex-1">
                                       <p className="truncate text-sm text-slate-500">{m.label || 'Untitled'}</p>
