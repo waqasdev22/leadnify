@@ -3559,15 +3559,8 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
   // Contact Information
   const isContacts = BUILDER_SECTIONS[step] === 'Contact Information'
   const coAgents = form.coAgents || []
-  const [coModal, setCoModal] = useState(null)
-  const openCoModal = (c) => setCoModal(c ? { ...c } : { name: '', role: 'Agent', email: '', phone: '' })
-  const submitCo = () => {
-    const c = coModal
-    if (c.id) setForm((f) => ({ ...f, coAgents: f.coAgents.map((x) => (x.id === c.id ? c : x)) }))
-    else setForm((f) => ({ ...f, coAgents: [...(f.coAgents || []), { ...c, id: uid() }] }))
-    setCoModal(null)
-    notify(c.id ? 'Co-listing agent updated' : 'Co-listing agent added')
-  }
+  const addCo = () => setForm((f) => ({ ...f, coAgents: [...(f.coAgents || []), { id: uid(), photo: null, name: '', title: '', phone: '', phoneType: 'Direct', email: '', license: '' }] }))
+  const updCo = (id, k, v) => setForm((f) => ({ ...f, coAgents: f.coAgents.map((x) => (x.id === id ? { ...x, [k]: v } : x)) }))
   const delCo = (id) => setForm((f) => ({ ...f, coAgents: f.coAgents.filter((x) => x.id !== id) }))
   // Confidentiality Statement (read-only, admin-managed)
   const isConfidentiality = BUILDER_SECTIONS[step] === 'Confidentiality Statement'
@@ -4471,26 +4464,68 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                     </div>
                   </div>
 
-                  {/* Co-listing agents */}
-                  {coAgents.length > 0 && (
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                      {coAgents.map((c) => (
-                        <div key={c.id} className="group flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4">
-                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-400"><UserCircle className="h-7 w-7" /></div>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-bold text-slate-900">{c.name || 'Co-Listing Agent'}</p>
-                            <p className="truncate text-xs text-slate-500">{c.role}{c.email ? ` · ${c.email}` : ''}</p>
-                          </div>
-                          <div className="flex shrink-0 items-center gap-1">
-                            <button onClick={() => openCoModal(c)} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-brand"><Pencil className="h-4 w-4" /></button>
-                            <button onClick={() => delCo(c.id)} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-500"><Trash2 className="h-4 w-4" /></button>
+                  {/* Co-listing agents — inline forms */}
+                  {coAgents.map((c) => (
+                    <div key={c.id} className="mt-5">
+                      <span className="inline-block rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-slate-500">Co-Listing Agent</span>
+                      <div className="mt-3 flex items-start justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-500"><Users className="h-5 w-5" /></div>
+                          <div>
+                            <p className="text-sm font-bold text-slate-900">Personal Information</p>
+                            <p className="text-xs text-slate-400">Name, contact details, and license info</p>
                           </div>
                         </div>
-                      ))}
+                        <button onClick={() => delCo(c.id)} className="inline-flex items-center gap-1 text-sm font-semibold text-slate-400 transition hover:text-rose-500"><Trash2 className="h-4 w-4" /> Remove</button>
+                      </div>
+                      <div className="mt-2 flex gap-5 rounded-2xl border border-slate-200 border-l-4 border-l-blue-400 bg-white p-5">
+                        {/* Avatar / upload */}
+                        <div className="flex w-24 shrink-0 flex-col items-center">
+                          <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-slate-300">
+                            {c.photo ? <img src={c.photo} alt="" className="h-full w-full object-cover" /> : <UserCircle className="h-12 w-12" />}
+                          </div>
+                          <label className="mt-2 cursor-pointer text-sm font-semibold text-brand hover:underline">
+                            Upload
+                            <input type="file" accept="image/*" className="hidden" onChange={async (e) => { if (!e.target.files?.length) return; const [img] = await readFiles([e.target.files[0]]); updCo(c.id, 'photo', img.url) }} />
+                          </label>
+                        </div>
+                        {/* Fields */}
+                        <div className="min-w-0 flex-1">
+                          <div className="grid gap-4 sm:grid-cols-2">
+                            <div>
+                              <label className="mb-1 block text-sm font-semibold text-slate-700">Full Name</label>
+                              <input value={c.name} onChange={(e) => updCo(c.id, 'name', e.target.value)} placeholder="John Smith" className={inputCls} />
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-sm font-semibold text-slate-700">Title</label>
+                              <input value={c.title} onChange={(e) => updCo(c.id, 'title', e.target.value)} placeholder="Senior Broker" className={inputCls} />
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-sm font-semibold text-slate-700">Phone</label>
+                              <div className="flex gap-2">
+                                <input value={c.phone} onChange={(e) => updCo(c.id, 'phone', e.target.value)} placeholder="(555) 123-4567" className={`${inputCls} flex-1`} />
+                                <select value={c.phoneType} onChange={(e) => updCo(c.id, 'phoneType', e.target.value)} className="rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-600 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100">
+                                  <option>Direct</option>
+                                  <option>Mobile</option>
+                                  <option>Office</option>
+                                </select>
+                              </div>
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-sm font-semibold text-slate-700">Email</label>
+                              <input value={c.email} onChange={(e) => updCo(c.id, 'email', e.target.value)} placeholder="agent@company.com" className={inputCls} />
+                            </div>
+                          </div>
+                          <div className="mt-4 sm:w-1/2 sm:pr-2.5">
+                            <label className="mb-1 block text-sm font-semibold text-slate-700">License #</label>
+                            <input value={c.license} onChange={(e) => updCo(c.id, 'license', e.target.value)} placeholder="DRE# 012345" className={inputCls} />
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  )}
+                  ))}
 
-                  <button onClick={() => openCoModal()} className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"><Plus className="h-4 w-4" /> Add Co-Listing Agent</button>
+                  <button onClick={addCo} className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"><Plus className="h-4 w-4" /> Add Co-Listing Agent</button>
 
                   {/* No team members notice */}
                   <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
@@ -5579,40 +5614,6 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
               >
                 Change Scope
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add / Edit Co-Listing Agent modal */}
-      {coModal && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => setCoModal(null)}>
-          <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-              <h3 className="text-lg font-extrabold text-slate-900">{coModal.id ? 'Edit Co-Listing Agent' : 'Add Co-Listing Agent'}</h3>
-              <button onClick={() => setCoModal(null)} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"><X className="h-5 w-5" /></button>
-            </div>
-            <div className="space-y-3 p-5">
-              <div>
-                <label className="mb-1 block text-sm font-semibold text-slate-700">Full Name</label>
-                <input value={coModal.name} onChange={(e) => setCoModal((x) => ({ ...x, name: e.target.value }))} placeholder="e.g. Jane Doe" className={inputCls} />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-semibold text-slate-700">Title / Role</label>
-                <input value={coModal.role} onChange={(e) => setCoModal((x) => ({ ...x, role: e.target.value }))} placeholder="e.g. Agent" className={inputCls} />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-semibold text-slate-700">Email</label>
-                <input value={coModal.email} onChange={(e) => setCoModal((x) => ({ ...x, email: e.target.value }))} placeholder="name@company.com" className={inputCls} />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-semibold text-slate-700">Phone</label>
-                <input value={coModal.phone} onChange={(e) => setCoModal((x) => ({ ...x, phone: e.target.value }))} placeholder="(555) 000-0000" className={inputCls} />
-              </div>
-            </div>
-            <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-3">
-              <button onClick={() => setCoModal(null)} className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 transition hover:text-slate-900">Cancel</button>
-              <button onClick={submitCo} disabled={!coModal.name.trim()} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600 disabled:opacity-50">{coModal.id ? 'Save Changes' : 'Add Agent'}</button>
             </div>
           </div>
         </div>
