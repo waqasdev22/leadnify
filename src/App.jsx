@@ -2480,7 +2480,7 @@ const US_STATE_ABBR = { Alabama: 'AL', Alaska: 'AK', Arizona: 'AZ', Arkansas: 'A
 const BUILDER_SECTIONS = [
   'Property Details', 'Property Data', 'Executive Summary', 'Investment Highlights',
   'Location Highlights', 'Images & Media', 'Financials', 'Rent Roll',
-  'Income & Expenses', 'Valuation', 'Maps', 'Tenant Profiles', 'Sales Comparables', 'Rental Comparables',
+  'Income & Expenses', 'Valuation', 'Tenant Profiles', 'Maps', 'Sales Comparables', 'Rental Comparables',
 ]
 
 // Suggested "Property Data" fields per property type (shown as one-tap pills).
