@@ -106,6 +106,8 @@ import {
   RefreshCw,
   Train,
   Plane,
+  Frame,
+  Video,
 } from 'lucide-react'
 
 /* -------------------------------------------------------------------------- */
@@ -3216,6 +3218,52 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
   const delTransit = (id) => setForm((f) => ({ ...f, manualTransit: f.manualTransit.filter((t) => t.id !== id) }))
   const updLc = (key, val) => setForm((f) => ({ ...f, locCard: { ...(f.locCard || {}), [key]: val } }))
 
+  // Images & Media helpers
+  const media = form.media || { cover: null, singles: [], galleries: [], video: '' }
+  const setMedia = (fn) => setForm((f) => ({ ...f, media: fn(f.media || { cover: null, singles: [], galleries: [], video: '' }) }))
+  const readFiles = (files) =>
+    Promise.all(
+      [...files].map(
+        (file) =>
+          new Promise((resolve) => {
+            const r = new FileReader()
+            r.onload = () => resolve({ id: uid(), name: file.name, url: r.result })
+            r.readAsDataURL(file)
+          }),
+      ),
+    )
+  const uploadCover = async (files) => {
+    if (!files?.length) return
+    const [img] = await readFiles([files[0]])
+    setMedia((m) => ({ ...m, cover: img }))
+    notify('Cover image added')
+  }
+  const uploadSingles = async (files) => {
+    if (!files?.length) return
+    const imgs = await readFiles(files)
+    setMedia((m) => ({ ...m, singles: [...m.singles, ...imgs] }))
+    notify(`${imgs.length} image${imgs.length > 1 ? 's' : ''} added`)
+  }
+  const removeCover = () => setMedia((m) => ({ ...m, cover: null }))
+  const removeSingle = (id) => setMedia((m) => ({ ...m, singles: m.singles.filter((s) => s.id !== id) }))
+  const removeGallery = (id) => setMedia((m) => ({ ...m, galleries: m.galleries.filter((g) => g.id !== id) }))
+
+  // Gallery + video modals
+  const [galleryModal, setGalleryModal] = useState({ open: false, title: '', layout: 'Grid', images: [] })
+  const addGalleryImages = async (files) => {
+    if (!files?.length) return
+    const imgs = await readFiles(files)
+    setGalleryModal((g) => ({ ...g, images: [...g.images, ...imgs].slice(0, 8) }))
+  }
+  const createGallery = () => {
+    if (galleryModal.images.length < 2) return
+    setMedia((m) => ({ ...m, galleries: [...m.galleries, { id: uid(), title: galleryModal.title.trim(), layout: galleryModal.layout, images: galleryModal.images }] }))
+    setGalleryModal({ open: false, title: '', layout: 'Grid', images: [] })
+    notify('Gallery page created')
+  }
+  const [videoModal, setVideoModal] = useState(false)
+  const [videoDraft, setVideoDraft] = useState('')
+
   const locLabel = [form.countryName || (form.country === 'CA' ? 'Canada' : 'United States'), form.city, form.state].filter(Boolean).join(', ')
   const fullAddress = [form.street, form.city, form.state, form.zip].filter(Boolean).join(', ')
   const brand = config.brandColor || '#0f172a'
@@ -3248,6 +3296,7 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
   const curGroup = groups[Math.min(copyCat, groups.length - 1)] || groups[0]
   const isInvest = BUILDER_SECTIONS[step] === 'Investment Highlights'
   const isLocation = BUILDER_SECTIONS[step] === 'Location Highlights'
+  const isMedia = BUILDER_SECTIONS[step] === 'Images & Media'
   const charLimit = isInvest || isLocation ? 2500 : 3000
 
   // Calculated Key Metrics — auto-fill from price & property data where possible.
@@ -3576,6 +3625,117 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
                     </span>
                   </div>
                 </>
+              ) : isMedia ? (
+                <div>
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-500">
+                      <Camera className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-extrabold text-slate-900">Images &amp; Media</h2>
+                      <p className="mt-0.5 text-sm text-slate-500">Upload property photos, floorplans, site plans, aerials, and other media. Supports JPG, PNG, WebP, PDF, and SVG.</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                    {/* Cover Image */}
+                    <div className="flex flex-col items-center gap-1.5 rounded-2xl border-2 border-dashed border-slate-200 p-6 text-center transition hover:border-orange-300">
+                      <Star className="h-7 w-7 text-amber-400" />
+                      <p className="mt-1 font-bold text-slate-800">Cover Image</p>
+                      <p className="text-xs text-slate-400">1 required — exterior</p>
+                      <label className="mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600">
+                        <Upload className="h-4 w-4" /> Upload
+                        <input type="file" accept="image/*,.pdf,.svg" className="hidden" onChange={(e) => uploadCover(e.target.files)} />
+                      </label>
+                    </div>
+                    {/* Single-Page Images */}
+                    <div className="flex flex-col items-center gap-1.5 rounded-2xl border-2 border-dashed border-slate-200 p-6 text-center transition hover:border-orange-300">
+                      <Frame className="h-7 w-7 text-blue-500" />
+                      <p className="mt-1 font-bold text-slate-800">Single-Page Images</p>
+                      <p className="text-xs text-slate-400">One per page</p>
+                      <label className="mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600">
+                        <Upload className="h-4 w-4" /> Upload
+                        <input type="file" accept="image/*,.pdf,.svg" multiple className="hidden" onChange={(e) => uploadSingles(e.target.files)} />
+                      </label>
+                    </div>
+                    {/* Multi-Image Page */}
+                    <div className="flex flex-col items-center gap-1.5 rounded-2xl border-2 border-dashed border-slate-200 p-6 text-center transition hover:border-orange-300">
+                      <Grid2X2 className="h-7 w-7 text-emerald-500" />
+                      <p className="mt-1 font-bold text-slate-800">Multi-Image Page</p>
+                      <p className="text-xs text-slate-400">Up to 8 per page</p>
+                      <button onClick={() => setGalleryModal({ open: true, title: '', layout: 'Grid', images: [] })} className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600">
+                        <Plus className="h-4 w-4" /> Add Gallery
+                      </button>
+                    </div>
+                    {/* Property Video */}
+                    <div className="flex flex-col items-center gap-1.5 rounded-2xl border-2 border-dashed border-slate-200 p-6 text-center transition hover:border-orange-300">
+                      <Video className="h-7 w-7 text-rose-500" />
+                      <p className="mt-1 font-bold text-slate-800">Property Video</p>
+                      <p className="text-xs text-slate-400">YouTube, Vimeo, or .mp4</p>
+                      <button onClick={() => { setVideoDraft(media.video || ''); setVideoModal(true) }} className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600">
+                        <Plus className="h-4 w-4" /> Link
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Uploaded media preview */}
+                  {(media.cover || media.singles.length > 0 || media.galleries.length > 0 || media.video) && (
+                    <div className="mt-6 space-y-5">
+                      {media.cover && (
+                        <div>
+                          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Cover Image</p>
+                          <div className="relative inline-block">
+                            <img src={media.cover.url} alt="cover" className="h-28 w-40 rounded-lg border border-slate-200 object-cover" />
+                            <button onClick={removeCover} className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-white text-slate-400 shadow ring-1 ring-slate-200 transition hover:text-rose-500"><X className="h-3.5 w-3.5" /></button>
+                          </div>
+                        </div>
+                      )}
+                      {media.singles.length > 0 && (
+                        <div>
+                          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Single-Page Images ({media.singles.length})</p>
+                          <div className="flex flex-wrap gap-3">
+                            {media.singles.map((s) => (
+                              <div key={s.id} className="relative">
+                                <img src={s.url} alt={s.name} className="h-20 w-28 rounded-lg border border-slate-200 object-cover" />
+                                <button onClick={() => removeSingle(s.id)} className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-white text-slate-400 shadow ring-1 ring-slate-200 transition hover:text-rose-500"><X className="h-3.5 w-3.5" /></button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {media.galleries.length > 0 && (
+                        <div>
+                          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Multi-Image Pages ({media.galleries.length})</p>
+                          <div className="space-y-3">
+                            {media.galleries.map((g) => (
+                              <div key={g.id} className="rounded-xl border border-slate-200 p-3">
+                                <div className="mb-2 flex items-center justify-between">
+                                  <p className="text-sm font-semibold text-slate-800">{g.title || 'Untitled Page'} <span className="ml-1 text-xs font-normal text-slate-400">· {g.layout} · {g.images.length} photos</span></p>
+                                  <button onClick={() => removeGallery(g.id)} className="rounded p-1 text-slate-400 transition hover:bg-rose-50 hover:text-rose-500"><Trash2 className="h-4 w-4" /></button>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  {g.images.map((im) => (
+                                    <img key={im.id} src={im.url} alt="" className="h-14 w-14 rounded-md border border-slate-200 object-cover" />
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {media.video && (
+                        <div>
+                          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Property Video</p>
+                          <div className="flex items-center gap-2 rounded-lg border border-slate-200 p-3">
+                            <Video className="h-4 w-4 shrink-0 text-rose-500" />
+                            <a href={media.video} target="_blank" rel="noreferrer" className="min-w-0 flex-1 truncate text-sm text-brand hover:underline">{media.video}</a>
+                            <button onClick={() => setMedia((m) => ({ ...m, video: '' }))} className="rounded p-1 text-slate-400 transition hover:bg-rose-50 hover:text-rose-500"><X className="h-4 w-4" /></button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               ) : (
                 <div className="flex flex-col gap-4 xl:flex-row">
                 <div className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -4162,6 +4322,100 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
         onClose={() => setViewerIdx(null)}
         onIndex={setViewerIdx}
       />
+
+      {/* Create Multi-Image Page modal */}
+      {galleryModal.open && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => setGalleryModal((g) => ({ ...g, open: false }))}>
+          <div className="w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+              <h3 className="text-lg font-extrabold text-slate-900">Create Multi-Image Page</h3>
+              <button onClick={() => setGalleryModal((g) => ({ ...g, open: false }))} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="scrollbar-slim max-h-[70vh] overflow-y-auto p-5">
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Page Title <span className="font-normal text-slate-400">(Optional)</span></label>
+              <input value={galleryModal.title} onChange={(e) => setGalleryModal((g) => ({ ...g, title: e.target.value }))} placeholder="e.g. Exterior Views, Interior Details…" className={inputCls} />
+
+              <p className="mb-1.5 mt-5 text-sm font-semibold text-slate-700">Layout Style</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {[
+                  { key: 'Grid', desc: 'All photos at equal size in a clean, uniform layout' },
+                  { key: 'Masonry', desc: 'Varied sizes for a dynamic, editorial look — great for mixing landscape and portrait' },
+                ].map((o) => (
+                  <button
+                    key={o.key}
+                    onClick={() => setGalleryModal((g) => ({ ...g, layout: o.key }))}
+                    className={`rounded-xl border-2 p-3 text-left transition ${galleryModal.layout === o.key ? 'border-orange-300 bg-orange-50/50' : 'border-slate-200 hover:border-slate-300'}`}
+                  >
+                    <p className={`text-sm font-bold ${galleryModal.layout === o.key ? 'text-brand' : 'text-slate-800'}`}>{o.key}</p>
+                    <p className="mt-0.5 text-xs text-slate-500">{o.desc}</p>
+                  </button>
+                ))}
+              </div>
+
+              <p className="mb-1.5 mt-5 text-sm font-semibold text-slate-700">Upload Images <span className="font-normal text-slate-400">(2–8 images)</span></p>
+              <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 py-10 text-center transition hover:border-orange-300">
+                <Upload className="h-7 w-7 text-slate-400" />
+                <p className="text-sm text-slate-500">Drop images here or click to browse</p>
+                <p className="text-xs text-slate-400">{galleryModal.images.length}/8 images selected</p>
+                <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => addGalleryImages(e.target.files)} />
+              </label>
+              {galleryModal.images.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {galleryModal.images.map((im, i) => (
+                    <div key={im.id} className="relative">
+                      <img src={im.url} alt="" className="h-16 w-16 rounded-md border border-slate-200 object-cover" />
+                      <button onClick={() => setGalleryModal((g) => ({ ...g, images: g.images.filter((_, j) => j !== i) }))} className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-white text-slate-400 shadow ring-1 ring-slate-200 hover:text-rose-500"><X className="h-3 w-3" /></button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="flex items-center justify-between gap-3 border-t border-slate-200 px-5 py-3">
+              <span className="text-xs text-slate-400">{galleryModal.images.length < 2 ? 'Select at least 2 images' : `${galleryModal.images.length} images ready`}</span>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setGalleryModal((g) => ({ ...g, open: false }))} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
+                <button onClick={createGallery} disabled={galleryModal.images.length < 2} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600 disabled:opacity-40">Create Page</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Property Video modal */}
+      {videoModal && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => setVideoModal(false)}>
+          <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+              <h3 className="text-lg font-extrabold text-slate-900">Property Video</h3>
+              <button onClick={() => setVideoModal(false)} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="p-5">
+              <div className="rounded-xl border border-slate-200 p-4">
+                <div className="flex items-start gap-2">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-rose-50 text-rose-500"><Video className="h-4 w-4" /></div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-900">Property Video <span className="ml-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Optional</span></p>
+                    <p className="mt-0.5 text-xs leading-snug text-slate-500">Add a YouTube, Vimeo, or direct video link. We'll show a play badge on the cover, a "View Property Video" link on the Property Summary, and embed the player on your Property Hub page.</p>
+                  </div>
+                </div>
+                <div className="relative mt-3">
+                  <ExternalLink className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <input value={videoDraft} onChange={(e) => setVideoDraft(e.target.value)} placeholder="https://www.youtube.com/watch?v=…" className={`${inputCls} pl-9`} />
+                </div>
+                <p className="mt-2 text-xs text-slate-400">{videoDraft.trim() ? 'Video ready' : 'No video attached'}</p>
+              </div>
+            </div>
+            <div className="flex items-center justify-end border-t border-slate-200 px-5 py-3">
+              <button
+                onClick={() => { setMedia((m) => ({ ...m, video: videoDraft.trim() })); setVideoModal(false); notify(videoDraft.trim() ? 'Video linked' : 'Video removed') }}
+                className="rounded-lg bg-brand px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
