@@ -108,6 +108,7 @@ import {
   Plane,
   Frame,
   Video,
+  Route,
 } from 'lucide-react'
 
 /* -------------------------------------------------------------------------- */
@@ -3199,8 +3200,20 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
 
   // Accessibility helpers (Location Highlights sidebar)
   const [accessLoading, setAccessLoading] = useState(false)
-  const access = form.access
-  const manualTransit = form.manualTransit || []
+  const accessItems = form.accessItems || { transit: [], airports: [], highways: [] }
+  const [addForm, setAddForm] = useState({ cat: null, name: '', dist: '' })
+  const openAdd = (cat) => setAddForm({ cat, name: '', dist: '' })
+  const submitAdd = () => {
+    if (!addForm.name.trim()) return
+    const cat = addForm.cat
+    setForm((f) => {
+      const base = f.accessItems || { transit: [], airports: [], highways: [] }
+      return { ...f, accessItems: { ...base, [cat]: [...(base[cat] || []), { id: uid(), name: addForm.name.trim(), dist: parseFloat(addForm.dist) || null, manual: true }] } }
+    })
+    setAddForm({ cat: null, name: '', dist: '' })
+  }
+  const delAccessItem = (cat, id) =>
+    setForm((f) => ({ ...f, accessItems: { ...f.accessItems, [cat]: (f.accessItems[cat] || []).filter((x) => x.id !== id) } }))
   const haversineMi = (a1, o1, a2, o2) => {
     const R = 6371
     const toRad = (d) => (d * Math.PI) / 180
@@ -3217,35 +3230,67 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
     setAccessLoading(true)
     try {
       const { lat, lng } = form
-      const q = `[out:json][timeout:25];(node["aeroway"="aerodrome"](around:70000,${lat},${lng});way["aeroway"="aerodrome"](around:70000,${lat},${lng});node["railway"="station"](around:9000,${lat},${lng});node["public_transport"="station"](around:9000,${lat},${lng}););out center 40;`
-      const res = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: q })
-      const data = await res.json()
+      const q = `[out:json][timeout:25];(node["aeroway"="aerodrome"](around:70000,${lat},${lng});way["aeroway"="aerodrome"](around:70000,${lat},${lng});node["railway"="station"](around:9000,${lat},${lng});node["public_transport"="station"](around:9000,${lat},${lng});way["highway"~"^(motorway|trunk|primary)$"](around:9000,${lat},${lng}););out center 80;`
+      // Try the main Overpass server plus mirrors (handles rate-limits/outages).
+      const endpoints = [
+        'https://overpass-api.de/api/interpreter',
+        'https://overpass.kumi.systems/api/interpreter',
+        'https://overpass.openstreetmap.fr/api/interpreter',
+      ]
+      let data = null
+      for (const url of endpoints) {
+        try {
+          const res = await fetch(url, { method: 'POST', body: q })
+          if (!res.ok) continue
+          const json = await res.json()
+          if (json && Array.isArray(json.elements) && json.elements.length) { data = json; break }
+        } catch { /* try next mirror */ }
+      }
+      if (!data) throw new Error('no data')
       const airports = []
       const transit = []
-      const seenA = new Set()
-      const seenT = new Set()
+      const highways = []
+      const seen = { a: new Set(), t: new Set(), h: new Set() }
       for (const el of data.elements || []) {
         const elat = el.lat ?? el.center?.lat
         const elng = el.lon ?? el.center?.lon
-        const name = el.tags?.name
-        if (elat == null || !name) continue
+        if (elat == null) continue
+        const tags = el.tags || {}
         const dist = haversineMi(lat, lng, elat, elng)
-        if (el.tags.aeroway === 'aerodrome') {
-          if (!seenA.has(name)) { seenA.add(name); airports.push({ name, dist }) }
-        } else if (!seenT.has(name)) { seenT.add(name); transit.push({ name, dist }) }
+        if (tags.aeroway === 'aerodrome') {
+          const n = tags.name
+          if (n && !seen.a.has(n)) { seen.a.add(n); airports.push({ id: uid(), name: n, dist }) }
+        } else if (tags.railway === 'station' || tags.public_transport === 'station') {
+          const n = tags.name
+          if (n && !seen.t.has(n)) { seen.t.add(n); transit.push({ id: uid(), name: n, dist }) }
+        } else if (tags.highway) {
+          const n = tags.ref || tags.name
+          if (n && !seen.h.has(n)) { seen.h.add(n); highways.push({ id: uid(), name: n, dist }) }
+        }
       }
-      airports.sort((a, b) => a.dist - b.dist)
-      transit.sort((a, b) => a.dist - b.dist)
-      setForm((f) => ({ ...f, access: { airports: airports.slice(0, 8), transit: transit.slice(0, 8) } }))
+      ;[airports, transit, highways].forEach((arr) => arr.sort((a, b) => a.dist - b.dist))
+      setForm((f) => {
+        const manual = (cat) => ((f.accessItems?.[cat]) || []).filter((x) => x.manual)
+        return {
+          ...f,
+          accessItems: {
+            transit: [...transit.slice(0, 8), ...manual('transit')],
+            airports: [...airports.slice(0, 8), ...manual('airports')],
+            highways: [...highways.slice(0, 8), ...manual('highways')],
+          },
+        }
+      })
       notify('Accessibility refreshed')
     } catch {
-      notify('Could not fetch nearby places — try again', 'error')
+      notify('Lookup is busy right now — tap Refresh again in a moment', 'error')
     }
     setAccessLoading(false)
   }
-  const addTransitStop = () => setForm((f) => ({ ...f, manualTransit: [...(f.manualTransit || []), { id: uid(), name: '' }] }))
-  const updTransit = (id, name) => setForm((f) => ({ ...f, manualTransit: f.manualTransit.map((t) => (t.id === id ? { ...t, name } : t)) }))
-  const delTransit = (id) => setForm((f) => ({ ...f, manualTransit: f.manualTransit.filter((t) => t.id !== id) }))
+  const ACCESS_SECTIONS = [
+    { cat: 'transit', label: 'Transit', icon: Train, add: 'Add transit stop', tone: 'emerald' },
+    { cat: 'airports', label: 'Airports', icon: Plane, add: 'Add airport', tone: 'blue' },
+    { cat: 'highways', label: 'Highways', icon: Route, add: 'Add highway', tone: 'amber' },
+  ]
   const updLc = (key, val) => setForm((f) => ({ ...f, locCard: { ...(f.locCard || {}), [key]: val } }))
 
   // Images & Media helpers
@@ -3392,7 +3437,7 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
     // On the Location Highlights step: seed the location card and auto-fetch nearby places.
     if (isLocation) {
       setForm((f) => (f.locCard ? f : { ...f, locCard: { address: f.street, city: f.city, state: f.state, zip: f.zip } }))
-      if (!form.access && form.lat) refreshAccess()
+      if (!form.accessItems && form.lat) refreshAccess()
     }
     // Intentionally keyed on step only — must not reset while typing.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -4317,50 +4362,45 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
                     </div>
 
                     <div className="scrollbar-slim max-h-[480px] overflow-y-auto p-4">
-                      {/* Transit */}
-                      <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">
-                        <Train className="h-3.5 w-3.5" /> Transit
-                      </div>
-                      {access?.transit?.length || manualTransit.length ? (
-                        <div className="space-y-1.5">
-                          {(access?.transit || []).map((t, i) => (
-                            <div key={`t${i}`} className="flex items-center justify-between gap-2 text-sm">
-                              <span className="truncate text-slate-700">{t.name}</span>
-                              <span className="shrink-0 text-slate-400">{t.dist.toFixed(1)} mi</span>
+                      {ACCESS_SECTIONS.map((sec) => {
+                        const items = accessItems[sec.cat] || []
+                        const toneBtn = sec.tone === 'emerald' ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' : sec.tone === 'blue' ? 'bg-blue-50 text-blue-700 hover:bg-blue-100' : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+                        return (
+                          <div key={sec.cat} className="mb-4">
+                            <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                              <sec.icon className="h-3.5 w-3.5" /> {sec.label}
                             </div>
-                          ))}
-                          {manualTransit.map((t) => (
-                            <div key={t.id} className="flex items-center gap-1">
-                              <input value={t.name} onChange={(e) => updTransit(t.id, e.target.value)} placeholder="Transit stop name" className={`${inputCls} h-8 flex-1`} />
-                              <button onClick={() => delTransit(t.id)} className="rounded p-1 text-slate-400 transition hover:bg-rose-50 hover:text-rose-500"><X className="h-3.5 w-3.5" /></button>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-sm italic text-slate-400">{accessLoading ? 'Searching…' : 'None found nearby'}</p>
-                      )}
-                      <button onClick={addTransitStop} className="mt-2 inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100">
-                        <Plus className="h-3.5 w-3.5" /> Add transit stop
-                      </button>
+                            {items.length ? (
+                              <div className="space-y-1">
+                                {items.map((it) => (
+                                  <div key={it.id} className="group flex items-center justify-between gap-2 text-sm">
+                                    <span className="truncate text-slate-700">{it.name}</span>
+                                    <span className="flex shrink-0 items-center gap-1.5">
+                                      {it.dist != null && <span className="text-slate-400">{it.dist.toFixed(1)} mi</span>}
+                                      <button onClick={() => delAccessItem(sec.cat, it.id)} className="text-rose-400 opacity-0 transition hover:text-rose-600 group-hover:opacity-100"><X className="h-3.5 w-3.5" /></button>
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-sm italic text-slate-400">{accessLoading ? 'Searching…' : 'None found nearby'}</p>
+                            )}
+                            {addForm.cat === sec.cat ? (
+                              <div className="mt-2 flex items-center gap-1">
+                                <input autoFocus value={addForm.name} onChange={(e) => setAddForm((a) => ({ ...a, name: e.target.value }))} onKeyDown={(e) => e.key === 'Enter' && submitAdd()} placeholder="Name" className={`${inputCls} h-8 flex-1`} />
+                                <input value={addForm.dist} onChange={(e) => setAddForm((a) => ({ ...a, dist: e.target.value }))} onKeyDown={(e) => e.key === 'Enter' && submitAdd()} placeholder="mi" className={`${inputCls} h-8 w-12`} />
+                                <button onClick={submitAdd} className="px-2 text-xs font-bold text-brand transition hover:underline">Add</button>
+                              </div>
+                            ) : (
+                              <button onClick={() => openAdd(sec.cat)} className={`mt-2 inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold transition ${toneBtn}`}>
+                                <Plus className="h-3.5 w-3.5" /> {sec.add}
+                              </button>
+                            )}
+                          </div>
+                        )
+                      })}
 
-                      {/* Airports */}
-                      <div className="mb-1.5 mt-4 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">
-                        <Plane className="h-3.5 w-3.5" /> Airports
-                      </div>
-                      {access?.airports?.length ? (
-                        <div className="space-y-1.5">
-                          {access.airports.map((a, i) => (
-                            <div key={`a${i}`} className="flex items-center justify-between gap-2 text-sm">
-                              <span className="truncate text-slate-700">{a.name}</span>
-                              <span className="shrink-0 text-slate-400">{a.dist.toFixed(1)} mi</span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-sm italic text-slate-400">{accessLoading ? 'Searching…' : 'None found nearby'}</p>
-                      )}
-
-                      <p className="mt-3 border-t border-slate-100 pt-2 text-[11px] text-slate-400">Appears on highlights pages in your document.</p>
+                      <p className="mt-1 border-t border-slate-100 pt-2 text-[11px] text-slate-400">Appears on highlights pages in your document.</p>
 
                       {/* Location card */}
                       <div className="mb-1.5 mt-4 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">
