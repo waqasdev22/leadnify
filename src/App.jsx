@@ -101,6 +101,7 @@ import {
   Percent,
   Calendar,
   Library,
+  Car,
 } from 'lucide-react'
 
 /* -------------------------------------------------------------------------- */
@@ -2624,8 +2625,47 @@ const ICON_LIBRARY = {
   DollarSign, Percent, Scale, TrendingUp, BarChart3, PieChart,
   Building2, Home, Warehouse, Store, Factory, Container,
   MapPin, Map, Users, Calendar, Clock, Star,
-  Zap, Target, BadgeCheck, Globe, Layers, Camera,
+  Zap, Target, BadgeCheck, Globe, Layers, Camera, Car,
 }
+
+// Metric library, grouped by category (shown in the "Add from Library" picker).
+const METRIC_CATALOG = {
+  FINANCIAL: [
+    { name: 'DSCR', desc: 'Debt Service Coverage Ratio', icon: 'Scale' },
+    { name: 'Cap Rate', desc: 'Capitalization rate', icon: 'Percent' },
+    { name: 'NOI', desc: 'Net operating income', icon: 'TrendingUp' },
+    { name: 'Cash-on-Cash', desc: 'Cash-on-cash return', icon: 'Percent' },
+    { name: 'Gross Income', desc: 'Gross scheduled income', icon: 'DollarSign' },
+    { name: 'Operating Expenses', desc: 'Total annual operating expenses', icon: 'DollarSign' },
+    { name: 'Loan-to-Value', desc: 'LTV ratio', icon: 'Percent' },
+    { name: 'Debt Yield', desc: 'NOI ÷ loan amount', icon: 'Percent' },
+  ],
+  PROPERTY: [
+    { name: 'Units', desc: 'Total unit count', icon: 'Layers' },
+    { name: 'Parking', desc: 'Parking spaces or ratio', icon: 'Car' },
+    { name: 'Stories', desc: 'Number of stories/floors', icon: 'Building2' },
+    { name: 'Tenants', desc: 'Number of tenants', icon: 'Users' },
+    { name: 'Total SF', desc: 'Total leasable square footage', icon: 'Scale' },
+    { name: 'Year Built', desc: 'Year the property was built', icon: 'Calendar' },
+    { name: 'Lot Size', desc: 'Parcel size in acres', icon: 'Map' },
+  ],
+  OCCUPANCY: [
+    { name: 'Occupancy', desc: 'Current occupancy rate', icon: 'Percent' },
+    { name: 'Vacancy', desc: 'Current vacancy rate', icon: 'Percent' },
+    { name: 'Physical Occupancy', desc: 'Physically occupied units', icon: 'Home' },
+    { name: 'Economic Occupancy', desc: 'Rent-paying occupancy', icon: 'DollarSign' },
+    { name: 'WALT', desc: 'Weighted average lease term', icon: 'Clock' },
+  ],
+  RETURNS: [],
+  HOTEL: [
+    { name: 'GOPPAR', desc: 'Gross operating profit per available room', icon: 'TrendingUp' },
+    { name: 'Room Revenue', desc: 'Total annual room revenue', icon: 'DollarSign' },
+    { name: 'ADR', desc: 'Average daily rate', icon: 'DollarSign' },
+    { name: 'RevPAR', desc: 'Revenue per available room', icon: 'BarChart3' },
+    { name: 'Keys', desc: 'Number of guest rooms', icon: 'Home' },
+  ],
+}
+const METRIC_CATS = Object.keys(METRIC_CATALOG)
 const ICON_NAMES = Object.keys(ICON_LIBRARY)
 const MetricIcon = ({ name, className }) => {
   const I = ICON_LIBRARY[name] || DollarSign
@@ -3077,8 +3117,8 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
 
   // Key Metrics helpers (Investment Highlights sidebar)
   const metrics = form.metrics || []
-  const addMetric = (label = '', value = '', icon = 'DollarSign') =>
-    setForm((f) => ({ ...f, metrics: [...(f.metrics || []), { id: uid(), label, value, icon, hidden: false }] }))
+  const addMetric = (label = '', value = '', icon = 'DollarSign', editing = false) =>
+    setForm((f) => ({ ...f, metrics: [...(f.metrics || []), { id: uid(), label, value, icon, hidden: false, editing }] }))
   const updMetric = (id, key, val) =>
     setForm((f) => ({ ...f, metrics: f.metrics.map((m) => (m.id === id ? { ...m, [key]: val } : m)) }))
   const delMetric = (id) =>
@@ -3092,7 +3132,14 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
       ;[arr[i], arr[j]] = [arr[j], arr[i]]
       return { ...f, metrics: arr }
     })
-  const METRIC_LIBRARY = ['GLA', 'DSCR', 'GOPPAR', 'Parking Ratio', 'Clear Height', 'Loan-to-Value', 'Debt Yield', 'Break-Even Occupancy', 'Price/Unit', 'Expense Ratio']
+  // "Add from Library" picker state
+  const [libCat, setLibCat] = useState('FINANCIAL')
+  const [libSearch, setLibSearch] = useState('')
+  const tabStripRef = useRef(null)
+  const scrollTabs = (dir) => tabStripRef.current?.scrollBy({ left: dir * 120, behavior: 'smooth' })
+  const addedNames = new Set(metrics.map((m) => m.label))
+  const libResults = (libSearch.trim() ? METRIC_CATS.flatMap((c) => METRIC_CATALOG[c]) : METRIC_CATALOG[libCat] || [])
+    .filter((m) => !addedNames.has(m.name) && `${m.name} ${m.desc}`.toLowerCase().includes(libSearch.toLowerCase()))
 
   // Calculated-metric visibility + ordering (persisted in the draft).
   const toggleCalcHidden = (label) =>
@@ -3619,12 +3666,58 @@ function DocumentBuilder({ config, initial, onExit, onChangeType, onSave, notify
                           <Library className="h-3.5 w-3.5" /> Add from Library
                         </button>
                         {libOpen && (
-                          <div className="absolute z-30 mt-1 max-h-56 w-48 overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
-                            {METRIC_LIBRARY.filter((m) => !metrics.some((x) => x.label === m)).map((m) => (
-                              <button key={m} onClick={() => { addMetric(m, ''); setLibOpen(false) }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-600 transition hover:bg-slate-50">
-                                <Plus className="h-3.5 w-3.5 text-brand" /> {m}
-                              </button>
-                            ))}
+                          <div className="absolute z-30 mt-1 w-72 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+                            {/* Search */}
+                            <div className="p-2">
+                              <div className="relative">
+                                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                                <input
+                                  value={libSearch}
+                                  onChange={(e) => setLibSearch(e.target.value)}
+                                  placeholder="Search metrics..."
+                                  className="w-full rounded-lg border border-orange-300 bg-white py-1.5 pl-8 pr-2 text-xs outline-none focus:ring-2 focus:ring-orange-100"
+                                />
+                              </div>
+                            </div>
+                            {/* Category tabs (slider) */}
+                            <div className="flex items-center border-b border-slate-100">
+                              <button onClick={() => scrollTabs(-1)} className="shrink-0 px-1 py-1.5 text-slate-400 transition hover:text-slate-700"><ChevronLeft className="h-3.5 w-3.5" /></button>
+                              <div ref={tabStripRef} className="scrollbar-slim flex flex-1 gap-3 overflow-x-auto px-1 py-1.5">
+                                {METRIC_CATS.map((c) => (
+                                  <button
+                                    key={c}
+                                    onClick={() => setLibCat(c)}
+                                    className={`shrink-0 border-b-2 pb-1 text-[11px] font-bold uppercase tracking-wide transition ${libCat === c && !libSearch.trim() ? 'border-brand text-brand' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                                  >
+                                    {c}
+                                  </button>
+                                ))}
+                              </div>
+                              <button onClick={() => scrollTabs(1)} className="shrink-0 px-1 py-1.5 text-slate-400 transition hover:text-slate-700"><ChevronRight className="h-3.5 w-3.5" /></button>
+                            </div>
+                            {/* Results */}
+                            <div className="scrollbar-slim max-h-56 overflow-y-auto p-1">
+                              {libResults.length === 0 ? (
+                                <p className="py-6 text-center text-xs italic text-slate-400">No metrics found</p>
+                              ) : (
+                                libResults.map((m) => (
+                                  <button
+                                    key={m.name}
+                                    onClick={() => { addMetric(m.name, '', m.icon, true); setLibOpen(false); setLibSearch('') }}
+                                    className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left transition hover:bg-orange-50/50"
+                                  >
+                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
+                                      <MetricIcon name={m.icon} className="h-4 w-4" />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <p className="text-sm font-semibold text-slate-700">{m.name}</p>
+                                      <p className="truncate text-[11px] text-slate-400">{m.desc}</p>
+                                    </div>
+                                    <Plus className="h-4 w-4 shrink-0 text-brand" />
+                                  </button>
+                                ))
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>
