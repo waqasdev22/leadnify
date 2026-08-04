@@ -7408,7 +7408,7 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
   }
 
   return (
-    <div className="mx-auto max-w-[1500px] p-6">
+    <div className="mx-auto max-w-[1600px] p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-extrabold text-slate-900">Your Marketing Packages</h1>
@@ -10343,13 +10343,14 @@ export default function App() {
         )}
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <TopBar
-            title={activeLabel}
-            user={user}
-            query={query}
-            onQuery={setQuery}
-            onMenu={() => setMobileNav(true)}
-          />
+          {/* Mobile-only menu button (top bar removed) — opens the nav drawer */}
+          <button
+            onClick={() => setMobileNav(true)}
+            className="absolute left-3 top-3 z-40 inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-100 md:hidden"
+            aria-label="Open menu"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
           <main className="scrollbar-slim relative min-h-0 flex-1 overflow-y-auto">{renderScreen()}</main>
         </div>
       </div>
