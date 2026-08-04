@@ -3776,6 +3776,11 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
     }
     // After Property Details, confirm the map location before moving on.
     if (step === 0) {
+      // Require the "Use Custom Display Address" checkbox before leaving step 1.
+      if (!form.customDisplay) {
+        notify?.('Please tick "Use Custom Display Address" to continue', 'error')
+        return
+      }
       setMapOpen(true)
       return
     }
