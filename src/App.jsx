@@ -3755,7 +3755,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
   const [form, setForm] = useState(
     initial?.form || {
       name: '', price: '', priceVis: 'Show', country: 'US', searchMode: 'address',
-      street: '', city: '', state: '', zip: '', customDisplay: false, displayAddress: '',
+      street: '', city: '', state: '', zip: '', county: '', apn: '', customDisplay: false, displayAddress: '',
       lat: null, lng: null, dataPoints: [], metrics: [], sections: {},
     },
   )
@@ -4928,6 +4928,8 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                       ))}
                     </div>
                     <div className="mt-4">
+                      {form.searchMode === 'address' ? (
+                      <>
                       <div className="relative">
                         <label className="mb-1.5 block text-sm font-semibold text-slate-700">Street Address</label>
                         <input
@@ -4965,6 +4967,30 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                         </Field>
                         <Field label="ZIP"><TextInput value={form.zip} onChange={set('zip')} placeholder="12345" /></Field>
                       </div>
+                      </>
+                      ) : (
+                      <>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <Field label="State">
+                          <SelectInput value={form.state} onChange={set('state')} options={['Select state…', ...US_STATES]} />
+                        </Field>
+                        <Field label="County">
+                          <input
+                            value={form.county || ''}
+                            onChange={set('county')}
+                            disabled={!form.state || form.state.startsWith('Select')}
+                            placeholder={!form.state || form.state.startsWith('Select') ? 'Select state first' : 'Enter county'}
+                            className={`${inputCls} disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400`}
+                          />
+                        </Field>
+                      </div>
+                      <div className="mt-3">
+                        <Field label="APN (Assessor Parcel Number)">
+                          <input value={form.apn || ''} onChange={set('apn')} placeholder="e.g. 5012-001-001" className={inputCls} />
+                        </Field>
+                      </div>
+                      </>
+                      )}
                     </div>
                   </div>
 
