@@ -2659,20 +2659,30 @@ const COPY_LIBRARY = {
     ] },
   ],
   'Investment Highlights': [
-    { title: 'Income Stability', cards: [
-      '[Property Name] is [Occupancy] leased to [Anchor Tenants], generating [NOI] in net operating income with [Escalations] annual rent escalations that hedge against inflation.',
-      'Backed by a creditworthy tenant base, [Property Name] delivers [NOI] of stable net operating income with contractual rent growth over the hold period.',
-      'The property’s [Occupancy] occupancy and staggered lease expirations provide [Property Name] with a resilient, diversified income stream.',
+    { title: 'Property Features', cards: [
+      '[Property Name] offers [Building SF] square feet of quality [Property Type] space built in [Year Built], featuring durable [Construction] construction and [Parking] parking spaces.',
+      'The asset combines modern building systems, excellent [Street] frontage, and [Parking] parking spaces, making [Property Name] highly functional for tenants and customers.',
+      'Well-maintained and strategically configured, [Property Name] delivers [Building SF] square feet of leasable area on a [Lot Size]-acre parcel with strong curb appeal.',
     ] },
-    { title: 'Location Advantage', cards: [
-      'Located in the high-growth [City], [State] corridor, [Property Name] benefits from [Traffic Count] vehicles per day and a trade-area population of [Population].',
-      '[Property Name] enjoys premier frontage along [Street], placing it directly in the path of growth within the [City] market.',
-      'Surrounded by strong demand drivers, [Property Name] offers exceptional accessibility and visibility in one of [City]’s most sought-after submarkets.',
+    { title: 'Location & Demographics', cards: [
+      'Situated in [City], [State], [Property Name] serves a trade area of [Population] residents with an average household income of [Income] within a [Radius]-mile radius.',
+      '[Property Name] benefits from [Traffic Count] vehicles per day along [Street] and a growing, affluent population base that supports durable tenant demand.',
+      'Favorable demographics and a daytime population of [Daytime Population] reinforce the long-term stability of income at [Property Name].',
     ] },
-    { title: 'Value-Add Upside', cards: [
-      'With [Vacancy] of vacant space and below-market rents, [Property Name] offers meaningful upside through lease-up and mark-to-market rent growth.',
-      'Investors can unlock additional value at [Property Name] through cosmetic renovations, expense optimization, and renewing tenants to market rents.',
-      '[Property Name] provides a clear value-add path, positioning new ownership to grow NOI and expand asset value over time.',
+    { title: 'Financial Performance', cards: [
+      '[Property Name] generates [NOI] in net operating income at a [Cap Rate] cap rate on the [Price] asking price, with [Escalations] annual escalations driving future growth.',
+      'In-place rents produce [GSI] in gross scheduled income and [NOI] of stable net operating income, backed by [Occupancy] occupancy.',
+      'With efficient operating expenses of [OpEx] and contractual rent growth, [Property Name] offers investors predictable, growing cash flow.',
+    ] },
+    { title: 'Tenant Mix', cards: [
+      '[Property Name] is [Occupancy] leased to [Anchor Tenants], providing a creditworthy, diversified rent roll with staggered lease expirations.',
+      'A complementary mix of national and regional tenants at [Property Name] limits rollover risk and supports consistent foot traffic.',
+      'Anchored by [Anchor Tenants] with [Lease Term] of weighted average lease term remaining, [Property Name] delivers a resilient income stream.',
+    ] },
+    { title: 'Market Position', cards: [
+      'Positioned in the supply-constrained [City], [State] submarket, [Property Name] benefits from limited competition and steady tenant demand.',
+      '[Property Name] holds a dominant location within one of [City]’s most sought-after corridors, supported by strong population and job growth.',
+      'As a landmark [Property Type] asset in [City], [Property Name] enjoys premier visibility and a durable competitive advantage in its trade area.',
     ] },
   ],
   'Location Highlights': [
