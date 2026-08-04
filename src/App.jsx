@@ -2686,20 +2686,30 @@ const COPY_LIBRARY = {
     ] },
   ],
   'Location Highlights': [
-    { title: 'Market Overview', cards: [
-      '[Property Name] is situated in [City], [State], one of the region’s most active [Property Type] submarkets, supported by strong population and job growth.',
-      'The [City], [State] market continues to attract residents and employers, providing a durable demand base for [Property Name].',
-      'Positioned in a supply-constrained corridor, [Property Name] benefits from limited competition and steady tenant demand.',
+    { title: 'Strategic Position', cards: [
+      'Strategically positioned in [City], [State], [Property Name] sits within a supply-constrained corridor with excellent frontage along [Street] and strong regional connectivity.',
+      '[Property Name] commands a dominant location in one of [City]’s most active [Property Type] submarkets, benefiting from established demand drivers and limited competition.',
+      'Located at the crossroads of [Street] and major thoroughfares, [Property Name] enjoys premier visibility and accessibility in a high-growth trade area.',
     ] },
-    { title: 'Access & Visibility', cards: [
-      'The property enjoys prominent frontage along [Street] with [Traffic Count] vehicles per day and direct access to [Highway], ensuring exceptional visibility.',
-      '[Property Name] offers convenient ingress and egress from [Street], with strong signage visibility to passing traffic.',
-      'Located at [Street] in [City], the asset is easily accessible from major thoroughfares and regional transit routes.',
+    { title: 'Transportation & Access', cards: [
+      '[Property Name] offers convenient access via [Street] and [Highway], with [Traffic Count] vehicles per day passing the site and direct routes to regional employment centers.',
+      'The property benefits from multiple ingress and egress points along [Street], ensuring seamless access for tenants, customers, and delivery traffic.',
+      'Well-served by nearby transit and highway networks, [Property Name] provides exceptional connectivity throughout the [City], [State] market.',
     ] },
-    { title: 'Demographics', cards: [
-      'Within a [Radius]-mile radius, the trade area is home to [Population] residents with an average household income of [Income], underpinning strong consumer demand.',
-      'The surrounding population of [Population] and growing household incomes provide a deep customer base for tenants at [Property Name].',
-      'Favorable demographics — including a daytime population of [Daytime Population] — reinforce the long-term stability of [Property Name].',
+    { title: 'Demographics & Economy', cards: [
+      'Within a [Radius]-mile radius, [Property Name] serves [Population] residents with an average household income of [Income], underpinning strong and durable consumer demand.',
+      'The surrounding [City], [State] economy continues to expand, supported by job growth, rising incomes, and a daytime population of [Daytime Population].',
+      'Favorable demographic trends and a deep, affluent customer base reinforce the long-term stability of income at [Property Name].',
+    ] },
+    { title: 'Nearby Amenities', cards: [
+      '[Property Name] is surrounded by complementary retail, dining, and service amenities that generate consistent foot traffic and support tenant performance.',
+      'Anchored by major demand drivers within the trade area, [Property Name] benefits from proximity to shopping centers, employers, and residential neighborhoods.',
+      'The immediate area around [Property Name] offers a robust mix of national and regional amenities that enhance its appeal to tenants and customers.',
+    ] },
+    { title: 'Growth & Development', cards: [
+      'The [City], [State] submarket is experiencing significant new development and population growth, positioning [Property Name] to benefit from rising demand.',
+      'Ongoing infrastructure investment and commercial expansion in the corridor surrounding [Property Name] support long-term appreciation potential.',
+      'As the [City] trade area continues to grow, [Property Name] is well-positioned to capture increasing tenant demand and value creation over the hold period.',
     ] },
   ],
   'Financials': [
