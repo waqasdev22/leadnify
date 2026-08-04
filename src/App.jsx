@@ -2868,7 +2868,7 @@ function ScaledPage({ scale, children }) {
 }
 
 function BuilderPage({ pageKey, data }) {
-  const { name, docType, price, priceVis, location, owner, ownerEmail, dataPoints, brand, sections, lat, lng } = data
+  const { name, docType, price, priceVis, location, owner, ownerEmail, dataPoints, brand, sections, lat, lng, cover } = data
   const initials = (owner || 'W').split(' ').map((s) => s[0]).join('').slice(0, 2).toUpperCase()
   const showPrice = priceVis === 'Show' && price
   const hasLoc = typeof lat === 'number' && !Number.isNaN(lat)
@@ -2898,7 +2898,8 @@ function BuilderPage({ pageKey, data }) {
   if (pageKey === 'cover') {
     return (
       <div className="flex h-full flex-col">
-        <div className="relative flex-1" style={{ background: 'repeating-linear-gradient(45deg,#eef2f7,#eef2f7 14px,#e8eef6 14px,#e8eef6 28px)' }}>
+        <div className="relative flex-1 overflow-hidden" style={cover ? undefined : { background: 'repeating-linear-gradient(45deg,#eef2f7,#eef2f7 14px,#e8eef6 14px,#e8eef6 28px)' }}>
+          {cover && <img src={cover} alt="" className="absolute inset-0 h-full w-full object-cover" />}
           <div className="absolute bottom-4 right-5 flex items-center gap-2 rounded-md bg-white/80 px-3 py-1.5">
             <Building2 className="h-4 w-4" style={{ color: brand }} />
             <span className="text-xs font-extrabold tracking-tight text-slate-700">MyCREBlueprint</span>
@@ -4007,6 +4008,10 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
     sections: form.sections,
     lat: form.lat,
     lng: form.lng,
+    cover: form.media?.cover || null,
+    moAbout: form.moAbout,
+    moFacts: form.moFacts,
+    agent: (form.coAgents && form.coAgents[0]) || { name: CURRENT_USER.name, role: 'Agent', email: CURRENT_USER.email, initials: CURRENT_USER.initials },
   }
 
   // Token values available to auto-fill suggested copy.
@@ -4476,38 +4481,27 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
           <div className="relative flex flex-1 items-center justify-center overflow-auto p-8">
             {(() => {
               const pg = visiblePages[Math.min(rc.page, visiblePages.length - 1)] || visiblePages[0]
+              const bpKey = { cover: 'cover', exec: 'exec', invest: 'invest', market: 'location', closing: 'contact' }[pg?.key] || 'exec'
               return (
-                <div className="w-full max-w-[720px] overflow-hidden rounded-xl bg-white shadow-xl ring-1 ring-slate-200">
+                <div className="overflow-hidden rounded-xl bg-white shadow-xl ring-1 ring-slate-200" style={{ width: 560, height: 724 }}>
                   {pg?.map ? (
-                    <GMapThumb lat={pg.map.lat} lng={pg.map.lng} zoom={pg.map.zoom} className="h-[360px] w-full" />
+                    <GMapThumb lat={pg.map.lat} lng={pg.map.lng} zoom={pg.map.zoom} className="h-full w-full" />
+                  ) : pg?.custom ? (
+                    <div className="h-full w-full overflow-y-auto p-8">
+                      <h2 className="text-2xl font-extrabold text-slate-900">{pg.custom.title}</h2>
+                      <div className="mt-3 h-1 w-16 rounded" style={{ background: rc.primary }} />
+                      {pg.custom.image && (pg.custom.imageName || '').toLowerCase().endsWith('.pdf') ? (
+                        <div className="mt-4 flex items-center gap-2 text-slate-500"><FileText className="h-6 w-6 text-rose-400" /> {pg.custom.imageName}</div>
+                      ) : pg.custom.image ? (
+                        <img src={pg.custom.image} alt="" className="mt-4 w-full rounded-lg object-cover" />
+                      ) : null}
+                      {pg.custom.body && <div className="mt-4 text-sm leading-relaxed text-slate-700 [&_a]:text-brand" dangerouslySetInnerHTML={{ __html: pg.custom.body }} />}
+                    </div>
                   ) : (
-                    <div className="flex h-[360px] items-center justify-center bg-[repeating-linear-gradient(45deg,#f1f5f9,#f1f5f9_10px,#e2e8f0_10px,#e2e8f0_20px)] text-slate-300">
-                      {rc.logo && <ImageIcon className="h-10 w-10" />}
+                    <div className="origin-top-left" style={{ transform: 'scale(0.875)', width: 640, height: 828 }}>
+                      <BuilderPage pageKey={bpKey} data={previewData} />
                     </div>
                   )}
-                  <div className="px-8 py-6">
-                    <span className="inline-block rounded px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white" style={{ background: rc.primary }}>Offering Memorandum</span>
-                    <div className="mt-3 flex items-start justify-between gap-4">
-                      <div>
-                        <h2 className="text-3xl font-extrabold text-slate-900">{docName}</h2>
-                        <p className="mt-1 text-sm text-slate-500">{form.city || 'City'}</p>
-                        <p className="text-sm text-slate-500">{[form.city, form.state, form.zip].filter(Boolean).join(', ') || 'Address'}</p>
-                      </div>
-                      {rc.price && (
-                        <div className="text-right">
-                          <p className="text-xl font-extrabold text-slate-900">{priceStr}</p>
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Price</p>
-                        </div>
-                      )}
-                    </div>
-                    {rc.contactInfo && (
-                      <div className="mt-4 border-t border-slate-200 pt-3">
-                        <p className="text-sm font-bold text-slate-900">{contact.name}</p>
-                        <p className="text-xs text-slate-500">{contact.title || 'Agent'}</p>
-                        <p className="text-xs text-slate-500">{contact.email}</p>
-                      </div>
-                    )}
-                  </div>
                 </div>
               )
             })()}
