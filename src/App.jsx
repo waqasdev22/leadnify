@@ -961,8 +961,20 @@ function UpgradeCard({ onDismiss }) {
 
 const NAV_PERM = { dashboard: 'dashboard.view', listings: 'listings.view', deals: 'dealrooms.view' }
 
-function Sidebar({ active, onNavigate, onSignOut, user, forceCollapsed, defaultCollapsed, can }) {
-  const [collapsed, setCollapsed] = useState(!!forceCollapsed || !!defaultCollapsed)
+function Sidebar({ active, onNavigate, onSignOut, user, forceCollapsed, responsiveCollapse, can }) {
+  const [collapsed, setCollapsed] = useState(
+    () => !!forceCollapsed || (!!responsiveCollapse && typeof window !== 'undefined' && window.innerWidth < 1024),
+  )
+  // On tablet/iPad widths (below desktop lg) keep the sidebar as an icon rail.
+  // Re-evaluated on mount and resize so it's correct immediately — no refresh
+  // needed — and adapts when the device is rotated.
+  useEffect(() => {
+    if (forceCollapsed || !responsiveCollapse) return
+    const apply = () => setCollapsed(window.innerWidth < 1024)
+    apply()
+    window.addEventListener('resize', apply)
+    return () => window.removeEventListener('resize', apply)
+  }, [forceCollapsed, responsiveCollapse])
   const [showPromo, setShowPromo] = useState(true)
 
   // Filter nav by page permissions (when a `can` gate is provided), and add the
@@ -10292,12 +10304,6 @@ export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [authReady, setAuthReady] = useState(false)
   const [active, setActive] = useState('dashboard')
-  // On tablets/iPad (md rail visible but below desktop lg) start the sidebar
-  // collapsed to an icon rail. Derived from viewport at mount, so a refresh on
-  // an iPad always comes back collapsed.
-  const [tabletCollapsed] = useState(
-    () => typeof window !== 'undefined' && window.innerWidth >= 768 && window.innerWidth < 1024,
-  )
   const [user, setUser] = useState(CURRENT_USER)
   const [myUid, setMyUid] = useState(null)
   const [role, setRole] = useState('Member')
@@ -10466,7 +10472,7 @@ export default function App() {
       <div className="flex h-screen overflow-hidden bg-slate-50 text-slate-900">
         {/* Desktop sidebar */}
         <div className="hidden md:block">
-          <Sidebar active={active} onNavigate={navigate} onSignOut={handleSignOut} user={user} can={can} defaultCollapsed={tabletCollapsed} />
+          <Sidebar active={active} onNavigate={navigate} onSignOut={handleSignOut} user={user} can={can} responsiveCollapse />
         </div>
 
         {/* Mobile slide-in drawer */}
@@ -10492,10 +10498,10 @@ export default function App() {
         )}
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          {/* Mobile-only menu button (top bar removed) — opens the nav drawer */}
+          {/* Mobile-only menu button (top bar removed) — fixed so it never scrolls away */}
           <button
             onClick={() => setMobileNav(true)}
-            className="absolute left-3 top-3 z-40 inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-100 md:hidden"
+            className="fixed left-3 top-3 z-40 inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-100 md:hidden"
             aria-label="Open menu"
           >
             <Menu className="h-5 w-5" />
