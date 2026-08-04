@@ -3625,9 +3625,9 @@ function LocationPickerModal({ open, initial, address, sub, onConfirm, onClose }
   useEffect(() => {
     if (!open || !elRef.current) return
     const hasInit = initial && typeof initial[0] === 'number'
-    const start = hasInit ? initial : [30.3753, 69.3451] // fallback: center of Pakistan
+    const start = hasInit ? initial : [39.8283, -98.5795] // fallback: geographic center of the United States
     posRef.current = start
-    const map = L.map(elRef.current, { scrollWheelZoom: true }).setView(start, hasInit ? 15 : 5)
+    const map = L.map(elRef.current, { scrollWheelZoom: true }).setView(start, hasInit ? 15 : 4)
     // CARTO Voyager — clean tiles with English/Latin place labels, reliable CDN.
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
       subdomains: 'abcd',
