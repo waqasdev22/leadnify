@@ -7192,18 +7192,18 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
     const sizePoint = (bf.dataPoints || []).find(
       (p) => /building sf|gla|rentable sf|size/i.test(p.label) && p.value,
     )
-    // Everything needed to reopen the builder exactly where the user left off.
-    const draft = finished
-      ? null
-      : {
-          id,
-          form: bf,
-          step,
-          docType: builderCfg?.docType,
-          propertyType: builderCfg?.propertyType,
-          template: builderCfg?.template ?? newDoc.template,
-          brandColor: builderCfg?.brandColor ?? newDoc.brandColor,
-        }
+    // Everything needed to reopen the builder exactly where the user left off —
+    // stored even when finished, so re-editing keeps all content (images, media…).
+    const draft = {
+      id,
+      form: bf,
+      step,
+      reviewMode: finished, // finished docs re-open straight into Review & Customize
+      docType: builderCfg?.docType,
+      propertyType: builderCfg?.propertyType,
+      template: builderCfg?.template ?? newDoc.template,
+      brandColor: builderCfg?.brandColor ?? newDoc.brandColor,
+    }
 
     const pkg = {
       id,
@@ -7259,6 +7259,17 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
     try { localStorage.removeItem(BUILDER_SESSION_KEY) } catch { /* ignore */ }
   }
   const openEdit = (pkg) => {
+    // Re-open the full builder (restoring all content incl. images) when we have
+    // the saved form; otherwise fall back to the lightweight metadata modal.
+    if (pkg._draft && pkg._draft.form) {
+      const d = pkg._draft
+      setBuilderCfg({ docType: d.docType, propertyType: d.propertyType, template: d.template, brandColor: d.brandColor })
+      setBuilderInitial({ form: d.form, step: d.step, reviewMode: d.reviewMode })
+      setBuilderDraftId(d.id)
+      setBuilderNonce((n) => n + 1)
+      setBuilderOpen(true)
+      return
+    }
     setEditing(pkg)
     setModalOpen(true)
   }
