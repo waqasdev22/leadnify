@@ -3618,7 +3618,7 @@ function MapEditorModal({ open, map, onSave, onClose }) {
 }
 
 // Confirm-location modal: draggable Leaflet pin, opens after Property Details.
-function LocationPickerModal({ open, initial, address, onConfirm, onClose }) {
+function LocationPickerModal({ open, initial, address, sub, onConfirm, onClose }) {
   const elRef = useRef(null)
   const posRef = useRef(null)
 
@@ -3663,9 +3663,11 @@ function LocationPickerModal({ open, initial, address, onConfirm, onClose }) {
         <div className="flex items-start justify-between gap-3 border-b border-slate-200 px-5 py-4">
           <div>
             <h3 className="flex items-center gap-2 text-lg font-extrabold text-slate-900">
-              <MapPin className="h-5 w-5 text-brand" /> Confirm Property Location
+              <MapPin className="h-5 w-5 text-brand" /> Pin the property location
             </h3>
-            {address && <p className="mt-0.5 text-sm text-slate-500">{address}</p>}
+            <p className="mt-0.5 text-sm text-slate-500">
+              We couldn&apos;t pinpoint this parcel automatically{sub ? ` in ${sub}` : ''}. Drag the pin to where the property actually is, or click anywhere on the map.
+            </p>
           </div>
           <button onClick={onClose} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700">
             <X className="h-5 w-5" />
@@ -3673,11 +3675,11 @@ function LocationPickerModal({ open, initial, address, onConfirm, onClose }) {
         </div>
         <div ref={elRef} className="h-80 w-full bg-slate-100" />
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-5 py-3">
-          <p className="text-xs text-slate-500">Drag the pin or click the map to fine-tune the exact location.</p>
+          <p className="text-xs text-slate-500">Drag the pin or click on the map to set the location.</p>
           <div className="flex items-center gap-2">
             <button onClick={onClose} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
             <button onClick={() => onConfirm(posRef.current)} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600">
-              <Check className="h-4 w-4" /> Confirm Location
+              <Check className="h-4 w-4" /> Save Location
             </button>
           </div>
         </div>
@@ -3700,6 +3702,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
     return d
   })
   const [mapOpen, setMapOpen] = useState(false)
+  const [addrPopupOpen, setAddrPopupOpen] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(true)
   const [viewerIdx, setViewerIdx] = useState(null)
   // Rich-text draft editor (content sections, step >= 2)
@@ -3781,7 +3784,9 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
         notify?.('Please tick "Use Custom Display Address" to continue', 'error')
         return
       }
-      setMapOpen(true)
+      // Show the "New Property" confirmation popup first; the map opens only
+      // after the user clicks "Continue with this address".
+      setAddrPopupOpen(true)
       return
     }
     setDone((d) => ({ ...d, [step]: true }))
@@ -6450,10 +6455,50 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
       </div>
       </div>
 
+      {/* "New Property — Let's Add It!" confirmation before the map picker */}
+      {addrPopupOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onClick={() => setAddrPopupOpen(false)}>
+          <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between gap-3 px-6 pt-5">
+              <h3 className="text-lg font-extrabold text-slate-900">New Property — Let&apos;s Add It!</h3>
+              <button onClick={() => setAddrPopupOpen(false)} className="rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="px-6 pb-5 pt-3">
+              <p className="text-sm font-medium text-brand">
+                We don&apos;t have this address in our database yet, but no worries! You can still build a great marketing package.
+              </p>
+              <div className="mt-4 grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
+                <div className="flex items-start gap-2 text-sm text-slate-600"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" /> Automated maps generate instantly</div>
+                <div className="flex items-start gap-2 text-sm text-slate-600"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" /> Demographics included</div>
+                <div className="flex items-start gap-2 text-sm text-slate-600"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" /> City insights included</div>
+                <div className="flex items-start gap-2 text-sm text-slate-600"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" /> You&apos;ll need to confirm a few property details</div>
+              </div>
+              <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button
+                  onClick={() => setAddrPopupOpen(false)}
+                  className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Try a different address
+                </button>
+                <button
+                  onClick={() => { setAddrPopupOpen(false); setMapOpen(true) }}
+                  className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
+                >
+                  Continue with this address
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <LocationPickerModal
         open={mapOpen}
         initial={form.lat ? [form.lat, form.lng] : null}
         address={fullAddress || docName}
+        sub={[form.city, US_STATE_ABBR[form.state] || form.state].filter(Boolean).join(', ')}
         onConfirm={confirmLocation}
         onClose={() => setMapOpen(false)}
       />
