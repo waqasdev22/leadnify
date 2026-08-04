@@ -1,6 +1,7 @@
 import { initializeApp, deleteApp } from "firebase/app";
 import { getDatabase } from "firebase/database";
 import { getAuth, GoogleAuthProvider, createUserWithEmailAndPassword, updateProfile, signOut } from "firebase/auth";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCM6FECzAa6maN6UF6O0JaSPAsqaO__ePc",
@@ -17,6 +18,18 @@ const app = initializeApp(firebaseConfig);
 export const db = getDatabase(app);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
+export const storage = getStorage(app);
+
+// Upload a file to Firebase Storage and return its public download URL.
+// Images live in the cloud; only the small URL is stored in the document —
+// so large photos never blow the browser's localStorage quota.
+export async function uploadToStorage(file) {
+  const safe = (file.name || "file").replace(/[^a-zA-Z0-9._-]/g, "_");
+  const path = `uploads/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safe}`;
+  const r = storageRef(storage, path);
+  await uploadBytes(r, file);
+  return await getDownloadURL(r);
+}
 
 // Create a member's auth account WITHOUT signing the current admin out, by
 // using a throwaway secondary Firebase app instance. Returns the new user's uid.

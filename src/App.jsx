@@ -10,7 +10,7 @@ import { jsPDF } from 'jspdf'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { getCol, putCol, saveUser } from './api'
-import { auth, googleProvider, db, createMemberAccount } from './firebase'
+import { auth, googleProvider, db, createMemberAccount, uploadToStorage } from './firebase'
 import { ref as dbRef, get as dbGet, set as dbSet, update as dbUpdate, onValue } from 'firebase/database'
 import { PERMISSION_GROUPS, ROLE_PRESETS, ROLES, ROLE_INFO, resolvePerms, decodeOverrides, encodeOverrides } from './permissions'
 import {
@@ -3893,16 +3893,23 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
   // Images & Media helpers
   const media = form.media || { cover: null, singles: [], galleries: [], video: '' }
   const setMedia = (fn) => setForm((f) => ({ ...f, media: fn(f.media || { cover: null, singles: [], galleries: [], video: '' }) }))
+  // Upload each file to Firebase Storage (small URL persists cleanly). If Storage
+  // is unavailable, fall back to an inline base64 data URL so uploads still work.
   const readFiles = (files) =>
     Promise.all(
-      [...files].map(
-        (file) =>
-          new Promise((resolve) => {
+      [...files].map(async (file) => {
+        try {
+          const url = await uploadToStorage(file)
+          return { id: uid(), name: file.name, url }
+        } catch {
+          const url = await new Promise((resolve) => {
             const r = new FileReader()
-            r.onload = () => resolve({ id: uid(), name: file.name, url: r.result })
+            r.onload = () => resolve(r.result)
             r.readAsDataURL(file)
-          }),
-      ),
+          })
+          return { id: uid(), name: file.name, url }
+        }
+      }),
     )
   const uploadCover = async (files) => {
     if (!files?.length) return
