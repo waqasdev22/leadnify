@@ -4813,7 +4813,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
         {/* Left: form + footer */}
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="scrollbar-slim flex-1 overflow-y-auto">
-            <div className={`mx-auto px-6 py-8 ${isMedia || isFinancials || isConfidentiality ? 'max-w-5xl' : isMarket ? 'max-w-6xl' : isContacts ? 'max-w-3xl' : 'max-w-none'}`}>
+            <div className={`mx-auto px-6 py-8 ${isMedia || isFinancials || isConfidentiality ? 'max-w-5xl' : isMarket ? 'max-w-6xl' : isContacts ? 'max-w-3xl' : 'max-w-[1200px]'}`}>
               {step === 0 ? (
                 <>
                   <h2 className="text-2xl font-extrabold text-slate-900">Property Details</h2>
@@ -6484,13 +6484,13 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
               <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <button
                   onClick={() => setAddrPopupOpen(false)}
-                  className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  className="whitespace-nowrap rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                 >
                   Try a different address
                 </button>
                 <button
                   onClick={() => { setAddrPopupOpen(false); setMapOpen(true) }}
-                  className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
+                  className="whitespace-nowrap rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
                 >
                   Continue with this address
                 </button>
