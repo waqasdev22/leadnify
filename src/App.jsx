@@ -8615,7 +8615,8 @@ function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onRes
             )}
           </div>
 
-          {/* Your own domain card */}
+          {/* Your own domain card — hidden per request */}
+          {false && (
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <p className="flex items-center gap-2 text-sm font-bold text-slate-900">
               <ExternalLink className="h-4 w-4 text-brand" /> Your own domain
@@ -8633,6 +8634,7 @@ function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onRes
               <PrimaryButton onClick={addDomain}>Add</PrimaryButton>
             </div>
           </div>
+          )}
 
           {/* My Listings */}
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
