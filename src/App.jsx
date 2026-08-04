@@ -7979,7 +7979,7 @@ function MicrositePreview({ open, onClose, listings, primary }) {
       <div className="border-t border-slate-200 bg-gradient-to-b from-white to-orange-50/40 py-6 text-center">
         <div className="mx-auto mb-3 h-0.5 w-24 rounded" style={{ background: `${primary}66` }} />
         <p className="text-sm text-slate-500">
-          Powered by <span className="font-bold" style={{ color: primary }}>CREBuilder</span>
+          Powered by <span className="font-bold" style={{ color: primary }}>MyCREBlueprint</span>
         </p>
       </div>
     </div>
@@ -8146,7 +8146,7 @@ body.detail-open .detail{display:block}
   <div class="spacer"><span class="result" id="result"></span><div class="seg" id="viewSeg"><button data-v="map">Map</button><button data-v="mapgrid" class="active">Map + Grid</button><button data-v="grid">Grid</button><button data-v="list">List</button></div></div>
 </div></div>
 <div class="content mapgrid" id="content"><div id="map"></div><div id="cards"></div></div>
-<footer class="list-footer"><div class="line"></div><p>Powered by <b>CREBuilder</b></p></footer>
+<footer class="list-footer"><div class="line"></div><p>Powered by <b>MyCREBlueprint</b></p></footer>
 <div class="detail" id="detailView"></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
@@ -8290,7 +8290,7 @@ footer b{color:#F97316}
   </div>
   <div class="side"><div class="k">LISTED BY</div><div class="an">${agentName}</div><a href="mailto:${agentEmail}">${agentEmail}</a></div>
 </div>
-<footer>Powered by <b>CREBuilder</b></footer>
+<footer>Powered by <b>MyCREBlueprint</b></footer>
 <script>
 var NAME=${JSON.stringify(name)},ADDR=${JSON.stringify(addr)};
 var DATA={};
