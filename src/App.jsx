@@ -8590,7 +8590,7 @@ function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onRes
   const sectionLabel = 'mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400'
 
   return (
-    <div className="p-6">
+    <div className="mx-auto max-w-[1600px] p-6">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
@@ -9827,14 +9827,14 @@ function DealRoomsPage({ dealRooms, setDealRooms, onEditDocument }) {
 
   if (openRoom) {
     return (
-      <div className="p-6">
+      <div className="mx-auto max-w-[1600px] p-6">
         <DealRoomDetail room={openRoom} onBack={() => setOpenRoom(null)} notify={notify} onEditDocument={onEditDocument} />
       </div>
     )
   }
 
   return (
-    <div className="p-6">
+    <div className="mx-auto max-w-[1600px] p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-extrabold text-slate-900">
