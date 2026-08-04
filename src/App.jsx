@@ -4845,8 +4845,8 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                         <label className="mb-1.5 block text-sm font-semibold text-slate-700">Selling Price</label>
                         <div className="flex gap-2">
                           <div className="relative flex-1">
-                            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">$</span>
-                            <input value={form.price} onChange={set('price')} type="number" placeholder="e.g. 2,500,000" className={`${inputCls} pl-7`} />
+                            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">{form.country === 'CA' ? 'CA$' : 'US$'}</span>
+                            <input value={form.price} onChange={set('price')} type="number" placeholder="e.g. 2,500,000" className={`${inputCls} pl-11`} />
                           </div>
                           <div className="inline-flex shrink-0 rounded-lg bg-slate-100 p-1">
                             {['Show', 'Hide', 'Negotiable'].map((o) => (
@@ -4854,6 +4854,12 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                             ))}
                           </div>
                         </div>
+                        {form.priceVis === 'Hide' && (
+                          <p className="mt-2 text-xs text-slate-400">The price is used for internal calculations but won&apos;t appear in the marketing package.</p>
+                        )}
+                        {form.priceVis === 'Negotiable' && (
+                          <p className="mt-2 text-xs text-slate-400">The price will appear as &quot;Negotiable&quot; in the marketing package.</p>
+                        )}
                       </div>
                     </div>
                   </div>
