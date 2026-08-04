@@ -4008,7 +4008,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
     sections: form.sections,
     lat: form.lat,
     lng: form.lng,
-    cover: form.media?.cover || null,
+    cover: form.media?.cover?.url || null,
     moAbout: form.moAbout,
     moFacts: form.moFacts,
     agent: (form.coAgents && form.coAgents[0]) || { name: CURRENT_USER.name, role: 'Agent', email: CURRENT_USER.email, initials: CURRENT_USER.initials },
@@ -4284,7 +4284,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
     const sectionTitle = (t, y) => { doc.setFillColor(primary); doc.rect(M, y - 11, 3, 15, 'F'); doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor('#0f172a'); doc.text(t, M + 12, y) }
     const kv = (k, v, x, y, w) => { doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor('#64748b'); doc.text(k, x, y); doc.setFont('helvetica', 'bold'); doc.setTextColor('#0f172a'); doc.text(String(v), x + w, y, { align: 'right' }) }
 
-    const coverImg = await loadImg(form.media?.cover)
+    const coverImg = await loadImg(form.media?.cover?.url)
     const mapImg = GMAPS_KEY && typeof form.lat === 'number' ? await loadImg(`https://maps.googleapis.com/maps/api/staticmap?center=${form.lat},${form.lng}&zoom=13&size=600x400&scale=2&markers=color:red%7C${form.lat},${form.lng}&key=${GMAPS_KEY}`) : null
 
     // ---- Page 1: Cover ----
