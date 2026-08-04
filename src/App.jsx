@@ -7408,7 +7408,7 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
   }
 
   return (
-    <div className="p-6">
+    <div className="mx-auto max-w-[1500px] p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-extrabold text-slate-900">Your Marketing Packages</h1>
