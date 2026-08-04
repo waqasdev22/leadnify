@@ -2638,6 +2638,7 @@ const COPY_LIBRARY = {
       'Positioned in the thriving [City], [State] market, [Property Name] is a well-maintained [Property Type] asset that delivers stable returns and standout visibility.',
       '[Property Name] is offered to qualified investors as a stabilized [Property Type] asset in [City], [State], combining dependable cash flow with a compelling long-term growth story.',
       'We are proud to bring [Property Name] to market — a [Property Type] property at [Street] in [City] that stands out for its location, income durability, and upside potential.',
+      'It is our pleasure to introduce [Property Name], an exceptional [Property Type] opportunity in [City], [State] that pairs stable, in-place income with a clear path to long-term value creation.',
     ] },
     { title: 'Property Description', cards: [
       '[Property Name] encompasses [Building SF] square feet of leasable [Property Type] space situated on a [Lot Size]-acre parcel. Originally constructed in [Year Built], the property features [Construction] construction with [Parking] parking spaces, providing ample convenience for tenants and customers alike.',
