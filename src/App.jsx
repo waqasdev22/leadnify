@@ -155,7 +155,7 @@ import {
 
 const CURRENT_USER = {
   name: 'Waqas',
-  email: 'waqas.axecorp@gmail.com',
+  email: 'waqasdev@gmail.com',
   role: 'Broker',
   initials: 'W',
 }
