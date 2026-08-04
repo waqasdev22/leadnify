@@ -4262,6 +4262,89 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
   const seg = 'rounded-md px-4 py-1.5 text-sm font-semibold transition'
 
   // ---- Review & Customize (final step) -------------------------------------
+  // Build a real multi-page PDF (Cover, Executive Summary, Investment Highlights,
+  // Map, Market Overview, Closing) — all pages in one file.
+  const genPdf = async () => {
+    notify('Generating PDF…')
+    const doc = new jsPDF({ unit: 'pt', format: 'a4' })
+    const W = 595.28, H = 841.89, M = 44
+    const primary = rc.primary || brand || '#1e293b'
+    const money = (n) => '$' + (Number(n) || 0).toLocaleString('en-US')
+    const cap = (form.capRate ? String(form.capRate) : dpVal('Cap Rate').replace('%', '') || '5.50') + '%'
+    const noi = money(form.noi || (dpVal('NOI') || '').replace(/[^0-9.]/g, '') || 82500)
+    const agent = (form.coAgents && form.coAgents[0]) || { name: CURRENT_USER.name, role: 'Agent', email: CURRENT_USER.email }
+    const stripHtml = (h) => (h || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+    const loadImg = (url) => new Promise((res) => { if (!url) { res(null); return } const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => res(im); im.onerror = () => res(null); im.src = url })
+    const label = (t, x, y) => { doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor('#94a3b8'); doc.text(t.toUpperCase(), x, y) }
+    const sectionTitle = (t, y) => { doc.setFillColor(primary); doc.rect(M, y - 11, 3, 15, 'F'); doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor('#0f172a'); doc.text(t, M + 12, y) }
+    const kv = (k, v, x, y, w) => { doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor('#64748b'); doc.text(k, x, y); doc.setFont('helvetica', 'bold'); doc.setTextColor('#0f172a'); doc.text(String(v), x + w, y, { align: 'right' }) }
+
+    const coverImg = await loadImg(form.media?.cover)
+    const mapImg = GMAPS_KEY && typeof form.lat === 'number' ? await loadImg(`https://maps.googleapis.com/maps/api/staticmap?center=${form.lat},${form.lng}&zoom=13&size=600x400&scale=2&markers=color:red%7C${form.lat},${form.lng}&key=${GMAPS_KEY}`) : null
+
+    // ---- Page 1: Cover ----
+    if (coverImg) { try { doc.addImage(coverImg, 'JPEG', 0, 0, W, 360) } catch { doc.setFillColor('#e2e8f0'); doc.rect(0, 0, W, 360, 'F') } } else { doc.setFillColor('#e2e8f0'); doc.rect(0, 0, W, 360, 'F') }
+    let y = 420
+    doc.setFillColor(primary); doc.rect(M, y - 16, 78, 20, 'F'); doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor('#ffffff'); doc.text((config.docType || 'FOR SALE').toUpperCase().slice(0, 18), M + 8, y - 2)
+    doc.setTextColor('#0f172a'); doc.setFontSize(30); doc.text(docName, M, y + 30)
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(12); doc.setTextColor('#64748b'); doc.text(fullAddress || '', M, y + 52)
+    // price row (right)
+    if (rc.price) { doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor('#0f172a'); doc.text(money(form.price), W - M, y + 6, { align: 'right' }); label('Price', W - M - 60, y + 20) }
+    doc.setDrawColor('#e2e8f0'); doc.line(M, y + 76, W - M, y + 76)
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor('#0f172a'); doc.text(agent.name, M, y + 100)
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor('#64748b'); doc.text(agent.role || 'Agent', M, y + 116); doc.text(agent.email || '', M, y + 130)
+
+    // ---- Page 2: Executive Summary ----
+    doc.addPage(); doc.setFillColor(primary); doc.rect(0, 0, W, 6, 'F'); sectionTitle('Executive Summary', 70)
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor('#64748b'); doc.text(fullAddress || '', M, 96)
+    let by = 140
+    label('Property Data', M, by); by += 14
+    const pdRows = [['Tenant', 'Quick Quack Car Wash'], ['Lease Type', 'Ground Lease'], ['Lease Term', '20 Years'], ['Rent Increases', '10% every 5 Years'], ['Renewal Options', 'Four (4), Five (5) Yr'], ['Guarantee', 'Corporate']]
+    pdRows.forEach(([k, v]) => { kv(k, v, M, by, W - 2 * M); doc.setDrawColor('#eef2f7'); doc.line(M, by + 8, W - M, by + 8); by += 26 })
+    // metric tiles
+    let ty = 140
+    const tile = (t, v, x) => { doc.setDrawColor('#e2e8f0'); doc.roundedRect(x, ty, 150, 54, 6, 6); doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(primary); doc.text(v, x + 12, ty + 24); label(t, x + 12, ty + 42) }
+    if (rc.price) tile('Price', money(form.price), W - M - 150)
+
+    // ---- Page 3: Investment Highlights ----
+    doc.addPage(); doc.setFillColor(primary); doc.rect(0, 0, W, 6, 'F'); sectionTitle('Investment Highlights', 70)
+    let iy = 130
+    const block = (t, rows) => { label(t, M, iy); iy += 16; rows.forEach(([k, v]) => { kv(k, v, M, iy, W - 2 * M); doc.setDrawColor('#eef2f7'); doc.line(M, iy + 8, W - M, iy + 8); iy += 26 }); iy += 14 }
+    block('Property Snapshot', [['Asking Price', money(form.price)], ['Cap Rate', cap]])
+    block('Income Summary', [['Net Operating Income', noi]])
+    block('Returns & Occupancy', [['Cap Rate', cap]])
+
+    // ---- Page 4: Map ----
+    doc.addPage(); doc.setFillColor(primary); doc.rect(0, 0, W, 6, 'F'); sectionTitle(maps[0]?.title || 'Location', 70)
+    if (mapImg) { try { doc.addImage(mapImg, 'PNG', M, 100, W - 2 * M, 380) } catch { /* skip */ } }
+    else { doc.setFillColor('#e2e8f0'); doc.rect(M, 100, W - 2 * M, 380, 'F') }
+
+    // ---- Page 5: Market Overview ----
+    doc.addPage(); doc.setFillColor(primary); doc.rect(0, 0, W, 6, 'F'); sectionTitle('Market Overview', 70)
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor('#475569')
+    const mo = stripHtml(form.moAbout) || `Market overview for ${[form.city, form.state].filter(Boolean).join(', ') || 'the area'}. A thriving, high-demand trade area with strong demographics anchoring durable commercial real estate demand.`
+    doc.text(doc.splitTextToSize(mo, W - 2 * M), M, 100)
+    let my = 300
+    label('Key Facts', M, my); my += 16
+    const facts = (form.moFacts && form.moFacts.length ? form.moFacts.map((f) => [f.label, f.value]) : [['Population', '281,707'], ['Area', '66.8 sq mi'], ['Time Zone', 'Pacific Time Zone'], ['County', 'Orange County'], ['State', 'California']])
+    facts.forEach(([k, v]) => { kv(k, v, M, my, W - 2 * M); doc.setDrawColor('#eef2f7'); doc.line(M, my + 8, W - M, my + 8); my += 26 })
+
+    // ---- Page 6: Closing ----
+    doc.addPage(); doc.setFillColor(primary); doc.rect(0, 0, W, 6, 'F')
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.setTextColor('#0f172a'); doc.text(docName, W / 2, 90, { align: 'center' })
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor('#64748b'); doc.text(fullAddress || '', W / 2, 110, { align: 'center' })
+    label('Presented By', W / 2 - 34, 240)
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor('#0f172a'); doc.text(agent.name, W / 2, 266, { align: 'center' })
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor('#64748b'); doc.text(agent.role || 'Agent', W / 2, 282, { align: 'center' }); doc.text(agent.email || '', W / 2, 296, { align: 'center' })
+    label('Disclaimer', M, 560)
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor('#94a3b8')
+    const disc = CONFIDENTIALITY_TEXT.join(' ').replace(/\[COMPANY_NAME\]/g, 'MyCREBlueprint')
+    doc.text(doc.splitTextToSize(disc, W - 2 * M), M, 576)
+
+    doc.save(`${docName} - ${config.docType || 'Document'}.pdf`)
+    notify('PDF downloaded')
+  }
+
   if (reviewMode) {
     const priceStr = form.price ? `$${(Number(form.price) / 1e6).toFixed(3)}M` : '—'
     const contact = (form.coAgents && form.coAgents[0]) || { name: CURRENT_USER.name, title: 'Agent', email: CURRENT_USER.email }
@@ -4296,7 +4379,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
           </div>
           <div className="flex items-center gap-2">
             <button onClick={() => notify('Template gallery coming soon')} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"><Repeat2 className="h-4 w-4" /> Swap Template</button>
-            <button onClick={() => { notify('Generating PDF…'); downloadPdf({ title: docName, name: docName, address: fullAddress, docType: config.docType, propertyType: config.propertyType, price: form.price, tags: [config.docType, config.propertyType] }, notify) }} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"><Download className="h-4 w-4" /> Download PDF</button>
+            <button onClick={genPdf} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"><Download className="h-4 w-4" /> Download PDF</button>
           </div>
         </header>
 
