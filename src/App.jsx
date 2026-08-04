@@ -4394,7 +4394,8 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
           </div>
           <div className="flex items-center gap-2">
             <button onClick={() => notify('Template gallery coming soon')} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"><Repeat2 className="h-4 w-4" /> Swap Template</button>
-            <button onClick={genPdf} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"><Download className="h-4 w-4" /> Download PDF</button>
+            <button onClick={genPdf} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"><Download className="h-4 w-4" /> Download PDF</button>
+            <button onClick={() => { notify('Saved'); onSave(form, step, true) }} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"><LogOut className="h-4 w-4" /> Save &amp; Exit</button>
           </div>
         </header>
 
