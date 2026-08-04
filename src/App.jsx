@@ -2636,26 +2636,40 @@ const COPY_LIBRARY = {
       '[Property Name] presents a rare opportunity to acquire a fully-stabilized [Property Type] asset in the heart of [City], [State], offering durable income and meaningful long-term upside.',
       'Offered to the market for the first time in years, [Property Name] is a landmark [Property Type] property located at [Street], [City]. The offering combines strong in-place cash flow with a clear path to future appreciation.',
       'Positioned in the thriving [City], [State] market, [Property Name] is a well-maintained [Property Type] asset that delivers stable returns and standout visibility.',
+      '[Property Name] is offered to qualified investors as a stabilized [Property Type] asset in [City], [State], combining dependable cash flow with a compelling long-term growth story.',
+      'We are proud to bring [Property Name] to market — a [Property Type] property at [Street] in [City] that stands out for its location, income durability, and upside potential.',
     ] },
     { title: 'Property Description', cards: [
       '[Property Name] encompasses [Building SF] square feet of leasable [Property Type] space situated on a [Lot Size]-acre parcel. Originally constructed in [Year Built], the property features [Construction] construction with [Parking] parking spaces, providing ample convenience for tenants and customers alike.',
       'Built in [Year Built], [Property Name] offers [Building SF] square feet across a [Lot Size]-acre site, with quality [Construction] construction and [Parking] dedicated parking spaces.',
       '[Property Name] is a [Building SF]-square-foot [Property Type] property featuring durable [Construction] construction, ample [Parking] parking, and excellent frontage along [Street].',
+      'Spanning [Building SF] square feet on a [Lot Size]-acre site, [Property Name] was thoughtfully designed for [Property Type] use, with [Parking] parking spaces and efficient, low-maintenance systems.',
+      'The improvements at [Property Name] total [Building SF] square feet of [Property Type] space, constructed in [Year Built] with quality materials and generous [Parking] parking.',
+      'Featuring strong frontage along [Street], [Property Name] offers [Building SF] square feet of well-configured [Property Type] space that appeals to a broad range of tenants.',
     ] },
     { title: 'Location & Access', cards: [
       'Strategically positioned in [City], [State], [Property Name] enjoys strong visibility along [Street] with convenient regional access and proximity to major demand drivers.',
       '[Property Name] benefits from a prime [City] location, with excellent access via [Street] and a surrounding trade area of [Population] residents within a [Radius]-mile radius.',
       'Located at [Street] in [City], [State], the property sits within an established trade area supported by strong daytime population and [Traffic Count] vehicles per day.',
+      'The property sits at [Street] in [City], [State], offering seamless access to [Highway] and proximity to key employment and retail nodes.',
+      '[Property Name] commands excellent visibility along [Street], with [Traffic Count] vehicles per day and convenient ingress and egress for tenants and customers.',
+      'Set within a growing [City] corridor, [Property Name] is surrounded by strong demand drivers and a trade-area population of [Population] within a [Radius]-mile radius.',
     ] },
     { title: 'Investment Thesis', cards: [
       'This offering represents a compelling opportunity to acquire [Property Name] at an attractive [Cap Rate] cap rate, with [Lease Term] remaining and built-in [Escalations] escalations driving predictable cash flow.',
       'With durable in-place income and below-market rents, [Property Name] offers investors both stability and upside in the growing [City], [State] market.',
       '[Property Name] presents an attractive risk-adjusted return, combining a well-located [Property Type] asset with a clear value-creation strategy and long-term appreciation potential.',
+      'Backed by [Occupancy] occupancy and contractual rent growth, [Property Name] offers investors a durable income stream with a clear path to value creation.',
+      'At the [Price] asking price, [Property Name] delivers a [Cap Rate] going-in cap rate on stable, in-place income with meaningful upside as rents mark to market.',
+      '[Property Name] combines the security of a well-located [Property Type] asset with the growth potential of the expanding [City], [State] market.',
     ] },
     { title: 'Closing Statement', cards: [
       'In summary, [Property Name] combines a prime [City], [State] location, [Occupancy] occupancy, and [Cap Rate] returns into a single institutional-quality offering.',
       '[Property Name] is an institutional-quality [Property Type] offering in [City], [State] that merits serious consideration from discerning investors.',
       'We welcome the opportunity to discuss [Property Name] further and to arrange a private tour of this well-positioned [City] asset.',
+      '[Property Name] represents a rare chance to own a well-positioned [Property Type] asset in [City] — one built for durable income and long-term appreciation.',
+      'We invite qualified investors to review the details of [Property Name] and to schedule a private tour of this [Occupancy]-leased [City], [State] offering.',
+      'For the discerning investor seeking stability and upside, [Property Name] offers a compelling, institutional-quality opportunity in [City], [State].',
     ] },
   ],
   'Investment Highlights': [
@@ -2663,26 +2677,41 @@ const COPY_LIBRARY = {
       '[Property Name] offers [Building SF] square feet of quality [Property Type] space built in [Year Built], featuring durable [Construction] construction and [Parking] parking spaces.',
       'The asset combines modern building systems, excellent [Street] frontage, and [Parking] parking spaces, making [Property Name] highly functional for tenants and customers.',
       'Well-maintained and strategically configured, [Property Name] delivers [Building SF] square feet of leasable area on a [Lot Size]-acre parcel with strong curb appeal.',
+      'The building at [Property Name] features an efficient [Property Type] layout, quality [Construction] construction, and [Parking] parking spaces that support strong tenant operations.',
+      'With [Building SF] square feet of flexible space and prominent [Street] frontage, [Property Name] is well-suited to a wide range of [Property Type] users.',
+      'Recent capital improvements and low deferred maintenance make [Property Name] a turnkey [Property Type] asset requiring minimal near-term investment.',
     ] },
     { title: 'Location & Demographics', cards: [
       'Situated in [City], [State], [Property Name] serves a trade area of [Population] residents with an average household income of [Income] within a [Radius]-mile radius.',
       '[Property Name] benefits from [Traffic Count] vehicles per day along [Street] and a growing, affluent population base that supports durable tenant demand.',
       'Favorable demographics and a daytime population of [Daytime Population] reinforce the long-term stability of income at [Property Name].',
+      'The trade area surrounding [Property Name] features growing household incomes and a population of [Population], creating durable demand for tenants.',
+      '[Property Name] sits in a high-visibility [City], [State] location with [Traffic Count] vehicles per day and easy access from [Street].',
+      'Strong daytime population and a [Radius]-mile trade area of [Population] residents position [Property Name] to benefit from consistent customer traffic.',
     ] },
     { title: 'Financial Performance', cards: [
       '[Property Name] generates [NOI] in net operating income at a [Cap Rate] cap rate on the [Price] asking price, with [Escalations] annual escalations driving future growth.',
       'In-place rents produce [GSI] in gross scheduled income and [NOI] of stable net operating income, backed by [Occupancy] occupancy.',
       'With efficient operating expenses of [OpEx] and contractual rent growth, [Property Name] offers investors predictable, growing cash flow.',
+      'Backed by [Occupancy] occupancy, [Property Name] produces [NOI] in net operating income with [Escalations] annual rent escalations that support future growth.',
+      'At [Price], [Property Name] offers a [Cap Rate] cap rate on durable in-place income, with below-market rents providing additional upside.',
+      'Efficient operations and a largely net-lease structure limit expenses to [OpEx], preserving strong margins and predictable cash flow at [Property Name].',
     ] },
     { title: 'Tenant Mix', cards: [
       '[Property Name] is [Occupancy] leased to [Anchor Tenants], providing a creditworthy, diversified rent roll with staggered lease expirations.',
       'A complementary mix of national and regional tenants at [Property Name] limits rollover risk and supports consistent foot traffic.',
       'Anchored by [Anchor Tenants] with [Lease Term] of weighted average lease term remaining, [Property Name] delivers a resilient income stream.',
+      'The rent roll at [Property Name] blends established anchor tenants with complementary in-line tenants, reducing risk and stabilizing income.',
+      'With staggered lease expirations and [Lease Term] of weighted average term remaining, [Property Name] minimizes rollover exposure.',
+      '[Anchor Tenants] anchor [Property Name], driving foot traffic that benefits the broader tenant base and supports renewals at market rents.',
     ] },
     { title: 'Market Position', cards: [
       'Positioned in the supply-constrained [City], [State] submarket, [Property Name] benefits from limited competition and steady tenant demand.',
       '[Property Name] holds a dominant location within one of [City]’s most sought-after corridors, supported by strong population and job growth.',
       'As a landmark [Property Type] asset in [City], [Property Name] enjoys premier visibility and a durable competitive advantage in its trade area.',
+      'Supported by population and job growth, the [City], [State] submarket gives [Property Name] a durable competitive advantage over surrounding assets.',
+      'Limited new supply and strong tenant demand in the corridor reinforce [Property Name]’s position as a preferred [Property Type] location.',
+      '[Property Name] enjoys standout visibility and a strategic location that positions it ahead of competing properties in the [City] market.',
     ] },
   ],
   'Location Highlights': [
@@ -2690,26 +2719,41 @@ const COPY_LIBRARY = {
       'Strategically positioned in [City], [State], [Property Name] sits within a supply-constrained corridor with excellent frontage along [Street] and strong regional connectivity.',
       '[Property Name] commands a dominant location in one of [City]’s most active [Property Type] submarkets, benefiting from established demand drivers and limited competition.',
       'Located at the crossroads of [Street] and major thoroughfares, [Property Name] enjoys premier visibility and accessibility in a high-growth trade area.',
+      '[Property Name] anchors a prime position along [Street] in [City], [State], with strong regional connectivity and proximity to major demand drivers.',
+      'Set in a supply-constrained corridor, [Property Name] benefits from limited competition and a durable, established tenant base.',
+      'The strategic [City] location of [Property Name] places it in the path of growth, with excellent visibility and access from surrounding thoroughfares.',
     ] },
     { title: 'Transportation & Access', cards: [
       '[Property Name] offers convenient access via [Street] and [Highway], with [Traffic Count] vehicles per day passing the site and direct routes to regional employment centers.',
       'The property benefits from multiple ingress and egress points along [Street], ensuring seamless access for tenants, customers, and delivery traffic.',
       'Well-served by nearby transit and highway networks, [Property Name] provides exceptional connectivity throughout the [City], [State] market.',
+      '[Property Name] is easily reached via [Highway] and [Street], with [Traffic Count] vehicles per day and convenient connections to regional employment centers.',
+      'Multiple access points and nearby transit make [Property Name] highly convenient for tenants, customers, and delivery traffic alike.',
+      'Positioned along [Street], [Property Name] offers seamless ingress and egress and direct routes throughout the [City], [State] market.',
     ] },
     { title: 'Demographics & Economy', cards: [
       'Within a [Radius]-mile radius, [Property Name] serves [Population] residents with an average household income of [Income], underpinning strong and durable consumer demand.',
       'The surrounding [City], [State] economy continues to expand, supported by job growth, rising incomes, and a daytime population of [Daytime Population].',
       'Favorable demographic trends and a deep, affluent customer base reinforce the long-term stability of income at [Property Name].',
+      'A [Radius]-mile trade area of [Population] residents with an average income of [Income] gives [Property Name] a deep, affluent customer base.',
+      'The [City], [State] economy continues to expand through job growth and rising incomes, supporting durable demand at [Property Name].',
+      'Strong daytime population and favorable demographic trends around [Property Name] reinforce long-term income stability.',
     ] },
     { title: 'Nearby Amenities', cards: [
       '[Property Name] is surrounded by complementary retail, dining, and service amenities that generate consistent foot traffic and support tenant performance.',
       'Anchored by major demand drivers within the trade area, [Property Name] benefits from proximity to shopping centers, employers, and residential neighborhoods.',
       'The immediate area around [Property Name] offers a robust mix of national and regional amenities that enhance its appeal to tenants and customers.',
+      'Surrounding retail, dining, and services near [Property Name] generate steady foot traffic that benefits tenants and reinforces the location.',
+      '[Property Name] sits near major employers, shopping centers, and residential neighborhoods that anchor demand within the trade area.',
+      'A robust mix of national and regional amenities around [Property Name] enhances its appeal to tenants and their customers.',
     ] },
     { title: 'Growth & Development', cards: [
       'The [City], [State] submarket is experiencing significant new development and population growth, positioning [Property Name] to benefit from rising demand.',
       'Ongoing infrastructure investment and commercial expansion in the corridor surrounding [Property Name] support long-term appreciation potential.',
       'As the [City] trade area continues to grow, [Property Name] is well-positioned to capture increasing tenant demand and value creation over the hold period.',
+      'New development and rising population in the [City], [State] submarket position [Property Name] to capture growing tenant demand.',
+      'Ongoing infrastructure and commercial investment in the corridor around [Property Name] support long-term value appreciation.',
+      'As the [City] trade area expands, [Property Name] is well-positioned to benefit from increasing demand and rents over the hold period.',
     ] },
   ],
   'Financials': [
@@ -5842,7 +5886,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                         >
                           {curGroup.title}
                           <span className="flex items-center gap-3 text-slate-400">
-                            <span>{tokenCount(curGroup.cards[0])}</span>
+                            <span>{curGroup.cards.length}</span>
                             {catOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                           </span>
                         </button>
@@ -5858,7 +5902,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                                   {i === copyCat && <Check className="h-4 w-4" />}
                                   {g.title}
                                 </span>
-                                <span className="text-slate-400">{tokenCount(g.cards[0])}</span>
+                                <span className="text-slate-400">{g.cards.length}</span>
                               </button>
                             ))}
                           </div>
