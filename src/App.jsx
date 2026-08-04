@@ -3618,7 +3618,7 @@ function MapEditorModal({ open, map, onSave, onClose }) {
 }
 
 // Confirm-location modal: draggable Leaflet pin, opens after Property Details.
-function LocationPickerModal({ open, initial, address, sub, onConfirm, onClose }) {
+function LocationPickerModal({ open, initial, address, sub, query, onConfirm, onClose }) {
   const elRef = useRef(null)
   const posRef = useRef(null)
 
@@ -3649,12 +3649,39 @@ function LocationPickerModal({ open, initial, address, sub, onConfirm, onClose }
       marker.setLatLng(e.latlng)
       posRef.current = [e.latlng.lat, e.latlng.lng]
     })
+    // No exact coordinates yet? Geocode the typed text (e.g. a country or city
+    // entered as the display address) and recenter the map on it.
+    if (!hasInit && query && query.trim()) {
+      fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query.trim())}`)
+        .then((r) => r.json())
+        .then((data) => {
+          const hit = Array.isArray(data) && data[0]
+          if (!hit) return
+          const p = [parseFloat(hit.lat), parseFloat(hit.lon)]
+          posRef.current = p
+          marker.setLatLng(p)
+          const bb = (hit.boundingbox || []).map(parseFloat)
+          // Some results (e.g. "France" with overseas territories) have a
+          // near-global bounding box — fitBounds would zoom the whole world out.
+          // Only fitBounds for sanely-sized areas; otherwise center with a
+          // sensible zoom based on the result type.
+          const latSpan = bb.length === 4 ? Math.abs(bb[1] - bb[0]) : 999
+          const lonSpan = bb.length === 4 ? Math.abs(bb[3] - bb[2]) : 999
+          if (bb.length === 4 && latSpan < 40 && lonSpan < 40) {
+            map.fitBounds([[bb[0], bb[2]], [bb[1], bb[3]]], { maxZoom: 15 })
+          } else {
+            const isCountry = hit.type === 'country' || hit.addresstype === 'country' || latSpan >= 8
+            map.setView(p, isCountry ? 5 : 10)
+          }
+        })
+        .catch(() => {})
+    }
     const t = setTimeout(() => map.invalidateSize(), 120)
     return () => {
       clearTimeout(t)
       map.remove()
     }
-  }, [open, initial])
+  }, [open, initial, query])
 
   if (!open) return null
   return (
@@ -6505,6 +6532,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
         initial={form.lat ? [form.lat, form.lng] : null}
         address={fullAddress || docName}
         sub={[form.city, US_STATE_ABBR[form.state] || form.state].filter(Boolean).join(', ')}
+        query={form.displayAddress || fullAddress || form.street}
         onConfirm={confirmLocation}
         onClose={() => setMapOpen(false)}
       />
