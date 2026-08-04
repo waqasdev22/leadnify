@@ -69,6 +69,7 @@ import {
   Check,
   X,
   AlertTriangle,
+  Info,
   Zap,
   ClipboardList,
   TrendingUp,
@@ -4908,9 +4909,17 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                   <div className="mt-2 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                     <div className="inline-flex rounded-lg bg-slate-100 p-1">
                       {[{ k: 'US', l: 'United States' }, { k: 'CA', l: 'Canada' }].map((c) => (
-                        <button key={c.k} onClick={() => setForm((f) => ({ ...f, country: c.k }))} className={`${seg} ${form.country === c.k ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>{c.l}</button>
+                        <button key={c.k} onClick={() => setForm((f) => ({ ...f, country: c.k }))} className={`${seg} inline-flex items-center gap-1.5 ${form.country === c.k ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>
+                          <span className={`text-[10px] font-bold uppercase ${form.country === c.k ? 'text-brand' : 'text-slate-400'}`}>{c.k}</span>{c.l}
+                        </button>
                       ))}
                     </div>
+                    {form.country === 'CA' && (
+                      <div className="mt-3 flex items-start gap-2 rounded-lg border border-blue-100 bg-blue-50/60 px-3 py-2.5 text-xs leading-relaxed text-slate-600">
+                        <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-500" />
+                        <span><span className="font-semibold text-slate-700">Canada mode:</span> distances and areas display in metric (km / m&sup2; / ha). Automated property facts (building size, lot size, year built) aren&apos;t available from Canadian public records — enter those on the next step.</span>
+                      </div>
+                    )}
                     <div className="mt-3 inline-flex rounded-lg bg-slate-100 p-1">
                       {[{ k: 'address', l: 'Search by Address' }, { k: 'parcel', l: 'Search by Parcel' }].map((m) => (
                         <button key={m.k} onClick={() => setForm((f) => ({ ...f, searchMode: m.k }))} className={`${seg} inline-flex items-center gap-1.5 ${form.searchMode === m.k ? 'bg-white text-brand shadow-sm' : 'text-slate-500'}`}>
