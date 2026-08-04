@@ -2080,7 +2080,7 @@ function StepHeader({ step, onExit }) {
           <Box className="h-4 w-4" />
         </div>
         <span className="text-base font-extrabold tracking-tight text-slate-900">
-          <span className="text-brand">CRE</span>builder
+          My<span className="text-brand">CRE</span>Blueprint
         </span>
       </div>
 

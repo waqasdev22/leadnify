@@ -15,6 +15,15 @@ body {
   background-color: #f8fafc; /* slate-50 */
 }
 
+/* Safety net: never let the page itself scroll sideways on small screens.
+   Wide content (tables, map editor) lives inside its own overflow-x-auto
+   containers, so this only guards against accidental layout overflow. */
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 /* Thin, subtle scrollbars for the kanban / scroll areas */
 .scrollbar-slim::-webkit-scrollbar {
   height: 8px;
