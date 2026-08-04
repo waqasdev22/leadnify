@@ -10271,7 +10271,7 @@ export default function App() {
           </div>
         )}
 
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <TopBar
             title={activeLabel}
             user={user}
@@ -10279,7 +10279,7 @@ export default function App() {
             onQuery={setQuery}
             onMenu={() => setMobileNav(true)}
           />
-          <main className="scrollbar-slim flex-1 overflow-y-auto">{renderScreen()}</main>
+          <main className="scrollbar-slim relative min-h-0 flex-1 overflow-y-auto">{renderScreen()}</main>
         </div>
       </div>
     </ToastProvider>
