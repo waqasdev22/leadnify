@@ -7147,6 +7147,7 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [confirm, setConfirm] = useState(null)
+  const [transferTarget, setTransferTarget] = useState(null)
 
   // "Create Document For" chooser + who the next new doc belongs to.
   const [chooserOpen, setChooserOpen] = useState(false)
@@ -7383,13 +7384,24 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
     notify('Package duplicated')
   }
 
-  // Transfer moves the package between My Docs and Team Docs.
-  const transfer = (pkg) => {
-    const target = pkg.owner === 'my' ? 'team' : 'my'
+  // Transfer opens a chooser so the doc can be handed to a specific team member.
+  const transfer = (pkg) => setTransferTarget(pkg)
+
+  // Assign the package to the chosen recipient (a team member, or back to me).
+  const doTransfer = (recipient) => {
+    const pkg = transferTarget
+    if (!pkg) return
     setPackages((list) =>
-      list.map((p) => (p.id === pkg.id ? { ...p, owner: target } : p)),
+      list.map((p) =>
+        p.id === pkg.id
+          ? recipient === 'me'
+            ? { ...p, owner: 'my', assignee: null, owner_name: user?.name || 'Me' }
+            : { ...p, owner: 'team', assignee: recipient.name, owner_name: recipient.name }
+          : p,
+      ),
     )
-    notify(`Transferred to ${target === 'my' ? 'My' : 'Team'} Docs`)
+    notify(recipient === 'me' ? 'Transferred to you (My Docs)' : `Transferred to ${recipient.name}`)
+    setTransferTarget(null)
   }
 
   // Convert cycles the document type (OM → Flyer → Brochure → …).
@@ -7592,6 +7604,59 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
         title={`Delete ${selectedIds.length} package${selectedIds.length === 1 ? '' : 's'}?`}
         message="This action cannot be undone. All selected packages will be permanently removed."
       />
+
+      {/* Transfer to a team member */}
+      <Modal
+        open={!!transferTarget}
+        onClose={() => setTransferTarget(null)}
+        title="Transfer document"
+      >
+        <p className="text-sm text-slate-500">
+          Move <span className="font-semibold text-slate-700">"{transferTarget?.title || 'this document'}"</span> to a team member. They&apos;ll find it under Team Docs.
+        </p>
+        <div className="mt-4 space-y-2">
+          {/* Transfer back to me */}
+          <button
+            onClick={() => doTransfer('me')}
+            disabled={transferTarget?.owner === 'my'}
+            className="flex w-full items-center gap-3 rounded-xl border border-slate-200 p-3 text-left transition hover:border-orange-300 hover:bg-orange-50/40 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-orange-600 text-sm font-bold text-white">
+              {user?.initials || 'ME'}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold text-slate-800">{user?.name || 'Me'} <span className="font-normal text-slate-400">(You)</span></span>
+              <span className="block truncate text-xs text-slate-400">{user?.email || 'Keep in My Docs'}</span>
+            </span>
+            {transferTarget?.owner === 'my' && !transferTarget?.assignee && <Check className="h-4 w-4 text-emerald-500" />}
+          </button>
+
+          {TEAM_MEMBERS.map((m) => {
+            const isCurrent = transferTarget?.owner === 'team' && transferTarget?.assignee === m.name
+            return (
+              <button
+                key={m.id}
+                onClick={() => doTransfer(m)}
+                disabled={isCurrent}
+                className="flex w-full items-center gap-3 rounded-xl border border-slate-200 p-3 text-left transition hover:border-orange-300 hover:bg-orange-50/40 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-500">
+                  {m.initials}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-semibold text-slate-800">{m.name}</span>
+                  <span className="block truncate text-xs text-slate-400">{m.email}</span>
+                </span>
+                {isCurrent ? (
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600"><Check className="h-4 w-4" /> Current</span>
+                ) : (
+                  <Send className="h-4 w-4 text-slate-300" />
+                )}
+              </button>
+            )
+          })}
+        </div>
+      </Modal>
     </div>
   )
 }
