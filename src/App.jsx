@@ -3699,6 +3699,16 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
   const last = step === total - 1
 
   const goNext = () => {
+    // Edit mode: Continue hops through the curated edit sections only, then
+    // lands on Review & Customize — never the hidden (financial/comparable) steps.
+    if (initial?.reviewMode) {
+      setDone((d) => ({ ...d, [step]: true }))
+      const order = EDIT_SECTIONS.map((s) => s.i)
+      const pos = order.indexOf(step)
+      if (pos >= 0 && pos < order.length - 1) setStep(order[pos + 1])
+      else setReviewMode(true)
+      return
+    }
     // After Property Details, confirm the map location before moving on.
     if (step === 0) {
       setMapOpen(true)
@@ -6241,7 +6251,15 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
           {!mapEditor && (
           <div className="flex items-center justify-between border-t border-slate-200 bg-white px-6 py-3">
             <button
-              onClick={() => (step > 0 ? setStep(step - 1) : onExit())}
+              onClick={() => {
+                if (initial?.reviewMode) {
+                  const order = EDIT_SECTIONS.map((s) => s.i)
+                  const pos = order.indexOf(step)
+                  if (pos > 0) setStep(order[pos - 1]); else setReviewMode(true)
+                  return
+                }
+                step > 0 ? setStep(step - 1) : onExit()
+              }}
               className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-500 transition hover:text-slate-800"
             >
               <ArrowLeft className="h-4 w-4" /> Back
@@ -6316,8 +6334,8 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                     </button>
                   )
                 })}
-                <button onClick={() => setReviewMode(true)} className="flex w-full items-center gap-3 rounded-lg bg-orange-50 px-3 py-2 text-left text-sm font-medium text-brand transition">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-bold text-white">{EDIT_SECTIONS.length + 1}</span>
+                <button onClick={() => setReviewMode(true)} className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-600 transition hover:bg-slate-50">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-400">{EDIT_SECTIONS.length + 1}</span>
                   <span className="min-w-0"><span className="block truncate">Review &amp; Customize</span></span>
                 </button>
               </>
