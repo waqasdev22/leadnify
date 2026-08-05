@@ -994,7 +994,7 @@ function Sidebar({ active, onNavigate, onSignOut, user, forceCollapsed, responsi
       }`}
     >
       {/* Logo */}
-      <div className="flex h-16 items-center justify-between border-b border-slate-100 px-5">
+      <div className="flex h-16 items-center justify-between gap-4 border-b border-slate-100 px-5">
         <Logo collapsed={collapsed} />
         {onClose && (
           <button
