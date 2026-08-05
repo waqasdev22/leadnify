@@ -962,7 +962,7 @@ function UpgradeCard({ onDismiss }) {
 
 const NAV_PERM = { dashboard: 'dashboard.view', listings: 'listings.view', deals: 'dealrooms.view' }
 
-function Sidebar({ active, onNavigate, onSignOut, user, forceCollapsed, responsiveCollapse, can }) {
+function Sidebar({ active, onNavigate, onSignOut, user, forceCollapsed, responsiveCollapse, onClose, can }) {
   const [collapsed, setCollapsed] = useState(
     () => !!forceCollapsed || (!!responsiveCollapse && typeof window !== 'undefined' && window.innerWidth < 1024),
   )
@@ -994,12 +994,21 @@ function Sidebar({ active, onNavigate, onSignOut, user, forceCollapsed, responsi
       }`}
     >
       {/* Logo */}
-      <div className="flex h-16 items-center border-b border-slate-100 px-5">
+      <div className="flex h-16 items-center justify-between border-b border-slate-100 px-5">
         <Logo collapsed={collapsed} />
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+            aria-label="Close menu"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        )}
       </div>
 
-      {/* Collapse toggle */}
-      {!forceCollapsed && (
+      {/* Collapse toggle (desktop only — the drawer uses the close button instead) */}
+      {!forceCollapsed && !onClose && (
         <button
           onClick={() => setCollapsed((c) => !c)}
           className="absolute -right-3 top-14 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 shadow-sm transition hover:text-brand"
@@ -10522,6 +10531,7 @@ export default function App() {
               <Sidebar
                 active={active}
                 onNavigate={(k) => { setMobileNav(false); navigate(k) }}
+                onClose={() => setMobileNav(false)}
                 onSignOut={() => {
                   setMobileNav(false)
                   handleSignOut()
