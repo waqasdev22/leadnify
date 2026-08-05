@@ -2619,7 +2619,7 @@ function CreateWizard({ open, onExit, onComplete, assignee }) {
 
       {/* Footer */}
       <div className="border-t border-slate-200 bg-white px-6 py-4">
-        <div className="mx-auto flex max-w-7xl items-center justify-between">
+        <div className="mx-auto flex max-w-[850px] items-center justify-between">
           <button
             onClick={back}
             className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
