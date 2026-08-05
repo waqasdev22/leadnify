@@ -7595,7 +7595,7 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
             Manage and create marketing materials for your properties
           </p>
         </div>
-        {can('document.create') && (
+        {false && can('document.create') && (
           <PrimaryButton icon={Plus} onClick={openCreate}>
             Create New
           </PrimaryButton>
