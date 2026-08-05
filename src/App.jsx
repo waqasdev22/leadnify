@@ -172,7 +172,7 @@ const propertyImage = (seed) =>
   `https://images.unsplash.com/photo-${seed}?auto=format&fit=crop&w=800&q=60`
 
 const FALLBACK_IMG =
-  'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=60'
+  'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=60'
 
 const INITIAL_PACKAGES = [
   {
