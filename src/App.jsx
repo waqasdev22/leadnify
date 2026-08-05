@@ -1994,10 +1994,13 @@ function MiniPage({ index, brandColor }) {
   return (
     <div className="h-full w-full bg-white">
       <div className="h-2" style={{ background: brandColor }} />
-      <div className="space-y-1 p-1.5">
-        <div className="h-1 w-3/4 rounded bg-slate-200" />
-        <div className="h-1 w-1/2 rounded bg-slate-100" />
-        <div className="h-1 w-2/3 rounded bg-slate-100" />
+      <div className="flex gap-1 p-1.5">
+        <img src={FALLBACK_IMG} alt="" className="h-8 w-10 shrink-0 rounded object-cover" />
+        <div className="flex-1 space-y-1 pt-0.5">
+          <div className="h-1 w-3/4 rounded bg-slate-200" />
+          <div className="h-1 w-1/2 rounded bg-slate-100" />
+          <div className="h-1 w-2/3 rounded bg-slate-100" />
+        </div>
       </div>
     </div>
   )
