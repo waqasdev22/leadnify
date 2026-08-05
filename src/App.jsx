@@ -1942,35 +1942,44 @@ function PreviewPage({ index, brandColor, docType }) {
           </>
         )}
         {variant === 1 && (
-          <div className="overflow-hidden rounded-lg border border-slate-200">
-            {Array.from({ length: 7 }).map((_, r) => (
-              <div key={r} className={`flex items-center justify-between px-4 py-2.5 ${r === 0 ? 'text-white' : r % 2 ? 'bg-slate-50' : 'bg-white'}`} style={r === 0 ? { background: brandColor } : undefined}>
-                <div className={`h-2.5 w-1/3 rounded ${r === 0 ? 'bg-white/70' : 'bg-slate-300'}`} />
-                <div className={`h-2.5 w-16 rounded ${r === 0 ? 'bg-white/70' : 'bg-slate-200'}`} />
-                <div className={`h-2.5 w-12 rounded ${r === 0 ? 'bg-white/70' : 'bg-slate-200'}`} />
-              </div>
-            ))}
-          </div>
+          <>
+            <img src={FALLBACK_IMG} alt="" className="h-40 w-full rounded-lg object-cover" />
+            <div className="overflow-hidden rounded-lg border border-slate-200">
+              {Array.from({ length: 6 }).map((_, r) => (
+                <div key={r} className={`flex items-center justify-between px-4 py-2.5 ${r === 0 ? 'text-white' : r % 2 ? 'bg-slate-50' : 'bg-white'}`} style={r === 0 ? { background: brandColor } : undefined}>
+                  <div className={`h-2.5 w-1/3 rounded ${r === 0 ? 'bg-white/70' : 'bg-slate-300'}`} />
+                  <div className={`h-2.5 w-16 rounded ${r === 0 ? 'bg-white/70' : 'bg-slate-200'}`} />
+                  <div className={`h-2.5 w-12 rounded ${r === 0 ? 'bg-white/70' : 'bg-slate-200'}`} />
+                </div>
+              ))}
+            </div>
+          </>
         )}
         {variant === 2 && (
-          <div className="grid grid-cols-2 gap-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="rounded-lg border border-slate-200 p-4">
-                <div className="mb-2 h-6 w-6 rounded" style={{ background: brandColor }} />
-                <div className="h-2.5 w-3/4 rounded bg-slate-200" />
-                <div className="mt-1.5 h-2.5 w-1/2 rounded bg-slate-100" />
-              </div>
-            ))}
-          </div>
+          <>
+            <img src={FALLBACK_IMG} alt="" className="h-40 w-full rounded-lg object-cover" />
+            <div className="grid grid-cols-2 gap-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="rounded-lg border border-slate-200 p-4">
+                  <div className="mb-2 h-6 w-6 rounded" style={{ background: brandColor }} />
+                  <div className="h-2.5 w-3/4 rounded bg-slate-200" />
+                  <div className="mt-1.5 h-2.5 w-1/2 rounded bg-slate-100" />
+                </div>
+              ))}
+            </div>
+          </>
         )}
         {variant === 3 && (
-          <div className="space-y-2.5">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: brandColor }} />
-                <div className="h-2.5 rounded bg-slate-200" style={{ width: `${90 - i * 6}%` }} />
-              </div>
-            ))}
+          <div className="flex gap-6">
+            <img src={FALLBACK_IMG} alt="" className="h-56 w-1/2 shrink-0 rounded-lg object-cover" />
+            <div className="flex-1 space-y-2.5">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: brandColor }} />
+                  <div className="h-2.5 rounded bg-slate-200" style={{ width: `${90 - i * 6}%` }} />
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
