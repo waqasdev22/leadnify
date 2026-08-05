@@ -9113,7 +9113,10 @@ function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onRes
                       </td>
                       <td className="py-2.5 pr-3">
                         <div className="flex items-center justify-center gap-1">
-                          <IconButton icon={ExternalLink} label="Open deal room" onClick={() => notify(`Deal room for ${l.name}`)} />
+                          <IconButton icon={ExternalLink} label="Preview listing" onClick={() => {
+                            const w = window.open(`${hubUrl}&p=${l.id}`, '_blank')
+                            if (!w) notify('Please allow pop-ups to open the preview', 'error')
+                          }} />
                           <IconButton icon={Trash2} label="Delete" tone="danger" onClick={() => setConfirm(l)} />
                         </div>
                       </td>
