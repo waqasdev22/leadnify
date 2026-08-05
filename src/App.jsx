@@ -10533,14 +10533,30 @@ export default function App() {
         )}
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          {/* Mobile-only menu button (top bar removed) — fixed so it never scrolls away */}
-          <button
-            onClick={() => setMobileNav(true)}
-            className="fixed left-3 top-3 z-40 inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-100 md:hidden"
-            aria-label="Open menu"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
+          {/* Mobile-only sticky header: menu · logo · create */}
+          <header className="sticky top-0 z-40 flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-3 py-2 md:hidden">
+            <button
+              onClick={() => setMobileNav(true)}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-100"
+              aria-label="Open menu"
+            >
+              <Menu className="h-6 w-6" />
+            </button>
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-sm">
+              <Box className="h-5 w-5" />
+            </div>
+            {can('document.create') ? (
+              <button
+                onClick={startCreate}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-sm transition hover:bg-emerald-600"
+                aria-label="Create new"
+              >
+                <Plus className="h-6 w-6" />
+              </button>
+            ) : (
+              <span className="h-10 w-10" />
+            )}
+          </header>
           <main className="scrollbar-slim relative min-h-0 flex-1 overflow-y-auto">{renderScreen()}</main>
         </div>
       </div>
