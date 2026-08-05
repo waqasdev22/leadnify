@@ -172,7 +172,7 @@ const propertyImage = (seed) =>
   `https://images.unsplash.com/photo-${seed}?auto=format&fit=crop&w=800&q=60`
 
 const FALLBACK_IMG =
-  'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=60'
+  'https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=800&q=60'
 
 const INITIAL_PACKAGES = [
   {
@@ -7464,7 +7464,7 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
     }
     setPackages((list) =>
       builderDraftId && list.some((p) => p.id === id)
-        ? list.map((p) => (p.id === id ? { ...p, ...pkg } : p))
+        ? list.map((p) => (p.id === id ? { ...p, ...pkg, ts: p.ts || pkg.ts } : p))
         : [pkg, ...list],
     )
 
