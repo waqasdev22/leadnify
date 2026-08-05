@@ -10515,12 +10515,13 @@ export default function App() {
           <div className="fixed inset-0 z-50 md:hidden">
             <div
               className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
+              style={{ animation: 'drawer-fade 0.25s ease-out' }}
               onClick={() => setMobileNav(false)}
             />
-            <div className="absolute left-0 top-0 h-full shadow-2xl">
+            <div className="absolute left-0 top-0 h-full shadow-2xl" style={{ animation: 'drawer-in 0.3s ease-out' }}>
               <Sidebar
                 active={active}
-                onNavigate={navigate}
+                onNavigate={(k) => { setMobileNav(false); navigate(k) }}
                 onSignOut={() => {
                   setMobileNav(false)
                   handleSignOut()
