@@ -1690,6 +1690,24 @@ const TEMPLATE_GALLERY = [
   { name: 'Axis', style: 'left-panel' },
 ]
 
+// A distinct preview image per template, so switching tabs shows a different
+// picture. Uses known-good Unsplash IDs cycled by the template's position.
+const PREVIEW_IMG_POOL = [
+  'photo-1613490493576-7fde63acd811',
+  'photo-1486406146926-c627a92ad1ab',
+  'photo-1560518883-ce09059eeffa',
+  'photo-1512917774080-9991f1c4c750',
+  'photo-1553413077-190dd305871c',
+  'photo-1519494026892-80bbd2d6fd0d',
+  'photo-1497366216548-37526070297c',
+  'photo-1522708323590-d24dbb6b0267',
+].map((s) => `https://images.unsplash.com/${s}?auto=format&fit=crop&w=800&q=60`)
+
+const templateImage = (name) => {
+  const i = TEMPLATE_GALLERY.findIndex((t) => t.name === name)
+  return PREVIEW_IMG_POOL[(i < 0 ? 0 : i) % PREVIEW_IMG_POOL.length]
+}
+
 // A miniature *document* preview — the property details (badge, address,
 // buildings/SF, tagline) are baked into each template's own layout.
 function TemplateThumb({ style, color, docType }) {
@@ -1859,6 +1877,29 @@ const PREVIEW_PROPERTY = {
   },
 }
 
+// Sample copy used to make the template preview pages look real (not skeletons).
+const PREVIEW_FIN_ROWS = [
+  ['Gross Scheduled Income', '$1,284,000', '$17.42'],
+  ['Vacancy & Credit Loss', '($64,200)', '($0.87)'],
+  ['Effective Gross Income', '$1,219,800', '$16.55'],
+  ['Operating Expenses', '($508,700)', '($6.90)'],
+  ['Net Operating Income', '$711,100', '$9.65'],
+]
+const PREVIEW_HIGHLIGHTS = [
+  { t: 'Prime Location', d: 'Positioned in a high-growth corridor with strong visibility and regional access.' },
+  { t: 'Creditworthy Tenancy', d: 'Stabilized rent roll with staggered lease expirations and durable income.' },
+  { t: 'Value-Add Upside', d: 'Below-market rents provide a clear mark-to-market growth path.' },
+  { t: 'Stable Cash Flow', d: 'Contractual annual escalations hedge income against inflation.' },
+]
+const PREVIEW_BULLETS = [
+  '6.52% going-in cap rate on stable, in-place income',
+  '73,700 SF across three well-maintained buildings',
+  'Strong demographics with a growing daytime population',
+  'Contractual rent escalations that hedge against inflation',
+  'Prominent frontage along a major thoroughfare',
+  'Diversified tenant base that reduces rollover risk',
+]
+
 const PAGE_TITLES = [
   'Cover', 'Executive Summary', 'Investment Highlights', 'Property Overview',
   'Financial Overview', 'Cash Flow Analysis', 'Rent Roll', 'Operating Statement',
@@ -1878,13 +1919,14 @@ function Metric({ value, label, color }) {
 }
 
 // One full document page rendered inside the preview.
-function PreviewPage({ index, brandColor, docType }) {
+function PreviewPage({ index, brandColor, docType, template }) {
   const p = PREVIEW_PROPERTY
+  const img = template ? templateImage(template) : FALLBACK_IMG
   if (index === 0) {
     return (
       <div className="flex h-[72vh] flex-col">
         <div className="relative h-[52%] shrink-0">
-          <img src={FALLBACK_IMG} alt="" className="h-full w-full object-cover" />
+          <img src={img} alt="" className="h-full w-full object-cover" />
           <div className="absolute inset-y-0 left-0 w-1.5" style={{ background: brandColor }} />
         </div>
         <div className="flex flex-1 flex-col p-8">
@@ -1936,20 +1978,24 @@ function PreviewPage({ index, brandColor, docType }) {
       <div className="flex-1 space-y-4 overflow-hidden p-8">
         {variant === 0 && (
           <>
-            <img src={FALLBACK_IMG} alt="" className="h-56 w-full rounded-lg object-cover" />
-            <div className="h-3 w-2/3 rounded bg-slate-200" />
-            <div className="h-3 w-1/2 rounded bg-slate-100" />
+            <img src={img} alt="" className="h-56 w-full rounded-lg object-cover" />
+            <h3 className="text-lg font-bold text-slate-900">{PAGE_TITLES[index]}</h3>
+            <p className="text-sm leading-relaxed text-slate-600">{p.name} represents a rare opportunity to acquire a fully-stabilized asset in one of the region&apos;s strongest submarkets, combining durable in-place income with a clear path to long-term value creation.</p>
+            <p className="text-sm leading-relaxed text-slate-600">Priced at {p.price} — a {p.cap} cap rate on {p.noi} of net operating income — the offering delivers both stability and meaningful upside for discerning investors.</p>
           </>
         )}
         {variant === 1 && (
           <>
-            <img src={FALLBACK_IMG} alt="" className="h-40 w-full rounded-lg object-cover" />
-            <div className="overflow-hidden rounded-lg border border-slate-200">
-              {Array.from({ length: 6 }).map((_, r) => (
-                <div key={r} className={`flex items-center justify-between px-4 py-2.5 ${r === 0 ? 'text-white' : r % 2 ? 'bg-slate-50' : 'bg-white'}`} style={r === 0 ? { background: brandColor } : undefined}>
-                  <div className={`h-2.5 w-1/3 rounded ${r === 0 ? 'bg-white/70' : 'bg-slate-300'}`} />
-                  <div className={`h-2.5 w-16 rounded ${r === 0 ? 'bg-white/70' : 'bg-slate-200'}`} />
-                  <div className={`h-2.5 w-12 rounded ${r === 0 ? 'bg-white/70' : 'bg-slate-200'}`} />
+            <img src={img} alt="" className="h-40 w-full rounded-lg object-cover" />
+            <div className="overflow-hidden rounded-lg border border-slate-200 text-sm">
+              <div className="flex items-center justify-between px-4 py-2.5 font-semibold text-white" style={{ background: brandColor }}>
+                <span className="w-1/2">Line Item</span><span className="w-1/4 text-right">Annual</span><span className="w-1/4 text-right">Per SF</span>
+              </div>
+              {PREVIEW_FIN_ROWS.map((r, i) => (
+                <div key={i} className={`flex items-center justify-between px-4 py-2.5 ${i % 2 ? 'bg-slate-50' : 'bg-white'}`}>
+                  <span className="w-1/2 text-slate-700">{r[0]}</span>
+                  <span className="w-1/4 text-right font-medium text-slate-800">{r[1]}</span>
+                  <span className="w-1/4 text-right text-slate-500">{r[2]}</span>
                 </div>
               ))}
             </div>
@@ -1957,13 +2003,12 @@ function PreviewPage({ index, brandColor, docType }) {
         )}
         {variant === 2 && (
           <>
-            <img src={FALLBACK_IMG} alt="" className="h-40 w-full rounded-lg object-cover" />
+            <img src={img} alt="" className="h-40 w-full rounded-lg object-cover" />
             <div className="grid grid-cols-2 gap-4">
-              {Array.from({ length: 4 }).map((_, i) => (
+              {PREVIEW_HIGHLIGHTS.map((c, i) => (
                 <div key={i} className="rounded-lg border border-slate-200 p-4">
-                  <div className="mb-2 h-6 w-6 rounded" style={{ background: brandColor }} />
-                  <div className="h-2.5 w-3/4 rounded bg-slate-200" />
-                  <div className="mt-1.5 h-2.5 w-1/2 rounded bg-slate-100" />
+                  <p className="text-sm font-bold" style={{ color: brandColor }}>{c.t}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-600">{c.d}</p>
                 </div>
               ))}
             </div>
@@ -1971,15 +2016,15 @@ function PreviewPage({ index, brandColor, docType }) {
         )}
         {variant === 3 && (
           <div className="flex gap-6">
-            <img src={FALLBACK_IMG} alt="" className="h-56 w-1/2 shrink-0 rounded-lg object-cover" />
-            <div className="flex-1 space-y-2.5">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: brandColor }} />
-                  <div className="h-2.5 rounded bg-slate-200" style={{ width: `${90 - i * 6}%` }} />
-                </div>
+            <img src={img} alt="" className="h-56 w-1/2 shrink-0 rounded-lg object-cover" />
+            <ul className="flex-1 space-y-2.5">
+              {PREVIEW_BULLETS.map((b, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm leading-relaxed text-slate-600">
+                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full" style={{ background: brandColor }} />
+                  {b}
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
         )}
       </div>
@@ -1991,11 +2036,12 @@ function PreviewPage({ index, brandColor, docType }) {
 }
 
 // A tiny thumbnail of a page for the bottom filmstrip.
-function MiniPage({ index, brandColor }) {
+function MiniPage({ index, brandColor, template }) {
+  const img = template ? templateImage(template) : FALLBACK_IMG
   if (index === 0) {
     return (
       <div className="h-full w-full">
-        <img src={FALLBACK_IMG} alt="" className="h-2/3 w-full object-cover" />
+        <img src={img} alt="" className="h-2/3 w-full object-cover" />
         <div className="h-1/3 bg-white" style={{ borderTop: `2px solid ${brandColor}` }} />
       </div>
     )
@@ -2004,7 +2050,7 @@ function MiniPage({ index, brandColor }) {
     <div className="h-full w-full bg-white">
       <div className="h-2" style={{ background: brandColor }} />
       <div className="flex gap-1 p-1.5">
-        <img src={FALLBACK_IMG} alt="" className="h-8 w-10 shrink-0 rounded object-cover" />
+        <img src={img} alt="" className="h-8 w-10 shrink-0 rounded object-cover" />
         <div className="flex-1 space-y-1 pt-0.5">
           <div className="h-1 w-3/4 rounded bg-slate-200" />
           <div className="h-1 w-1/2 rounded bg-slate-100" />
@@ -2084,7 +2130,7 @@ function TemplatePreviewModal({ open, onClose, template, onTemplateChange, brand
         </button>
 
         <div className="relative w-full max-w-3xl overflow-hidden rounded-lg bg-white shadow-2xl">
-          <PreviewPage index={page} brandColor={brandColor} docType={docType} />
+          <PreviewPage index={page} brandColor={brandColor} docType={docType} template={template} />
           <span className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-slate-900/70 px-3 py-1 text-xs font-semibold text-white">
             Page {page + 1} of {TOTAL}
           </span>
@@ -2111,7 +2157,7 @@ function TemplatePreviewModal({ open, onClose, template, onTemplateChange, brand
               page === i ? 'border-orange-400' : 'border-transparent opacity-70 hover:opacity-100'
             }`}
           >
-            <MiniPage index={i} brandColor={brandColor} />
+            <MiniPage index={i} brandColor={brandColor} template={template} />
           </button>
         ))}
       </div>
