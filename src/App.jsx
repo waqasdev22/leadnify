@@ -352,6 +352,25 @@ const currency = (n) =>
 
 const uid = () => Date.now() + Math.floor(Math.random() * 1000)
 
+// Relative "time ago" from a millisecond timestamp — updates as time passes.
+const timeAgo = (ts) => {
+  if (!ts) return ''
+  const s = Math.max(0, Math.floor((Date.now() - ts) / 1000))
+  if (s < 45) return 'just now'
+  const m = Math.floor(s / 60)
+  if (m < 60) return `${m} min${m === 1 ? '' : 's'} ago`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h} hour${h === 1 ? '' : 's'} ago`
+  const d = Math.floor(h / 24)
+  if (d < 7) return `${d} day${d === 1 ? '' : 's'} ago`
+  const w = Math.floor(d / 7)
+  if (w < 5) return `${w} week${w === 1 ? '' : 's'} ago`
+  const mo = Math.floor(d / 30)
+  if (mo < 12) return `${mo} month${mo === 1 ? '' : 's'} ago`
+  const y = Math.floor(d / 365)
+  return `${y} year${y === 1 ? '' : 's'} ago`
+}
+
 /* --- Real action helpers (share / email / social / pdf) ------------------- */
 
 const shareUrlFor = (item) =>
@@ -1342,10 +1361,10 @@ function PackageCard({
               {t}
             </span>
           ))}
-          {pkg.updated && (
+          {(pkg.ts || pkg.updated) && (
             <span className="ml-auto flex items-center gap-1 text-xs text-slate-400">
               <Clock className="h-3.5 w-3.5" />
-              {pkg.updated}
+              {pkg.ts ? timeAgo(pkg.ts) : pkg.updated}
             </span>
           )}
         </div>
@@ -7277,6 +7296,12 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
 
 function DashboardPage({ packages, setPackages, setListings, globalQuery, createNonce, resume, onResumeHandled, onNavigate, onSignOut, user, can = () => true }) {
   const notify = useToast()
+  // Re-render once a minute so the "time ago" labels on cards stay current.
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 60000)
+    return () => clearInterval(id)
+  }, [])
   const [subTab, setSubTab] = useState('my')
   const [search, setSearch] = useState('')
   const [docType, setDocType] = useState('All Doc Types')
@@ -7428,6 +7453,7 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
       tags: builderCfg?.propertyType ? [builderCfg.propertyType] : [],
       image: '',
       updated: 'just now',
+      ts: Date.now(),
       progress,
       price: Number(bf.price) || 0,
       owner: newDoc.owner,
@@ -7497,6 +7523,7 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
           id: uid(),
           image: '',
           updated: 'just now',
+          ts: Date.now(),
           progress: 10,
           ...data,
           owner: newDoc.owner,
@@ -7518,7 +7545,7 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
 
   const duplicate = (pkg) => {
     setPackages((list) => [
-      { ...pkg, id: uid(), title: `${pkg.title} (Copy)`, status: 'Draft', progress: pkg.progress ?? 20, updated: 'just now' },
+      { ...pkg, id: uid(), title: `${pkg.title} (Copy)`, status: 'Draft', progress: pkg.progress ?? 20, updated: 'just now', ts: Date.now() },
       ...list,
     ])
     notify('Package duplicated')
