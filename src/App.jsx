@@ -9766,6 +9766,8 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
 
   const views = prospects.reduce((s, p) => s + p.views, 0)
   const downloads = prospects.reduce((s, p) => s + p.downloads, 0)
+  const openOms = prospects.filter((p) => p.views > 0).length
+  const executedCa = prospects.filter((p) => /NDA/i.test(p.access)).length
   const visitorUrl = `${window.location.origin}${window.location.pathname}?room=${room.id}`
 
   // Save this room so the public "?room=" gate page (opened in a new tab) can render it.
@@ -9889,12 +9891,10 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
         </div>
 
         {/* Stats */}
-        <div className="mt-4 grid grid-cols-2 divide-slate-100 rounded-lg border border-slate-100 sm:grid-cols-3 lg:grid-cols-5 lg:divide-x">
-          <RoomStat icon={FileText} value={files.length} label="Files" color="text-blue-500" />
-          <RoomStat icon={Users} value={prospects.length} label="Prospects" color="text-indigo-500" />
-          <RoomStat icon={Clock} value={0} label="Pending requests" color="text-slate-400" />
-          <RoomStat icon={Eye} value={views} label="OM & room views" color="text-emerald-500" />
-          <RoomStat icon={Download} value={downloads} label="Downloads" color="text-sky-500" />
+        <div className="mt-4 grid grid-cols-3 divide-slate-100 rounded-lg border border-slate-100 lg:divide-x">
+          <RoomStat icon={Eye} value={views} label="Page Views" color="text-emerald-500" />
+          <RoomStat icon={FileText} value={openOms} label="Open OM's" color="text-blue-500" />
+          <RoomStat icon={CheckCircle2} value={executedCa} label="Executed CA" color="text-purple-500" />
         </div>
       </div>
 
