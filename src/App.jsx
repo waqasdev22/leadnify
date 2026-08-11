@@ -10337,7 +10337,7 @@ function TeamPermissionsPage({ myUid }) {
     dbSet(dbRef(db, `users/${uid}/overrides`), encodeOverrides(overrides)).catch(() => notify('Save failed — check DB rules', 'error'))
   }
 
-  const roleBadge = (r) => ({ Admin: 'bg-amber-50 text-amber-700', Member: 'bg-slate-100 text-slate-600', Coordinator: 'bg-emerald-50 text-emerald-700' }[r] || 'bg-slate-100 text-slate-600')
+  const roleBadge = (r) => ({ Owner: 'bg-amber-50 text-amber-700', Admin: 'bg-rose-50 text-rose-700', Manager: 'bg-indigo-50 text-indigo-700', Member: 'bg-slate-100 text-slate-600' }[r] || 'bg-slate-100 text-slate-600')
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-8">
@@ -10488,7 +10488,7 @@ export default function App() {
           profile = users[u.uid]
           if (!profile) {
             const isFirst = Object.keys(users).length === 0
-            profile = { name, email: u.email || '', role: isFirst ? 'Admin' : 'Member', overrides: {}, createdAt: u.metadata?.creationTime || '' }
+            profile = { name, email: u.email || '', role: isFirst ? 'Owner' : 'Member', overrides: {}, createdAt: u.metadata?.creationTime || '' }
             await dbSet(dbRef(db, `users/${u.uid}`), profile)
           }
         } catch {

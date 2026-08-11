@@ -38,10 +38,12 @@ export const PERMISSION_GROUPS = [
     ],
   },
   {
-    group: 'Team',
+    group: 'Team & Billing',
     perms: [
       { key: 'team.invite', label: 'Invite team members' },
       { key: 'team.manage_permissions', label: 'Manage roles & permissions' },
+      { key: 'team.view_all_leads', label: "See all team members' leads & data" },
+      { key: 'billing.manage', label: 'Manage billing & subscription' },
     ],
   },
 ]
@@ -49,26 +51,25 @@ export const PERMISSION_GROUPS = [
 export const ALL_PERMS = PERMISSION_GROUPS.flatMap((g) => g.perms.map((p) => p.key))
 
 // Role presets — the default permission set for each role.
+// Owner  = account owner, full control.
+// Admin  = Manager + team management & billing (effectively everything).
+// Manager= all features, sees all team members' leads & data. Paid seat.
+// Member = all features, sees only their own leads & data. Paid seat.
+const NO_TEAM_MGMT = ['team.invite', 'team.manage_permissions', 'billing.manage']
 export const ROLE_PRESETS = {
-  Admin: [...ALL_PERMS], // full control
-  Member: [
-    'dashboard.view', 'listings.view', 'dealrooms.view',
-    'listing.create', 'listing.edit', 'listing.publish',
-    'document.create', 'document.edit', 'document.download_pdf',
-    'dealroom.create',
-  ],
-  Coordinator: [
-    'dashboard.view', 'listings.view',
-    'listing.create', 'document.create',
-  ],
+  Owner: [...ALL_PERMS],
+  Admin: [...ALL_PERMS],
+  Manager: ALL_PERMS.filter((k) => !NO_TEAM_MGMT.includes(k)),
+  Member: ALL_PERMS.filter((k) => !NO_TEAM_MGMT.includes(k) && k !== 'team.view_all_leads'),
 }
 
 export const ROLES = Object.keys(ROLE_PRESETS)
 
 export const ROLE_INFO = {
-  Admin: { color: 'amber', desc: 'Everything a Member has, plus team management & billing.' },
-  Member: { color: 'slate', desc: 'Own documents, all features. Paid seat.' },
-  Coordinator: { color: 'emerald', desc: 'Creates documents on behalf of others. Free seat.' },
+  Owner: { color: 'amber', desc: 'Account owner — full control, including billing & team management.' },
+  Admin: { color: 'rose', desc: 'All features plus team management & billing.' },
+  Manager: { color: 'indigo', desc: "All features. Sees all team members' leads & data. Paid seat." },
+  Member: { color: 'slate', desc: 'All features. Sees only their own leads & data. Paid seat.' },
 }
 
 // Realtime DB keys can't contain "." — encode permission keys for storage.
