@@ -1275,10 +1275,12 @@ function PackageCard({
   onDelete,
   onTransfer,
   onConvert,
+  onOpen,
   selectMode,
   selected,
   onToggleSelect,
 }) {
+  const canOpen = onOpen && !selectMode
   const notify = useToast()
   const isDraft = pkg.status === 'Draft'
 
@@ -1305,8 +1307,12 @@ function PackageCard({
         selected ? 'border-brand ring-2 ring-orange-200' : 'border-slate-200'
       }`}
     >
-      {/* Preview / image */}
-      <div className="relative h-44 overflow-hidden">
+      {/* Preview / image — click opens the property's deal room */}
+      <div
+        className={`relative h-44 overflow-hidden ${canOpen ? 'cursor-pointer' : ''}`}
+        onClick={() => canOpen && onOpen(pkg)}
+        title={canOpen ? 'Open deal room' : undefined}
+      >
         {pkg.image ? (
           <img
             src={pkg.image}
@@ -1342,7 +1348,12 @@ function PackageCard({
 
       {/* Body */}
       <div className="p-4">
-        <h3 className="text-base font-bold text-slate-900">{pkg.title}</h3>
+        <h3
+          className={`text-base font-bold text-slate-900 ${canOpen ? 'cursor-pointer hover:text-brand' : ''}`}
+          onClick={() => canOpen && onOpen(pkg)}
+        >
+          {pkg.title}
+        </h3>
         <p className="mt-1 flex items-start gap-1 text-sm text-slate-500">
           <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <span>{pkg.address}</span>
@@ -7352,7 +7363,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
   )
 }
 
-function DashboardPage({ packages, setPackages, setListings, globalQuery, createNonce, resume, onResumeHandled, onNavigate, onSignOut, user, can = () => true }) {
+function DashboardPage({ packages, setPackages, setListings, globalQuery, createNonce, resume, onResumeHandled, onNavigate, onSignOut, onOpenDealRoom, user, can = () => true }) {
   const notify = useToast()
   // Re-render once a minute so the "time ago" labels on cards stay current.
   const [, setTick] = useState(0)
@@ -7758,6 +7769,7 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
         onDelete={setConfirm}
         onTransfer={transfer}
         onConvert={convert}
+        onOpen={onOpenDealRoom}
         selectMode={selectMode}
         selected={selectedIds.includes(pkg.id)}
         onToggleSelect={() => toggleSelected(pkg.id)}
@@ -10098,11 +10110,19 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
   )
 }
 
-function DealRoomsPage({ dealRooms, setDealRooms, onEditDocument }) {
+function DealRoomsPage({ dealRooms, setDealRooms, onEditDocument, openTarget, onOpenHandled }) {
   const notify = useToast()
   const [modalOpen, setModalOpen] = useState(false)
   const [confirm, setConfirm] = useState(null)
   const [openRoom, setOpenRoom] = useState(null)
+
+  // Open a specific room when navigated here from the Dashboard.
+  useEffect(() => {
+    if (openTarget) {
+      setOpenRoom(openTarget)
+      onOpenHandled?.()
+    }
+  }, [openTarget]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const create = (data) => {
     setDealRooms((list) => [
@@ -10554,6 +10574,37 @@ export default function App() {
     setResume({ draft, nonce: (resume?.nonce || 0) + 1 })
   }
 
+  // Clicking a property on the Dashboard opens that property's Deal Room —
+  // matching an existing room by address/name, or creating one on the fly.
+  const [dealRoomTarget, setDealRoomTarget] = useState(null)
+  const openDealRoomFor = (pkg) => {
+    if (!pkg) return
+    const addr = (pkg.address || '').trim().toLowerCase()
+    const name = (pkg.title || pkg.name || '').trim().toLowerCase()
+    let room = dealRooms.find(
+      (r) =>
+        (addr && (r.address || '').trim().toLowerCase() === addr) ||
+        (name && (r.name || '').trim().toLowerCase() === name),
+    )
+    if (!room) {
+      room = {
+        id: uid(),
+        name: pkg.title || pkg.name || 'Untitled Property',
+        address: pkg.address || '',
+        image: pkg.image || '',
+        status: 'Active',
+        access: 'Free Access',
+        files: 0,
+        members: 0,
+        updated: 'just now',
+      }
+      setDealRooms((list) => [room, ...list])
+    }
+    setDealRoomTarget(room)
+    setActive('deals')
+    setMobileNav(false)
+  }
+
   if (!authReady) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-400">
@@ -10577,11 +10628,11 @@ export default function App() {
   const renderScreen = () => {
     switch (active) {
       case 'dashboard':
-        return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} resume={resume} onResumeHandled={() => setResume(null)} onNavigate={navigate} onSignOut={handleSignOut} user={user} can={can} />
+        return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} resume={resume} onResumeHandled={() => setResume(null)} onNavigate={navigate} onSignOut={handleSignOut} onOpenDealRoom={openDealRoomFor} user={user} can={can} />
       case 'listings':
         return <ListingHubPage listings={listings} setListings={setListings} globalQuery={query} onCreateNew={startCreate} onResumeDraft={resumeDraft} can={can} />
       case 'deals':
-        return <DealRoomsPage dealRooms={dealRooms} setDealRooms={setDealRooms} onEditDocument={resumeDraft} />
+        return <DealRoomsPage dealRooms={dealRooms} setDealRooms={setDealRooms} onEditDocument={resumeDraft} openTarget={dealRoomTarget} onOpenHandled={() => setDealRoomTarget(null)} />
       case 'team':
         return <TeamPermissionsPage myUid={myUid} />
       case 'documents':
@@ -10595,7 +10646,7 @@ export default function App() {
       case 'knowledge':
         return <PlaceholderPage label="Knowledge Base" icon={BookOpen} />
       default:
-        return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} resume={resume} onResumeHandled={() => setResume(null)} onNavigate={navigate} onSignOut={handleSignOut} user={user} can={can} />
+        return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} resume={resume} onResumeHandled={() => setResume(null)} onNavigate={navigate} onSignOut={handleSignOut} onOpenDealRoom={openDealRoomFor} user={user} can={can} />
     }
   }
 
