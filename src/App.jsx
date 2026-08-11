@@ -333,10 +333,10 @@ const INITIAL_DEALS = [
 
 // Deal Rooms = confidential data rooms behind a listing's access gate.
 const INITIAL_DEAL_ROOMS = [
-  { id: 1, name: 'Riverside Business Park', address: '1200 Riverside Dr, Austin, TX', image: propertyImage('1486406146926-c627a92ad1ab'), status: 'Active', access: 'Password', files: 8, members: 5, updated: '2h ago' },
+  { id: 1, name: 'Riverside Business Park', address: '1200 Riverside Dr, Austin, TX', image: propertyImage('1486406146926-c627a92ad1ab'), status: 'Active', access: 'Contact Required', files: 8, members: 5, updated: '2h ago' },
   { id: 2, name: 'Summit Retail Center', address: '455 Market St, Dallas, TX', image: propertyImage('1560518883-ce09059eeffa'), status: 'Active', access: 'Free Access', files: 4, members: 2, updated: '1d ago' },
   { id: 3, name: 'Northgate Logistics Hub', address: '8900 Industrial Pkwy, Houston, TX', image: propertyImage('1553413077-190dd305871c'), status: 'Archived', access: 'Free Access', files: 12, members: 9, updated: '3d ago' },
-  { id: 4, name: 'Cypress Corporate Tower', address: '', image: '', status: 'Active', access: 'Password', files: 1, members: 0, updated: '3d ago' },
+  { id: 4, name: 'Cypress Corporate Tower', address: '', image: '', status: 'Active', access: 'NDA - Approval Required', files: 1, members: 0, updated: '3d ago' },
 ]
 
 /* -------------------------------------------------------------------------- */
@@ -9439,7 +9439,7 @@ function DealForm({ initialStage, onSubmit, onCancel }) {
 /* -------------------------------------------------------------------------- */
 
 const DEAL_ROOM_STATUSES = ['Active', 'Archived']
-const DEAL_ROOM_ACCESS = ['Free Access', 'Password', 'Registered Users', 'Private']
+const DEAL_ROOM_ACCESS = ['Free Access', 'Contact Required', 'NDA - Auto Access', 'NDA - Approval Required']
 
 function DealRoomForm({ onSubmit, onCancel }) {
   const [form, setForm] = useState({ name: '', address: '', status: 'Active', access: 'Free Access' })
@@ -9689,7 +9689,7 @@ function DocumentHubView({ room, onBack, notify, onEditDocument }) {
           </div>
           <label className="mt-3 block text-xs font-medium text-slate-500">Access to OM &amp; documents</label>
           <select value={access} onChange={(e) => setAccess(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none">
-            <option>Free Access</option><option>Email gate</option><option>NDA</option><option>Password</option>
+            {DEAL_ROOM_ACCESS.map((o) => <option key={o}>{o}</option>)}
           </select>
           <div className="mt-3 flex items-center gap-2">
             <input readOnly value={publicUrl} className="flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500 outline-none" />
@@ -9841,9 +9841,9 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
   }
 
   const accessBadge = (a) =>
-    a === 'NDA'
+    a && a.startsWith('NDA')
       ? 'bg-purple-50 text-purple-700'
-      : a === 'Email gate'
+      : a === 'Contact Required'
         ? 'bg-teal-50 text-teal-700'
         : 'bg-slate-100 text-slate-600'
 
@@ -10014,7 +10014,15 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
               <SelectInput value={access} onChange={(e) => { setAccess(e.target.value); notify('Access gate updated') }} options={DEAL_ROOM_ACCESS} />
             </div>
             <p className="mt-2 text-xs text-slate-400">
-              {access === 'Free Access' ? 'Anyone can view and download — no gate.' : `Visitors must pass the "${access}" gate before viewing.`}
+              {access === 'Free Access'
+                ? 'Anyone can view and download — no gate.'
+                : access === 'Contact Required'
+                  ? 'Visitors submit their contact details before viewing.'
+                  : access === 'NDA - Auto Access'
+                    ? 'Visitors e-sign an NDA and get instant access.'
+                    : access === 'NDA - Approval Required'
+                      ? 'Visitors e-sign an NDA, then you approve each request.'
+                      : `Visitors must pass the "${access}" gate before viewing.`}
             </p>
           </div>
 
