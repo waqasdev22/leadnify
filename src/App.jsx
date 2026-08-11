@@ -8355,7 +8355,9 @@ function MicrositePreview({ open, onClose, listings, primary }) {
 
 // Builds a fully self-contained microsite HTML page (Leaflet via CDN, data baked
 // in) so "Preview" can open the live listings site in a brand-new browser tab.
-export function buildMicrositeHtml(items, brandColor, template = 'Modern') {
+export function buildMicrositeHtml(items, brandColor, template = 'Modern', defaultView = 'mapgrid') {
+  // Which view the microsite opens in (from the owner's "Default View" setting).
+  const VIEW = ['map', 'mapgrid', 'grid', 'card', 'list'].includes(defaultView) ? defaultView : 'mapgrid'
   // Each microsite theme drives the accent colour + heading font. Because every
   // accent in the CSS below reads ${primary}, reassigning it themes the whole page.
   const THEMES = {
@@ -8398,19 +8400,22 @@ input,select{border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;font-si
 .content{padding:24px;display:grid;gap:24px}
 .content.mapgrid{grid-template-columns:1fr 1fr}
 .content.map{grid-template-columns:1fr}
-.content.grid #map,.content.list #map{display:none}
+.content.grid #map,.content.list #map,.content.card #map{display:none}
 .content.map #cards{display:none}
 #map{height:560px;border-radius:12px;border:1px solid #e2e8f0;z-index:0}
 #cards{display:grid;gap:20px}
 .content.mapgrid #cards{grid-template-columns:1fr 1fr;align-content:start}
 .content.grid #cards{grid-template-columns:repeat(3,1fr)}
-.content.list #cards{grid-template-columns:1fr}
+.content.list #cards,.content.card #cards{grid-template-columns:1fr}
+.content.card #cards{max-width:1000px;margin:0 auto;width:100%}
 .card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.05)}
-.content.list .card{display:flex}
+.content.list .card,.content.card .card{display:flex}
 .imgwrap{position:relative}
 .content.list .imgwrap{width:260px;flex:none}
+.content.card .imgwrap{width:440px;flex:none}
 .card img{width:100%;height:208px;object-fit:cover;display:block}
-.content.list .card img{height:100%}
+.content.list .card img,.content.card .card img{height:100%;min-height:100%}
+.content.card .body{padding:26px}
 .badge{position:absolute;left:12px;top:12px;color:#fff;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:4px 8px;border-radius:4px}
 .price{position:absolute;right:12px;bottom:12px;background:rgba(15,23,42,.8);color:#fff;font-size:12px;font-weight:700;padding:4px 8px;border-radius:4px}
 .inner2{flex:1;display:flex;flex-direction:column}
@@ -8510,16 +8515,16 @@ body.detail-open .detail{display:block}
   <div class="seg" id="filterSeg"><button data-f="All" class="active">All</button><button data-f="For Sale">For Sale</button><button data-f="For Lease">For Lease</button></div>
   <input id="search" placeholder="Search..."/>
   <select id="sort"><option value="Newest">Sort: Newest First</option><option value="PriceHigh">Sort: Price High to Low</option><option value="PriceLow">Sort: Price Low to High</option></select>
-  <div class="spacer"><span class="result" id="result"></span><div class="seg" id="viewSeg"><button data-v="map">Map</button><button data-v="mapgrid" class="active">Map + Grid</button><button data-v="grid">Grid</button><button data-v="list">List</button></div></div>
+  <div class="spacer"><span class="result" id="result"></span><div class="seg" id="viewSeg"><button data-v="map" class="${VIEW === 'map' ? 'active' : ''}">Map</button><button data-v="mapgrid" class="${VIEW === 'mapgrid' ? 'active' : ''}">Map + Grid</button><button data-v="grid" class="${VIEW === 'grid' ? 'active' : ''}">Grid</button><button data-v="card" class="${VIEW === 'card' ? 'active' : ''}">Card</button><button data-v="list" class="${VIEW === 'list' ? 'active' : ''}">List</button></div></div>
 </div></div>
-<div class="content mapgrid" id="content"><div id="map"></div><div id="cards"></div></div>
+<div class="content ${VIEW}" id="content"><div id="map"></div><div id="cards"></div></div>
 <footer class="list-footer"><div class="line"></div><p>Powered by <b>MyCREBlueprint</b></p></footer>
 <div class="detail" id="detailView"></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 var DATA=${JSON.stringify(items)};
 var PRIMARY=${JSON.stringify(primary)};
-var state={view:'mapgrid',filter:'All',search:'',sort:'Newest'};
+var state={view:'${VIEW}',filter:'All',search:'',sort:'Newest'};
 var map=null,markers=[];
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
 function pinIcon(){return L.divIcon({className:'',html:'<svg width="30" height="30" viewBox="0 0 24 24" fill="'+PRIMARY+'" stroke="white" stroke-width="1.5"><path d="M12 2C8 2 5 5 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-4-3-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="white" stroke="none"/></svg>',iconSize:[30,30],iconAnchor:[15,30],popupAnchor:[0,-28]});}
@@ -8751,7 +8756,7 @@ function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onRes
 
   // Embed URL carries the theme in the URL (?t=&c=) so it renders correctly on
   // any external site / visitor browser, where localStorage isn't available.
-  const embedUrl = `${hubUrl}&t=${encodeURIComponent(micrositeTpl)}&c=${primary.replace('#', '')}`
+  const embedUrl = `${hubUrl}&t=${encodeURIComponent(micrositeTpl)}&c=${primary.replace('#', '')}&v=${encodeURIComponent(defaultView)}`
   const embedCode = `<iframe
   id="cre-listings"
   src="${embedUrl}"
@@ -8805,12 +8810,12 @@ function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onRes
     try {
       localStorage.setItem(
         'crebuilder_hub',
-        JSON.stringify({ items: toMicrositeItems(rows), primary, template: micrositeTpl }),
+        JSON.stringify({ items: toMicrositeItems(rows), primary, template: micrositeTpl, defaultView }),
       )
     } catch {
       /* ignore storage errors */
     }
-  }, [listings, primary, micrositeTpl])
+  }, [listings, primary, micrositeTpl, defaultView])
 
   const listedCount = rows.filter((l) => l.listed).length
   const unlistedCount = rows.length - listedCount

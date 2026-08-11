@@ -32,9 +32,11 @@ if (params.get('hub') !== null) {
     (params.get('c') ? '#' + params.get('c') : null) ||
     (saved && saved.primary) ||
     '#F97316'
+  // ?v= view wins (for embeds); else the owner's saved Default View, then the default.
+  const defaultView = params.get('v') || (saved && saved.defaultView) || 'mapgrid'
 
   document.open()
-  document.write(buildMicrositeHtml(items, primary, template))
+  document.write(buildMicrositeHtml(items, primary, template, defaultView))
   document.close()
 } else if (params.get('room') !== null) {
   const id = params.get('room')
