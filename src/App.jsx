@@ -510,6 +510,7 @@ const NAV_ITEMS = [
   { key: 'dashboard', label: 'Dashboard', icon: Home },
   { key: 'listings', label: 'Listing Hub', icon: Globe },
   { key: 'deals', label: 'Deal Rooms', icon: FolderLock },
+  { key: 'crm', label: 'CRM', icon: Contact },
 ]
 
 /* -------------------------------------------------------------------------- */
@@ -10311,6 +10312,339 @@ function DealCard({ deal, accent, dragging, onDragStart, onDragEnd, onDelete }) 
 /*  Placeholder Screens                                                       */
 /* -------------------------------------------------------------------------- */
 
+/* -------------------------------------------------------------------------- */
+/*  CRM                                                                        */
+/* -------------------------------------------------------------------------- */
+
+const CRM_TABS = [
+  { key: 'today', label: 'Today', icon: Clock },
+  { key: 'leads', label: 'Leads', icon: Target },
+  { key: 'contacts', label: 'Contacts', icon: Contact },
+  { key: 'pipelines', label: 'Pipelines', icon: TrendingUp },
+  { key: 'tasks', label: 'Tasks', icon: ClipboardList },
+  { key: 'scripts', label: 'Scripts', icon: FileText },
+  { key: 'automations', label: 'Automations', icon: Zap },
+  { key: 'reports', label: 'Reports', icon: BarChart3 },
+]
+
+const CRM_LEADS = [
+  { id: 'l1', name: 'Jordan Miller', company: 'Miller Capital', email: 'jordan@millercap.com', phone: '(602) 555-0142', source: 'Website', status: 'New', value: 4200000, owner: 'Waqas', last: '2h ago' },
+  { id: 'l2', name: 'Priya Shah', company: 'Everest Holdings', email: 'priya@everest.com', phone: '(480) 555-0199', source: 'Referral', status: 'Contacted', value: 8700000, owner: 'Waqas', last: '5h ago' },
+  { id: 'l3', name: 'Marcus Lee', company: 'Lee Retail Group', email: 'marcus@leerg.com', phone: '(602) 555-0177', source: 'Listing Hub', status: 'Qualified', value: 3100000, owner: 'Maya Chen', last: '1d ago' },
+  { id: 'l4', name: 'Sofia Ramirez', company: 'Ramirez Ventures', email: 'sofia@rventures.com', phone: '(520) 555-0110', source: 'Cold Call', status: 'New', value: 2450000, owner: 'Devon Park', last: '1d ago' },
+  { id: 'l5', name: 'Aaron Cole', company: 'Cole Net Lease', email: 'aaron@colenl.com', phone: '(602) 555-0164', source: 'Email Blast', status: 'Contacted', value: 6300000, owner: 'Sam Rivera', last: '2d ago' },
+  { id: 'l6', name: 'Nina Patel', company: 'Summit Realty', email: 'nina@summit.com', phone: '(480) 555-0133', source: 'Website', status: 'Qualified', value: 5100000, owner: 'Waqas', last: '3d ago' },
+]
+
+const CRM_CONTACTS = [
+  { id: 'c1', name: 'Jordan Miller', title: 'Principal', company: 'Miller Capital', email: 'jordan@millercap.com', phone: '(602) 555-0142', owner: 'Waqas' },
+  { id: 'c2', name: 'Priya Shah', title: 'Acquisitions', company: 'Everest Holdings', email: 'priya@everest.com', phone: '(480) 555-0199', owner: 'Waqas' },
+  { id: 'c3', name: 'Marcus Lee', title: 'Managing Partner', company: 'Lee Retail Group', email: 'marcus@leerg.com', phone: '(602) 555-0177', owner: 'Maya Chen' },
+  { id: 'c4', name: 'Sofia Ramirez', title: 'Investor', company: 'Ramirez Ventures', email: 'sofia@rventures.com', phone: '(520) 555-0110', owner: 'Devon Park' },
+  { id: 'c5', name: 'Aaron Cole', title: 'Director', company: 'Cole Net Lease', email: 'aaron@colenl.com', phone: '(602) 555-0164', owner: 'Sam Rivera' },
+]
+
+const CRM_STAGES = ['New', 'Contacted', 'Qualified', 'Proposal', 'Closed Won']
+const CRM_DEALS = [
+  { id: 'd1', title: 'Olive Grove Plaza', company: 'Miller Capital', value: 10900000, stage: 'Proposal', owner: 'Waqas' },
+  { id: 'd2', title: 'Summit Retail Center', company: 'Everest Holdings', value: 8700000, stage: 'Qualified', owner: 'Waqas' },
+  { id: 'd3', title: 'Cypress Corporate Tower', company: 'Lee Retail Group', value: 14250000, stage: 'New', owner: 'Maya Chen' },
+  { id: 'd4', title: 'Riverside Business Park', company: 'Ramirez Ventures', value: 6300000, stage: 'Contacted', owner: 'Devon Park' },
+  { id: 'd5', title: 'Northgate Logistics Hub', company: 'Cole Net Lease', value: 12750000, stage: 'Closed Won', owner: 'Sam Rivera' },
+  { id: 'd6', title: 'Metro Office Plaza', company: 'Summit Realty', value: 5100000, stage: 'Proposal', owner: 'Waqas' },
+]
+
+const CRM_TASKS_SEED = [
+  { id: 't1', title: 'Call Jordan Miller re: Olive Grove OM', due: 'Today', related: 'Miller Capital', owner: 'Waqas', done: false },
+  { id: 't2', title: 'Send NDA to Priya Shah', due: 'Today', related: 'Everest Holdings', owner: 'Waqas', done: false },
+  { id: 't3', title: 'Follow up: Summit Retail tour', due: 'Tomorrow', related: 'Summit Retail Center', owner: 'Waqas', done: false },
+  { id: 't4', title: 'Prepare BOV for Lee Retail', due: 'Fri', related: 'Lee Retail Group', owner: 'Maya Chen', done: false },
+  { id: 't5', title: 'Update pipeline notes', due: 'Today', related: 'Ramirez Ventures', owner: 'Devon Park', done: true },
+]
+
+const CRM_SCRIPTS = [
+  { id: 's1', title: 'Cold Call — Investor Intro', type: 'Call', owner: 'Waqas', body: 'Hi [Name], this is Waqas with MyCREBlueprint. I noticed you invest in [Property Type] in [City] — I have an off-market opportunity at a [Cap Rate] cap. Do you have 2 minutes?' },
+  { id: 's2', title: 'Follow-up Email — After Tour', type: 'Email', owner: 'Waqas', body: 'Hi [Name], thanks for touring [Property Name]. Attached is the full OM. The asking price is [Price] at a [Cap Rate] cap. Happy to answer any questions.' },
+  { id: 's3', title: 'NDA Request — Deal Room', type: 'Email', owner: 'Maya Chen', body: 'Hi [Name], to access the confidential financials for [Property Name], please e-sign the NDA at the link below. You will get instant access to the data room.' },
+  { id: 's4', title: 'Voicemail — No Answer', type: 'Call', owner: 'Sam Rivera', body: 'Hi [Name], Waqas here regarding [Property Name] in [City]. Give me a call back at your convenience — I think this fits your buy-box well.' },
+]
+
+const CRM_AUTOMATIONS_SEED = [
+  { id: 'a1', name: 'New lead → send welcome email', trigger: 'Lead created', action: 'Send "Investor Intro" email', on: true, owner: 'Waqas' },
+  { id: 'a2', name: 'NDA signed → notify agent', trigger: 'CA executed', action: 'Notify owner + create task', on: true, owner: 'Waqas' },
+  { id: 'a3', name: 'No activity 7 days → follow-up task', trigger: 'Lead idle 7 days', action: 'Create follow-up task', on: false, owner: 'Maya Chen' },
+  { id: 'a4', name: 'OM opened → alert', trigger: 'OM opened', action: 'Send Slack + email alert', on: true, owner: 'Devon Park' },
+]
+
+const crmStatusBadge = (s) => ({
+  New: 'bg-blue-50 text-blue-700',
+  Contacted: 'bg-amber-50 text-amber-700',
+  Qualified: 'bg-emerald-50 text-emerald-700',
+  Proposal: 'bg-violet-50 text-violet-700',
+  'Closed Won': 'bg-teal-50 text-teal-700',
+}[s] || 'bg-slate-100 text-slate-600')
+
+function CrmKpi({ icon: Icon, label, value, tone = 'text-brand' }) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+        <Icon className={`h-4 w-4 ${tone}`} /> {label}
+      </div>
+      <p className="mt-2 text-2xl font-extrabold text-slate-900">{value}</p>
+    </div>
+  )
+}
+
+function CRMPage({ user }) {
+  const notify = useToast()
+  const me = user?.name || CURRENT_USER.name
+  const [tab, setTab] = useState('today')
+  const [scope, setScope] = useState('mine') // 'mine' | 'team'
+  const [search, setSearch] = useState('')
+  const [tasks, setTasks] = useState(CRM_TASKS_SEED)
+  const [autos, setAutos] = useState(CRM_AUTOMATIONS_SEED)
+
+  const mine = (arr) => (scope === 'mine' ? arr.filter((x) => x.owner === me) : arr)
+  const leads = mine(CRM_LEADS).filter((l) => (l.name + l.company).toLowerCase().includes(search.toLowerCase()))
+  const contacts = mine(CRM_CONTACTS).filter((c) => (c.name + c.company).toLowerCase().includes(search.toLowerCase()))
+  const deals = mine(CRM_DEALS)
+  const myTasks = mine(tasks)
+  const scripts = mine(CRM_SCRIPTS)
+  const automations = mine(autos)
+  const pipelineValue = deals.reduce((s, d) => s + d.value, 0)
+
+  const toggleTask = (id) => setTasks((l) => l.map((t) => (t.id === id ? { ...t, done: !t.done } : t)))
+  const toggleAuto = (id) => setAutos((l) => l.map((a) => (a.id === id ? { ...a, on: !a.on } : a)))
+
+  const th = 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500'
+  const td = 'px-4 py-3 text-sm text-slate-700'
+
+  return (
+    <div className="mx-auto max-w-[1600px] p-6">
+      {/* Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2">
+          <Contact className="h-6 w-6 text-brand" />
+          <h1 className="text-2xl font-extrabold text-slate-900">CRM</h1>
+        </div>
+        {/* Mine / Whole Team toggle */}
+        <div className="inline-flex rounded-lg bg-slate-100 p-1">
+          {[{ k: 'mine', l: 'Mine' }, { k: 'team', l: 'Whole Team' }].map((s) => (
+            <button key={s.k} onClick={() => setScope(s.k)} className={`rounded-md px-4 py-1.5 text-sm font-semibold transition ${scope === s.k ? 'bg-white text-brand shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>{s.l}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Top bar tabs */}
+      <div className="scrollbar-slim mt-5 flex gap-1 overflow-x-auto border-b border-slate-200">
+        {CRM_TABS.map(({ key, label, icon: Icon }) => (
+          <button key={key} onClick={() => setTab(key)} className={`inline-flex shrink-0 items-center gap-1.5 border-b-2 px-4 py-2.5 text-sm font-semibold transition ${tab === key ? 'border-brand text-brand' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>
+            <Icon className="h-4 w-4" /> {label}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-6">
+        {/* TODAY */}
+        {tab === 'today' && (
+          <div className="space-y-6">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <CrmKpi icon={Target} label="New Leads" value={leads.filter((l) => l.status === 'New').length} tone="text-blue-500" />
+              <CrmKpi icon={ClipboardList} label="Tasks Due" value={myTasks.filter((t) => !t.done && t.due === 'Today').length} tone="text-amber-500" />
+              <CrmKpi icon={TrendingUp} label="Open Deals" value={deals.filter((d) => d.stage !== 'Closed Won').length} tone="text-violet-500" />
+              <CrmKpi icon={DollarSign} label="Pipeline Value" value={currency(pipelineValue)} tone="text-emerald-500" />
+            </div>
+            <div className="grid gap-6 lg:grid-cols-2">
+              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <p className="text-sm font-bold text-slate-900">Today&apos;s Tasks</p>
+                <div className="mt-3 space-y-2">
+                  {myTasks.filter((t) => t.due === 'Today').map((t) => (
+                    <label key={t.id} className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-100 p-3 text-sm">
+                      <button onClick={() => toggleTask(t.id)} className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${t.done ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-slate-300'}`}>{t.done && <Check className="h-3 w-3" />}</button>
+                      <span className={`flex-1 ${t.done ? 'text-slate-400 line-through' : 'text-slate-700'}`}>{t.title}</span>
+                      <span className="text-xs text-slate-400">{t.related}</span>
+                    </label>
+                  ))}
+                  {!myTasks.filter((t) => t.due === 'Today').length && <p className="py-6 text-center text-sm text-slate-400">No tasks due today.</p>}
+                </div>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <p className="text-sm font-bold text-slate-900">Recent Leads</p>
+                <div className="mt-3 space-y-2">
+                  {leads.slice(0, 5).map((l) => (
+                    <div key={l.id} className="flex items-center gap-3 rounded-lg border border-slate-100 p-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-500">{l.name.split(' ').map((n) => n[0]).join('')}</div>
+                      <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-slate-800">{l.name}</p><p className="truncate text-xs text-slate-400">{l.company} · {l.last}</p></div>
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${crmStatusBadge(l.status)}`}>{l.status}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* LEADS */}
+        {tab === 'leads' && (
+          <div>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <div className="relative w-64 max-w-full"><Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search leads..." className="w-full rounded-lg border border-slate-200 py-2 pl-8 pr-3 text-sm outline-none focus:border-orange-400" /></div>
+              <PrimaryButton icon={Plus} onClick={() => notify('New lead — demo')}>New Lead</PrimaryButton>
+            </div>
+            <div className="scrollbar-slim overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+              <table className="w-full min-w-[760px]">
+                <thead className="border-b border-slate-100 bg-slate-50"><tr><th className={th}>Lead</th><th className={th}>Company</th><th className={th}>Source</th><th className={th}>Status</th><th className={th}>Value</th><th className={th}>Owner</th></tr></thead>
+                <tbody className="divide-y divide-slate-100">
+                  {leads.map((l) => (
+                    <tr key={l.id} className="hover:bg-slate-50">
+                      <td className={td}><p className="font-semibold text-slate-800">{l.name}</p><p className="text-xs text-slate-400">{l.email}</p></td>
+                      <td className={td}>{l.company}</td>
+                      <td className={td}>{l.source}</td>
+                      <td className={td}><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${crmStatusBadge(l.status)}`}>{l.status}</span></td>
+                      <td className={`${td} font-semibold text-slate-900`}>{currency(l.value)}</td>
+                      <td className={td}>{l.owner}</td>
+                    </tr>
+                  ))}
+                  {!leads.length && <tr><td colSpan={6} className="py-10 text-center text-sm text-slate-400">No leads.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* CONTACTS */}
+        {tab === 'contacts' && (
+          <div>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <div className="relative w-64 max-w-full"><Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search contacts..." className="w-full rounded-lg border border-slate-200 py-2 pl-8 pr-3 text-sm outline-none focus:border-orange-400" /></div>
+              <PrimaryButton icon={Plus} onClick={() => notify('New contact — demo')}>New Contact</PrimaryButton>
+            </div>
+            <div className="scrollbar-slim overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+              <table className="w-full min-w-[720px]">
+                <thead className="border-b border-slate-100 bg-slate-50"><tr><th className={th}>Name</th><th className={th}>Company</th><th className={th}>Email</th><th className={th}>Phone</th><th className={th}>Owner</th></tr></thead>
+                <tbody className="divide-y divide-slate-100">
+                  {contacts.map((c) => (
+                    <tr key={c.id} className="hover:bg-slate-50">
+                      <td className={td}><p className="font-semibold text-slate-800">{c.name}</p><p className="text-xs text-slate-400">{c.title}</p></td>
+                      <td className={td}>{c.company}</td>
+                      <td className={td}><a href={`mailto:${c.email}`} className="text-brand hover:underline">{c.email}</a></td>
+                      <td className={td}>{c.phone}</td>
+                      <td className={td}>{c.owner}</td>
+                    </tr>
+                  ))}
+                  {!contacts.length && <tr><td colSpan={5} className="py-10 text-center text-sm text-slate-400">No contacts.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* PIPELINES */}
+        {tab === 'pipelines' && (
+          <div className="scrollbar-slim flex gap-4 overflow-x-auto pb-2">
+            {CRM_STAGES.map((stage) => {
+              const col = deals.filter((d) => d.stage === stage)
+              const total = col.reduce((s, d) => s + d.value, 0)
+              return (
+                <div key={stage} className="w-72 shrink-0">
+                  <div className="mb-2 flex items-center justify-between px-1"><span className="text-sm font-bold text-slate-700">{stage}</span><span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500">{col.length}</span></div>
+                  <p className="mb-2 px-1 text-xs font-semibold text-slate-400">{currency(total)}</p>
+                  <div className="space-y-2 rounded-xl bg-slate-50 p-2">
+                    {col.map((d) => (
+                      <div key={d.id} className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+                        <p className="text-sm font-bold text-slate-800">{d.title}</p>
+                        <p className="text-xs text-slate-400">{d.company}</p>
+                        <div className="mt-2 flex items-center justify-between"><span className="text-sm font-extrabold text-slate-900">{currency(d.value)}</span><span className="text-xs text-slate-400">{d.owner}</span></div>
+                      </div>
+                    ))}
+                    {!col.length && <p className="py-6 text-center text-xs text-slate-300">—</p>}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* TASKS */}
+        {tab === 'tasks' && (
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="mb-3 flex items-center justify-between"><p className="text-sm font-bold text-slate-900">Tasks</p><PrimaryButton icon={Plus} onClick={() => notify('New task — demo')}>New Task</PrimaryButton></div>
+            <div className="space-y-2">
+              {myTasks.map((t) => (
+                <div key={t.id} className="flex items-center gap-3 rounded-lg border border-slate-100 p-3">
+                  <button onClick={() => toggleTask(t.id)} className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${t.done ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-slate-300'}`}>{t.done && <Check className="h-3 w-3" />}</button>
+                  <span className={`flex-1 text-sm ${t.done ? 'text-slate-400 line-through' : 'text-slate-700'}`}>{t.title}</span>
+                  <span className="text-xs text-slate-400">{t.related}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${t.due === 'Today' ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>{t.due}</span>
+                </div>
+              ))}
+              {!myTasks.length && <p className="py-8 text-center text-sm text-slate-400">No tasks.</p>}
+            </div>
+          </div>
+        )}
+
+        {/* SCRIPTS */}
+        {tab === 'scripts' && (
+          <div className="grid gap-4 md:grid-cols-2">
+            {scripts.map((s) => (
+              <div key={s.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="flex items-center justify-between"><p className="text-sm font-bold text-slate-900">{s.title}</p><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${s.type === 'Call' ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700'}`}>{s.type}</span></div>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600">{s.body}</p>
+                <button onClick={() => { copyToClipboard(s.body); notify('Script copied') }} className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-brand hover:underline"><Copy className="h-3.5 w-3.5" /> Copy script</button>
+              </div>
+            ))}
+            {!scripts.length && <p className="py-8 text-center text-sm text-slate-400">No scripts.</p>}
+          </div>
+        )}
+
+        {/* AUTOMATIONS */}
+        {tab === 'automations' && (
+          <div className="space-y-3">
+            {automations.map((a) => (
+              <div key={a.id} className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${a.on ? 'bg-brand/10 text-brand' : 'bg-slate-100 text-slate-400'}`}><Zap className="h-5 w-5" /></div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold text-slate-900">{a.name}</p>
+                  <p className="text-xs text-slate-400"><span className="font-semibold text-slate-500">When</span> {a.trigger} → <span className="font-semibold text-slate-500">do</span> {a.action}</p>
+                </div>
+                <button onClick={() => toggleAuto(a.id)} className={`relative h-6 w-11 shrink-0 rounded-full transition ${a.on ? 'bg-emerald-500' : 'bg-slate-300'}`}><span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${a.on ? 'left-[22px]' : 'left-0.5'}`} /></button>
+              </div>
+            ))}
+            {!automations.length && <p className="py-8 text-center text-sm text-slate-400">No automations.</p>}
+          </div>
+        )}
+
+        {/* REPORTS */}
+        {tab === 'reports' && (
+          <div className="space-y-6">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <CrmKpi icon={Target} label="Total Leads" value={leads.length} tone="text-blue-500" />
+              <CrmKpi icon={TrendingUp} label="Open Deals" value={deals.filter((d) => d.stage !== 'Closed Won').length} tone="text-violet-500" />
+              <CrmKpi icon={DollarSign} label="Pipeline Value" value={currency(pipelineValue)} tone="text-emerald-500" />
+              <CrmKpi icon={Check} label="Closed Won" value={deals.filter((d) => d.stage === 'Closed Won').length} tone="text-teal-500" />
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+              <p className="text-sm font-bold text-slate-900">Deals by stage</p>
+              <div className="mt-4 space-y-3">
+                {CRM_STAGES.map((stage) => {
+                  const col = deals.filter((d) => d.stage === stage)
+                  const pct = deals.length ? Math.round((col.length / deals.length) * 100) : 0
+                  return (
+                    <div key={stage}>
+                      <div className="mb-1 flex items-center justify-between text-xs"><span className="font-semibold text-slate-600">{stage}</span><span className="text-slate-400">{col.length} · {currency(col.reduce((s, d) => s + d.value, 0))}</span></div>
+                      <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-brand" style={{ width: `${pct}%` }} /></div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function PlaceholderPage({ label, icon: Icon }) {
   const notify = useToast()
   return (
@@ -10697,7 +11031,7 @@ export default function App() {
       case 'documents':
         return <PlaceholderPage label="Documents" icon={FileText} />
       case 'crm':
-        return <PlaceholderPage label="CRM" icon={Contact} />
+        return <CRMPage user={user} />
       case 'email':
         return <PlaceholderPage label="Email Blasts" icon={Send} />
       case 'templates':
