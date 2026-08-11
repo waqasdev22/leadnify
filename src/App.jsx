@@ -9766,7 +9766,9 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
   const [watermark, setWatermark] = useState(true)
   const [wmStyle, setWmStyle] = useState('Standard')
   const [nda, setNda] = useState({ name: 'NDA Agreement.pdf' })
+  const [omFlyer, setOmFlyer] = useState(null) // single OM/Flyer shown above the gate
   const fileRef = useRef(null)
+  const omRef = useRef(null)
   const ndaRef = useRef(null)
 
   const views = prospects.reduce((s, p) => s + p.views, 0)
@@ -9842,6 +9844,16 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
     notify('File uploaded')
     e.target.value = ''
   }
+  // OM / Flyer — a single marketing document shown above the gate (only 1 file).
+  const onOmUpload = (e) => {
+    const f = e.target.files && e.target.files[0]
+    if (!f) return
+    const mb = f.size / (1024 * 1024)
+    const size = mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.max(1, Math.round(f.size / 1024))} KB`
+    setOmFlyer({ name: f.name, size, date: new Date().toLocaleDateString('en-GB') })
+    notify('OM / Flyer uploaded')
+    e.target.value = ''
+  }
   const copy = async (text, msg) => {
     const ok = await copyToClipboard(text)
     notify(ok ? msg : 'Unable to copy', ok ? 'success' : 'error')
@@ -9906,6 +9918,40 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
       <div className="mt-5 grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
         {/* LEFT */}
         <div className="space-y-5">
+          {/* OM / Flyer — single public marketing doc, shown above the gated files */}
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                  <FileText className="h-4 w-4 text-brand" /> OM / Flyer
+                </p>
+                <p className="text-xs text-slate-400">One marketing document (Offering Memorandum or Flyer) shown before the gate.</p>
+              </div>
+              {!omFlyer && (
+                <PrimaryButton icon={Upload} onClick={() => omRef.current && omRef.current.click()}>Upload</PrimaryButton>
+              )}
+              <input ref={omRef} type="file" accept=".pdf,.doc,.docx,image/*" className="hidden" onChange={onOmUpload} />
+            </div>
+            {omFlyer ? (
+              <div className="mt-3 flex items-center gap-3 rounded-lg border border-orange-100 bg-orange-50/40 p-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand/10 text-brand"><FileText className="h-5 w-5" /></div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-slate-800">{omFlyer.name}</p>
+                  <p className="text-xs text-slate-400">{omFlyer.size} · uploaded {omFlyer.date}</p>
+                </div>
+                <IconButton icon={Download} label="Download" onClick={() => downloadFile(omFlyer)} />
+                <IconButton icon={Upload} label="Replace" onClick={() => omRef.current && omRef.current.click()} />
+                <IconButton icon={Trash2} label="Remove" tone="danger" onClick={() => { setOmFlyer(null); notify('OM / Flyer removed', 'error') }} />
+              </div>
+            ) : (
+              <button onClick={() => omRef.current && omRef.current.click()} className="mt-3 flex w-full flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-slate-200 py-6 text-center transition hover:border-orange-300 hover:bg-orange-50/30">
+                <Upload className="h-6 w-6 text-slate-400" />
+                <span className="text-sm font-semibold text-slate-600">Upload OM or Flyer</span>
+                <span className="text-xs text-slate-400">PDF, Word, or image · one file only</span>
+              </button>
+            )}
+          </div>
+
           {/* Confidential files */}
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex items-center justify-between">
