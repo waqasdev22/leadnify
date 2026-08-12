@@ -70,6 +70,7 @@ import {
   X,
   AlertTriangle,
   Info,
+  Ban,
   Zap,
   ClipboardList,
   TrendingUp,
@@ -10402,6 +10403,23 @@ const CRM_INQUIRIES = [
   { id: 'iq2', name: 'Sofia Ramirez', property: 'Summit Retail Center', owner: 'Devon Park' },
 ]
 
+// Leads "inbox" — raw enquiries, NDA signers, email/forwarded leads.
+const CRM_FORWARD_ADDR = 'leads+qx-s_yJEz4LH5tklhdOK0ojxlZpObhOYFJda7A442mY@inbound.mycreblueprint.com'
+const CRM_INBOX_SEED = [
+  { id: 'in1', name: 'Neil Naran', email: 'neil@valuenetlease.com', type: 'NDA Signer', company: 'Value Net Lease Partners', listing: '#41195', date: 'Jul 29, 2026', status: 'expires 28/08/2026', owner: 'Waqas' },
+  { id: 'in2', name: 'Neil Naran', email: 'naran.neil@gmail.com', type: 'Email Lead', company: 'Value Net Lease Partners', listing: '#41195', date: 'Jul 29, 2026', status: 'expires 28/08/2026', owner: 'Waqas' },
+  { id: 'in3', name: 'Neil Naran', email: 'naran.neil@gmail.com', type: 'Inquiry', company: '—', listing: 'Unknown', date: 'Jul 28, 2026', status: 'Unread', unread: true, owner: 'Waqas' },
+  { id: 'in4', name: 'Jordan Miller', email: 'jordan@millercap.com', type: 'Forwarded', company: 'Miller Capital', listing: '#38210', date: 'Jul 27, 2026', status: 'LoopNet', owner: 'Maya Chen' },
+  { id: 'in5', name: 'Priya Shah', email: 'priya@everest.com', type: 'Inquiry', company: '—', listing: 'Unknown', date: 'Jul 26, 2026', status: 'Unread', unread: true, owner: 'Devon Park' },
+  { id: 'in6', name: 'Aaron Cole', email: 'aaron@colenl.com', type: 'NDA Signer', company: 'Cole Net Lease', listing: '#41822', date: 'Jul 25, 2026', status: 'expires 25/08/2026', owner: 'Sam Rivera' },
+]
+const crmLeadTypeBadge = (t) => ({
+  'NDA Signer': 'bg-violet-50 text-violet-700',
+  'Email Lead': 'bg-blue-50 text-blue-700',
+  Inquiry: 'bg-sky-50 text-sky-700',
+  Forwarded: 'bg-amber-50 text-amber-700',
+}[t] || 'bg-slate-100 text-slate-600')
+
 // A "Today" attention card — shows a count and a list, or "Nothing needs attention".
 // "View all →" fades in on hover.
 function CrmAttentionCard({ icon: Icon, label, count, accent, onViewAll, children }) {
@@ -10442,6 +10460,8 @@ function CRMPage({ user }) {
   const [search, setSearch] = useState('')
   const [tasks, setTasks] = useState(CRM_TASKS_SEED)
   const [autos, setAutos] = useState(CRM_AUTOMATIONS_SEED)
+  const [inbox, setInbox] = useState(CRM_INBOX_SEED)
+  const [leadFilter, setLeadFilter] = useState('All')
 
   const mine = (arr) => (scope === 'mine' ? arr.filter((x) => x.owner === me) : arr)
   const leads = mine(CRM_LEADS).filter((l) => (l.name + l.company).toLowerCase().includes(search.toLowerCase()))
@@ -10546,33 +10566,86 @@ function CRMPage({ user }) {
           )
         })()}
 
-        {/* LEADS */}
-        {tab === 'leads' && (
-          <div>
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <div className="relative w-64 max-w-full"><Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search leads..." className="w-full rounded-lg border border-slate-200 py-2 pl-8 pr-3 text-sm outline-none focus:border-orange-400" /></div>
-              <PrimaryButton icon={Plus} onClick={() => notify('New lead — demo')}>New Lead</PrimaryButton>
+        {/* LEADS (inbox) */}
+        {tab === 'leads' && (() => {
+          const scopedInbox = scope === 'mine' ? inbox.filter((l) => l.owner === me) : inbox
+          const unreadCount = scopedInbox.filter((l) => l.unread).length
+          const ndaCount = scopedInbox.filter((l) => l.type === 'NDA Signer').length
+          const typeFor = { All: () => true, Inquiries: (l) => l.type === 'Inquiry', 'NDA Signers': (l) => l.type === 'NDA Signer', 'Email Leads': (l) => l.type === 'Email Lead', Forwarded: (l) => l.type === 'Forwarded' }
+          const rows = scopedInbox.filter(typeFor[leadFilter]).filter((l) => (l.name + l.email + l.company).toLowerCase().includes(search.toLowerCase()))
+          const markRead = (id) => setInbox((list) => list.map((l) => (l.id === id ? { ...l, unread: false, status: 'Read' } : l)))
+          const del = (id) => setInbox((list) => list.filter((l) => l.id !== id))
+          const revoke = (id) => setInbox((list) => list.map((l) => (l.id === id ? { ...l, status: 'Revoked' } : l)))
+          return (
+          <div className="space-y-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="-mt-2 text-sm text-slate-500">People who just enquired. Reply here, then save the real ones as contacts.</p>
+                <h2 className="mt-1 text-xl font-extrabold text-slate-900">Leads</h2>
+                <p className="text-sm text-slate-500">{unreadCount} unread inquiry · {ndaCount} active NDA signers</p>
+              </div>
+              <button onClick={() => notify('Exported inquiries to CSV')} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50" title="Export inquiries to CSV"><Download className="h-4 w-4" /> Export</button>
             </div>
+
+            {/* Forward-in address */}
+            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <p className="flex items-center gap-2 text-sm font-bold text-slate-900"><Mail className="h-4 w-4 text-slate-400" /> Forward leads straight into your CRM</p>
+              <p className="mt-1 text-xs text-slate-500">Forward a LoopNet, BizBuySell, or Crexi lead email to your personal address below — or set an auto-forward rule — and it becomes a contact here, tagged with the source.</p>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <input readOnly value={CRM_FORWARD_ADDR} className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-xs text-slate-600 outline-none" />
+                <button onClick={() => { copyToClipboard(CRM_FORWARD_ADDR); notify('Address copied') }} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"><Copy className="h-4 w-4" /> Copy</button>
+              </div>
+              <p className="mt-2 text-xs text-slate-400">This address is private to you.</p>
+            </div>
+
+            {/* Filters + search */}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap gap-2">
+                {['All', 'Inquiries', 'NDA Signers', 'Email Leads', 'Forwarded'].map((f) => (
+                  <button key={f} onClick={() => setLeadFilter(f)} className={`rounded-full px-3 py-1.5 text-sm font-semibold transition ${leadFilter === f ? 'bg-brand text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{f}</button>
+                ))}
+              </div>
+              <div className="relative w-56 max-w-full"><Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search leads..." className="w-full rounded-lg border border-slate-200 py-2 pl-8 pr-3 text-sm outline-none focus:border-orange-400" /></div>
+              <span className="text-sm font-semibold text-slate-400">{rows.length} leads</span>
+            </div>
+
+            {/* Table */}
             <div className="scrollbar-slim overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-              <table className="w-full min-w-[760px]">
-                <thead className="border-b border-slate-100 bg-slate-50"><tr><th className={th}>Lead</th><th className={th}>Company</th><th className={th}>Source</th><th className={th}>Status</th><th className={th}>Value</th><th className={th}>Owner</th></tr></thead>
+              <table className="w-full min-w-[820px]">
+                <thead className="border-b border-slate-100 bg-slate-50"><tr><th className={th}>Lead</th><th className={th}>Type</th><th className={th}>Company</th><th className={th}>Listing</th><th className={th}>Date</th><th className={th}>Status</th><th className={th + ' text-right'}>Actions</th></tr></thead>
                 <tbody className="divide-y divide-slate-100">
-                  {leads.map((l) => (
+                  {rows.map((l) => (
                     <tr key={l.id} className="hover:bg-slate-50">
-                      <td className={td}><p className="font-semibold text-slate-800">{l.name}</p><p className="text-xs text-slate-400">{l.email}</p></td>
+                      <td className={td}>
+                        <div className="flex items-center gap-2">
+                          {l.unread && <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
+                          <div><p className={`text-slate-800 ${l.unread ? 'font-bold' : 'font-semibold'}`}>{l.name}</p><p className="text-xs text-slate-400">{l.email}</p></div>
+                        </div>
+                      </td>
+                      <td className={td}><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${crmLeadTypeBadge(l.type)}`}>{l.type}</span></td>
                       <td className={td}>{l.company}</td>
-                      <td className={td}>{l.source}</td>
-                      <td className={td}><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${crmStatusBadge(l.status)}`}>{l.status}</span></td>
-                      <td className={`${td} font-semibold text-slate-900`}>{currency(l.value)}</td>
-                      <td className={td}>{l.owner}</td>
+                      <td className={td}>{l.listing}</td>
+                      <td className={td}>{l.date}</td>
+                      <td className={td}>{l.status === 'Unread' ? <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">Unread</span> : <span className="text-xs text-slate-500">{l.status}</span>}</td>
+                      <td className={td + ' text-right'}>
+                        {l.type === 'NDA Signer' || l.type === 'Email Lead' ? (
+                          l.status === 'Revoked' ? <span className="text-xs text-slate-400">Revoked</span> : <button onClick={() => revoke(l.id)} className="inline-flex items-center gap-1 text-sm font-semibold text-slate-600 transition hover:text-rose-600"><Ban className="h-4 w-4" /> Revoke</button>
+                        ) : (
+                          <span className="inline-flex items-center gap-1">
+                            <IconButton icon={Eye} label="Mark read" onClick={() => markRead(l.id)} />
+                            <IconButton icon={Trash2} label="Delete" tone="danger" onClick={() => del(l.id)} />
+                          </span>
+                        )}
+                      </td>
                     </tr>
                   ))}
-                  {!leads.length && <tr><td colSpan={6} className="py-10 text-center text-sm text-slate-400">No leads.</td></tr>}
+                  {!rows.length && <tr><td colSpan={7} className="py-10 text-center text-sm text-slate-400">No leads.</td></tr>}
                 </tbody>
               </table>
             </div>
           </div>
-        )}
+          )
+        })()}
 
         {/* CONTACTS */}
         {tab === 'contacts' && (
