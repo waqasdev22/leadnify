@@ -1000,11 +1000,13 @@ function Sidebar({ active, onNavigate, onSignOut, user, forceCollapsed, responsi
   const [showPromo, setShowPromo] = useState(true)
 
   // Filter nav by page permissions (when a `can` gate is provided), and add the
-  // admin-only Team & Permissions entry.
+  // admin-only Team & Permissions entry plus the settings pages.
   const navItems = can
     ? [
         ...NAV_ITEMS.filter((n) => !NAV_PERM[n.key] || can(NAV_PERM[n.key])),
         ...(can('team.manage_permissions') ? [{ key: 'team', label: 'Team & Permissions', icon: Users, dividerBefore: true }] : []),
+        { key: 'profile', label: 'Profile Settings', icon: Contact, dividerBefore: true },
+        { key: 'teamsettings', label: 'Team Settings', icon: Users },
       ]
     : NAV_ITEMS
 
@@ -1073,32 +1075,16 @@ function Sidebar({ active, onNavigate, onSignOut, user, forceCollapsed, responsi
 
       {/* Upgrade promo */}
 
-      {/* Account: Profile Settings · Team Settings · Sign Out, then profile at the end */}
+      {/* Sign Out + profile at the very bottom */}
       <div className="border-t border-slate-100 p-3">
-        <div className="space-y-1">
-          {[
-            { key: 'profile', label: 'Profile Settings', icon: Contact },
-            { key: 'teamsettings', label: 'Team Settings', icon: Users },
-          ].map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              onClick={() => onNavigate(key)}
-              title={collapsed ? label : undefined}
-              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${collapsed ? 'justify-center' : ''} ${active === key ? 'bg-orange-50 text-brand' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
-            >
-              <Icon className={`h-5 w-5 ${active === key ? 'text-brand' : 'text-slate-400'}`} />
-              {!collapsed && label}
-            </button>
-          ))}
-          <button
-            onClick={onSignOut}
-            title={collapsed ? 'Sign Out' : undefined}
-            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-rose-600 transition hover:bg-rose-50 ${collapsed ? 'justify-center' : ''}`}
-          >
-            <LogOut className="h-5 w-5" />
-            {!collapsed && 'Sign Out'}
-          </button>
-        </div>
+        <button
+          onClick={onSignOut}
+          title={collapsed ? 'Sign Out' : undefined}
+          className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-rose-600 transition hover:bg-rose-50 ${collapsed ? 'justify-center' : ''}`}
+        >
+          <LogOut className="h-5 w-5" />
+          {!collapsed && 'Sign Out'}
+        </button>
         <div className={`mt-2 flex items-center gap-3 border-t border-slate-100 px-2 pt-3 ${collapsed ? 'justify-center' : ''}`}>
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-orange-600 text-sm font-bold text-white">
             {user.initials}
