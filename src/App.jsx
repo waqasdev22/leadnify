@@ -12416,79 +12416,155 @@ function ProfileSettingsPage({ user }) {
 }
 
 const TEAM_SETTINGS_MEMBERS = [
-  { id: 'u1', name: 'Waqas', email: 'waqasdev@gmail.com', role: 'Owner', status: 'Active', initials: 'W' },
-  { id: 'u2', name: 'Maya Chen', email: 'maya@valuereis.com', role: 'Manager', status: 'Active', initials: 'MC' },
-  { id: 'u3', name: 'Devon Park', email: 'devon@valuereis.com', role: 'Member', status: 'Active', initials: 'DP' },
-  { id: 'u4', name: 'Sam Rivera', email: 'sam@valuereis.com', role: 'Admin', status: 'Active', initials: 'SR' },
-  { id: 'u5', name: 'Priya N.', email: 'priya@valuereis.com', role: 'Member', status: 'Invited', initials: 'PN' },
+  { id: 'u1', name: 'Neil Naran', email: 'Nel@valuereis.com', role: 'Admin', docs: 16, active: 'Aug 11', you: true, initials: 'N' },
+]
+const TEAM_ROLES = ['Member', 'Admin', 'Coordinator']
+const TEAM_ROLE_LEGEND = [
+  { role: 'Member', desc: 'Own documents, all features. Paid seat.' },
+  { role: 'Admin', desc: 'Member + team management/billing.' },
+  { role: 'Coordinator', desc: 'Creates docs on behalf of others. Free seat.' },
+]
+const BROKER_FLOWS = {
+  property: { label: 'Property', stages: ['Inquiry', 'NDA Signed', 'Tour', 'LOI', 'Under Contract'], desc: '' },
+  businesses: { label: 'Businesses', stages: ['Inquiry', 'NDA Sent', 'NDA Signed', 'CIM Sent', 'LOI'], desc: 'For brokers selling restaurants, bars, shops and other going concerns, where a buyer signs an NDA and then receives a CIM.' },
+}
+const DEFAULT_CA_TEXT = `The information contained in the following offering memorandum is proprietary and strictly confidential. It is intended to be reviewed only by the party receiving it from [COMPANY_NAME] and should not be made available to any other person or entity without the written consent of [COMPANY_NAME].
+
+By taking possession of and reviewing the information contained herein the recipient agrees to hold and treat all such information in the strictest confidence. The recipient further agrees that recipient will not photocopy or duplicate any part of the offering memorandum. If you have no interest in the subject property, please promptly return this offering memorandum to [COMPANY_NAME]. This offering memorandum has been prepared to provide summary, unverified financial and physical information to prospective purchasers, and to establish only a preliminary level of interest in the subject property. The information contained herein is not a substitute for a thorough due diligence investigation. [COMPANY_NAME] has not made any investigation, and makes no warranty or representation with respect to the income or expenses for the subject property, the future projected financial performance of the property, the size and square footage of the property and improvements, the presence or absence of contaminating substances, PCBs or asbestos, the compliance with local, state and federal regulations, the physical condition of the improvements thereon, or financial condition or business prospects of any tenant, or any tenant's plans or intentions to continue its occupancy of the subject property. The information contained in this offering memorandum has been obtained from sources we believe reliable; however, [COMPANY_NAME] has not verified, and will not verify, any of the information contained herein, nor has [COMPANY_NAME] conducted any investigation regarding these matters and makes no warranty or representation whatsoever regarding the accuracy or completeness of the information provided. All potential buyers must take appropriate measures to verify all of the information set forth herein. Prospective buyers shall be responsible for their costs and expenses of investigating the subject property.
+
+PROPERTY SHOWINGS ARE BY APPOINTMENT ONLY.
+PLEASE CONTACT THE [COMPANY_NAME] ADVISOR FOR MORE DETAILS.`
+const CA_TEMPLATES = [
+  { name: 'Standard Offering Memorandum CA', text: DEFAULT_CA_TEXT },
+  { name: 'Short-form NDA', text: `This Confidentiality Agreement is entered into between the recipient and [COMPANY_NAME]. The recipient agrees to keep all information regarding the subject property strictly confidential and to use it solely to evaluate a potential transaction.\n\nPLEASE CONTACT THE [COMPANY_NAME] ADVISOR FOR MORE DETAILS.` },
+  { name: 'Business (going-concern) CA', text: `The information regarding this business is confidential. By signing, the recipient agrees not to contact employees, landlords, customers, or suppliers, and to hold all financials and the identity of the business in strict confidence, as required by [COMPANY_NAME].\n\nPLEASE CONTACT THE [COMPANY_NAME] ADVISOR FOR MORE DETAILS.` },
 ]
 
 function TeamSettingsPage() {
   const notify = useToast()
-  const [members, setMembers] = useState(TEAM_SETTINGS_MEMBERS)
-  const [teamName, setTeamName] = useState('Value REIS')
+  const [members, setMembers] = usePersistentState('team_members', TEAM_SETTINGS_MEMBERS)
+  const [brokerType, setBrokerType] = usePersistentState('team_broker', 'property')
+  const [savedCa, setSavedCa] = usePersistentState('team_ca', DEFAULT_CA_TEXT)
+  const [caDraft, setCaDraft] = useState(savedCa)
+  const [tplOpen, setTplOpen] = useState(false)
   const setRole = (id, role) => { setMembers((l) => l.map((m) => (m.id === id ? { ...m, role } : m))); notify('Role updated') }
-  const remove = (id) => { setMembers((l) => l.filter((m) => m.id !== id)); notify('Member removed', 'error') }
-  const seats = members.filter((m) => m.status === 'Active').length
-  const roleBadge = (r) => ({ Owner: 'bg-amber-50 text-amber-700', Admin: 'bg-rose-50 text-rose-700', Manager: 'bg-indigo-50 text-indigo-700', Member: 'bg-slate-100 text-slate-600' }[r] || 'bg-slate-100 text-slate-600')
-  const th = 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500'
+  const seats = members.length
+  const unsaved = caDraft !== savedCa
+  const toolBtn = 'flex h-7 w-7 items-center justify-center rounded text-slate-500 transition hover:bg-slate-100 hover:text-slate-700'
+  const th = 'px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400'
   const td = 'px-4 py-3 text-sm text-slate-700'
 
   return (
-    <div className="mx-auto max-w-[1200px] p-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
-          <Users className="h-6 w-6 text-brand" />
-          <h1 className="text-2xl font-extrabold text-slate-900">Team Settings</h1>
-        </div>
-        <PrimaryButton icon={Plus} onClick={() => notify('Invite sent — demo')}>Invite Member</PrimaryButton>
-      </div>
-
-      {/* Team + plan */}
-      <div className="mt-6 grid gap-4 lg:grid-cols-3">
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
-          <p className="text-sm font-bold text-slate-900">Team</p>
-          <div className="mt-3 max-w-sm"><SettingsField label="Team name" value={teamName} onChange={(e) => setTeamName(e.target.value)} /></div>
-          <div className="mt-3 flex justify-end"><button onClick={() => notify('Team saved')} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Save</button></div>
-        </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-bold text-slate-900">Plan & Billing</p>
-          <p className="mt-2 text-2xl font-extrabold text-slate-900">Pro</p>
-          <p className="text-xs text-slate-400">{seats} of 10 paid seats used</p>
-          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-brand" style={{ width: `${(seats / 10) * 100}%` }} /></div>
-          <p className="mt-3 flex items-center gap-1.5 text-sm font-semibold text-slate-700"><DollarSign className="h-4 w-4 text-emerald-500" />{currency(seats * 49)}/mo</p>
-          <button onClick={() => notify('Billing — demo')} className="mt-3 w-full rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Manage Billing</button>
+    <div className="mx-auto max-w-[1000px] p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-extrabold text-slate-900">Team Management</h1>
+          <button onClick={() => notify('Invite sent — demo')} className="inline-flex items-center gap-1.5 rounded-full bg-brand px-3 py-1.5 text-xs font-bold text-white transition hover:bg-orange-600"><Zap className="h-3.5 w-3.5" /> Invite Member</button>
         </div>
       </div>
+      <p className="mt-1 text-sm font-semibold text-brand">{seats} paid seat{seats === 1 ? '' : 's'}</p>
 
-      {/* Members */}
-      <div className="mt-5 scrollbar-slim overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-        <table className="w-full min-w-[720px]">
-          <thead className="border-b border-slate-100 bg-slate-50"><tr><th className={th}>Member</th><th className={th}>Role</th><th className={th}>Status</th><th className={th + ' text-right'}>Actions</th></tr></thead>
-          <tbody className="divide-y divide-slate-100">
-            {members.map((m) => (
-              <tr key={m.id} className="hover:bg-slate-50">
-                <td className={td}>
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-500">{m.initials}</div>
-                    <div><p className="font-semibold text-slate-800">{m.name}</p><p className="text-xs text-slate-400">{m.email}</p></div>
-                  </div>
-                </td>
-                <td className={td}>
-                  {m.role === 'Owner' ? (
-                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${roleBadge(m.role)}`}>Owner</span>
-                  ) : (
-                    <select value={m.role} onChange={(e) => setRole(m.id, e.target.value)} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-700 outline-none focus:border-orange-400">
-                      {ROLES.filter((r) => r !== 'Owner').map((r) => <option key={r}>{r}</option>)}
+      {/* Team Members */}
+      <div className="mt-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-bold text-slate-900">Team Members</p>
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{seats} {seats === 1 ? 'member' : 'members'}</span>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 border-b border-slate-100 pb-3 text-xs text-slate-400">
+          {TEAM_ROLE_LEGEND.map((r) => (<span key={r.role}><span className="font-bold text-slate-600">{r.role}</span> — {r.desc}</span>))}
+        </div>
+        <div className="scrollbar-slim mt-1 overflow-x-auto">
+          <table className="w-full min-w-[640px]">
+            <thead><tr><th className={th}>Member</th><th className={th}>Email</th><th className={th + ' text-right'}>Docs</th><th className={th + ' text-right'}>Active</th><th className={th + ' text-right'}>Role</th></tr></thead>
+            <tbody className="divide-y divide-slate-100">
+              {members.map((m) => (
+                <tr key={m.id} className="hover:bg-slate-50">
+                  <td className={td}>
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50 text-xs font-bold text-emerald-600">{m.initials}</div>
+                      <span className="font-semibold text-slate-800">{m.name} {m.you && <span className="font-normal text-slate-400">(you)</span>}</span>
+                    </div>
+                  </td>
+                  <td className={td + ' text-slate-500'}>{m.email}</td>
+                  <td className={td + ' text-right'}>{m.docs}</td>
+                  <td className={td + ' text-right text-slate-500'}>{m.active}</td>
+                  <td className={td + ' text-right'}>
+                    <select value={m.role} onChange={(e) => setRole(m.id, e.target.value)} className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm font-semibold text-brand outline-none focus:border-orange-400">
+                      {TEAM_ROLES.map((r) => <option key={r} className="text-slate-700">{r}</option>)}
                     </select>
-                  )}
-                </td>
-                <td className={td}><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${m.status === 'Active' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>{m.status}</span></td>
-                <td className={td + ' text-right'}>{m.role !== 'Owner' && <IconButton icon={Trash2} label="Remove" tone="danger" onClick={() => remove(m.id)} />}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* What do you broker? */}
+      <div className="mt-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex items-start gap-2">
+          <Building2 className="mt-0.5 h-5 w-5 text-slate-400" />
+          <div><p className="text-sm font-bold text-slate-900">What do you broker?</p><p className="text-xs text-slate-400">See the deal stages your whole team works in.</p></div>
+        </div>
+        <div className="mt-4 space-y-3">
+          {Object.entries(BROKER_FLOWS).map(([key, f]) => {
+            const selected = brokerType === key
+            return (
+              <div key={key} className={`rounded-xl border p-4 ${selected ? 'border-orange-300 bg-orange-50/40' : 'border-slate-200'}`}>
+                <p className={`text-sm font-bold ${selected ? 'text-brand' : 'text-slate-700'}`}>{f.label}{selected && <span className="font-normal text-slate-400"> — currently selected</span>}</p>
+                <p className="mt-1 flex flex-wrap items-center gap-1.5 text-sm text-slate-600">{f.stages.map((s, i) => (<span key={s} className="flex items-center gap-1.5">{i > 0 && <ArrowRight className="h-3.5 w-3.5 text-slate-300" />}{s}</span>))}</p>
+                {f.desc && <p className="mt-2 text-xs text-slate-400">{f.desc}</p>}
+              </div>
+            )
+          })}
+        </div>
+        <button onClick={() => { const next = brokerType === 'property' ? 'businesses' : 'property'; setBrokerType(next); notify(`Switched to ${BROKER_FLOWS[next].label.toLowerCase()}`) }} className="mt-3 rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Switch to {brokerType === 'property' ? 'businesses' : 'property'}</button>
+      </div>
+
+      {/* Company Confidentiality Agreement */}
+      <div className="mt-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex items-start gap-2">
+            <FileText className="mt-0.5 h-5 w-5 text-slate-400" />
+            <div><p className="text-sm font-bold text-slate-900">Company Confidentiality Agreement</p><p className="text-xs text-slate-400">Set the default agreement enforced on all team member documents.</p></div>
+          </div>
+          <div className="flex items-center gap-3">
+            {unsaved && <span className="text-xs font-semibold text-amber-600">Unsaved</span>}
+            <div className="relative">
+              <button onClick={() => setTplOpen((v) => !v)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"><FileText className="h-4 w-4" /> Templates <ChevronDown className="h-3.5 w-3.5" /></button>
+              {tplOpen && (
+                <div className="absolute right-0 z-20 mt-1 w-64 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
+                  {CA_TEMPLATES.map((t) => (
+                    <button key={t.name} onClick={() => { setCaDraft(t.text); setTplOpen(false); notify(`Loaded: ${t.name}`) }} className="block w-full px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-50">{t.name}</button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="mt-4 rounded-lg border border-slate-300 focus-within:border-orange-400">
+          <div className="flex items-center gap-1 border-b border-slate-200 px-2 py-1.5">
+            <button className={toolBtn} title="Bold"><Bold className="h-3.5 w-3.5" /></button>
+            <button className={toolBtn} title="Italic"><Italic className="h-3.5 w-3.5" /></button>
+            <button className={toolBtn} title="Underline"><Underline className="h-3.5 w-3.5" /></button>
+            <span className="mx-1 h-4 w-px bg-slate-200" />
+            <button className={toolBtn} title="Bulleted list"><List className="h-3.5 w-3.5" /></button>
+            <button className={toolBtn} title="Numbered list"><ListOrdered className="h-3.5 w-3.5" /></button>
+            <button className={toolBtn} title="Link"><Link2 className="h-3.5 w-3.5" /></button>
+            <span className="mx-1 h-4 w-px bg-slate-200" />
+            <button className={toolBtn} title="Undo"><Undo2 className="h-3.5 w-3.5" /></button>
+            <button className={toolBtn} title="Redo"><Redo2 className="h-3.5 w-3.5" /></button>
+          </div>
+          <textarea value={caDraft} onChange={(e) => setCaDraft(e.target.value)} rows={16} className="w-full resize-y rounded-b-lg bg-white px-4 py-3 text-sm leading-relaxed text-brand outline-none" />
+        </div>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <p className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500"><Lock className="h-3.5 w-3.5" /> Enforced on all team member documents</p>
+          <div className="flex items-center gap-2">
+            <button onClick={() => { setCaDraft(''); setSavedCa(''); notify('Agreement removed', 'error') }} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Remove Agreement</button>
+            <PrimaryButton icon={Check} onClick={() => { setSavedCa(caDraft); notify('Agreement saved. All team member documents updated.', 'success') }}>Save Agreement</PrimaryButton>
+          </div>
+        </div>
+        <p className="mt-2 text-xs text-slate-400">This agreement will appear on all team member documents and cannot be changed by members.</p>
       </div>
     </div>
   )
