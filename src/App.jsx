@@ -511,6 +511,7 @@ const NAV_ITEMS = [
   { key: 'listings', label: 'Listing Hub', icon: Globe },
   { key: 'deals', label: 'Deal Rooms', icon: FolderLock },
   { key: 'crm', label: 'CRM', icon: Contact },
+  { key: 'email', label: 'Email Blasts', icon: Send },
 ]
 
 /* -------------------------------------------------------------------------- */
@@ -10645,6 +10646,157 @@ function CRMPage({ user }) {
   )
 }
 
+/* -------------------------------------------------------------------------- */
+/*  Email Blasts                                                               */
+/* -------------------------------------------------------------------------- */
+
+const EMAIL_PROVIDERS = [
+  { key: 'outlook', name: 'Outlook', desc: 'Send blasts from your Microsoft 365 / Outlook mailbox.', account: 'you@outlook.com', color: 'bg-blue-50 text-blue-600', builtin: false },
+  { key: 'crebuildermail', name: 'CREBuilderMail', desc: 'Built-in sending — no setup, fully managed deliverability.', account: 'blasts@mycreblueprint.com', color: 'bg-orange-50 text-brand', builtin: true },
+  { key: 'gmail', name: 'Gmail', desc: 'Send from your Google Workspace / Gmail account.', account: 'you@gmail.com', color: 'bg-rose-50 text-rose-600', builtin: false },
+]
+
+const EMAIL_AUDIENCES = ['All Contacts', 'Qualified Leads', 'New Leads', 'Active Deal Room Prospects']
+
+const EMAIL_CAMPAIGNS_SEED = [
+  { id: 'e1', name: 'Olive Grove Plaza — New Listing', audience: 'All Contacts', recipients: 842, opens: 512, clicks: 138, status: 'Sent', date: '2 days ago' },
+  { id: 'e2', name: 'Q3 Net Lease Opportunities', audience: 'Qualified Leads', recipients: 214, opens: 151, clicks: 47, status: 'Sent', date: '1 week ago' },
+  { id: 'e3', name: 'Summit Retail — Price Reduction', audience: 'Active Deal Room Prospects', recipients: 96, opens: 0, clicks: 0, status: 'Draft', date: '—' },
+]
+
+function EmailBlastPage({ user }) {
+  const notify = useToast()
+  const [tab, setTab] = useState('campaigns')
+  const [conns, setConns] = useState({ outlook: false, crebuildermail: true, gmail: false })
+  const [campaigns, setCampaigns] = useState(EMAIL_CAMPAIGNS_SEED)
+  const [composeOpen, setComposeOpen] = useState(false)
+  const connectedProviders = EMAIL_PROVIDERS.filter((p) => conns[p.key])
+  const [form, setForm] = useState({ from: 'crebuildermail', audience: EMAIL_AUDIENCES[0], subject: '', body: '' })
+
+  const toggleConn = (key) => {
+    setConns((c) => {
+      const next = { ...c, [key]: !c[key] }
+      const p = EMAIL_PROVIDERS.find((x) => x.key === key)
+      notify(next[key] ? `Connected ${p.name}` : `Disconnected ${p.name}`, next[key] ? 'success' : 'error')
+      return next
+    })
+  }
+
+  const send = (asDraft) => {
+    if (!form.subject.trim()) { notify('Add a subject first', 'error'); return }
+    if (!connectedProviders.length) { notify('Connect an email account in Integrations first', 'error'); return }
+    const audienceCounts = { 'All Contacts': 842, 'Qualified Leads': 214, 'New Leads': 128, 'Active Deal Room Prospects': 96 }
+    setCampaigns((list) => [
+      { id: uid(), name: form.subject, audience: form.audience, recipients: asDraft ? audienceCounts[form.audience] : audienceCounts[form.audience], opens: 0, clicks: 0, status: asDraft ? 'Draft' : 'Sent', date: asDraft ? '—' : 'just now' },
+      ...list,
+    ])
+    notify(asDraft ? 'Draft saved' : `Blast sent to ${form.audience}`)
+    setComposeOpen(false)
+    setForm({ from: connectedProviders[0]?.key || 'crebuildermail', audience: EMAIL_AUDIENCES[0], subject: '', body: '' })
+  }
+
+  const th = 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500'
+  const td = 'px-4 py-3 text-sm text-slate-700'
+  const inputCls = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-orange-400'
+
+  return (
+    <div className="mx-auto max-w-[1600px] p-6">
+      {/* Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2">
+          <Send className="h-6 w-6 text-brand" />
+          <h1 className="text-2xl font-extrabold text-slate-900">Email Blasts</h1>
+        </div>
+        {tab === 'campaigns' && (
+          <PrimaryButton icon={Plus} onClick={() => { setForm((f) => ({ ...f, from: connectedProviders[0]?.key || 'crebuildermail' })); setComposeOpen(true) }}>New Campaign</PrimaryButton>
+        )}
+      </div>
+
+      {/* Tabs */}
+      <div className="mt-5 flex gap-1 border-b border-slate-200">
+        {[{ k: 'campaigns', l: 'Campaigns' }, { k: 'integrations', l: 'Integrations' }].map((t) => (
+          <button key={t.k} onClick={() => setTab(t.k)} className={`border-b-2 px-4 py-2.5 text-sm font-semibold transition ${tab === t.k ? 'border-brand text-brand' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>{t.l}</button>
+        ))}
+      </div>
+
+      <div className="mt-6">
+        {/* CAMPAIGNS */}
+        {tab === 'campaigns' && (
+          <div className="space-y-5">
+            {!connectedProviders.length && (
+              <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50/60 px-4 py-3 text-sm text-amber-800">
+                <AlertTriangle className="h-4 w-4 shrink-0" /> No email account connected. Go to <button onClick={() => setTab('integrations')} className="font-semibold underline">Integrations</button> to connect Outlook or CREBuilderMail.
+              </div>
+            )}
+            {composeOpen && (
+              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex items-center justify-between"><p className="text-sm font-bold text-slate-900">New Email Blast</p><button onClick={() => setComposeOpen(false)} className="text-slate-400 hover:text-slate-700"><X className="h-5 w-5" /></button></div>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div><label className="mb-1 block text-xs font-semibold text-slate-500">Send from</label>
+                    <select value={form.from} onChange={(e) => setForm((f) => ({ ...f, from: e.target.value }))} className={inputCls}>
+                      {connectedProviders.length ? connectedProviders.map((p) => <option key={p.key} value={p.key}>{p.name} · {p.account}</option>) : <option>Connect an account first</option>}
+                    </select>
+                  </div>
+                  <div><label className="mb-1 block text-xs font-semibold text-slate-500">Audience</label>
+                    <select value={form.audience} onChange={(e) => setForm((f) => ({ ...f, audience: e.target.value }))} className={inputCls}>{EMAIL_AUDIENCES.map((a) => <option key={a}>{a}</option>)}</select>
+                  </div>
+                </div>
+                <div className="mt-3"><label className="mb-1 block text-xs font-semibold text-slate-500">Subject</label><input value={form.subject} onChange={(e) => setForm((f) => ({ ...f, subject: e.target.value }))} placeholder="e.g. New Off-Market Retail Opportunity" className={inputCls} /></div>
+                <div className="mt-3"><label className="mb-1 block text-xs font-semibold text-slate-500">Message</label><textarea value={form.body} onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))} rows={5} placeholder="Write your email…" className={`${inputCls} resize-none`} /></div>
+                <div className="mt-4 flex justify-end gap-2">
+                  <button onClick={() => send(true)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Save Draft</button>
+                  <PrimaryButton icon={Send} onClick={() => send(false)}>Send Blast</PrimaryButton>
+                </div>
+              </div>
+            )}
+            <div className="scrollbar-slim overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+              <table className="w-full min-w-[760px]">
+                <thead className="border-b border-slate-100 bg-slate-50"><tr><th className={th}>Campaign</th><th className={th}>Audience</th><th className={th}>Recipients</th><th className={th}>Opens</th><th className={th}>Clicks</th><th className={th}>Status</th><th className={th}>Sent</th></tr></thead>
+                <tbody className="divide-y divide-slate-100">
+                  {campaigns.map((c) => (
+                    <tr key={c.id} className="hover:bg-slate-50">
+                      <td className={`${td} font-semibold text-slate-800`}>{c.name}</td>
+                      <td className={td}>{c.audience}</td>
+                      <td className={td}>{c.recipients.toLocaleString()}</td>
+                      <td className={td}>{c.status === 'Sent' ? `${c.opens} (${Math.round((c.opens / c.recipients) * 100)}%)` : '—'}</td>
+                      <td className={td}>{c.status === 'Sent' ? c.clicks : '—'}</td>
+                      <td className={td}><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${c.status === 'Sent' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>{c.status}</span></td>
+                      <td className={td}>{c.date}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* INTEGRATIONS */}
+        {tab === 'integrations' && (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {EMAIL_PROVIDERS.map((p) => {
+              const on = conns[p.key]
+              return (
+                <div key={p.key} className="flex flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="flex items-start justify-between">
+                    <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${p.color}`}><Mail className="h-6 w-6" /></div>
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${on ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{on ? 'Connected' : 'Not connected'}</span>
+                  </div>
+                  <p className="mt-3 text-base font-bold text-slate-900">{p.name}{p.builtin && <span className="ml-2 rounded bg-orange-50 px-1.5 py-0.5 text-[10px] font-bold uppercase text-brand">Built-in</span>}</p>
+                  <p className="mt-1 flex-1 text-sm text-slate-500">{p.desc}</p>
+                  {on && <p className="mt-2 text-xs font-medium text-slate-400">{p.account}</p>}
+                  <button onClick={() => toggleConn(p.key)} className={`mt-4 inline-flex items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold transition ${on ? 'border border-slate-200 text-slate-700 hover:bg-slate-50' : 'bg-brand text-white shadow-sm hover:bg-orange-600'}`}>
+                    {on ? 'Disconnect' : <><Plus className="h-4 w-4" /> Connect {p.name}</>}
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function PlaceholderPage({ label, icon: Icon }) {
   const notify = useToast()
   return (
@@ -11033,7 +11185,7 @@ export default function App() {
       case 'crm':
         return <CRMPage user={user} />
       case 'email':
-        return <PlaceholderPage label="Email Blasts" icon={Send} />
+        return <EmailBlastPage user={user} />
       case 'templates':
         return <PlaceholderPage label="Custom Templates" icon={Wand2} />
       case 'knowledge':
