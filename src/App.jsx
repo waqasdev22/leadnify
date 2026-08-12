@@ -12200,8 +12200,13 @@ function SettingsField({ label, value, onChange, type = 'text', placeholder }) {
   )
 }
 
-const PROFILE_TIMEZONES = ['Follow my company (not set) — UTC', 'Pacific — America/Los_Angeles', 'Mountain — America/Denver', 'Central — America/Chicago', 'Eastern — America/New_York', 'UTC']
 const OFFICE_TIMEZONES = ['Not set — the CRM uses UTC', 'Pacific — America/Los_Angeles', 'Mountain — America/Denver', 'Central — America/Chicago', 'Eastern — America/New_York', 'UTC']
+// Grouped CRM time-zone options (the "Detected" group is filled from the browser at render).
+const CRM_TZ_GROUPS = [
+  { group: 'United States', zones: ['Eastern — New York, Atlanta, Miami', 'Central — Chicago, Dallas, Houston', 'Mountain — Denver, Salt Lake City', 'Arizona — Phoenix, Tucson (no DST)', 'Pacific — Los Angeles, Seattle', 'Alaska — Anchorage', 'Hawaii — Honolulu (no DST)'] },
+  { group: 'Canada', zones: ['Eastern — Toronto, Ottawa', 'Central — Winnipeg', 'Mountain — Calgary, Edmonton', 'Pacific — Vancouver', 'Atlantic — Halifax'] },
+  { group: 'Other', zones: ['Mexico City', 'London', 'UTC — no local calendar'] },
+]
 
 function ProfileSectionHead({ icon: Icon, tone, title, sub }) {
   return (
@@ -12230,7 +12235,7 @@ function ProfileSettingsPage({ user }) {
   const [form, setForm] = usePersistentState('profile_settings', {
     firstName: (user?.name || CURRENT_USER.name).split(' ')[0] || '',
     lastName: (user?.name || CURRENT_USER.name).split(' ').slice(1).join(' ') || '',
-    phone: '', phoneType: '', title: 'Agent', license: '', crmTz: PROFILE_TIMEZONES[0], bio: '',
+    phone: '', phoneType: '', title: 'Agent', license: '', crmTz: '', bio: '',
     companyName: '', companyLicense: '', officePhone: '', website: '', officeAddress: '', city: '', state: '', zip: '', officeTz: OFFICE_TIMEZONES[0],
     photo: '', logo: '',
   })
@@ -12241,6 +12246,18 @@ function ProfileSettingsPage({ user }) {
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
   const setP = (k) => (e) => setPw((p) => ({ ...p, [k]: e.target.value }))
   const initials = ((form.firstName || '') + ' ' + (form.lastName || '')).trim().split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() || 'U'
+  const detectedTz = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone } catch { return 'UTC' } })()
+  const detectedOpt = `${detectedTz} — from this browser`
+  const photoRef = useRef(null)
+  const logoRef = useRef(null)
+  const readImage = (file, key) => {
+    if (!file) return
+    if (!file.type.startsWith('image/')) { notify('Please choose an image file', 'error'); return }
+    if (file.size > 3 * 1024 * 1024) { notify('Image must be under 3 MB', 'error'); return }
+    const reader = new FileReader()
+    reader.onload = () => { setForm((f) => ({ ...f, [key]: reader.result })); notify(key === 'photo' ? 'Photo updated' : 'Logo updated') }
+    reader.readAsDataURL(file)
+  }
   const sel = 'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-orange-400'
   const toolBtn = 'flex h-7 w-7 items-center justify-center rounded text-slate-500 transition hover:bg-slate-100 hover:text-slate-700'
 
@@ -12260,10 +12277,14 @@ function ProfileSettingsPage({ user }) {
       <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 border-l-4 border-l-blue-400 bg-white p-5 shadow-sm">
         <ProfileSectionHead icon={User} tone="bg-blue-50 text-blue-500" title="Personal information" />
         <div className="mt-5 flex items-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-orange-400 to-orange-600 text-lg font-bold text-white ring-2 ring-orange-200">{form.photo ? <img src={form.photo} alt="" className="h-full w-full object-cover" /> : initials}</div>
+          <button type="button" onClick={() => photoRef.current && photoRef.current.click()} className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-orange-400 to-orange-600 text-lg font-bold text-white ring-2 ring-orange-200 transition hover:opacity-90">{form.photo ? <img src={form.photo} alt="" className="h-full w-full object-cover" /> : initials}</button>
+          <input ref={photoRef} type="file" accept="image/*" className="hidden" onChange={(e) => { readImage(e.target.files[0], 'photo'); e.target.value = '' }} />
           <div>
             <p className="text-sm font-semibold text-slate-600">Profile Photo</p>
-            <button onClick={() => notify('Photo upload — demo')} className="text-sm font-semibold text-brand hover:underline">Upload</button>
+            <div className="flex items-center gap-2">
+              <button onClick={() => photoRef.current && photoRef.current.click()} className="text-sm font-semibold text-brand hover:underline">Upload</button>
+              {form.photo && <button onClick={() => setForm((f) => ({ ...f, photo: '' }))} className="text-sm font-semibold text-slate-400 hover:text-rose-500">Remove</button>}
+            </div>
           </div>
         </div>
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -12280,7 +12301,10 @@ function ProfileSettingsPage({ user }) {
         </div>
         <div className="mt-4">
           <label className="mb-1 block text-xs font-semibold text-slate-500">CRM time zone</label>
-          <select value={form.crmTz} onChange={set('crmTz')} className={sel}>{PROFILE_TIMEZONES.map((t) => <option key={t}>{t}</option>)}</select>
+          <select value={form.crmTz || detectedOpt} onChange={set('crmTz')} className={sel}>
+            <optgroup label="Detected"><option value={detectedOpt}>{detectedOpt}</option></optgroup>
+            {CRM_TZ_GROUPS.map((g) => <optgroup key={g.group} label={g.group}>{g.zones.map((z) => <option key={z} value={z}>{z}</option>)}</optgroup>)}
+          </select>
           <p className="mt-1 text-xs text-slate-400">Sets what day the CRM calls "today" — due dates, the week's tasks, and the countdown to a lease expiring. Only override this if you work in a different time zone from your office.</p>
         </div>
         <div className="mt-4">
@@ -12311,10 +12335,14 @@ function ProfileSettingsPage({ user }) {
       <div className="mt-5 overflow-hidden rounded-xl border border-slate-200 border-l-4 border-l-emerald-400 bg-white p-5 shadow-sm">
         <ProfileSectionHead icon={Building2} tone="bg-emerald-50 text-emerald-500" title="Company information" sub="This info appears in your marketing documents." />
         <div className="mt-5 flex items-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-lg border border-dashed border-slate-300 bg-slate-50 text-slate-300">{form.logo ? <img src={form.logo} alt="" className="h-full w-full object-cover" /> : <ImageIcon className="h-6 w-6" />}</div>
+          <button type="button" onClick={() => logoRef.current && logoRef.current.click()} className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-lg border border-dashed border-slate-300 bg-slate-50 text-slate-300 transition hover:border-orange-400 hover:text-orange-400">{form.logo ? <img src={form.logo} alt="" className="h-full w-full object-contain" /> : <ImageIcon className="h-6 w-6" />}</button>
+          <input ref={logoRef} type="file" accept="image/*" className="hidden" onChange={(e) => { readImage(e.target.files[0], 'logo'); e.target.value = '' }} />
           <div>
             <p className="text-sm font-semibold text-slate-600">Company Logo</p>
-            <button onClick={() => notify('Logo upload — demo')} className="text-sm font-semibold text-brand hover:underline">Upload</button>
+            <div className="flex items-center gap-2">
+              <button onClick={() => logoRef.current && logoRef.current.click()} className="text-sm font-semibold text-brand hover:underline">Upload</button>
+              {form.logo && <button onClick={() => setForm((f) => ({ ...f, logo: '' }))} className="text-sm font-semibold text-slate-400 hover:text-rose-500">Remove</button>}
+            </div>
           </div>
         </div>
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
