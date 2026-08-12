@@ -10389,6 +10389,20 @@ const ASSIGN_STAGE_META = {
   Lost: { pct: 0, bar: 'border-t-slate-400' },
 }
 const CRM_ASSIGNMENTS = []
+// Listings = properties you already represent, tracked prep → closing.
+const LISTING_STAGES = ['Prep', 'Live', 'Tours', 'LOI', 'Contract', 'Diligence', 'Closing', 'Closed', 'Expired']
+const LISTING_STAGE_META = {
+  Prep: { pct: 10, bar: 'border-t-slate-400' },
+  Live: { pct: 25, bar: 'border-t-blue-500' },
+  Tours: { pct: 40, bar: 'border-t-amber-500' },
+  LOI: { pct: 55, bar: 'border-t-orange-500' },
+  Contract: { pct: 70, bar: 'border-t-emerald-500' },
+  Diligence: { pct: 80, bar: 'border-t-blue-500' },
+  Closing: { pct: 90, bar: 'border-t-emerald-500' },
+  Closed: { pct: 100, bar: 'border-t-emerald-600' },
+  Expired: { pct: 0, bar: 'border-t-slate-400' },
+}
+const CRM_LISTINGS_SEED = []
 const CRM_DEALS = [
   { id: 'd1', title: 'Neil Naran — Test', contact: 'Neil Naran', company: 'Value Net Lease Partners', value: 1500000, stage: 'NDA Signed', days: 14, owner: 'Waqas' },
   { id: 'd2', title: 'Neil Naran — Test', contact: 'Neil Naran', company: 'Value Net Lease Partners', value: 1500000, stage: 'NDA Signed', days: 14, owner: 'Waqas' },
@@ -10525,12 +10539,16 @@ function CRMPage({ user }) {
   const [assignList, setAssignList] = usePersistentState('crm_assignments', CRM_ASSIGNMENTS)
   const [addAssignStage, setAddAssignStage] = useState(null)
   const [newAssign, setNewAssign] = useState({ contact: '', title: '', company: '', value: '', days: '0' })
+  const [listingList, setListingList] = usePersistentState('crm_listings', CRM_LISTINGS_SEED)
+  const [addListingStage, setAddListingStage] = useState(null)
+  const [newListing, setNewListing] = useState({ title: '', contact: '', company: '', value: '', days: '0' })
 
   const mine = (arr) => (scope === 'mine' ? arr.filter((x) => x.owner === me) : arr)
   const leads = mine(CRM_LEADS).filter((l) => (l.name + l.company).toLowerCase().includes(search.toLowerCase()))
   const contacts = (scope === 'mine' ? contactList.filter((c) => c.owner === me) : contactList).filter((c) => (c.name + c.email + c.company).toLowerCase().includes(search.toLowerCase()))
   const deals = mine(dealsList)
   const assignments = mine(assignList)
+  const listings = mine(listingList)
   const myTasks = mine(tasks)
   const scripts = mine(CRM_SCRIPTS)
   const automations = mine(autos)
@@ -10977,6 +10995,14 @@ function CRMPage({ user }) {
             setAddAssignStage(null)
             setNewAssign({ contact: '', title: '', company: '', value: '', days: '0' })
           }
+          const moveListing = (id, stage) => { setListingList((list) => list.map((l) => (l.id === id ? { ...l, stage } : l))); notify(`Moved to ${stage}`) }
+          const addListing = () => {
+            if (!newListing.title.trim() && !newListing.contact.trim()) { notify('Enter a property', 'error'); return }
+            setListingList((list) => [{ id: uid(), title: newListing.title.trim() || newListing.contact.trim(), contact: newListing.contact.trim() || '—', company: newListing.company.trim() || '—', value: Number(newListing.value) || 0, stage: addListingStage, days: Number(newListing.days) || 0, owner: me }, ...list])
+            notify('Listing added')
+            setAddListingStage(null)
+            setNewListing({ title: '', contact: '', company: '', value: '', days: '0' })
+          }
           return (
           <div className="space-y-5">
             {/* Sub-tabs */}
@@ -11256,11 +11282,137 @@ function CRMPage({ user }) {
               )}
               </>
             ) : (
-              <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 py-20 text-center">
-                <TrendingUp className="h-10 w-10 text-slate-300" />
-                <p className="mt-4 text-base font-bold text-slate-800">{pipeTab}</p>
-                <p className="mt-1 max-w-md text-sm text-slate-500">Your active listings pipeline — coming soon.</p>
+              <>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-xl font-extrabold text-slate-900">Listings</h2>
+                  <p className="mt-1 max-w-2xl text-sm text-slate-500">Properties you already represent, tracked from prep through closing. Buyers pursuing them live on the Deals board.</p>
+                </div>
+                <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1">
+                  <button onClick={() => setDealView('board')} title="Board view" className={`flex h-8 w-8 items-center justify-center rounded-md transition ${dealView === 'board' ? 'bg-orange-50 text-brand' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'}`}><LayoutGrid className="h-4 w-4" /></button>
+                  <button onClick={() => setDealView('list')} title="List view" className={`flex h-8 w-8 items-center justify-center rounded-md transition ${dealView === 'list' ? 'bg-orange-50 text-brand' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'}`}><List className="h-4 w-4" /></button>
+                </div>
               </div>
+
+              {addListingStage && (
+                <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="flex items-center justify-between"><p className="text-sm font-bold text-slate-900">New Listing · <span className="text-brand">{addListingStage}</span></p><button onClick={() => setAddListingStage(null)} className="text-slate-400 hover:text-slate-700"><X className="h-5 w-5" /></button></div>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    <div><label className="mb-1 block text-xs font-semibold text-slate-500">Property / Address</label><input value={newListing.title} onChange={(e) => setNewListing((f) => ({ ...f, title: e.target.value }))} placeholder="e.g. Olive Grove Plaza" className={dealIn} /></div>
+                    <div><label className="mb-1 block text-xs font-semibold text-slate-500">Owner / Landlord</label><input value={newListing.contact} onChange={(e) => setNewListing((f) => ({ ...f, contact: e.target.value }))} placeholder="e.g. Jordan Miller" className={dealIn} /></div>
+                    <div><label className="mb-1 block text-xs font-semibold text-slate-500">Company</label><input value={newListing.company} onChange={(e) => setNewListing((f) => ({ ...f, company: e.target.value }))} placeholder="Company" className={dealIn} /></div>
+                    <div><label className="mb-1 block text-xs font-semibold text-slate-500">List price ($)</label><input value={newListing.value} onChange={(e) => setNewListing((f) => ({ ...f, value: e.target.value }))} type="number" placeholder="5000000" className={dealIn} /></div>
+                    <div><label className="mb-1 block text-xs font-semibold text-slate-500">Days on market</label><input value={newListing.days} onChange={(e) => setNewListing((f) => ({ ...f, days: e.target.value }))} type="number" placeholder="0" className={dealIn} /></div>
+                  </div>
+                  <div className="mt-4 flex justify-end gap-2">
+                    <button onClick={() => setAddListingStage(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
+                    <PrimaryButton icon={Plus} onClick={addListing}>Add listing</PrimaryButton>
+                  </div>
+                </div>
+              )}
+
+              {dealView === 'board' ? (
+              <div className="scrollbar-slim flex gap-4 overflow-x-auto pb-2">
+                {LISTING_STAGES.map((stage) => {
+                  const meta = LISTING_STAGE_META[stage]
+                  const col = listings.filter((l) => l.stage === stage)
+                  const total = col.reduce((s, l) => s + l.value, 0)
+                  return (
+                    <div
+                      key={stage}
+                      onDragOver={(e) => { if (dragDeal) { e.preventDefault(); if (dragStage !== stage) setDragStage(stage) } }}
+                      onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragStage((s) => (s === stage ? null : s)) }}
+                      onDrop={(e) => { e.preventDefault(); if (dragDeal) moveListing(dragDeal, stage); setDragDeal(null); setDragStage(null) }}
+                      className={`flex w-80 shrink-0 flex-col rounded-xl border border-t-4 border-slate-200 ${meta.bar} transition ${dragStage === stage ? 'bg-orange-50 ring-2 ring-orange-300' : 'bg-slate-50/60'}`}
+                    >
+                      <div className="px-3 pt-3">
+                        <div className="flex items-center justify-between">
+                          <span className="flex items-center gap-2 text-sm font-bold text-slate-800">{stage} <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-500">{col.length}</span></span>
+                          <span className="text-xs font-semibold text-slate-400">{meta.pct}%</span>
+                        </div>
+                        {col.length > 0 && <p className="mt-1 text-xs font-semibold text-slate-500">{money(total)}</p>}
+                      </div>
+                      <div className="scrollbar-slim mt-2 max-h-[520px] space-y-2 overflow-y-auto p-2">
+                        {col.map((l) => (
+                          <div
+                            key={l.id}
+                            draggable
+                            onDragStart={(e) => { setDragDeal(l.id); e.dataTransfer.effectAllowed = 'move' }}
+                            onDragEnd={() => { setDragDeal(null); setDragStage(null) }}
+                            className={`cursor-grab rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition active:cursor-grabbing ${dragDeal === l.id ? 'opacity-40' : 'hover:shadow-md'}`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-orange-500"><Building2 className="h-4 w-4" /></div>
+                              <div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-slate-800">{l.title}</p><p className="truncate text-xs text-slate-400">{l.contact} · {l.company}</p></div>
+                            </div>
+                            {l.value > 0 && (
+                              <div className="mt-2 flex items-center gap-2">
+                                <span className="text-sm font-extrabold text-orange-600">{currency(l.value)}</span>
+                                <span className="inline-flex items-center gap-0.5 rounded bg-slate-100 px-1.5 py-0.5 text-xs font-semibold text-slate-500">{l.days}d on market</span>
+                              </div>
+                            )}
+                            <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-100 pt-2">
+                              <button onClick={() => notify(`Opening ${l.title}`)} className="text-sm font-semibold text-brand hover:underline">Open</button>
+                              <select value="" onChange={(e) => e.target.value && moveListing(l.id, e.target.value)} className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 outline-none focus:border-orange-400">
+                                <option value="">Move to…</option>
+                                {LISTING_STAGES.filter((s) => s !== stage).map((s) => <option key={s} value={s}>{s}</option>)}
+                              </select>
+                            </div>
+                          </div>
+                        ))}
+                        {!col.length && <div className="flex items-center justify-center rounded-lg border border-dashed border-slate-200 py-10 text-center text-sm text-slate-400">No listings here yet</div>}
+                        <button onClick={() => { setAddListingStage(stage); setNewListing({ title: '', contact: '', company: '', value: '', days: '0' }) }} className="flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-slate-300 py-2 text-sm font-semibold text-slate-500 transition hover:border-orange-400 hover:bg-orange-50 hover:text-brand"><Plus className="h-4 w-4" /> Add</button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              ) : (
+                <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                  <div className="scrollbar-slim overflow-x-auto">
+                    <table className="w-full min-w-[720px] text-left text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          <th className="px-4 py-3">Property</th>
+                          <th className="px-4 py-3">Owner</th>
+                          <th className="px-4 py-3">Company</th>
+                          <th className="px-4 py-3 text-right">List price</th>
+                          <th className="px-4 py-3">Stage</th>
+                          <th className="px-4 py-3 text-right">DOM</th>
+                          <th className="px-4 py-3 text-right">Move to</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {listings.length === 0 && (
+                          <tr><td colSpan={7} className="px-4 py-12 text-center text-sm text-slate-400">No listings yet — use “+ Add” in any stage to add a property you represent.</td></tr>
+                        )}
+                        {LISTING_STAGES.flatMap((stage) => listings.filter((l) => l.stage === stage)).map((l) => (
+                          <tr key={l.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-orange-500"><Building2 className="h-4 w-4" /></div>
+                                <span className="font-semibold text-slate-800">{l.title}</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-slate-600">{l.contact}</td>
+                            <td className="px-4 py-3 text-slate-500">{l.company}</td>
+                            <td className="px-4 py-3 text-right font-extrabold text-orange-600">{l.value > 0 ? currency(l.value) : '—'}</td>
+                            <td className="px-4 py-3"><span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">{l.stage}</span></td>
+                            <td className="px-4 py-3 text-right text-xs font-semibold text-slate-500">{l.days}d</td>
+                            <td className="px-4 py-3 text-right">
+                              <select value="" onChange={(e) => e.target.value && moveListing(l.id, e.target.value)} className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 outline-none focus:border-orange-400">
+                                <option value="">Move to…</option>
+                                {LISTING_STAGES.filter((s) => s !== l.stage).map((s) => <option key={s} value={s}>{s}</option>)}
+                              </select>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+              </>
             )}
           </div>
           )
