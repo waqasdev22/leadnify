@@ -11798,13 +11798,15 @@ function CRMPage({ user, onNavigate }) {
           const doneTasks = myTasks.filter((t) => t.done)
           const calUrl = `https://app.mycreblueprint.com/cal/${(me || 'user').toLowerCase().replace(/\s+/g, '')}-${uid()}.ics`
           const fmtDue = (t) => { if (t.dueAt) { const d = new Date(t.dueAt); if (!isNaN(d)) return `due ${d.toLocaleString('en-GB')}` } return t.due && t.due !== 'No date' ? `due ${t.due}` : 'No due date' }
+          const deleteTask = (id) => { setTasks((l) => l.filter((t) => t.id !== id)); notify('Task deleted', 'error') }
           const TaskRow = (t) => (
-            <div key={t.id} className="flex items-start gap-3 rounded-lg border border-slate-100 bg-white p-3">
+            <div key={t.id} className="group flex items-start gap-3 rounded-lg border border-slate-100 bg-white p-3">
               <button onClick={() => toggleTask(t.id)} className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 ${t.done ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-slate-300 hover:border-emerald-400'}`}>{t.done && <Check className="h-3 w-3" />}</button>
               <div className="min-w-0 flex-1">
                 <p className={`text-sm ${t.done ? 'text-slate-400 line-through' : 'font-semibold text-slate-800'}`}>{t.title}</p>
                 <p className="text-xs text-slate-400">{fmtDue(t)}{t.related && t.related !== '—' ? ` · ${t.related}` : ''}</p>
               </div>
+              <button onClick={() => deleteTask(t.id)} title="Delete task" className="mt-0.5 shrink-0 rounded p-1 text-slate-300 opacity-0 transition hover:bg-rose-50 hover:text-rose-500 focus:opacity-100 group-hover:opacity-100"><Trash2 className="h-4 w-4" /></button>
             </div>
           )
           return (
