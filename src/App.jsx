@@ -10396,6 +10396,38 @@ function CrmKpi({ icon: Icon, label, value, tone = 'text-brand' }) {
   )
 }
 
+const CRM_STAGE_WEIGHT = { New: 0.1, Contacted: 0.25, Qualified: 0.5, Proposal: 0.75, 'Closed Won': 1 }
+const CRM_INQUIRIES = [
+  { id: 'iq1', name: 'Neil Naran', property: 'Olive Grove Plaza', owner: 'Waqas' },
+  { id: 'iq2', name: 'Sofia Ramirez', property: 'Summit Retail Center', owner: 'Devon Park' },
+]
+
+// A "Today" attention card — shows a count and a list, or "Nothing needs attention".
+function CrmAttentionCard({ icon: Icon, label, count, accent, children }) {
+  const active = count > 0
+  return (
+    <div className={`rounded-xl border bg-white p-4 shadow-sm ${accent && active ? 'border-l-4 border-l-amber-400 border-slate-200' : 'border-slate-200'}`}>
+      <div className="flex items-center justify-between">
+        <p className="flex items-center gap-2 text-sm font-bold text-slate-900"><Icon className="h-4 w-4 text-slate-400" /> {label}</p>
+        <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${active ? 'bg-brand/10 text-brand' : 'bg-slate-100 text-slate-400'}`}>{count}</span>
+      </div>
+      <div className="mt-3">
+        {active ? children : <p className="text-sm text-slate-400">Nothing needs attention.</p>}
+      </div>
+    </div>
+  )
+}
+
+function CrmMetric({ label, value, sub }) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{label}</p>
+      <p className="mt-1 text-2xl font-extrabold text-slate-900">{value}</p>
+      {sub && <p className="mt-1 text-xs text-slate-400">{sub}</p>}
+    </div>
+  )
+}
+
 function CRMPage({ user }) {
   const notify = useToast()
   const me = user?.name || CURRENT_USER.name
@@ -10447,43 +10479,66 @@ function CRMPage({ user }) {
 
       <div className="mt-6">
         {/* TODAY */}
-        {tab === 'today' && (
+        {tab === 'today' && (() => {
+          const openDeals = deals.filter((d) => d.stage !== 'Closed Won')
+          const weighted = openDeals.reduce((s, d) => s + d.value * (CRM_STAGE_WEIGHT[d.stage] || 0), 0)
+          const dueToday = myTasks.filter((t) => t.due === 'Today' && !t.done)
+          const noNextAction = openDeals.filter((d) => ['New', 'Contacted'].includes(d.stage))
+          const newLeads7d = leads.filter((l) => /h ago|1 day|2 days|3 days/.test(l.last))
+          const inquiries = (scope === 'mine' ? CRM_INQUIRIES.filter((i) => i.owner === me) : CRM_INQUIRIES)
+          const won = deals.filter((d) => d.stage === 'Closed Won').length
+          return (
           <div className="space-y-6">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <CrmKpi icon={Target} label="New Leads" value={leads.filter((l) => l.status === 'New').length} tone="text-blue-500" />
-              <CrmKpi icon={ClipboardList} label="Tasks Due" value={myTasks.filter((t) => !t.done && t.due === 'Today').length} tone="text-amber-500" />
-              <CrmKpi icon={TrendingUp} label="Open Deals" value={deals.filter((d) => d.stage !== 'Closed Won').length} tone="text-violet-500" />
-              <CrmKpi icon={DollarSign} label="Pipeline Value" value={currency(pipelineValue)} tone="text-emerald-500" />
+            <p className="-mt-2 text-sm text-slate-500">What needs you today — new enquiries, overdue tasks, and deals that have gone quiet.</p>
+            <div>
+              <h2 className="text-xl font-extrabold text-slate-900">Today</h2>
+              <p className="text-sm text-slate-500">What needs your attention today.</p>
             </div>
-            <div className="grid gap-6 lg:grid-cols-2">
-              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                <p className="text-sm font-bold text-slate-900">Today&apos;s Tasks</p>
-                <div className="mt-3 space-y-2">
-                  {myTasks.filter((t) => t.due === 'Today').map((t) => (
-                    <label key={t.id} className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-100 p-3 text-sm">
-                      <button onClick={() => toggleTask(t.id)} className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${t.done ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-slate-300'}`}>{t.done && <Check className="h-3 w-3" />}</button>
-                      <span className={`flex-1 ${t.done ? 'text-slate-400 line-through' : 'text-slate-700'}`}>{t.title}</span>
-                      <span className="text-xs text-slate-400">{t.related}</span>
-                    </label>
-                  ))}
-                  {!myTasks.filter((t) => t.due === 'Today').length && <p className="py-6 text-center text-sm text-slate-400">No tasks due today.</p>}
-                </div>
+
+            {/* Attention cards */}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <CrmAttentionCard icon={AlertTriangle} label="Overdue tasks" count={0} />
+              <CrmAttentionCard icon={ClipboardList} label="Due today" count={dueToday.length}>
+                <div className="space-y-1.5">{dueToday.map((t) => <div key={t.id} className="flex justify-between text-sm"><span className="truncate text-slate-700">{t.title}</span><span className="shrink-0 text-xs text-slate-400">{t.related}</span></div>)}</div>
+              </CrmAttentionCard>
+              <CrmAttentionCard icon={Clock} label="Stale deals" count={0} />
+              <CrmAttentionCard icon={TrendingUp} label="Deals with no next action" count={noNextAction.length} accent>
+                <div className="space-y-1.5">{noNextAction.map((d) => <div key={d.id} className="flex justify-between text-sm"><span className="truncate text-slate-700">{d.company} — {d.title}</span><span className="shrink-0 text-xs font-semibold text-slate-400">{currency(d.value)}</span></div>)}</div>
+              </CrmAttentionCard>
+              <CrmAttentionCard icon={Target} label="New leads (7d)" count={newLeads7d.length}>
+                <div className="space-y-1.5">{newLeads7d.map((l) => <div key={l.id} className="flex justify-between text-sm"><span className="truncate text-slate-700">{l.name}</span><span className="shrink-0 text-xs text-slate-400">{l.company}</span></div>)}</div>
+              </CrmAttentionCard>
+              <CrmAttentionCard icon={Mail} label="Unread inquiries" count={inquiries.length}>
+                <div className="space-y-1.5">{inquiries.map((i) => <div key={i.id} className="flex justify-between text-sm"><span className="truncate text-slate-700">{i.name}</span><span className="shrink-0 text-xs text-slate-400">{i.property}</span></div>)}</div>
+              </CrmAttentionCard>
+              <CrmAttentionCard icon={Clock} label="Access expiring (7d)" count={0} />
+            </div>
+
+            {/* Pipeline summary */}
+            <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+              <div className="flex flex-wrap gap-8">
+                <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Open deals</p><p className="text-lg font-extrabold text-slate-900">{openDeals.length}</p></div>
+                <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Pipeline value</p><p className="text-lg font-extrabold text-slate-900">{currency(pipelineValue)}</p></div>
+                <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Weighted</p><p className="text-lg font-extrabold text-slate-900">{currency(weighted)}</p></div>
               </div>
-              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                <p className="text-sm font-bold text-slate-900">Recent Leads</p>
-                <div className="mt-3 space-y-2">
-                  {leads.slice(0, 5).map((l) => (
-                    <div key={l.id} className="flex items-center gap-3 rounded-lg border border-slate-100 p-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-500">{l.name.split(' ').map((n) => n[0]).join('')}</div>
-                      <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-slate-800">{l.name}</p><p className="truncate text-xs text-slate-400">{l.company} · {l.last}</p></div>
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${crmStatusBadge(l.status)}`}>{l.status}</span>
-                    </div>
-                  ))}
-                </div>
+              <button onClick={() => setTab('pipelines')} className="inline-flex items-center gap-1 text-sm font-semibold text-brand hover:underline">Open pipeline →</button>
+            </div>
+
+            {/* Last 12 weeks */}
+            <div>
+              <p className="mb-3 text-sm font-bold text-slate-500">Last 12 weeks</p>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <CrmMetric label="New leads" value={leads.length} />
+                <CrmMetric label="Deals opened" value={deals.length} />
+                <CrmMetric label="Won" value={won} />
+                <CrmMetric label="Lost" value={0} />
+                <CrmMetric label="Win rate" value={won ? `${Math.round((won / deals.length) * 100)}%` : '—'} sub={won ? undefined : 'No deals closed yet'} />
+                <CrmMetric label="Median days to close" value="—" sub="No deals closed yet" />
               </div>
             </div>
           </div>
-        )}
+          )
+        })()}
 
         {/* LEADS */}
         {tab === 'leads' && (
