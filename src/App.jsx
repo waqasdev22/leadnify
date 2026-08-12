@@ -353,6 +353,21 @@ const currency = (n) =>
 
 const uid = () => Date.now() + Math.floor(Math.random() * 1000)
 
+// State that survives a page refresh by mirroring to localStorage.
+function usePersistentState(key, initial) {
+  const [state, setState] = useState(() => {
+    try {
+      const saved = localStorage.getItem(key)
+      if (saved != null) return JSON.parse(saved)
+    } catch { /* ignore */ }
+    return initial
+  })
+  useEffect(() => {
+    try { localStorage.setItem(key, JSON.stringify(state)) } catch { /* ignore */ }
+  }, [key, state])
+  return [state, setState]
+}
+
 // Relative "time ago" from a millisecond timestamp — updates as time passes.
 const timeAgo = (ts) => {
   if (!ts) return ''
@@ -10458,9 +10473,9 @@ function CRMPage({ user }) {
   const [tab, setTab] = useState('today')
   const [scope, setScope] = useState('mine') // 'mine' | 'team'
   const [search, setSearch] = useState('')
-  const [tasks, setTasks] = useState(CRM_TASKS_SEED)
-  const [autos, setAutos] = useState(CRM_AUTOMATIONS_SEED)
-  const [inbox, setInbox] = useState(CRM_INBOX_SEED)
+  const [tasks, setTasks] = usePersistentState('crm_tasks', CRM_TASKS_SEED)
+  const [autos, setAutos] = usePersistentState('crm_autos', CRM_AUTOMATIONS_SEED)
+  const [inbox, setInbox] = usePersistentState('crm_inbox', CRM_INBOX_SEED)
   const [leadFilter, setLeadFilter] = useState('All')
   const [addLeadOpen, setAddLeadOpen] = useState(false)
   const [newLead, setNewLead] = useState({ name: '', email: '', type: 'Inquiry', company: '', listing: '' })
@@ -10842,8 +10857,8 @@ const EMAIL_CAMPAIGNS_SEED = [
 function EmailBlastPage({ user }) {
   const notify = useToast()
   const [tab, setTab] = useState('campaigns')
-  const [conns, setConns] = useState({ outlook: false, crebuildermail: true, gmail: false })
-  const [campaigns, setCampaigns] = useState(EMAIL_CAMPAIGNS_SEED)
+  const [conns, setConns] = usePersistentState('email_conns', { outlook: false, crebuildermail: true, gmail: false })
+  const [campaigns, setCampaigns] = usePersistentState('email_campaigns', EMAIL_CAMPAIGNS_SEED)
   const [composeOpen, setComposeOpen] = useState(false)
   const connectedProviders = EMAIL_PROVIDERS.filter((p) => conns[p.key])
   const [form, setForm] = useState({ from: 'crebuildermail', audience: EMAIL_AUDIENCES[0], subject: '', body: '' })
