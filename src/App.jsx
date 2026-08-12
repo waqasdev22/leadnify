@@ -148,6 +148,7 @@ import {
   KeyRound,
   Cloud,
   Feather,
+  Loader2,
   Calendar,
   Library,
   Car,
@@ -1032,7 +1033,7 @@ function Sidebar({ active, onNavigate, onSignOut, user, forceCollapsed, responsi
     ? [
         ...NAV_ITEMS.filter((n) => !NAV_PERM[n.key] || can(NAV_PERM[n.key])),
         ...(can('team.manage_permissions') ? [{ key: 'team', label: 'Team & Permissions', icon: Users, dividerBefore: true }] : []),
-        { key: 'profile', label: 'Profile Settings', icon: Contact, dividerBefore: true },
+        { key: 'profile', label: 'Profile Settings', icon: User, dividerBefore: true },
         { key: 'teamsettings', label: 'Team Settings', icon: Users },
       ]
     : NAV_ITEMS
@@ -12110,15 +12111,18 @@ function EmailBlastPage({ user }) {
   const [composeOpen, setComposeOpen] = useState(false)
   const [form, setForm] = useState({ audience: EMAIL_AUDIENCES[0], subject: '', body: '', type: 'individual' })
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [connectTarget, setConnectTarget] = useState(null)
+  const [connecting, setConnecting] = useState(false)
   const drafts = campaigns.filter((c) => c.status === 'Draft')
   const sent = campaigns.filter((c) => c.status === 'Sent')
 
-  const toggleConn = (p) => {
-    setConns((c) => {
-      const next = { ...c, [p.key]: !c[p.key] }
-      notify(next[p.key] ? `Connected ${p.name}` : `Disconnected ${p.name}`, next[p.key] ? 'success' : 'error')
-      return next
-    })
+  const setConnected = (p, on) => setConns((c) => ({ ...c, [p.key]: on }))
+  const disconnect = (p) => { setConnected(p, false); notify(`Disconnected ${p.name}`, 'error') }
+  const confirmConnect = () => {
+    const p = connectTarget
+    setConnecting(true)
+    // Real OAuth would redirect to the provider here; this authorizes the demo connection.
+    setTimeout(() => { setConnected(p, true); setConnecting(false); setConnectTarget(null); notify(`Connected ${p.name}`, 'success') }, 900)
   }
   const startBlast = () => setPickerOpen(true)
   const chooseType = (type) => { setForm({ audience: EMAIL_AUDIENCES[0], subject: '', body: '', type }); setPickerOpen(false); setComposeOpen(true) }
@@ -12167,10 +12171,10 @@ function EmailBlastPage({ user }) {
                 ) : on ? (
                   <div className="flex flex-col items-center gap-1">
                     <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700"><CheckCircle2 className="h-4 w-4" /> Connected</span>
-                    <button onClick={() => toggleConn(p)} className="text-xs font-medium text-slate-400 hover:text-rose-500">Disconnect</button>
+                    <button onClick={() => disconnect(p)} className="text-xs font-medium text-slate-400 hover:text-rose-500">Disconnect</button>
                   </div>
                 ) : (
-                  <button onClick={() => toggleConn(p)} className="rounded-full bg-orange-50 px-4 py-1 text-sm font-semibold text-brand transition hover:bg-orange-100">Connect</button>
+                  <button onClick={() => setConnectTarget(p)} className="rounded-full bg-orange-50 px-4 py-1 text-sm font-semibold text-brand transition hover:bg-orange-100">Connect</button>
                 )}
               </div>
             </div>
@@ -12227,6 +12231,28 @@ function EmailBlastPage({ user }) {
           </div>
         </div>
       )}
+
+      {/* Connect / authorize modal */}
+      {connectTarget && (() => {
+        const p = connectTarget
+        const Icon = p.icon
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !connecting && setConnectTarget(null)}>
+            <div className="w-full max-w-md rounded-2xl bg-white p-6 text-center shadow-2xl" onClick={(e) => e.stopPropagation()}>
+              <span className={`mx-auto flex h-14 w-14 items-center justify-center rounded-xl ${p.tile}`}><Icon className="h-7 w-7" /></span>
+              <p className="mt-4 text-lg font-bold text-slate-900">Connect {p.name}</p>
+              <p className="mt-2 text-sm text-slate-500">You'll be securely redirected to {p.name} to sign in and authorize MyCREBlueprint to send on your behalf. We never see your password.</p>
+              <div className="mt-5 flex justify-center gap-2">
+                <button disabled={connecting} onClick={() => setConnectTarget(null)} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50">Cancel</button>
+                <button disabled={connecting} onClick={confirmConnect} className="inline-flex items-center gap-2 rounded-lg bg-brand px-5 py-2 text-sm font-bold text-white transition hover:bg-orange-600 disabled:opacity-70">
+                  {connecting ? <><Loader2 className="h-4 w-4 animate-spin" /> Connecting…</> : <>Continue to {p.name}</>}
+                </button>
+              </div>
+              <p className="mt-3 text-xs text-slate-400">MyCREBlueprint only requests permission to send emails — nothing else.</p>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Kind picker modal */}
       {pickerOpen && (
