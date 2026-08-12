@@ -10479,6 +10479,7 @@ function CRMPage({ user }) {
   const [leadFilter, setLeadFilter] = useState('All')
   const [addLeadOpen, setAddLeadOpen] = useState(false)
   const [newLead, setNewLead] = useState({ name: '', email: '', type: 'Inquiry', company: '', listing: '' })
+  const [selLeads, setSelLeads] = useState([])
 
   const mine = (arr) => (scope === 'mine' ? arr.filter((x) => x.owner === me) : arr)
   const leads = mine(CRM_LEADS).filter((l) => (l.name + l.company).toLowerCase().includes(search.toLowerCase()))
@@ -10606,6 +10607,10 @@ function CRMPage({ user }) {
             setAddLeadOpen(false)
             setNewLead({ name: '', email: '', type: 'Inquiry', company: '', listing: '' })
           }
+          const allSelected = rows.length > 0 && rows.every((l) => selLeads.includes(l.id))
+          const toggleSel = (id) => setSelLeads((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))
+          const toggleAll = () => setSelLeads(allSelected ? [] : rows.map((l) => l.id))
+          const deleteSelected = () => { setInbox((list) => list.filter((l) => !selLeads.includes(l.id))); notify(`${selLeads.length} lead${selLeads.length === 1 ? '' : 's'} deleted`, 'error'); setSelLeads([]) }
           return (
           <div className="space-y-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -10665,13 +10670,25 @@ function CRMPage({ user }) {
               </div>
             </div>
 
+            {/* Bulk action bar */}
+            {selLeads.length > 0 && (
+              <div className="flex items-center justify-between rounded-xl border border-orange-200 bg-orange-50 px-4 py-3">
+                <span className="text-sm font-semibold text-slate-700">{selLeads.length} selected</span>
+                <button onClick={deleteSelected} className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-rose-700"><Trash2 className="h-4 w-4" /> Delete selected</button>
+              </div>
+            )}
+
             {/* Table */}
             <div className="scrollbar-slim overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-              <table className="w-full min-w-[820px]">
-                <thead className="border-b border-slate-100 bg-slate-50"><tr><th className={th}>Lead</th><th className={th}>Type</th><th className={th}>Company</th><th className={th}>Listing</th><th className={th}>Date</th><th className={th}>Status</th><th className={th + ' text-right'}>Actions</th></tr></thead>
+              <table className="w-full min-w-[860px]">
+                <thead className="border-b border-slate-100 bg-slate-50"><tr>
+                  <th className="w-10 px-4 py-3"><input type="checkbox" checked={allSelected} onChange={toggleAll} className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-orange-300" /></th>
+                  <th className={th}>Lead</th><th className={th}>Type</th><th className={th}>Company</th><th className={th}>Listing</th><th className={th}>Date</th><th className={th}>Status</th><th className={th + ' text-right'}>Actions</th>
+                </tr></thead>
                 <tbody className="divide-y divide-slate-100">
                   {rows.map((l) => (
-                    <tr key={l.id} className="hover:bg-slate-50">
+                    <tr key={l.id} className={`hover:bg-slate-50 ${selLeads.includes(l.id) ? 'bg-orange-50/40' : ''}`}>
+                      <td className="w-10 px-4 py-3"><input type="checkbox" checked={selLeads.includes(l.id)} onChange={() => toggleSel(l.id)} className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-orange-300" /></td>
                       <td className={td}>
                         <div className="flex items-center gap-2">
                           {l.unread && <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
@@ -10688,14 +10705,14 @@ function CRMPage({ user }) {
                           l.status === 'Revoked' ? <span className="text-xs text-slate-400">Revoked</span> : <button onClick={() => revoke(l.id)} className="inline-flex items-center gap-1 text-sm font-semibold text-slate-600 transition hover:text-rose-600"><Ban className="h-4 w-4" /> Revoke</button>
                         ) : (
                           <span className="inline-flex items-center gap-1">
-                            <IconButton icon={Eye} label="Mark read" onClick={() => markRead(l.id)} />
+                            <IconButton icon={EyeOff} label="Mark read" onClick={() => markRead(l.id)} />
                             <IconButton icon={Trash2} label="Delete" tone="danger" onClick={() => del(l.id)} />
                           </span>
                         )}
                       </td>
                     </tr>
                   ))}
-                  {!rows.length && <tr><td colSpan={7} className="py-10 text-center text-sm text-slate-400">No leads.</td></tr>}
+                  {!rows.length && <tr><td colSpan={8} className="py-10 text-center text-sm text-slate-400">No leads.</td></tr>}
                 </tbody>
               </table>
             </div>
