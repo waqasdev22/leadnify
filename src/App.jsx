@@ -1073,19 +1073,8 @@ function Sidebar({ active, onNavigate, onSignOut, user, forceCollapsed, responsi
 
       {/* Upgrade promo */}
 
-      {/* Account: Profile Settings · Team Settings · Sign Out (always visible) */}
+      {/* Account: Profile Settings · Team Settings · Sign Out, then profile at the end */}
       <div className="border-t border-slate-100 p-3">
-        <div className={`mb-2 flex items-center gap-3 px-2 ${collapsed ? 'justify-center' : ''}`}>
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-orange-600 text-sm font-bold text-white">
-            {user.initials}
-          </div>
-          {!collapsed && (
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-slate-800">{user.name}</p>
-              <p className="truncate text-xs text-slate-400">{user.email}</p>
-            </div>
-          )}
-        </div>
         <div className="space-y-1">
           {[
             { key: 'profile', label: 'Profile Settings', icon: Contact },
@@ -1109,6 +1098,17 @@ function Sidebar({ active, onNavigate, onSignOut, user, forceCollapsed, responsi
             <LogOut className="h-5 w-5" />
             {!collapsed && 'Sign Out'}
           </button>
+        </div>
+        <div className={`mt-2 flex items-center gap-3 border-t border-slate-100 px-2 pt-3 ${collapsed ? 'justify-center' : ''}`}>
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-orange-600 text-sm font-bold text-white">
+            {user.initials}
+          </div>
+          {!collapsed && (
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-slate-800">{user.name}</p>
+              <p className="truncate text-xs text-slate-400">{user.email}</p>
+            </div>
+          )}
         </div>
       </div>
     </aside>
