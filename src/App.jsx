@@ -140,6 +140,7 @@ import {
   ChevronUp,
   Percent,
   Trophy,
+  Archive,
   Calendar,
   Library,
   Car,
@@ -10570,6 +10571,7 @@ function CRMPage({ user }) {
   const [newDeal, setNewDeal] = useState({ contact: '', title: '', company: '', value: '', stage: 'Inquiry', days: '0' })
   const [dragDeal, setDragDeal] = useState(null)
   const [dragStage, setDragStage] = useState(null)
+  const [dealDetailId, setDealDetailId] = useState(null)
   const [dealView, setDealView] = usePersistentState('crm_dealview', 'board')
   const [assignList, setAssignList] = usePersistentState('crm_assignments', CRM_ASSIGNMENTS)
   const [addAssignStage, setAddAssignStage] = useState(null)
@@ -11058,7 +11060,17 @@ function CRMPage({ user }) {
         {/* PIPELINES */}
         {tab === 'pipelines' && (() => {
           const money = (n) => (n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `$${Math.round(n / 1e3)}K` : `$${n}`)
-          const moveTo = (id, stage) => { setDealsList((list) => list.map((d) => (d.id === id ? { ...d, stage } : d))); notify(`Moved to ${stage}`) }
+          const stampNow = () => { const d = new Date(); return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}, ${d.toLocaleTimeString('en-GB')}` }
+          const updateDeal = (id, patch) => setDealsList((list) => list.map((d) => (d.id === id ? { ...d, ...patch } : d)))
+          const moveTo = (id, stage) => {
+            setDealsList((list) => list.map((d) => {
+              if (d.id !== id || d.stage === stage) return d
+              const entry = { text: `Stage changed — ${d.stage} → ${stage}`, ts: stampNow() }
+              return { ...d, stage, activity: [entry, ...(d.activity || [])] }
+            }))
+            notify(`Moved to ${stage}`)
+          }
+          const detailDeal = dealDetailId ? dealsList.find((d) => d.id === dealDetailId) : null
           const dealIn = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400'
           const addDeal = () => {
             if (!newDeal.contact.trim() && !newDeal.title.trim()) { notify('Enter a deal name or contact', 'error'); return }
@@ -11093,6 +11105,70 @@ function CRMPage({ user }) {
             </div>
 
             {pipeTab === 'Deals' ? (
+              detailDeal ? (
+              <>
+                <button onClick={() => setDealDetailId(null)} className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:underline"><ArrowLeft className="h-4 w-4" /> Deals</button>
+                {/* Header card */}
+                <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h2 className="text-xl font-extrabold text-slate-900">{detailDeal.title}</h2>
+                      <p className="mt-0.5 flex items-center gap-1.5 text-sm text-slate-500">{detailDeal.contact} · <span className="inline-flex items-center gap-1"><Building2 className="h-3.5 w-3.5" /> {detailDeal.company}</span></p>
+                    </div>
+                    <button onClick={() => { moveTo(detailDeal.id, 'Closed Lost'); notify('Deal archived'); setDealDetailId(null) }} className="inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-slate-800"><Archive className="h-4 w-4" /> Archive</button>
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {CRM_STAGES.map((s) => (
+                      <button key={s} onClick={() => moveTo(detailDeal.id, s)} className={`rounded-full px-3 py-1 text-xs font-semibold transition ${detailDeal.stage === s ? 'bg-violet-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{s}</button>
+                    ))}
+                  </div>
+                </div>
+                <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+                  <div className="space-y-6">
+                    {/* Deal economics */}
+                    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                      <p className="text-sm font-bold text-slate-900">Deal economics</p>
+                      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                        <div><label className="mb-1 block text-xs font-semibold text-slate-500">Value ($)</label><div className="relative"><span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">$</span><input type="number" value={detailDeal.value} onChange={(e) => updateDeal(detailDeal.id, { value: Number(e.target.value) || 0 })} className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-7 pr-3 text-sm outline-none focus:border-orange-400" /></div></div>
+                        <div><label className="mb-1 block text-xs font-semibold text-slate-500">Expected close</label><input type="date" value={detailDeal.expectedClose || ''} onChange={(e) => updateDeal(detailDeal.id, { expectedClose: e.target.value })} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" /></div>
+                        <div><label className="mb-1 block text-xs font-semibold text-slate-500">Side</label><select value={detailDeal.side || ''} onChange={(e) => updateDeal(detailDeal.id, { side: e.target.value })} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400"><option value="">—</option>{['Buyer', 'Seller', 'Landlord', 'Tenant', 'Dual'].map((o) => <option key={o}>{o}</option>)}</select></div>
+                        <div><label className="mb-1 block text-xs font-semibold text-slate-500">Commission (%)</label><div className="relative"><span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">%</span><input type="number" value={detailDeal.commission || ''} onChange={(e) => updateDeal(detailDeal.id, { commission: e.target.value })} className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-7 pr-3 text-sm outline-none focus:border-orange-400" /></div></div>
+                      </div>
+                    </div>
+                    {/* Offers & LOIs */}
+                    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                      <div className="flex items-center justify-between"><p className="text-sm font-bold text-slate-900">Offers &amp; LOIs</p><button onClick={() => notify('Log offer — demo')} className="text-xs font-semibold text-brand hover:underline">+ Log offer</button></div>
+                      <p className="mt-2 text-sm text-slate-500">No offers logged. Recording the terms — deposit, diligence, financing, closing — is what lets you rank competing bids on more than price.</p>
+                    </div>
+                    {/* Commission splits */}
+                    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                      <div className="flex items-center justify-between"><p className="text-sm font-bold text-slate-900">Commission splits</p><button onClick={() => notify('Add split — demo')} className="text-xs font-semibold text-brand hover:underline">+ Add split</button></div>
+                      <p className="mt-2 text-sm text-slate-500">No splits — the full commission is credited to this deal's owner. Add splits for a co-brokered deal so per-agent GCI is right.</p>
+                    </div>
+                    {/* Activity */}
+                    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                      <p className="text-sm font-bold text-slate-900">Activity</p>
+                      <div className="mt-3 space-y-2">
+                        {(detailDeal.activity && detailDeal.activity.length) ? detailDeal.activity.map((a, i) => (
+                          <div key={i} className="rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2"><p className="text-sm text-slate-700">{a.text}</p><p className="text-xs text-slate-400">{a.ts}</p></div>
+                        )) : <p className="text-sm text-slate-400">No activity yet — move the deal through stages and it logs here.</p>}
+                      </div>
+                    </div>
+                  </div>
+                  {/* Right column */}
+                  <div className="space-y-6">
+                    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                      <div className="flex items-center justify-between"><p className="flex items-center gap-2 text-sm font-bold text-slate-900"><Users className="h-4 w-4 text-slate-400" /> Parties</p><button onClick={() => notify('Add party — demo')} className="text-xs font-semibold text-brand hover:underline">+ Add</button></div>
+                      <div className="mt-3 rounded-lg border border-slate-100 p-3">
+                        <p className="text-sm font-bold text-slate-800">{detailDeal.contact}</p>
+                        <p className="text-xs text-slate-400">Primary contact</p>
+                      </div>
+                    </div>
+                    <button onClick={() => { setTab('today'); notify('Opening Property Hub — demo') }} className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-5 py-4 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50">Open Property Hub <ExternalLink className="h-4 w-4 text-slate-400" /></button>
+                  </div>
+                </div>
+              </>
+              ) : (
               <>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -11155,18 +11231,26 @@ function CRMPage({ user }) {
                             draggable
                             onDragStart={(e) => { setDragDeal(d.id); e.dataTransfer.effectAllowed = 'move' }}
                             onDragEnd={() => { setDragDeal(null); setDragStage(null) }}
-                            className={`cursor-grab rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition active:cursor-grabbing ${dragDeal === d.id ? 'opacity-40' : 'hover:shadow-md'}`}
+                            className={`group cursor-grab rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition active:cursor-grabbing ${dragDeal === d.id ? 'opacity-40' : 'hover:shadow-md'}`}
                           >
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-start gap-2">
                               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-xs font-bold text-emerald-600">{d.contact.split(' ').map((n) => n[0]).join('').slice(0, 2)}</div>
                               <div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-slate-800">{d.contact}</p><p className="truncate text-xs text-slate-400">{d.title} · {d.company}</p></div>
+                              <GripVertical className="h-4 w-4 shrink-0 text-slate-300 opacity-0 transition group-hover:opacity-100" />
                             </div>
                             <div className="mt-2 flex items-center gap-2">
                               <span className="text-sm font-extrabold text-emerald-600">{currency(d.value)}</span>
                               <span className="inline-flex items-center gap-0.5 rounded bg-orange-50 px-1.5 py-0.5 text-xs font-semibold text-orange-600"><Flame className="h-3 w-3" /> {d.days}d</span>
                             </div>
+                            {/* Add-a-note — visible on hover (or when a note exists) */}
+                            <div className={`overflow-hidden transition-all ${d.note ? 'mt-2 max-h-20' : 'max-h-0 group-hover:mt-2 group-hover:max-h-20'}`}>
+                              <div className="flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5">
+                                <FileText className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                                <input value={d.note || ''} onChange={(e) => updateDeal(d.id, { note: e.target.value })} onPointerDown={(e) => e.stopPropagation()} placeholder="Add a note…" className="w-full bg-transparent text-xs text-slate-600 outline-none placeholder:text-slate-400" />
+                              </div>
+                            </div>
                             <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-100 pt-2">
-                              <button onClick={() => notify(`Opening ${d.title}`)} className="text-sm font-semibold text-brand hover:underline">Open deal</button>
+                              <button onClick={() => setDealDetailId(d.id)} className="text-sm font-semibold text-brand hover:underline">Open deal</button>
                               <div className="flex items-center gap-1">
                                 <button onClick={() => notify('Assign owner — demo')} className="rounded p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"><User className="h-4 w-4" /></button>
                                 <select value="" onChange={(e) => e.target.value && moveTo(d.id, e.target.value)} className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 outline-none focus:border-orange-400">
@@ -11229,6 +11313,7 @@ function CRMPage({ user }) {
                 </div>
               )}
               </>
+              )
             ) : pipeTab === 'Assignments' ? (
               <>
               <div className="flex flex-wrap items-start justify-between gap-3">
