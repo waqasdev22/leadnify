@@ -10403,10 +10403,11 @@ const CRM_INQUIRIES = [
 ]
 
 // A "Today" attention card — shows a count and a list, or "Nothing needs attention".
-function CrmAttentionCard({ icon: Icon, label, count, accent, children }) {
+// "View all →" fades in on hover.
+function CrmAttentionCard({ icon: Icon, label, count, accent, onViewAll, children }) {
   const active = count > 0
   return (
-    <div className={`rounded-xl border bg-white p-4 shadow-sm ${accent && active ? 'border-l-4 border-l-amber-400 border-slate-200' : 'border-slate-200'}`}>
+    <div className={`group rounded-xl border bg-white p-4 shadow-sm transition hover:shadow-md ${accent && active ? 'border-l-4 border-l-amber-400 border-slate-200' : 'border-slate-200'}`}>
       <div className="flex items-center justify-between">
         <p className="flex items-center gap-2 text-sm font-bold text-slate-900"><Icon className="h-4 w-4 text-slate-400" /> {label}</p>
         <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${active ? 'bg-brand/10 text-brand' : 'bg-slate-100 text-slate-400'}`}>{count}</span>
@@ -10414,6 +10415,11 @@ function CrmAttentionCard({ icon: Icon, label, count, accent, children }) {
       <div className="mt-3">
         {active ? children : <p className="text-sm text-slate-400">Nothing needs attention.</p>}
       </div>
+      {onViewAll && (
+        <button onClick={onViewAll} className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-brand opacity-0 transition group-hover:opacity-100 hover:underline focus:opacity-100">
+          View all →
+        </button>
+      )}
     </div>
   )
 }
@@ -10497,21 +10503,21 @@ function CRMPage({ user }) {
 
             {/* Attention cards */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <CrmAttentionCard icon={AlertTriangle} label="Overdue tasks" count={0} />
-              <CrmAttentionCard icon={ClipboardList} label="Due today" count={dueToday.length}>
+              <CrmAttentionCard icon={AlertTriangle} label="Overdue tasks" count={0} onViewAll={() => setTab('tasks')} />
+              <CrmAttentionCard icon={ClipboardList} label="Due today" count={dueToday.length} onViewAll={() => setTab('tasks')}>
                 <div className="space-y-1.5">{dueToday.map((t) => <div key={t.id} className="flex justify-between text-sm"><span className="truncate text-slate-700">{t.title}</span><span className="shrink-0 text-xs text-slate-400">{t.related}</span></div>)}</div>
               </CrmAttentionCard>
-              <CrmAttentionCard icon={Clock} label="Stale deals" count={0} />
-              <CrmAttentionCard icon={TrendingUp} label="Deals with no next action" count={noNextAction.length} accent>
+              <CrmAttentionCard icon={Clock} label="Stale deals" count={0} onViewAll={() => setTab('pipelines')} />
+              <CrmAttentionCard icon={TrendingUp} label="Deals with no next action" count={noNextAction.length} accent onViewAll={() => setTab('pipelines')}>
                 <div className="space-y-1.5">{noNextAction.map((d) => <div key={d.id} className="flex justify-between text-sm"><span className="truncate text-slate-700">{d.company} — {d.title}</span><span className="shrink-0 text-xs font-semibold text-slate-400">{currency(d.value)}</span></div>)}</div>
               </CrmAttentionCard>
-              <CrmAttentionCard icon={Target} label="New leads (7d)" count={newLeads7d.length}>
+              <CrmAttentionCard icon={Target} label="New leads (7d)" count={newLeads7d.length} onViewAll={() => setTab('leads')}>
                 <div className="space-y-1.5">{newLeads7d.map((l) => <div key={l.id} className="flex justify-between text-sm"><span className="truncate text-slate-700">{l.name}</span><span className="shrink-0 text-xs text-slate-400">{l.company}</span></div>)}</div>
               </CrmAttentionCard>
-              <CrmAttentionCard icon={Mail} label="Unread inquiries" count={inquiries.length}>
+              <CrmAttentionCard icon={Mail} label="Unread inquiries" count={inquiries.length} onViewAll={() => setTab('leads')}>
                 <div className="space-y-1.5">{inquiries.map((i) => <div key={i.id} className="flex justify-between text-sm"><span className="truncate text-slate-700">{i.name}</span><span className="shrink-0 text-xs text-slate-400">{i.property}</span></div>)}</div>
               </CrmAttentionCard>
-              <CrmAttentionCard icon={Clock} label="Access expiring (7d)" count={0} />
+              <CrmAttentionCard icon={Clock} label="Access expiring (7d)" count={0} onViewAll={() => setTab('pipelines')} />
             </div>
 
             {/* Pipeline summary */}
