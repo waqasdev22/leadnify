@@ -12161,19 +12161,25 @@ function EmailBlastPage({ user }) {
     // Otherwise, authorize the demo connection.
     setTimeout(() => { setConnected(p, true); setConnecting(false); setConnectTarget(null); notify(`Connected ${p.name}`, 'success') }, 900)
   }
-  // Anchor the tour card just below the highlighted target (step 0 stays centered).
+  // Anchor the tour card to the highlighted target (step 0 stays centered).
   useEffect(() => {
     if (tourStep <= 0) { setTourPos(null); return }
     const target = document.querySelector(`[data-tour-target="${tourStep}"]`)
     const card = tourCardRef.current
     if (!target) { setTourPos(null); return }
+    // Bring the target into view so there's room for the card (instant = synchronous measure).
+    target.scrollIntoView({ block: 'center', behavior: 'auto' })
     const r = target.getBoundingClientRect()
     const cardW = card?.offsetWidth || 448
     const cardH = card?.offsetHeight || 340
+    const vw = window.innerWidth, vh = window.innerHeight
     let left = r.left + r.width / 2 - cardW / 2
-    left = Math.max(12, Math.min(window.innerWidth - cardW - 12, left))
-    let top = r.bottom + 12
-    if (top + cardH > window.innerHeight - 12) top = Math.max(12, window.innerHeight - cardH - 12)
+    left = Math.max(12, Math.min(vw - cardW - 12, left))
+    // Short targets (a button): sit fully below. Tall targets (a section): overlap the body,
+    // keeping the section's label visible just above the card.
+    const short = r.height < 160
+    let top = short ? r.bottom + 12 : r.top + 56
+    top = Math.max(12, Math.min(vh - cardH - 12, top))
     setTourPos({ top, left })
   }, [tourStep])
   // Handle the OAuth redirect back (?code=…&state=provider) — mark that provider connected.
