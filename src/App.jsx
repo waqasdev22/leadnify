@@ -10507,6 +10507,9 @@ function CRMPage({ user }) {
   const [pipeTab, setPipeTab] = useState('Deals')
   const [addDealOpen, setAddDealOpen] = useState(false)
   const [newDeal, setNewDeal] = useState({ contact: '', title: '', company: '', value: '', stage: 'Inquiry', days: '0' })
+  const [dragDeal, setDragDeal] = useState(null)
+  const [dragStage, setDragStage] = useState(null)
+  const [dealView, setDealView] = usePersistentState('crm_dealview', 'board')
 
   const mine = (arr) => (scope === 'mine' ? arr.filter((x) => x.owner === me) : arr)
   const leads = mine(CRM_LEADS).filter((l) => (l.name + l.company).toLowerCase().includes(search.toLowerCase()))
@@ -10967,7 +10970,13 @@ function CRMPage({ user }) {
                   <h2 className="mt-1 text-xl font-extrabold text-slate-900">Deals</h2>
                   <p className="text-sm text-slate-500">Deals appear automatically when prospects engage — drag them forward as conversations progress.</p>
                 </div>
-                <PrimaryButton icon={Plus} onClick={() => setAddDealOpen(true)}>New deal</PrimaryButton>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1">
+                    <button onClick={() => setDealView('board')} title="Board view" className={`flex h-8 w-8 items-center justify-center rounded-md transition ${dealView === 'board' ? 'bg-orange-50 text-brand' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'}`}><LayoutGrid className="h-4 w-4" /></button>
+                    <button onClick={() => setDealView('list')} title="List view" className={`flex h-8 w-8 items-center justify-center rounded-md transition ${dealView === 'list' ? 'bg-orange-50 text-brand' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'}`}><List className="h-4 w-4" /></button>
+                  </div>
+                  <PrimaryButton icon={Plus} onClick={() => setAddDealOpen(true)}>New deal</PrimaryButton>
+                </div>
               </div>
 
               {addDealOpen && (
@@ -10987,6 +10996,7 @@ function CRMPage({ user }) {
                   </div>
                 </div>
               )}
+              {dealView === 'board' ? (
               <div className="scrollbar-slim flex gap-4 overflow-x-auto pb-2">
                 {CRM_STAGES.map((stage) => {
                   const meta = CRM_STAGE_META[stage]
@@ -10994,7 +11004,13 @@ function CRMPage({ user }) {
                   const total = col.reduce((s, d) => s + d.value, 0)
                   const weighted = total * (CRM_STAGE_WEIGHT[stage] || 0)
                   return (
-                    <div key={stage} className={`flex w-80 shrink-0 flex-col rounded-xl border border-t-4 border-slate-200 ${meta.bar} bg-slate-50/60`}>
+                    <div
+                      key={stage}
+                      onDragOver={(e) => { if (dragDeal) { e.preventDefault(); if (dragStage !== stage) setDragStage(stage) } }}
+                      onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragStage((s) => (s === stage ? null : s)) }}
+                      onDrop={(e) => { e.preventDefault(); if (dragDeal) moveTo(dragDeal, stage); setDragDeal(null); setDragStage(null) }}
+                      className={`flex w-80 shrink-0 flex-col rounded-xl border border-t-4 border-slate-200 ${meta.bar} transition ${dragStage === stage ? 'bg-orange-50 ring-2 ring-orange-300' : 'bg-slate-50/60'}`}
+                    >
                       <div className="px-3 pt-3">
                         <div className="flex items-center justify-between">
                           <span className="flex items-center gap-2 text-sm font-bold text-slate-800">{stage} <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-500">{col.length}</span></span>
@@ -11004,7 +11020,13 @@ function CRMPage({ user }) {
                       </div>
                       <div className="scrollbar-slim mt-2 max-h-[520px] space-y-2 overflow-y-auto p-2">
                         {col.map((d) => (
-                          <div key={d.id} className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+                          <div
+                            key={d.id}
+                            draggable
+                            onDragStart={(e) => { setDragDeal(d.id); e.dataTransfer.effectAllowed = 'move' }}
+                            onDragEnd={() => { setDragDeal(null); setDragStage(null) }}
+                            className={`cursor-grab rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition active:cursor-grabbing ${dragDeal === d.id ? 'opacity-40' : 'hover:shadow-md'}`}
+                          >
                             <div className="flex items-center gap-2">
                               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-xs font-bold text-emerald-600">{d.contact.split(' ').map((n) => n[0]).join('').slice(0, 2)}</div>
                               <div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-slate-800">{d.contact}</p><p className="truncate text-xs text-slate-400">{d.title} · {d.company}</p></div>
@@ -11031,6 +11053,51 @@ function CRMPage({ user }) {
                   )
                 })}
               </div>
+              ) : (
+                <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                  <div className="scrollbar-slim overflow-x-auto">
+                    <table className="w-full min-w-[720px] text-left text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          <th className="px-4 py-3">Contact</th>
+                          <th className="px-4 py-3">Deal / Property</th>
+                          <th className="px-4 py-3">Company</th>
+                          <th className="px-4 py-3 text-right">Value</th>
+                          <th className="px-4 py-3">Stage</th>
+                          <th className="px-4 py-3 text-right">Age</th>
+                          <th className="px-4 py-3 text-right">Move to</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {deals.length === 0 && (
+                          <tr><td colSpan={7} className="px-4 py-12 text-center text-sm text-slate-400">No deals yet — click “New deal” to add one.</td></tr>
+                        )}
+                        {CRM_STAGES.flatMap((stage) => deals.filter((d) => d.stage === stage)).map((d) => (
+                          <tr key={d.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-xs font-bold text-emerald-600">{d.contact.split(' ').map((n) => n[0]).join('').slice(0, 2)}</div>
+                                <span className="font-semibold text-slate-800">{d.contact}</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-slate-600">{d.title}</td>
+                            <td className="px-4 py-3 text-slate-500">{d.company}</td>
+                            <td className="px-4 py-3 text-right font-extrabold text-emerald-600">{currency(d.value)}</td>
+                            <td className="px-4 py-3"><span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${CRM_STAGE_META[d.stage]?.bar ? 'bg-slate-100 text-slate-600' : 'bg-slate-100 text-slate-600'}`}>{d.stage}</span></td>
+                            <td className="px-4 py-3 text-right"><span className="inline-flex items-center gap-0.5 text-xs font-semibold text-orange-600"><Flame className="h-3 w-3" /> {d.days}d</span></td>
+                            <td className="px-4 py-3 text-right">
+                              <select value="" onChange={(e) => e.target.value && moveTo(d.id, e.target.value)} className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 outline-none focus:border-orange-400">
+                                <option value="">Move to…</option>
+                                {CRM_STAGES.filter((s) => s !== d.stage).map((s) => <option key={s} value={s}>{s}</option>)}
+                              </select>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
               </>
             ) : (
               <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 py-20 text-center">
