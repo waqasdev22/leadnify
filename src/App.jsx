@@ -998,7 +998,6 @@ function Sidebar({ active, onNavigate, onSignOut, user, forceCollapsed, responsi
     return () => window.removeEventListener('resize', apply)
   }, [forceCollapsed, responsiveCollapse])
   const [showPromo, setShowPromo] = useState(true)
-  const [menuOpen, setMenuOpen] = useState(false)
 
   // Filter nav by page permissions (when a `can` gate is provided), and add the
   // admin-only Team & Permissions entry.
@@ -1074,41 +1073,43 @@ function Sidebar({ active, onNavigate, onSignOut, user, forceCollapsed, responsi
 
       {/* Upgrade promo */}
 
-      {/* Profile menu (Profile Settings · Team Settings · Sign Out) */}
-      <div className="relative border-t border-slate-100 p-3">
-        {menuOpen && (
-          <>
-            <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-            <div className="absolute bottom-full left-3 right-3 z-20 mb-2 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
-              <button onClick={() => { setMenuOpen(false); onNavigate('profile') }} className="flex w-full items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
-                <Contact className="h-4 w-4 text-slate-400" /> Profile Settings
-              </button>
-              <button onClick={() => { setMenuOpen(false); onNavigate('teamsettings') }} className="flex w-full items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
-                <Users className="h-4 w-4 text-slate-400" /> Team Settings
-              </button>
-              <div className="my-1 border-t border-slate-100" />
-              <button onClick={() => { setMenuOpen(false); onSignOut() }} className="flex w-full items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-rose-600 transition hover:bg-rose-50">
-                <LogOut className="h-4 w-4" /> Sign Out
-              </button>
-            </div>
-          </>
-        )}
-        <button
-          onClick={() => setMenuOpen((o) => !o)}
-          className={`flex w-full items-center gap-3 rounded-lg px-2 py-2 transition hover:bg-slate-50 ${collapsed ? 'justify-center' : ''}`}
-          title="Account menu"
-        >
+      {/* Account: Profile Settings · Team Settings · Sign Out (always visible) */}
+      <div className="border-t border-slate-100 p-3">
+        <div className={`mb-2 flex items-center gap-3 px-2 ${collapsed ? 'justify-center' : ''}`}>
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-orange-600 text-sm font-bold text-white">
             {user.initials}
           </div>
           {!collapsed && (
-            <div className="min-w-0 flex-1 text-left">
+            <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-slate-800">{user.name}</p>
               <p className="truncate text-xs text-slate-400">{user.email}</p>
             </div>
           )}
-          {!collapsed && <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition ${menuOpen ? 'rotate-180' : ''}`} />}
-        </button>
+        </div>
+        <div className="space-y-1">
+          {[
+            { key: 'profile', label: 'Profile Settings', icon: Contact },
+            { key: 'teamsettings', label: 'Team Settings', icon: Users },
+          ].map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => onNavigate(key)}
+              title={collapsed ? label : undefined}
+              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${collapsed ? 'justify-center' : ''} ${active === key ? 'bg-orange-50 text-brand' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
+            >
+              <Icon className={`h-5 w-5 ${active === key ? 'text-brand' : 'text-slate-400'}`} />
+              {!collapsed && label}
+            </button>
+          ))}
+          <button
+            onClick={onSignOut}
+            title={collapsed ? 'Sign Out' : undefined}
+            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-rose-600 transition hover:bg-rose-50 ${collapsed ? 'justify-center' : ''}`}
+          >
+            <LogOut className="h-5 w-5" />
+            {!collapsed && 'Sign Out'}
+          </button>
+        </div>
       </div>
     </aside>
   )
