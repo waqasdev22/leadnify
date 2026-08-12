@@ -10489,7 +10489,7 @@ function CRMPage({ user }) {
   const [contactView, setContactView] = useState('people')
   const [contactChip, setContactChip] = useState(null)
   const [addContactOpen, setAddContactOpen] = useState(false)
-  const [newContact, setNewContact] = useState({ name: '', email: '', phone: '', company: '', source: 'Inquiry', tag: 'Warm', type: 'Buyer' })
+  const [newContact, setNewContact] = useState({ email: '', name: '', title: '', phone: '', company: '', leadType: 'Unset', note: '' })
   const [accounts, setAccounts] = usePersistentState('crm_accounts', [])
   const [addAccountOpen, setAddAccountOpen] = useState(false)
   const [newAccount, setNewAccount] = useState({ name: '', industry: '' })
@@ -10742,12 +10742,14 @@ function CRMPage({ user }) {
           const dupes = 1
           const inCls = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400'
           const addContact = () => {
-            if (!newContact.name.trim()) { notify('Enter a contact name', 'error'); return }
+            if (!newContact.email.trim()) { notify('Email is required', 'error'); return }
             const today = new Date().toLocaleDateString('en-GB')
-            setContactList((list) => [{ id: uid(), name: newContact.name.trim(), email: newContact.email.trim() || '—', phone: newContact.phone.trim() || '—', company: newContact.company.trim() || '—', source: newContact.source, score: 50, tag: newContact.tag, type: newContact.type, activity: 1, lastSeen: today, owner: me }, ...list])
-            notify('Contact added')
+            const displayName = newContact.name.trim() || newContact.email.trim().split('@')[0]
+            const type = newContact.leadType === 'Unset' ? 'Other' : newContact.leadType
+            setContactList((list) => [{ id: uid(), name: displayName, email: newContact.email.trim(), phone: newContact.phone.trim() || '—', company: newContact.company.trim() || '—', title: newContact.title.trim(), note: newContact.note.trim(), source: 'Inquiry', score: 50, tag: 'Warm', type, activity: 1, lastSeen: today, owner: me }, ...list])
+            notify('Contact created')
             setAddContactOpen(false)
-            setNewContact({ name: '', email: '', phone: '', company: '', source: 'Inquiry', tag: 'Warm', type: 'Buyer' })
+            setNewContact({ email: '', name: '', title: '', phone: '', company: '', leadType: 'Unset', note: '' })
           }
           const myAccounts = scope === 'mine' ? accounts.filter((a) => a.owner === me) : accounts
           const accountRows = myAccounts.filter((a) => a.name.toLowerCase().includes(search.toLowerCase()))
@@ -10769,6 +10771,58 @@ function CRMPage({ user }) {
             </div>
 
             {contactView === 'people' ? (
+            addContactOpen ? (
+            <div className="mx-auto max-w-3xl space-y-4">
+              <button onClick={() => setAddContactOpen(false)} className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 transition hover:text-slate-800"><ArrowLeft className="h-4 w-4" /> Contacts</button>
+              <div>
+                <h2 className="text-2xl font-extrabold text-slate-900">New contact</h2>
+                <p className="mt-1 text-sm text-slate-500">Only an email is required — everything else can be filled in now or later on their profile, where deals, tasks, buyer requirements and their full timeline live.</p>
+              </div>
+              {/* Contact */}
+              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <p className="flex items-center gap-2 text-sm font-bold text-slate-900"><Contact className="h-4 w-4 text-brand" /> Contact</p>
+                <div className="mt-4">
+                  <label className="mb-1 block text-xs font-semibold text-slate-500">Email *</label>
+                  <input value={newContact.email} onChange={(e) => setNewContact((f) => ({ ...f, email: e.target.value }))} placeholder="jane@buyercapital.com" className={`${inCls} ${newContact.email ? '' : 'focus:ring-2 focus:ring-orange-100'}`} />
+                  <p className="mt-1 text-xs text-slate-400">Contacts are unified by email — if this address already exists we&apos;ll open that record instead of creating a duplicate.</p>
+                </div>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div><label className="mb-1 block text-xs font-semibold text-slate-500">Full name</label><input value={newContact.name} onChange={(e) => setNewContact((f) => ({ ...f, name: e.target.value }))} placeholder="Jane Buyer" className={inCls} /></div>
+                  <div><label className="mb-1 block text-xs font-semibold text-slate-500">Title</label><input value={newContact.title} onChange={(e) => setNewContact((f) => ({ ...f, title: e.target.value }))} placeholder="Acquisitions Director" className={inCls} /></div>
+                </div>
+                <div className="mt-3 sm:w-1/2 sm:pr-1.5"><label className="mb-1 block text-xs font-semibold text-slate-500">Phone</label><input value={newContact.phone} onChange={(e) => setNewContact((f) => ({ ...f, phone: e.target.value }))} placeholder="(555) 555-1234" className={inCls} /></div>
+              </div>
+              {/* Firm */}
+              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <p className="flex items-center gap-2 text-sm font-bold text-slate-900"><Building2 className="h-4 w-4 text-violet-500" /> Firm</p>
+                <p className="mt-1 text-xs text-slate-500">Link them to an account to roll their activity up with everyone else at that firm, or just type the company name if you don&apos;t track it as an account yet.</p>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <div><label className="mb-1 block text-xs font-semibold text-slate-500">Account</label><button onClick={() => { setContactView('companies'); setAddAccountOpen(true) }} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"><Building2 className="h-4 w-4" /> Add to a firm</button></div>
+                  <div><label className="mb-1 block text-xs font-semibold text-slate-500">Company name</label><input value={newContact.company} onChange={(e) => setNewContact((f) => ({ ...f, company: e.target.value }))} placeholder="Buyer Capital" className={inCls} /></div>
+                </div>
+              </div>
+              {/* Lead type */}
+              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <p className="flex items-center gap-2 text-sm font-bold text-slate-900"><Target className="h-4 w-4 text-emerald-500" /> Lead type</p>
+                <p className="mt-1 text-xs text-slate-500">Drives filtering and listing matching. Pick Buyer, Investor or Tenant Rep and you can capture their requirements below.</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {['Unset', 'Buyer', 'Tenant Rep', 'Seller', 'Landlord', 'Investor', 'Other'].map((t) => (
+                    <button key={t} onClick={() => setNewContact((f) => ({ ...f, leadType: t }))} className={`rounded-full px-3 py-1.5 text-sm font-semibold transition ${newContact.leadType === t ? (t === 'Unset' ? 'bg-slate-900 text-white' : 'bg-brand text-white') : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{t}</button>
+                  ))}
+                </div>
+              </div>
+              {/* First note */}
+              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <p className="flex items-center gap-2 text-sm font-bold text-slate-900"><FileText className="h-4 w-4 text-amber-500" /> First note <span className="font-normal text-slate-400">· optional</span></p>
+                <textarea value={newContact.note} onChange={(e) => setNewContact((f) => ({ ...f, note: e.target.value }))} rows={3} placeholder="Where you met, what they're looking for, who introduced you..." className={`${inCls} mt-3 resize-none`} />
+                <p className="mt-2 text-xs text-slate-400">Posts to their timeline, alongside inquiries, NDAs and downloads.</p>
+              </div>
+              <div className="flex justify-end gap-2 pb-2">
+                <button onClick={() => setAddContactOpen(false)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
+                <PrimaryButton icon={Plus} onClick={addContact}>Create contact</PrimaryButton>
+              </div>
+            </div>
+            ) : (
             <>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
@@ -10784,27 +10838,6 @@ function CRMPage({ user }) {
                 <PrimaryButton icon={Plus} onClick={() => setAddContactOpen(true)}>Add contact</PrimaryButton>
               </div>
             </div>
-
-            {addContactOpen && (
-              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="flex items-center justify-between"><p className="text-sm font-bold text-slate-900">Add Contact</p><button onClick={() => setAddContactOpen(false)} className="text-slate-400 hover:text-slate-700"><X className="h-5 w-5" /></button></div>
-                <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  <div><label className="mb-1 block text-xs font-semibold text-slate-500">Name *</label><input value={newContact.name} onChange={(e) => setNewContact((f) => ({ ...f, name: e.target.value }))} placeholder="Full name" className={inCls} /></div>
-                  <div><label className="mb-1 block text-xs font-semibold text-slate-500">Email</label><input value={newContact.email} onChange={(e) => setNewContact((f) => ({ ...f, email: e.target.value }))} placeholder="name@email.com" className={inCls} /></div>
-                  <div><label className="mb-1 block text-xs font-semibold text-slate-500">Phone</label><input value={newContact.phone} onChange={(e) => setNewContact((f) => ({ ...f, phone: e.target.value }))} placeholder="Phone" className={inCls} /></div>
-                  <div><label className="mb-1 block text-xs font-semibold text-slate-500">Company</label><input value={newContact.company} onChange={(e) => setNewContact((f) => ({ ...f, company: e.target.value }))} placeholder="Company" className={inCls} /></div>
-                  <div><label className="mb-1 block text-xs font-semibold text-slate-500">Source</label><select value={newContact.source} onChange={(e) => setNewContact((f) => ({ ...f, source: e.target.value }))} className={inCls}><option>Inquiry</option><option>NDA</option><option>Download</option><option>Email</option></select></div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div><label className="mb-1 block text-xs font-semibold text-slate-500">Temp.</label><select value={newContact.tag} onChange={(e) => setNewContact((f) => ({ ...f, tag: e.target.value }))} className={inCls}><option>Hot</option><option>Warm</option><option>Cold</option></select></div>
-                    <div><label className="mb-1 block text-xs font-semibold text-slate-500">Type</label><select value={newContact.type} onChange={(e) => setNewContact((f) => ({ ...f, type: e.target.value }))} className={inCls}><option>Buyer</option><option>Tenant Rep</option><option>Seller</option><option>Landlord</option><option>Investor</option><option>Other</option></select></div>
-                  </div>
-                </div>
-                <div className="mt-4 flex justify-end gap-2">
-                  <button onClick={() => setAddContactOpen(false)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
-                  <PrimaryButton icon={Plus} onClick={addContact}>Add contact</PrimaryButton>
-                </div>
-              </div>
-            )}
 
             <button onClick={() => notify('View saved')} className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-500 transition hover:bg-slate-50"><Bookmark className="h-4 w-4" /> Save this view</button>
 
@@ -10837,6 +10870,7 @@ function CRMPage({ user }) {
               </table>
             </div>
             </>
+            )
             ) : (
             <>
             {/* Companies → Accounts */}
