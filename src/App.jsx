@@ -12092,12 +12092,24 @@ const EMAIL_AUDIENCES = ['All Contacts', 'Qualified Leads', 'New Leads', 'Active
 
 const EMAIL_CAMPAIGNS_SEED = []
 
+// Skyline (multi-building) icon for the multi-property email option.
+function BuildingsIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <rect x="3" y="9" width="5.5" height="11" rx="1" />
+      <rect x="9.5" y="4" width="5" height="16" rx="1" />
+      <rect x="15.5" y="12" width="5.5" height="8" rx="1" />
+    </svg>
+  )
+}
+
 function EmailBlastPage({ user }) {
   const notify = useToast()
   const [conns, setConns] = usePersistentState('email_conns', {})
   const [campaigns, setCampaigns] = usePersistentState('email_campaigns', EMAIL_CAMPAIGNS_SEED)
   const [composeOpen, setComposeOpen] = useState(false)
-  const [form, setForm] = useState({ audience: EMAIL_AUDIENCES[0], subject: '', body: '' })
+  const [form, setForm] = useState({ audience: EMAIL_AUDIENCES[0], subject: '', body: '', type: 'individual' })
+  const [pickerOpen, setPickerOpen] = useState(false)
   const drafts = campaigns.filter((c) => c.status === 'Draft')
   const sent = campaigns.filter((c) => c.status === 'Sent')
 
@@ -12108,7 +12120,8 @@ function EmailBlastPage({ user }) {
       return next
     })
   }
-  const startBlast = () => { setForm({ audience: EMAIL_AUDIENCES[0], subject: '', body: '' }); setComposeOpen(true) }
+  const startBlast = () => setPickerOpen(true)
+  const chooseType = (type) => { setForm({ audience: EMAIL_AUDIENCES[0], subject: '', body: '', type }); setPickerOpen(false); setComposeOpen(true) }
   const audienceCounts = { 'All Contacts': 842, 'Qualified Leads': 214, 'New Leads': 128, 'Active Deal Room Prospects': 96 }
   const saveOrSend = (asDraft) => {
     if (!form.subject.trim()) { notify('Add a subject first', 'error'); return }
@@ -12215,11 +12228,39 @@ function EmailBlastPage({ user }) {
         </div>
       )}
 
+      {/* Kind picker modal */}
+      {pickerOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setPickerOpen(false)}>
+          <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+              <p className="text-lg font-bold text-slate-900">New email blast</p>
+              <button onClick={() => setPickerOpen(false)} className="text-slate-400 hover:text-slate-700"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="px-6 py-5">
+              <p className="text-sm text-slate-500">What kind of email do you want to create?</p>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                {[
+                  { type: 'individual', icon: Building2, title: 'Individual property', desc: 'Feature a single listing with your choice of template, colors & sections' },
+                  { type: 'multi', icon: BuildingsIcon, title: 'Multi-property', desc: 'Feature several listings together in one portfolio email' },
+                ].map((o) => (
+                  <div key={o.type} className="flex flex-col items-center rounded-xl border border-slate-200 p-6 text-center transition hover:border-orange-300 hover:shadow-sm">
+                    <span className="flex h-14 w-14 items-center justify-center rounded-full bg-orange-50 text-brand"><o.icon className="h-7 w-7" /></span>
+                    <p className="mt-3 text-base font-bold text-slate-900">{o.title}</p>
+                    <p className="mt-1 text-sm text-slate-500">{o.desc}</p>
+                    <button onClick={() => chooseType(o.type)} className="mt-4 rounded-lg bg-brand px-5 py-2 text-sm font-bold text-white transition hover:bg-orange-600">Create</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Compose modal */}
       {composeOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setComposeOpen(false)}>
           <div className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between"><p className="text-base font-bold text-slate-900">New email blast</p><button onClick={() => setComposeOpen(false)} className="text-slate-400 hover:text-slate-700"><X className="h-5 w-5" /></button></div>
+            <div className="flex items-center justify-between"><p className="text-base font-bold text-slate-900">New email blast <span className="font-normal text-slate-400">· {form.type === 'multi' ? 'Multi-property' : 'Individual property'}</span></p><button onClick={() => setComposeOpen(false)} className="text-slate-400 hover:text-slate-700"><X className="h-5 w-5" /></button></div>
             <div className="mt-4"><label className="mb-1 block text-xs font-semibold text-slate-500">Audience</label><select value={form.audience} onChange={(e) => setForm((f) => ({ ...f, audience: e.target.value }))} className={inputCls}>{EMAIL_AUDIENCES.map((a) => <option key={a}>{a} ({audienceCounts[a].toLocaleString()})</option>)}</select></div>
             <div className="mt-3"><label className="mb-1 block text-xs font-semibold text-slate-500">Subject</label><input value={form.subject} onChange={(e) => setForm((f) => ({ ...f, subject: e.target.value }))} placeholder="e.g. New Off-Market Retail Opportunity" className={inputCls} /></div>
             <div className="mt-3"><label className="mb-1 block text-xs font-semibold text-slate-500">Message</label><textarea value={form.body} onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))} rows={6} placeholder="Write your email…" className={`${inputCls} resize-y`} /></div>
