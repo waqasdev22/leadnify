@@ -10487,6 +10487,65 @@ const CRM_ACTIVITY_SEED = [
 const REPORT_SOURCE_LABEL = { Inquiry: 'Inquiries', NDA: 'NDA signers', Download: 'Downloads', Email: 'Email', Website: 'Website', Referral: 'Referral', 'Cold Call': 'Cold Call', 'Listing Hub': 'Listing Hub', 'Email Blast': 'Email Blast' }
 const REPORT_STAGE_BAR = { Inquiry: 'bg-blue-500', 'NDA Signed': 'bg-violet-500', Tour: 'bg-amber-500', LOI: 'bg-orange-500', 'Under Contract': 'bg-emerald-500' }
 
+function Last12Weeks({ deals, contactList, scope, me }) {
+  const [showTable, setShowTable] = useState(false)
+  const weekStart = (d) => { const x = new Date(d); const day = (x.getDay() + 6) % 7; x.setDate(x.getDate() - day); x.setHours(0, 0, 0, 0); return x }
+  const now = new Date()
+  const weeks = []
+  for (let i = 11; i >= 0; i--) { const ws = weekStart(now); ws.setDate(ws.getDate() - i * 7); weeks.push({ t: ws.getTime(), label: ws.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }), newLeads: 0, opened: 0, won: 0, lost: 0 }) }
+  const bidx = (date) => { const t = weekStart(date).getTime(); return weeks.findIndex((w) => w.t === t) }
+  deals.forEach((d) => { const o = new Date(now); o.setDate(o.getDate() - (Number(d.days) || 0)); const b = bidx(o); if (b >= 0) { weeks[b].opened++; if (d.stage === 'Closed Won') weeks[b].won++; if (d.stage === 'Closed Lost') weeks[b].lost++ } })
+  const repC = scope === 'mine' ? contactList.filter((c) => c.owner === me) : contactList
+  repC.forEach((c) => { const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(c.lastSeen || ''); if (!m) return; const dt = new Date(+m[3], +m[2] - 1, +m[1]); const b = bidx(dt); if (b >= 0) weeks[b].newLeads++ })
+  const tot = weeks.reduce((a, w) => ({ newLeads: a.newLeads + w.newLeads, opened: a.opened + w.opened, won: a.won + w.won, lost: a.lost + w.lost }), { newLeads: 0, opened: 0, won: 0, lost: 0 })
+  const closed = tot.won + tot.lost
+  const winRate = closed ? `${Math.round((tot.won / closed) * 100)}%` : '—'
+  const closedDays = deals.filter((d) => ['Closed Won', 'Closed Lost'].includes(d.stage)).map((d) => Number(d.days) || 0).sort((a, b) => a - b)
+  const median = closedDays.length ? `${closedDays[Math.floor(closedDays.length / 2)]}d` : '—'
+  const Spark = ({ vals }) => { const max = Math.max(1, ...vals); return (<div className="mt-3 flex h-10 items-end gap-0.5">{vals.map((v, i) => <div key={i} className="flex-1 rounded-sm bg-slate-200" style={{ height: `${v ? Math.max(12, (v / max) * 100) : 4}%` }} />)}</div>) }
+  const StatCard = ({ label, value, vals, empty }) => (
+    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{label}</p>
+      <p className="mt-1 text-3xl font-extrabold text-slate-900">{value}</p>
+      {empty ? <p className="mt-2 text-xs text-slate-400">{empty}</p> : vals ? <Spark vals={vals} /> : null}
+    </div>
+  )
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-bold text-slate-900">Last 12 weeks</p>
+        <button onClick={() => setShowTable((v) => !v)} className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 transition hover:text-slate-800"><LayoutList className="h-4 w-4" /> {showTable ? 'Hide table' : 'Show table'}</button>
+      </div>
+      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <StatCard label="New leads" value={tot.newLeads} vals={weeks.map((w) => w.newLeads)} />
+        <StatCard label="Deals opened" value={tot.opened} vals={weeks.map((w) => w.opened)} />
+        <StatCard label="Won" value={tot.won} vals={weeks.map((w) => w.won)} />
+        <StatCard label="Lost" value={tot.lost} vals={weeks.map((w) => w.lost)} />
+        <StatCard label="Win rate" value={winRate} empty={closed ? null : 'No deals closed yet'} />
+        <StatCard label="Median days to close" value={median} empty={closed ? null : 'No deals closed yet'} />
+      </div>
+      {showTable && (
+        <div className="scrollbar-slim mt-5 overflow-x-auto rounded-xl border border-slate-200">
+          <table className="w-full min-w-[560px] text-left text-sm">
+            <thead><tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-400"><th className="px-4 py-2.5">Week of</th><th className="px-4 py-2.5 text-right">New leads</th><th className="px-4 py-2.5 text-right">Deals opened</th><th className="px-4 py-2.5 text-right">Won</th><th className="px-4 py-2.5 text-right">Lost</th></tr></thead>
+            <tbody>
+              {weeks.map((w) => (
+                <tr key={w.t} className="border-b border-slate-100 last:border-0 odd:bg-slate-50/40">
+                  <td className="px-4 py-2.5 text-slate-700">{w.label}</td>
+                  <td className="px-4 py-2.5 text-right text-slate-600">{w.newLeads}</td>
+                  <td className="px-4 py-2.5 text-right text-slate-600">{w.opened}</td>
+                  <td className="px-4 py-2.5 text-right text-slate-600">{w.won}</td>
+                  <td className="px-4 py-2.5 text-right text-slate-600">{w.lost}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function CrmKpi({ icon: Icon, label, value, tone = 'text-brand' }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -10606,7 +10665,6 @@ function CRMPage({ user, onNavigate }) {
   const [scriptDelId, setScriptDelId] = useState(null) // id pending delete confirm
   const scriptBodyRef = useRef(null)
   const [reportRange, setReportRange] = useState('30d')
-  const [showWeekTable, setShowWeekTable] = useState(false)
   const [taskTab, setTaskTab] = useState('todo') // 'todo' | 'leases'
   const [showDone, setShowDone] = useState(false)
   const [addTaskOpen, setAddTaskOpen] = useState(false)
@@ -10779,17 +10837,7 @@ function CRMPage({ user, onNavigate }) {
             </div>
 
             {/* Last 12 weeks */}
-            <div>
-              <p className="mb-3 text-sm font-bold text-slate-500">Last 12 weeks</p>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <CrmMetric label="New leads" value={leads.length} />
-                <CrmMetric label="Deals opened" value={deals.length} />
-                <CrmMetric label="Won" value={won} />
-                <CrmMetric label="Lost" value={0} />
-                <CrmMetric label="Win rate" value={won ? `${Math.round((won / deals.length) * 100)}%` : '—'} sub={won ? undefined : 'No deals closed yet'} />
-                <CrmMetric label="Median days to close" value="—" sub="No deals closed yet" />
-              </div>
-            </div>
+            <Last12Weeks deals={deals} contactList={contactList} scope={scope} me={me} />
           </div>
           )
         })()}
@@ -12179,64 +12227,6 @@ function CRMPage({ user, onNavigate }) {
               </div>
             </div>
 
-            {/* Last 12 weeks */}
-            {(() => {
-              const weekStart = (d) => { const x = new Date(d); const day = (x.getDay() + 6) % 7; x.setDate(x.getDate() - day); x.setHours(0, 0, 0, 0); return x }
-              const now = new Date()
-              const weeks = []
-              for (let i = 11; i >= 0; i--) { const ws = weekStart(now); ws.setDate(ws.getDate() - i * 7); weeks.push({ t: ws.getTime(), label: ws.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }), newLeads: 0, opened: 0, won: 0, lost: 0 }) }
-              const bidx = (date) => { const t = weekStart(date).getTime(); return weeks.findIndex((w) => w.t === t) }
-              deals.forEach((d) => { const o = new Date(now); o.setDate(o.getDate() - (Number(d.days) || 0)); const b = bidx(o); if (b >= 0) { weeks[b].opened++; if (d.stage === 'Closed Won') weeks[b].won++; if (d.stage === 'Closed Lost') weeks[b].lost++ } })
-              const repC = scope === 'mine' ? contactList.filter((c) => c.owner === me) : contactList
-              repC.forEach((c) => { const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(c.lastSeen || ''); if (!m) return; const dt = new Date(+m[3], +m[2] - 1, +m[1]); const b = bidx(dt); if (b >= 0) weeks[b].newLeads++ })
-              const tot = weeks.reduce((a, w) => ({ newLeads: a.newLeads + w.newLeads, opened: a.opened + w.opened, won: a.won + w.won, lost: a.lost + w.lost }), { newLeads: 0, opened: 0, won: 0, lost: 0 })
-              const closed = tot.won + tot.lost
-              const winRate = closed ? `${Math.round((tot.won / closed) * 100)}%` : '—'
-              const closedDays = deals.filter((d) => ['Closed Won', 'Closed Lost'].includes(d.stage)).map((d) => Number(d.days) || 0).sort((a, b) => a - b)
-              const median = closedDays.length ? `${closedDays[Math.floor(closedDays.length / 2)]}d` : '—'
-              const Spark = ({ vals }) => { const max = Math.max(1, ...vals); return (<div className="mt-3 flex h-10 items-end gap-0.5">{vals.map((v, i) => <div key={i} className="flex-1 rounded-sm bg-slate-200" style={{ height: `${v ? Math.max(12, (v / max) * 100) : 4}%` }} />)}</div>) }
-              const StatCard = ({ label, value, vals, empty }) => (
-                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{label}</p>
-                  <p className="mt-1 text-3xl font-extrabold text-slate-900">{value}</p>
-                  {empty ? <p className="mt-2 text-xs text-slate-400">{empty}</p> : vals ? <Spark vals={vals} /> : null}
-                </div>
-              )
-              return (
-                <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-bold text-slate-900">Last 12 weeks</p>
-                    <button onClick={() => setShowWeekTable((v) => !v)} className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 transition hover:text-slate-800"><LayoutList className="h-4 w-4" /> {showWeekTable ? 'Hide table' : 'Show table'}</button>
-                  </div>
-                  <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    <StatCard label="New leads" value={tot.newLeads} vals={weeks.map((w) => w.newLeads)} />
-                    <StatCard label="Deals opened" value={tot.opened} vals={weeks.map((w) => w.opened)} />
-                    <StatCard label="Won" value={tot.won} vals={weeks.map((w) => w.won)} />
-                    <StatCard label="Lost" value={tot.lost} vals={weeks.map((w) => w.lost)} />
-                    <StatCard label="Win rate" value={winRate} empty={closed ? null : 'No deals closed yet'} />
-                    <StatCard label="Median days to close" value={median} empty={closed ? null : 'No deals closed yet'} />
-                  </div>
-                  {showWeekTable && (
-                    <div className="scrollbar-slim mt-5 overflow-x-auto rounded-xl border border-slate-200">
-                      <table className="w-full min-w-[560px] text-left text-sm">
-                        <thead><tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-400"><th className="px-4 py-2.5">Week of</th><th className="px-4 py-2.5 text-right">New leads</th><th className="px-4 py-2.5 text-right">Deals opened</th><th className="px-4 py-2.5 text-right">Won</th><th className="px-4 py-2.5 text-right">Lost</th></tr></thead>
-                        <tbody>
-                          {weeks.map((w) => (
-                            <tr key={w.t} className="border-b border-slate-100 last:border-0 odd:bg-slate-50/40">
-                              <td className="px-4 py-2.5 text-slate-700">{w.label}</td>
-                              <td className="px-4 py-2.5 text-right text-slate-600">{w.newLeads}</td>
-                              <td className="px-4 py-2.5 text-right text-slate-600">{w.opened}</td>
-                              <td className="px-4 py-2.5 text-right text-slate-600">{w.won}</td>
-                              <td className="px-4 py-2.5 text-right text-slate-600">{w.lost}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              )
-            })()}
           </div>
           )
         })()}
