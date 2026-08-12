@@ -544,12 +544,11 @@ const useToast = () => useContext(ToastContext)
 function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([])
 
+  const dismiss = (id) => setToasts((t) => t.filter((x) => x.id !== id))
   const notify = (message, type = 'success') => {
     const id = uid()
     setToasts((t) => [...t, { id, message, type }])
-    setTimeout(() => {
-      setToasts((t) => t.filter((x) => x.id !== id))
-    }, 2600)
+    setTimeout(() => dismiss(id), 4000)
   }
 
   return (
@@ -559,16 +558,17 @@ function ToastProvider({ children }) {
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`pointer-events-auto flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium text-white shadow-lg ${
-              t.type === 'error' ? 'bg-rose-600' : 'bg-slate-900'
+            className={`pointer-events-auto flex items-start gap-2.5 rounded-lg border px-4 py-3 text-sm font-medium shadow-lg ${
+              t.type === 'error' ? 'border-rose-200 bg-rose-50 text-rose-800' : 'border-emerald-200 bg-emerald-50 text-slate-700'
             }`}
           >
             {t.type === 'error' ? (
-              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-500" />
             ) : (
-              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
             )}
-            <span>{t.message}</span>
+            <span className="flex-1 leading-snug">{t.message}</span>
+            <button onClick={() => dismiss(t.id)} className="shrink-0 text-slate-400 transition hover:text-slate-600"><X className="h-4 w-4" /></button>
           </div>
         ))}
       </div>
@@ -12366,7 +12366,7 @@ function ProfileSettingsPage({ user }) {
           <p className="mt-1 text-xs text-slate-400">The default for everyone on the team. Leaving it unset means the CRM ends the day at UTC midnight, which is the afternoon before in North America.</p>
         </div>
         <div className="mt-5 flex justify-end">
-          <PrimaryButton icon={Check} onClick={() => notify('Profile saved')}>Save Changes</PrimaryButton>
+          <PrimaryButton icon={Check} onClick={() => notify('Profile updated successfully. All documents have been updated.', 'success')}>Save Changes</PrimaryButton>
         </div>
       </div>
 
