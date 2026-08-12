@@ -12180,6 +12180,8 @@ function EmailBlastPage({ user }) {
     setComposeOpen(false)
   }
   const inputCls = 'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-orange-400'
+  // When a tour step targets an element, lift it above the dim overlay with a white spotlight ring.
+  const tourHi = (step) => (tourStep === step ? 'relative z-[46] rounded-2xl ring-4 ring-white' : '')
 
   return (
     <div className="mx-auto max-w-[1000px] p-6">
@@ -12191,12 +12193,13 @@ function EmailBlastPage({ user }) {
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setTourStep(0)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"><HelpCircle className="h-4 w-4" /> Show me around</button>
-          <PrimaryButton icon={Plus} onClick={startBlast}>New email blast</PrimaryButton>
+          <span className={`inline-block ${tourHi(1)}`}><PrimaryButton icon={Plus} onClick={startBlast}>New email blast</PrimaryButton></span>
         </div>
       </div>
 
       {/* SEND WITH */}
-      <div className="mt-7 flex items-center justify-between">
+      <div className={`mt-7 ${tourHi(2)} ${tourStep === 2 ? 'bg-white p-4' : ''}`}>
+      <div className="flex items-center justify-between">
         <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-500"><Send className="h-3.5 w-3.5" /> Send with</p>
         <button onClick={() => notify('Manage integrations — demo')} className="text-xs font-semibold text-brand hover:underline">Manage in Integrations →</button>
       </div>
@@ -12227,9 +12230,11 @@ function EmailBlastPage({ user }) {
           )
         })}
       </div>
+      </div>
 
       {/* DRAFTS */}
-      <p className="mt-8 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-500"><FileText className="h-3.5 w-3.5" /> Drafts</p>
+      <div className={`mt-8 ${tourHi(3)} ${tourStep === 3 ? 'bg-white p-4' : ''}`}>
+      <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-500"><FileText className="h-3.5 w-3.5" /> Drafts</p>
       {drafts.length === 0 ? (
         <div className="mt-3 flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 py-10 text-center">
           <span className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 text-slate-400"><Plus className="h-5 w-5" /></span>
@@ -12251,6 +12256,7 @@ function EmailBlastPage({ user }) {
           ))}
         </div>
       )}
+      </div>
 
       {/* SENT */}
       <p className="mt-8 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-500"><Send className="h-3.5 w-3.5" /> Sent</p>
@@ -12285,8 +12291,10 @@ function EmailBlastPage({ user }) {
         const place = s.place === 'top' ? 'items-start justify-center pt-24' : s.place === 'bottom' ? 'items-end justify-center pb-24' : 'items-center justify-center'
         const last = tourStep === EMAIL_TOUR.length - 1
         return (
-          <div className={`fixed inset-0 z-50 flex p-4 ${place} bg-black/50`} onClick={() => setTourStep(-1)}>
-            <div key={tourStep} className="tour-step-in w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <>
+          <div className="fixed inset-0 z-40 bg-black/50" onClick={() => setTourStep(-1)} />
+          <div className={`pointer-events-none fixed inset-0 z-50 flex p-4 ${place}`}>
+            <div key={tourStep} className="tour-step-in pointer-events-auto w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-start justify-between">
                 <span className={`flex h-11 w-11 items-center justify-center rounded-xl ${s.tile}`}><Icon className="h-6 w-6" /></span>
                 <button onClick={() => setTourStep(-1)} className="text-slate-400 hover:text-slate-700"><X className="h-5 w-5" /></button>
@@ -12311,6 +12319,7 @@ function EmailBlastPage({ user }) {
               <p className="mt-3 text-right text-xs text-slate-400">{tourStep + 1} of {EMAIL_TOUR.length}</p>
             </div>
           </div>
+          </>
         )
       })()}
 
