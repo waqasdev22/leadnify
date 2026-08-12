@@ -145,6 +145,7 @@ import {
   KanbanSquare,
   CheckSquare,
   ScrollText,
+  KeyRound,
   Calendar,
   Library,
   Car,
@@ -10702,20 +10703,20 @@ function CRMPage({ user, onNavigate }) {
             {/* Attention cards */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <CrmAttentionCard icon={AlertTriangle} label="Overdue tasks" count={0} onViewAll={() => setTab('tasks')} />
-              <CrmAttentionCard icon={ClipboardList} label="Due today" count={dueToday.length} onViewAll={() => setTab('tasks')}>
+              <CrmAttentionCard icon={CheckSquare} label="Due today" count={dueToday.length} onViewAll={() => setTab('tasks')}>
                 <div className="space-y-1.5">{dueToday.map((t) => <div key={t.id} className="flex justify-between text-sm"><span className="truncate text-slate-700">{t.title}</span><span className="shrink-0 text-xs text-slate-400">{t.related}</span></div>)}</div>
               </CrmAttentionCard>
               <CrmAttentionCard icon={Clock} label="Stale deals" count={0} onViewAll={() => setTab('pipelines')} />
               <CrmAttentionCard icon={TrendingUp} label="Deals with no next action" count={noNextAction.length} accent onViewAll={() => setTab('pipelines')}>
                 <div className="space-y-1.5">{noNextAction.map((d) => <div key={d.id} className="flex justify-between text-sm"><span className="truncate text-slate-700">{d.company} — {d.title}</span><span className="shrink-0 text-xs font-semibold text-slate-400">{currency(d.value)}</span></div>)}</div>
               </CrmAttentionCard>
-              <CrmAttentionCard icon={Target} label="New leads (7d)" count={newLeads7d.length} onViewAll={() => setTab('leads')}>
+              <CrmAttentionCard icon={UserPlus} label="New leads (7d)" count={newLeads7d.length} onViewAll={() => setTab('leads')}>
                 <div className="space-y-1.5">{newLeads7d.map((l) => <div key={l.id} className="flex justify-between text-sm"><span className="truncate text-slate-700">{l.name}</span><span className="shrink-0 text-xs text-slate-400">{l.company}</span></div>)}</div>
               </CrmAttentionCard>
-              <CrmAttentionCard icon={Mail} label="Unread inquiries" count={inquiries.length} onViewAll={() => setTab('leads')}>
+              <CrmAttentionCard icon={Inbox} label="Unread inquiries" count={inquiries.length} onViewAll={() => setTab('leads')}>
                 <div className="space-y-1.5">{inquiries.map((i) => <div key={i.id} className="flex justify-between text-sm"><span className="truncate text-slate-700">{i.name}</span><span className="shrink-0 text-xs text-slate-400">{i.property}</span></div>)}</div>
               </CrmAttentionCard>
-              <CrmAttentionCard icon={Clock} label="Access expiring (7d)" count={0} onViewAll={() => onNavigate && onNavigate('deals')} />
+              <CrmAttentionCard icon={KeyRound} label="Access expiring (7d)" count={0} onViewAll={() => onNavigate && onNavigate('deals')} />
             </div>
 
             {/* Pipeline summary */}
