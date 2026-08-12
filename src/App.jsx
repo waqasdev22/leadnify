@@ -10668,6 +10668,7 @@ function CRMPage({ user, onNavigate }) {
   const [taskTab, setTaskTab] = useState('todo') // 'todo' | 'leases'
   const [showDone, setShowDone] = useState(false)
   const [addTaskOpen, setAddTaskOpen] = useState(false)
+  const [delTask, setDelTask] = useState(null) // task pending delete confirm
   const [newTask, setNewTask] = useState({ title: '', related: '', due: '' })
   const [leaseList] = usePersistentState('crm_leases', CRM_LEASES_SEED)
   const [leaseHorizon, setLeaseHorizon] = useState(18)
@@ -11806,7 +11807,7 @@ function CRMPage({ user, onNavigate }) {
                 <p className={`text-sm ${t.done ? 'text-slate-400 line-through' : 'font-semibold text-slate-800'}`}>{t.title}</p>
                 <p className="text-xs text-slate-400">{fmtDue(t)}{t.related && t.related !== '—' ? ` · ${t.related}` : ''}</p>
               </div>
-              <button onClick={() => deleteTask(t.id)} title="Delete task" className="mt-0.5 shrink-0 rounded p-1 text-slate-300 opacity-0 transition hover:bg-rose-50 hover:text-rose-500 focus:opacity-100 group-hover:opacity-100"><Trash2 className="h-4 w-4" /></button>
+              <button onClick={() => setDelTask(t)} title="Delete task" className="mt-0.5 shrink-0 rounded p-1 text-slate-300 opacity-0 transition hover:bg-rose-50 hover:text-rose-500 focus:opacity-100 group-hover:opacity-100"><Trash2 className="h-4 w-4" /></button>
             </div>
           )
           return (
@@ -11875,6 +11876,18 @@ function CRMPage({ user, onNavigate }) {
                 <div>
                   <button onClick={() => setShowDone((v) => !v)} className="text-sm font-semibold text-slate-500 hover:text-slate-700">{showDone ? 'Hide completed' : `Show completed (${doneTasks.length})`}</button>
                   {showDone && <div className="mt-3 space-y-2">{doneTasks.map(TaskRow)}</div>}
+                </div>
+              )}
+
+              {delTask && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setDelTask(null)}>
+                  <div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-50 text-rose-500"><Trash2 className="h-5 w-5" /></span><div><p className="text-sm font-bold text-slate-900">Delete this task?</p><p className="mt-1 text-sm text-slate-500">"<span className="font-semibold text-slate-700">{delTask.title}</span>" will be removed. This can't be undone.</p></div></div>
+                    <div className="mt-4 flex justify-end gap-2">
+                      <button onClick={() => setDelTask(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
+                      <button onClick={() => { deleteTask(delTask.id); setDelTask(null) }} className="rounded-lg bg-rose-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-600">Delete</button>
+                    </div>
+                  </div>
                 </div>
               )}
               </>
