@@ -146,6 +146,8 @@ import {
   CheckSquare,
   ScrollText,
   KeyRound,
+  Cloud,
+  Feather,
   Calendar,
   Library,
   Car,
@@ -12078,148 +12080,151 @@ function CRMPage({ user, onNavigate }) {
 /* -------------------------------------------------------------------------- */
 
 const EMAIL_PROVIDERS = [
-  { key: 'outlook', name: 'Outlook', desc: 'Send blasts from your Microsoft 365 / Outlook mailbox.', account: 'you@outlook.com', color: 'bg-blue-50 text-blue-600', builtin: false },
-  { key: 'crebuildermail', name: 'CREBuilderMail', desc: 'Built-in sending — no setup, fully managed deliverability.', account: 'blasts@mycreblueprint.com', color: 'bg-orange-50 text-brand', builtin: true },
-  { key: 'gmail', name: 'Gmail', desc: 'Send from your Google Workspace / Gmail account.', account: 'you@gmail.com', color: 'bg-rose-50 text-rose-600', builtin: false },
+  { key: 'mailchimp', name: 'Mailchimp', sub: 'Draft campaigns in your account', account: 'you@mailchimp.com', action: 'connect', tile: 'bg-yellow-400 text-slate-900', icon: Mail },
+  { key: 'constant', name: 'Constant Contact', sub: 'Draft campaigns in your account', account: 'you@constantcontact.com', action: 'connect', tile: 'bg-blue-500 text-white', icon: Feather },
+  { key: 'ses', name: 'Amazon SES', sub: 'Send direct from your AWS', account: 'AWS SES', action: 'setup', tile: 'bg-slate-900 text-amber-400', icon: Cloud },
+  { key: 'gmail', name: 'Gmail', sub: 'Send from your Gmail', account: 'you@gmail.com', action: 'connect', tile: 'bg-white ring-1 ring-slate-200 text-rose-500', icon: Mail },
+  { key: 'outlook', name: 'Outlook', sub: 'Send from your Outlook', account: 'you@outlook.com', action: 'connect', tile: 'bg-blue-600 text-white', icon: Mail },
+  { key: 'download', name: 'Download HTML', sub: 'Use any email program', account: '', action: 'ready', tile: 'bg-slate-800 text-white', icon: Download },
 ]
 
 const EMAIL_AUDIENCES = ['All Contacts', 'Qualified Leads', 'New Leads', 'Active Deal Room Prospects']
 
-const EMAIL_CAMPAIGNS_SEED = [
-  { id: 'e1', name: 'Olive Grove Plaza — New Listing', audience: 'All Contacts', recipients: 842, opens: 512, clicks: 138, status: 'Sent', date: '2 days ago' },
-  { id: 'e2', name: 'Q3 Net Lease Opportunities', audience: 'Qualified Leads', recipients: 214, opens: 151, clicks: 47, status: 'Sent', date: '1 week ago' },
-  { id: 'e3', name: 'Summit Retail — Price Reduction', audience: 'Active Deal Room Prospects', recipients: 96, opens: 0, clicks: 0, status: 'Draft', date: '—' },
-]
+const EMAIL_CAMPAIGNS_SEED = []
 
 function EmailBlastPage({ user }) {
   const notify = useToast()
-  const [tab, setTab] = useState('campaigns')
-  const [conns, setConns] = usePersistentState('email_conns', { outlook: false, crebuildermail: true, gmail: false })
+  const [conns, setConns] = usePersistentState('email_conns', {})
   const [campaigns, setCampaigns] = usePersistentState('email_campaigns', EMAIL_CAMPAIGNS_SEED)
   const [composeOpen, setComposeOpen] = useState(false)
-  const connectedProviders = EMAIL_PROVIDERS.filter((p) => conns[p.key])
-  const [form, setForm] = useState({ from: 'crebuildermail', audience: EMAIL_AUDIENCES[0], subject: '', body: '' })
+  const [form, setForm] = useState({ audience: EMAIL_AUDIENCES[0], subject: '', body: '' })
+  const drafts = campaigns.filter((c) => c.status === 'Draft')
+  const sent = campaigns.filter((c) => c.status === 'Sent')
 
-  const toggleConn = (key) => {
+  const toggleConn = (p) => {
     setConns((c) => {
-      const next = { ...c, [key]: !c[key] }
-      const p = EMAIL_PROVIDERS.find((x) => x.key === key)
-      notify(next[key] ? `Connected ${p.name}` : `Disconnected ${p.name}`, next[key] ? 'success' : 'error')
+      const next = { ...c, [p.key]: !c[p.key] }
+      notify(next[p.key] ? `Connected ${p.name}` : `Disconnected ${p.name}`, next[p.key] ? 'success' : 'error')
       return next
     })
   }
-
-  const send = (asDraft) => {
+  const startBlast = () => { setForm({ audience: EMAIL_AUDIENCES[0], subject: '', body: '' }); setComposeOpen(true) }
+  const audienceCounts = { 'All Contacts': 842, 'Qualified Leads': 214, 'New Leads': 128, 'Active Deal Room Prospects': 96 }
+  const saveOrSend = (asDraft) => {
     if (!form.subject.trim()) { notify('Add a subject first', 'error'); return }
-    if (!connectedProviders.length) { notify('Connect an email account in Integrations first', 'error'); return }
-    const audienceCounts = { 'All Contacts': 842, 'Qualified Leads': 214, 'New Leads': 128, 'Active Deal Room Prospects': 96 }
-    setCampaigns((list) => [
-      { id: uid(), name: form.subject, audience: form.audience, recipients: asDraft ? audienceCounts[form.audience] : audienceCounts[form.audience], opens: 0, clicks: 0, status: asDraft ? 'Draft' : 'Sent', date: asDraft ? '—' : 'just now' },
-      ...list,
-    ])
-    notify(asDraft ? 'Draft saved' : `Blast sent to ${form.audience}`)
+    setCampaigns((list) => [{ id: uid(), name: form.subject, audience: form.audience, recipients: audienceCounts[form.audience], opens: 0, clicks: 0, status: asDraft ? 'Draft' : 'Sent', date: asDraft ? 'just now' : 'just now' }, ...list])
+    notify(asDraft ? 'Draft saved automatically' : `Blast sent to ${form.audience}`)
     setComposeOpen(false)
-    setForm({ from: connectedProviders[0]?.key || 'crebuildermail', audience: EMAIL_AUDIENCES[0], subject: '', body: '' })
   }
-
-  const th = 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500'
-  const td = 'px-4 py-3 text-sm text-slate-700'
-  const inputCls = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-orange-400'
+  const inputCls = 'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-orange-400'
 
   return (
     <div className="mx-auto max-w-[1600px] p-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
-          <Send className="h-6 w-6 text-brand" />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
           <h1 className="text-2xl font-extrabold text-slate-900">Email Blasts</h1>
+          <p className="text-sm text-brand">Turn any completed property into a polished email — drafts save automatically as you work.</p>
         </div>
-        {tab === 'campaigns' && (
-          <PrimaryButton icon={Plus} onClick={() => { setForm((f) => ({ ...f, from: connectedProviders[0]?.key || 'crebuildermail' })); setComposeOpen(true) }}>New Campaign</PrimaryButton>
-        )}
+        <div className="flex items-center gap-2">
+          <button onClick={() => notify('Quick tour — demo')} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"><HelpCircle className="h-4 w-4" /> Show me around</button>
+          <PrimaryButton icon={Plus} onClick={startBlast}>New email blast</PrimaryButton>
+        </div>
       </div>
 
-      {/* Tabs */}
-      <div className="mt-5 flex gap-1 border-b border-slate-200">
-        {[{ k: 'campaigns', l: 'Campaigns' }, { k: 'integrations', l: 'Integrations' }].map((t) => (
-          <button key={t.k} onClick={() => setTab(t.k)} className={`border-b-2 px-4 py-2.5 text-sm font-semibold transition ${tab === t.k ? 'border-brand text-brand' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>{t.l}</button>
-        ))}
+      {/* SEND WITH */}
+      <div className="mt-7 flex items-center justify-between">
+        <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-500"><Send className="h-3.5 w-3.5" /> Send with</p>
+        <button onClick={() => notify('Manage integrations — demo')} className="text-xs font-semibold text-brand hover:underline">Manage in Integrations →</button>
+      </div>
+      <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {EMAIL_PROVIDERS.map((p) => {
+          const on = conns[p.key]
+          const Icon = p.icon
+          return (
+            <div key={p.key} className="flex flex-col items-center rounded-xl border border-slate-200 bg-white p-5 text-center shadow-sm">
+              <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${p.tile}`}><Icon className="h-6 w-6" /></div>
+              <p className="mt-3 text-sm font-bold text-slate-900">{p.name}</p>
+              <p className="mt-0.5 text-xs text-slate-400">{p.sub}</p>
+              <div className="mt-3">
+                {p.action === 'ready' ? (
+                  <span className="inline-flex items-center gap-1 text-sm font-semibold text-emerald-600"><CheckCircle2 className="h-4 w-4" /> Always ready</span>
+                ) : p.action === 'setup' ? (
+                  <button onClick={() => notify(`${p.name} setup — demo`)} className="text-sm font-semibold text-brand hover:underline">Set up →</button>
+                ) : (
+                  <button onClick={() => toggleConn(p)} className={`rounded-full px-4 py-1 text-sm font-semibold transition ${on ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' : 'bg-orange-50 text-brand hover:bg-orange-100'}`}>{on ? 'Connected' : 'Connect'}</button>
+                )}
+              </div>
+            </div>
+          )
+        })}
       </div>
 
-      <div className="mt-6">
-        {/* CAMPAIGNS */}
-        {tab === 'campaigns' && (
-          <div className="space-y-5">
-            {!connectedProviders.length && (
-              <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50/60 px-4 py-3 text-sm text-amber-800">
-                <AlertTriangle className="h-4 w-4 shrink-0" /> No email account connected. Go to <button onClick={() => setTab('integrations')} className="font-semibold underline">Integrations</button> to connect Outlook or CREBuilderMail.
+      {/* DRAFTS */}
+      <p className="mt-8 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-500"><FileText className="h-3.5 w-3.5" /> Drafts</p>
+      {drafts.length === 0 ? (
+        <div className="mt-3 flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 py-10 text-center">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 text-slate-400"><Plus className="h-5 w-5" /></span>
+          <p className="mt-3 text-sm font-bold text-slate-700">No drafts yet</p>
+          <p className="mt-1 text-sm text-slate-500">Start one and it saves automatically — leave and come back any time.</p>
+          <button onClick={startBlast} className="mt-4 rounded-lg bg-brand px-4 py-2 text-sm font-bold text-white transition hover:bg-orange-600">Create your first email blast</button>
+        </div>
+      ) : (
+        <div className="mt-3 space-y-2">
+          {drafts.map((c) => (
+            <div key={c.id} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-400"><FileText className="h-4 w-4" /></span><div><p className="text-sm font-bold text-slate-800">{c.name}</p><p className="text-xs text-slate-400">{c.audience} · {c.recipients.toLocaleString()} recipients · saved {c.date}</p></div></div>
+              <div className="flex items-center gap-2">
+                <button onClick={() => { setForm({ audience: c.audience, subject: c.name, body: '' }); setComposeOpen(true) }} className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Edit</button>
+                <button onClick={() => { setCampaigns((l) => l.map((x) => x.id === c.id ? { ...x, status: 'Sent', date: 'just now' } : x)); notify(`Blast sent to ${c.audience}`) }} className="rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-orange-600">Send</button>
+                <button onClick={() => setCampaigns((l) => l.filter((x) => x.id !== c.id))} className="rounded p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-500"><Trash2 className="h-4 w-4" /></button>
               </div>
-            )}
-            {composeOpen && (
-              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="flex items-center justify-between"><p className="text-sm font-bold text-slate-900">New Email Blast</p><button onClick={() => setComposeOpen(false)} className="text-slate-400 hover:text-slate-700"><X className="h-5 w-5" /></button></div>
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <div><label className="mb-1 block text-xs font-semibold text-slate-500">Send from</label>
-                    <select value={form.from} onChange={(e) => setForm((f) => ({ ...f, from: e.target.value }))} className={inputCls}>
-                      {connectedProviders.length ? connectedProviders.map((p) => <option key={p.key} value={p.key}>{p.name} · {p.account}</option>) : <option>Connect an account first</option>}
-                    </select>
-                  </div>
-                  <div><label className="mb-1 block text-xs font-semibold text-slate-500">Audience</label>
-                    <select value={form.audience} onChange={(e) => setForm((f) => ({ ...f, audience: e.target.value }))} className={inputCls}>{EMAIL_AUDIENCES.map((a) => <option key={a}>{a}</option>)}</select>
-                  </div>
-                </div>
-                <div className="mt-3"><label className="mb-1 block text-xs font-semibold text-slate-500">Subject</label><input value={form.subject} onChange={(e) => setForm((f) => ({ ...f, subject: e.target.value }))} placeholder="e.g. New Off-Market Retail Opportunity" className={inputCls} /></div>
-                <div className="mt-3"><label className="mb-1 block text-xs font-semibold text-slate-500">Message</label><textarea value={form.body} onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))} rows={5} placeholder="Write your email…" className={`${inputCls} resize-none`} /></div>
-                <div className="mt-4 flex justify-end gap-2">
-                  <button onClick={() => send(true)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Save Draft</button>
-                  <PrimaryButton icon={Send} onClick={() => send(false)}>Send Blast</PrimaryButton>
-                </div>
-              </div>
-            )}
-            <div className="scrollbar-slim overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-              <table className="w-full min-w-[760px]">
-                <thead className="border-b border-slate-100 bg-slate-50"><tr><th className={th}>Campaign</th><th className={th}>Audience</th><th className={th}>Recipients</th><th className={th}>Opens</th><th className={th}>Clicks</th><th className={th}>Status</th><th className={th}>Sent</th></tr></thead>
-                <tbody className="divide-y divide-slate-100">
-                  {campaigns.map((c) => (
-                    <tr key={c.id} className="hover:bg-slate-50">
-                      <td className={`${td} font-semibold text-slate-800`}>{c.name}</td>
-                      <td className={td}>{c.audience}</td>
-                      <td className={td}>{c.recipients.toLocaleString()}</td>
-                      <td className={td}>{c.status === 'Sent' ? `${c.opens} (${Math.round((c.opens / c.recipients) * 100)}%)` : '—'}</td>
-                      <td className={td}>{c.status === 'Sent' ? c.clicks : '—'}</td>
-                      <td className={td}><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${c.status === 'Sent' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>{c.status}</span></td>
-                      <td className={td}>{c.date}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* SENT */}
+      <p className="mt-8 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-500"><Send className="h-3.5 w-3.5" /> Sent</p>
+      {sent.length === 0 ? (
+        <div className="mt-3 rounded-xl border-2 border-dashed border-slate-200 py-8 text-center text-sm text-slate-500">Nothing sent yet — your send history and provider links will show up here.</div>
+      ) : (
+        <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="scrollbar-slim overflow-x-auto">
+            <table className="w-full min-w-[640px] text-left text-sm">
+              <thead><tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-400"><th className="px-4 py-2.5">Campaign</th><th className="px-4 py-2.5">Audience</th><th className="px-4 py-2.5 text-right">Recipients</th><th className="px-4 py-2.5 text-right">Opens</th><th className="px-4 py-2.5 text-right">Clicks</th><th className="px-4 py-2.5 text-right">Sent</th></tr></thead>
+              <tbody>
+                {sent.map((c) => (
+                  <tr key={c.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
+                    <td className="px-4 py-2.5 font-semibold text-slate-800">{c.name}</td>
+                    <td className="px-4 py-2.5 text-slate-500">{c.audience}</td>
+                    <td className="px-4 py-2.5 text-right text-slate-600">{c.recipients.toLocaleString()}</td>
+                    <td className="px-4 py-2.5 text-right text-slate-600">{c.opens}</td>
+                    <td className="px-4 py-2.5 text-right text-slate-600">{c.clicks}</td>
+                    <td className="px-4 py-2.5 text-right text-slate-400">{c.date}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Compose modal */}
+      {composeOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setComposeOpen(false)}>
+          <div className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between"><p className="text-base font-bold text-slate-900">New email blast</p><button onClick={() => setComposeOpen(false)} className="text-slate-400 hover:text-slate-700"><X className="h-5 w-5" /></button></div>
+            <div className="mt-4"><label className="mb-1 block text-xs font-semibold text-slate-500">Audience</label><select value={form.audience} onChange={(e) => setForm((f) => ({ ...f, audience: e.target.value }))} className={inputCls}>{EMAIL_AUDIENCES.map((a) => <option key={a}>{a} ({audienceCounts[a].toLocaleString()})</option>)}</select></div>
+            <div className="mt-3"><label className="mb-1 block text-xs font-semibold text-slate-500">Subject</label><input value={form.subject} onChange={(e) => setForm((f) => ({ ...f, subject: e.target.value }))} placeholder="e.g. New Off-Market Retail Opportunity" className={inputCls} /></div>
+            <div className="mt-3"><label className="mb-1 block text-xs font-semibold text-slate-500">Message</label><textarea value={form.body} onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))} rows={6} placeholder="Write your email…" className={`${inputCls} resize-y`} /></div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => saveOrSend(true)} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Save draft</button>
+              <PrimaryButton icon={Send} onClick={() => saveOrSend(false)}>Send blast</PrimaryButton>
             </div>
           </div>
-        )}
-
-        {/* INTEGRATIONS */}
-        {tab === 'integrations' && (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {EMAIL_PROVIDERS.map((p) => {
-              const on = conns[p.key]
-              return (
-                <div key={p.key} className="flex flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                  <div className="flex items-start justify-between">
-                    <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${p.color}`}><Mail className="h-6 w-6" /></div>
-                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${on ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{on ? 'Connected' : 'Not connected'}</span>
-                  </div>
-                  <p className="mt-3 text-base font-bold text-slate-900">{p.name}{p.builtin && <span className="ml-2 rounded bg-orange-50 px-1.5 py-0.5 text-[10px] font-bold uppercase text-brand">Built-in</span>}</p>
-                  <p className="mt-1 flex-1 text-sm text-slate-500">{p.desc}</p>
-                  {on && <p className="mt-2 text-xs font-medium text-slate-400">{p.account}</p>}
-                  <button onClick={() => toggleConn(p.key)} className={`mt-4 inline-flex items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold transition ${on ? 'border border-slate-200 text-slate-700 hover:bg-slate-50' : 'bg-brand text-white shadow-sm hover:bg-orange-600'}`}>
-                    {on ? 'Disconnect' : <><Plus className="h-4 w-4" /> Connect {p.name}</>}
-                  </button>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }
