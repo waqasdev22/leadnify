@@ -10571,6 +10571,7 @@ function CRMPage({ user, onNavigate }) {
   const [contactChip, setContactChip] = useState(null)
   const [addContactOpen, setAddContactOpen] = useState(false)
   const [newContact, setNewContact] = useState({ email: '', name: '', title: '', phone: '', company: '', leadType: 'Unset', note: '' })
+  const [editContact, setEditContact] = useState(null) // contact being edited, or null
   const [accounts, setAccounts] = usePersistentState('crm_accounts', [])
   const [addAccountOpen, setAddAccountOpen] = useState(false)
   const [newAccount, setNewAccount] = useState({ name: '', industry: '' })
@@ -11014,13 +11015,46 @@ function CRMPage({ user, onNavigate }) {
                       <td className={td}><span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-bold text-amber-700"><span className={`h-2 w-2 rounded-full ${crmScoreDot(c.tag)}`} /> {c.score}</span></td>
                       <td className={td}>{c.activity} events</td>
                       <td className={td}>{c.lastSeen}</td>
-                      <td className={td + ' text-right'}><IconButton icon={Mail} label="Email" onClick={() => { window.location.href = `mailto:${c.email}` }} /></td>
+                      <td className={td + ' text-right'}>
+                        <div className="flex items-center justify-end gap-1">
+                          <IconButton icon={Pencil} label="Edit contact" onClick={() => setEditContact({ ...c })} />
+                          <IconButton icon={Mail} label="Email" onClick={() => { window.location.href = `mailto:${c.email}` }} />
+                        </div>
+                      </td>
                     </tr>
                   ))}
                   {!rows.length && <tr><td colSpan={7} className="py-10 text-center text-sm text-slate-400">No contacts.</td></tr>}
                 </tbody>
               </table>
             </div>
+
+            {editContact && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setEditContact(null)}>
+                <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+                    <p className="text-base font-bold text-slate-900">Edit contact</p>
+                    <button onClick={() => setEditContact(null)} className="text-slate-400 hover:text-slate-700"><X className="h-5 w-5" /></button>
+                  </div>
+                  <div className="grid gap-4 px-6 py-5 sm:grid-cols-2">
+                    <div><label className="mb-1 block text-xs font-semibold text-slate-500">Name</label><input value={editContact.name} onChange={(e) => setEditContact((c) => ({ ...c, name: e.target.value }))} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" /></div>
+                    <div><label className="mb-1 block text-xs font-semibold text-slate-500">Email</label><input value={editContact.email} onChange={(e) => setEditContact((c) => ({ ...c, email: e.target.value }))} type="email" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" /></div>
+                    <div><label className="mb-1 block text-xs font-semibold text-slate-500">Phone</label><input value={editContact.phone} onChange={(e) => setEditContact((c) => ({ ...c, phone: e.target.value }))} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" /></div>
+                    <div><label className="mb-1 block text-xs font-semibold text-slate-500">Company</label><input value={editContact.company} onChange={(e) => setEditContact((c) => ({ ...c, company: e.target.value }))} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" /></div>
+                    <div><label className="mb-1 block text-xs font-semibold text-slate-500">Type</label><select value={editContact.type || ''} onChange={(e) => setEditContact((c) => ({ ...c, type: e.target.value }))} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400">{['Buyer', 'Seller', 'Landlord', 'Tenant', 'Investor', 'Other'].map((o) => <option key={o}>{o}</option>)}</select></div>
+                    <div><label className="mb-1 block text-xs font-semibold text-slate-500">Temperature</label><select value={editContact.tag || ''} onChange={(e) => setEditContact((c) => ({ ...c, tag: e.target.value }))} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400">{['Hot', 'Warm', 'Cold'].map((o) => <option key={o}>{o}</option>)}</select></div>
+                  </div>
+                  <div className="flex justify-end gap-2 border-t border-slate-100 px-6 py-4">
+                    <button onClick={() => setEditContact(null)} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
+                    <PrimaryButton icon={Check} onClick={() => {
+                      if (!editContact.name.trim()) { notify('Enter a name', 'error'); return }
+                      setContactList((list) => list.map((x) => (x.id === editContact.id ? { ...x, ...editContact, name: editContact.name.trim(), email: editContact.email.trim() } : x)))
+                      notify('Contact updated')
+                      setEditContact(null)
+                    }}>Save changes</PrimaryButton>
+                  </div>
+                </div>
+              </div>
+            )}
             </>
             )
             ) : (
