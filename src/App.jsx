@@ -10420,6 +10420,11 @@ const CRM_TASKS_SEED = [
   { id: 't5', title: 'Update pipeline notes', due: 'Today', related: 'Ramirez Ventures', owner: 'Devon Park', done: true },
 ]
 
+// Lease expirations — a client's current space, driven by its lease-expiry date.
+// Empty by default: entries are created from a contact's record (lease-expiry is the driver).
+const CRM_LEASES_SEED = []
+const LEASE_HORIZONS = [6, 12, 18, 24, 36]
+
 const CRM_SCRIPTS = [
   { id: 's1', title: 'Cold Call — Investor Intro', type: 'Call', owner: 'Waqas', body: 'Hi [Name], this is Waqas with MyCREBlueprint. I noticed you invest in [Property Type] in [City] — I have an off-market opportunity at a [Cap Rate] cap. Do you have 2 minutes?' },
   { id: 's2', title: 'Follow-up Email — After Tour', type: 'Email', owner: 'Waqas', body: 'Hi [Name], thanks for touring [Property Name]. Attached is the full OM. The asking price is [Price] at a [Cap Rate] cap. Happy to answer any questions.' },
@@ -10542,6 +10547,12 @@ function CRMPage({ user }) {
   const [listingList, setListingList] = usePersistentState('crm_listings', CRM_LISTINGS_SEED)
   const [addListingStage, setAddListingStage] = useState(null)
   const [newListing, setNewListing] = useState({ title: '', contact: '', company: '', value: '', days: '0' })
+  const [taskTab, setTaskTab] = useState('todo') // 'todo' | 'leases'
+  const [showDone, setShowDone] = useState(false)
+  const [addTaskOpen, setAddTaskOpen] = useState(false)
+  const [newTask, setNewTask] = useState({ title: '', related: '', due: 'Today' })
+  const [leaseList] = usePersistentState('crm_leases', CRM_LEASES_SEED)
+  const [leaseHorizon, setLeaseHorizon] = useState(18)
 
   const mine = (arr) => (scope === 'mine' ? arr.filter((x) => x.owner === me) : arr)
   const leads = mine(CRM_LEADS).filter((l) => (l.name + l.company).toLowerCase().includes(search.toLowerCase()))
@@ -10555,6 +10566,14 @@ function CRMPage({ user }) {
   const pipelineValue = deals.reduce((s, d) => s + d.value, 0)
 
   const toggleTask = (id) => setTasks((l) => l.map((t) => (t.id === id ? { ...t, done: !t.done } : t)))
+  const leases = mine(leaseList)
+  const addTask = () => {
+    if (!newTask.title.trim()) { notify('Enter a task', 'error'); return }
+    setTasks((l) => [{ id: uid(), title: newTask.title.trim(), related: newTask.related.trim() || '—', due: newTask.due, owner: me, done: false }, ...l])
+    notify('Task added')
+    setAddTaskOpen(false)
+    setNewTask({ title: '', related: '', due: 'Today' })
+  }
   const toggleAuto = (id) => setAutos((l) => l.map((a) => (a.id === id ? { ...a, on: !a.on } : a)))
 
   const th = 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500'
@@ -11419,22 +11438,140 @@ function CRMPage({ user }) {
         })()}
 
         {/* TASKS */}
-        {tab === 'tasks' && (
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-3 flex items-center justify-between"><p className="text-sm font-bold text-slate-900">Tasks</p><PrimaryButton icon={Plus} onClick={() => notify('New task — demo')}>New Task</PrimaryButton></div>
-            <div className="space-y-2">
-              {myTasks.map((t) => (
-                <div key={t.id} className="flex items-center gap-3 rounded-lg border border-slate-100 p-3">
-                  <button onClick={() => toggleTask(t.id)} className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${t.done ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-slate-300'}`}>{t.done && <Check className="h-3 w-3" />}</button>
-                  <span className={`flex-1 text-sm ${t.done ? 'text-slate-400 line-through' : 'text-slate-700'}`}>{t.title}</span>
-                  <span className="text-xs text-slate-400">{t.related}</span>
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${t.due === 'Today' ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>{t.due}</span>
-                </div>
-              ))}
-              {!myTasks.length && <p className="py-8 text-center text-sm text-slate-400">No tasks.</p>}
+        {tab === 'tasks' && (() => {
+          const openTasks = myTasks.filter((t) => !t.done)
+          const doneTasks = myTasks.filter((t) => t.done)
+          const dueBadge = (due) => (due === 'Today' ? 'bg-amber-50 text-amber-700' : due === 'Tomorrow' ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-500')
+          const calUrl = `https://app.mycreblueprint.com/cal/${(me || 'user').toLowerCase().replace(/\s+/g, '')}-${uid()}.ics`
+          const TaskRow = (t) => (
+            <div key={t.id} className="flex items-center gap-3 rounded-lg border border-slate-100 bg-white p-3">
+              <button onClick={() => toggleTask(t.id)} className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${t.done ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-slate-300 hover:border-emerald-400'}`}>{t.done && <Check className="h-3 w-3" />}</button>
+              <span className={`flex-1 text-sm ${t.done ? 'text-slate-400 line-through' : 'text-slate-700'}`}>{t.title}</span>
+              {t.related && t.related !== '—' && <span className="hidden text-xs text-slate-400 sm:inline">{t.related}</span>}
+              <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${dueBadge(t.due)}`}>{t.due}</span>
             </div>
+          )
+          return (
+          <div className="space-y-5">
+            {/* Sub-tabs */}
+            <div className="flex flex-wrap gap-2">
+              {[{ k: 'todo', label: 'To do' }, { k: 'leases', label: 'Lease expirations' }].map((s) => (
+                <button key={s.k} onClick={() => setTaskTab(s.k)} className={`rounded-full border px-4 py-1.5 text-sm font-semibold transition ${taskTab === s.k ? 'border-brand bg-orange-50 text-brand' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>{s.label}</button>
+              ))}
+            </div>
+
+            {taskTab === 'todo' ? (
+              <>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="-mt-1 text-sm text-slate-500">What you promised to do, and by when.</p>
+                  <h2 className="mt-1 text-xl font-extrabold text-slate-900">Tasks</h2>
+                  <p className="text-sm text-slate-500">Follow-ups on your contacts and deals. Due tasks email you a reminder.</p>
+                </div>
+                <PrimaryButton icon={Plus} onClick={() => setAddTaskOpen(true)}>New task</PrimaryButton>
+              </div>
+
+              {addTaskOpen && (
+                <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="flex items-center justify-between"><p className="text-sm font-bold text-slate-900">New Task</p><button onClick={() => setAddTaskOpen(false)} className="text-slate-400 hover:text-slate-700"><X className="h-5 w-5" /></button></div>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="sm:col-span-2 lg:col-span-1"><label className="mb-1 block text-xs font-semibold text-slate-500">Task</label><input value={newTask.title} onChange={(e) => setNewTask((f) => ({ ...f, title: e.target.value }))} placeholder="e.g. Call Jordan re: OM" className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" /></div>
+                    <div><label className="mb-1 block text-xs font-semibold text-slate-500">Related to</label><input value={newTask.related} onChange={(e) => setNewTask((f) => ({ ...f, related: e.target.value }))} placeholder="Contact / deal / listing" className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" /></div>
+                    <div><label className="mb-1 block text-xs font-semibold text-slate-500">Due</label><select value={newTask.due} onChange={(e) => setNewTask((f) => ({ ...f, due: e.target.value }))} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400">{['Today', 'Tomorrow', 'This week', 'Next week', 'No date'].map((d) => <option key={d}>{d}</option>)}</select></div>
+                  </div>
+                  <div className="mt-4 flex justify-end gap-2">
+                    <button onClick={() => setAddTaskOpen(false)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
+                    <PrimaryButton icon={Plus} onClick={addTask}>Add task</PrimaryButton>
+                  </div>
+                </div>
+              )}
+
+              {/* Calendar sync card */}
+              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500"><Calendar className="h-5 w-5" /></div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-slate-900">Sync to your calendar</p>
+                    <p className="mt-0.5 text-sm text-slate-500">Add this to Google Calendar, Outlook, or Apple Calendar (as a subscribed URL) and your tasks and lease expirations appear there, refreshing automatically.</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <PrimaryButton icon={Calendar} onClick={() => notify('Opening calendar subscription…')}>Add to calendar</PrimaryButton>
+                      <button onClick={() => { copyToClipboard(calUrl); notify('Calendar URL copied') }} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"><Copy className="h-4 w-4" /> Copy URL</button>
+                    </div>
+                    <p className="mt-2 text-xs text-slate-400">The link is private to you — treat it like a password.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Task list / empty state */}
+              {openTasks.length > 0 ? (
+                <div className="space-y-2">{openTasks.map(TaskRow)}</div>
+              ) : (
+                <div className="rounded-xl border-2 border-dashed border-slate-200 py-12 text-center text-sm text-slate-500">No open tasks. Add follow-ups from here or from any contact's page.</div>
+              )}
+
+              {doneTasks.length > 0 && (
+                <div>
+                  <button onClick={() => setShowDone((v) => !v)} className="text-sm font-semibold text-slate-500 hover:text-slate-700">{showDone ? 'Hide completed' : `Show completed (${doneTasks.length})`}</button>
+                  {showDone && <div className="mt-3 space-y-2">{doneTasks.map(TaskRow)}</div>}
+                </div>
+              )}
+              </>
+            ) : (
+              (() => {
+                const withinHorizon = leases.filter((lx) => (lx.monthsOut ?? 999) <= leaseHorizon).sort((a, b) => (a.monthsOut ?? 0) - (b.monthsOut ?? 0))
+                return (
+                <>
+                <div>
+                  <p className="-mt-1 text-sm text-slate-500">Leases coming up for renewal — the easiest calls you can make this month.</p>
+                  <h2 className="mt-1 text-xl font-extrabold text-slate-900">Lease expirations</h2>
+                  <p className="max-w-3xl text-sm text-slate-500">Your clients' leases rolling within the horizon — the moment to re-engage on renewal vs. relocation. A renewal task is raised automatically inside each lease's notice window.</p>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-semibold text-slate-500">Horizon:</span>
+                    {LEASE_HORIZONS.map((h) => (
+                      <button key={h} onClick={() => setLeaseHorizon(h)} className={`rounded-full px-3 py-1 text-sm font-semibold transition ${leaseHorizon === h ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{h} mo</button>
+                    ))}
+                  </div>
+                  <span className="text-sm font-semibold text-slate-500">{withinHorizon.length} {withinHorizon.length === 1 ? 'lease' : 'leases'}</span>
+                </div>
+                {withinHorizon.length > 0 ? (
+                  <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                    <div className="scrollbar-slim overflow-x-auto">
+                      <table className="w-full min-w-[640px] text-left text-sm">
+                        <thead>
+                          <tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            <th className="px-4 py-3">Tenant</th>
+                            <th className="px-4 py-3">Property</th>
+                            <th className="px-4 py-3">Expires</th>
+                            <th className="px-4 py-3 text-right">In</th>
+                            <th className="px-4 py-3 text-right">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {withinHorizon.map((lx) => (
+                            <tr key={lx.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
+                              <td className="px-4 py-3 font-semibold text-slate-800">{lx.tenant}</td>
+                              <td className="px-4 py-3 text-slate-600">{lx.property}</td>
+                              <td className="px-4 py-3 text-slate-500">{lx.expires}</td>
+                              <td className="px-4 py-3 text-right"><span className={`inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-semibold ${lx.monthsOut <= 6 ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>{lx.monthsOut} mo</span></td>
+                              <td className="px-4 py-3 text-right"><button onClick={() => { setTaskTab('todo'); setAddTaskOpen(true); setNewTask({ title: `Renewal outreach — ${lx.tenant}`, related: lx.property, due: 'This week' }) }} className="text-sm font-semibold text-brand hover:underline">Add task</button></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border-2 border-dashed border-slate-200 py-12 text-center text-sm text-slate-500">No leases expiring in the next {leaseHorizon} months. Add a client's current space from their contact record — the lease-expiry date is what drives this pipeline.</div>
+                )}
+                </>
+                )
+              })()
+            )}
           </div>
-        )}
+          )
+        })()}
 
         {/* SCRIPTS */}
         {tab === 'scripts' && (
