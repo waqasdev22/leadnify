@@ -10505,6 +10505,8 @@ function CRMPage({ user }) {
   const [newAccount, setNewAccount] = useState({ name: '', industry: '' })
   const [dealsList, setDealsList] = usePersistentState('crm_deals', CRM_DEALS)
   const [pipeTab, setPipeTab] = useState('Deals')
+  const [addDealOpen, setAddDealOpen] = useState(false)
+  const [newDeal, setNewDeal] = useState({ contact: '', title: '', company: '', value: '', stage: 'Inquiry', days: '0' })
 
   const mine = (arr) => (scope === 'mine' ? arr.filter((x) => x.owner === me) : arr)
   const leads = mine(CRM_LEADS).filter((l) => (l.name + l.company).toLowerCase().includes(search.toLowerCase()))
@@ -10940,6 +10942,14 @@ function CRMPage({ user }) {
         {tab === 'pipelines' && (() => {
           const money = (n) => (n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `$${Math.round(n / 1e3)}K` : `$${n}`)
           const moveTo = (id, stage) => { setDealsList((list) => list.map((d) => (d.id === id ? { ...d, stage } : d))); notify(`Moved to ${stage}`) }
+          const dealIn = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400'
+          const addDeal = () => {
+            if (!newDeal.contact.trim() && !newDeal.title.trim()) { notify('Enter a deal name or contact', 'error'); return }
+            setDealsList((list) => [{ id: uid(), title: newDeal.title.trim() || newDeal.contact.trim(), contact: newDeal.contact.trim() || newDeal.title.trim(), company: newDeal.company.trim() || '—', value: Number(newDeal.value) || 0, stage: newDeal.stage, days: Number(newDeal.days) || 0, owner: me }, ...list])
+            notify('Deal added')
+            setAddDealOpen(false)
+            setNewDeal({ contact: '', title: '', company: '', value: '', stage: 'Inquiry', days: '0' })
+          }
           return (
           <div className="space-y-5">
             {/* Sub-tabs */}
@@ -10951,11 +10961,32 @@ function CRMPage({ user }) {
 
             {pipeTab === 'Deals' ? (
               <>
-              <div>
-                <p className="-mt-1 text-sm text-slate-500">Transactions you expect to get paid on. Move a card right as it gets closer to closing.</p>
-                <h2 className="mt-1 text-xl font-extrabold text-slate-900">Deals</h2>
-                <p className="text-sm text-slate-500">Deals appear automatically when prospects engage — drag them forward as conversations progress.</p>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="-mt-1 text-sm text-slate-500">Transactions you expect to get paid on. Move a card right as it gets closer to closing.</p>
+                  <h2 className="mt-1 text-xl font-extrabold text-slate-900">Deals</h2>
+                  <p className="text-sm text-slate-500">Deals appear automatically when prospects engage — drag them forward as conversations progress.</p>
+                </div>
+                <PrimaryButton icon={Plus} onClick={() => setAddDealOpen(true)}>New deal</PrimaryButton>
               </div>
+
+              {addDealOpen && (
+                <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="flex items-center justify-between"><p className="text-sm font-bold text-slate-900">New Deal</p><button onClick={() => setAddDealOpen(false)} className="text-slate-400 hover:text-slate-700"><X className="h-5 w-5" /></button></div>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    <div><label className="mb-1 block text-xs font-semibold text-slate-500">Contact</label><input value={newDeal.contact} onChange={(e) => setNewDeal((f) => ({ ...f, contact: e.target.value }))} placeholder="e.g. Neil Naran" className={dealIn} /></div>
+                    <div><label className="mb-1 block text-xs font-semibold text-slate-500">Deal / Property</label><input value={newDeal.title} onChange={(e) => setNewDeal((f) => ({ ...f, title: e.target.value }))} placeholder="e.g. Olive Grove Plaza" className={dealIn} /></div>
+                    <div><label className="mb-1 block text-xs font-semibold text-slate-500">Company</label><input value={newDeal.company} onChange={(e) => setNewDeal((f) => ({ ...f, company: e.target.value }))} placeholder="Company" className={dealIn} /></div>
+                    <div><label className="mb-1 block text-xs font-semibold text-slate-500">Value ($)</label><input value={newDeal.value} onChange={(e) => setNewDeal((f) => ({ ...f, value: e.target.value }))} type="number" placeholder="1500000" className={dealIn} /></div>
+                    <div><label className="mb-1 block text-xs font-semibold text-slate-500">Stage</label><select value={newDeal.stage} onChange={(e) => setNewDeal((f) => ({ ...f, stage: e.target.value }))} className={dealIn}>{CRM_STAGES.map((s) => <option key={s}>{s}</option>)}</select></div>
+                    <div><label className="mb-1 block text-xs font-semibold text-slate-500">Age (days)</label><input value={newDeal.days} onChange={(e) => setNewDeal((f) => ({ ...f, days: e.target.value }))} type="number" placeholder="0" className={dealIn} /></div>
+                  </div>
+                  <div className="mt-4 flex justify-end gap-2">
+                    <button onClick={() => setAddDealOpen(false)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
+                    <PrimaryButton icon={Plus} onClick={addDeal}>Add deal</PrimaryButton>
+                  </div>
+                </div>
+              )}
               <div className="scrollbar-slim flex gap-4 overflow-x-auto pb-2">
                 {CRM_STAGES.map((stage) => {
                   const meta = CRM_STAGE_META[stage]
