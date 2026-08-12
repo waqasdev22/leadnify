@@ -10791,7 +10791,7 @@ function CRMPage({ user, onNavigate }) {
       {/* Top bar tabs */}
       <div className="scrollbar-slim mt-5 flex gap-1 overflow-x-auto rounded-xl bg-slate-100 p-1">
         {CRM_TABS.map(({ key, label, icon: Icon }) => {
-          const badge = key === 'leads' ? inbox.filter((l) => l.unread).length : 0
+          const badge = key === 'leads' ? (scope === 'mine' ? inbox.filter((l) => l.owner === me && l.unread) : inbox.filter((l) => l.unread)).length : 0
           return (
             <button key={key} onClick={() => setTab(key)} className={`relative inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold transition ${tab === key ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>
               <Icon className={`h-4 w-4 ${tab === key ? 'text-brand' : ''}`} /> {label}
