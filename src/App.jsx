@@ -998,6 +998,7 @@ function Sidebar({ active, onNavigate, onSignOut, user, forceCollapsed, responsi
     return () => window.removeEventListener('resize', apply)
   }, [forceCollapsed, responsiveCollapse])
   const [showPromo, setShowPromo] = useState(true)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   // Filter nav by page permissions (when a `can` gate is provided), and add the
   // admin-only Team & Permissions entry.
@@ -1073,29 +1074,41 @@ function Sidebar({ active, onNavigate, onSignOut, user, forceCollapsed, responsi
 
       {/* Upgrade promo */}
 
-      {/* Sign out + profile */}
-      <div className="border-t border-slate-100 p-3">
+      {/* Profile menu (Profile Settings · Team Settings · Sign Out) */}
+      <div className="relative border-t border-slate-100 p-3">
+        {menuOpen && (
+          <>
+            <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+            <div className="absolute bottom-full left-3 right-3 z-20 mb-2 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+              <button onClick={() => { setMenuOpen(false); onNavigate('profile') }} className="flex w-full items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+                <Contact className="h-4 w-4 text-slate-400" /> Profile Settings
+              </button>
+              <button onClick={() => { setMenuOpen(false); onNavigate('teamsettings') }} className="flex w-full items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+                <Users className="h-4 w-4 text-slate-400" /> Team Settings
+              </button>
+              <div className="my-1 border-t border-slate-100" />
+              <button onClick={() => { setMenuOpen(false); onSignOut() }} className="flex w-full items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-rose-600 transition hover:bg-rose-50">
+                <LogOut className="h-4 w-4" /> Sign Out
+              </button>
+            </div>
+          </>
+        )}
         <button
-          onClick={onSignOut}
-          className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-rose-50 hover:text-rose-600 ${
-            collapsed ? 'justify-center' : ''
-          }`}
-          title={collapsed ? 'Sign Out' : undefined}
+          onClick={() => setMenuOpen((o) => !o)}
+          className={`flex w-full items-center gap-3 rounded-lg px-2 py-2 transition hover:bg-slate-50 ${collapsed ? 'justify-center' : ''}`}
+          title="Account menu"
         >
-          <LogOut className="h-5 w-5" />
-          {!collapsed && 'Sign Out'}
-        </button>
-        <div className={`mt-1 flex items-center gap-3 rounded-lg px-2 py-2 ${collapsed ? 'justify-center' : ''}`}>
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-orange-600 text-sm font-bold text-white">
             {user.initials}
           </div>
           {!collapsed && (
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 text-left">
               <p className="truncate text-sm font-semibold text-slate-800">{user.name}</p>
               <p className="truncate text-xs text-slate-400">{user.email}</p>
             </div>
           )}
-        </div>
+          {!collapsed && <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition ${menuOpen ? 'rotate-180' : ''}`} />}
+        </button>
       </div>
     </aside>
   )
@@ -10797,6 +10810,185 @@ function EmailBlastPage({ user }) {
   )
 }
 
+/* -------------------------------------------------------------------------- */
+/*  Profile Settings & Team Settings                                           */
+/* -------------------------------------------------------------------------- */
+
+function SettingsField({ label, value, onChange, type = 'text', placeholder }) {
+  return (
+    <div>
+      <label className="mb-1 block text-xs font-semibold text-slate-500">{label}</label>
+      <input value={value} onChange={onChange} type={type} placeholder={placeholder} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-orange-400" />
+    </div>
+  )
+}
+
+function ProfileSettingsPage({ user }) {
+  const notify = useToast()
+  const [form, setForm] = useState({
+    name: user?.name || CURRENT_USER.name,
+    email: user?.email || CURRENT_USER.email,
+    phone: '(602) 555-8100',
+    title: 'Broker',
+    company: 'MyCREBlueprint',
+    license: 'BR-0654321',
+  })
+  const [pw, setPw] = useState({ current: '', next: '', confirm: '' })
+  const [notif, setNotif] = useState({ newLead: true, ndaSigned: true, omOpened: false, weekly: true })
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+  const setP = (k) => (e) => setPw((p) => ({ ...p, [k]: e.target.value }))
+  const initials = (form.name || 'U').split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
+
+  const changePw = () => {
+    if (!pw.current || !pw.next) { notify('Fill in your current and new password', 'error'); return }
+    if (pw.next !== pw.confirm) { notify('New passwords do not match', 'error'); return }
+    setPw({ current: '', next: '', confirm: '' })
+    notify('Password updated')
+  }
+
+  return (
+    <div className="mx-auto max-w-[900px] p-6">
+      <div className="flex items-center gap-2">
+        <Contact className="h-6 w-6 text-brand" />
+        <h1 className="text-2xl font-extrabold text-slate-900">Profile Settings</h1>
+      </div>
+
+      {/* Profile */}
+      <div className="mt-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-orange-600 text-xl font-bold text-white">{initials}</div>
+          <div>
+            <p className="text-lg font-bold text-slate-900">{form.name}</p>
+            <p className="text-sm text-slate-500">{form.title} · {form.company}</p>
+          </div>
+        </div>
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          <SettingsField label="Full name" value={form.name} onChange={set('name')} />
+          <SettingsField label="Email" value={form.email} onChange={set('email')} type="email" />
+          <SettingsField label="Phone" value={form.phone} onChange={set('phone')} />
+          <SettingsField label="Title" value={form.title} onChange={set('title')} />
+          <SettingsField label="Company" value={form.company} onChange={set('company')} />
+          <SettingsField label="License #" value={form.license} onChange={set('license')} />
+        </div>
+        <div className="mt-5 flex justify-end">
+          <PrimaryButton icon={Check} onClick={() => notify('Profile saved')}>Save Changes</PrimaryButton>
+        </div>
+      </div>
+
+      {/* Password */}
+      <div className="mt-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <p className="text-sm font-bold text-slate-900">Password</p>
+        <p className="text-xs text-slate-400">Update the password you use to sign in.</p>
+        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          <SettingsField label="Current password" value={pw.current} onChange={setP('current')} type="password" placeholder="••••••••" />
+          <SettingsField label="New password" value={pw.next} onChange={setP('next')} type="password" placeholder="••••••••" />
+          <SettingsField label="Confirm new password" value={pw.confirm} onChange={setP('confirm')} type="password" placeholder="••••••••" />
+        </div>
+        <div className="mt-4 flex justify-end">
+          <button onClick={changePw} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Change Password</button>
+        </div>
+      </div>
+
+      {/* Notifications */}
+      <div className="mt-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <p className="text-sm font-bold text-slate-900">Email notifications</p>
+        <div className="mt-3 divide-y divide-slate-100">
+          {[
+            { k: 'newLead', l: 'New lead assigned to me' },
+            { k: 'ndaSigned', l: 'NDA / CA executed on a deal room' },
+            { k: 'omOpened', l: 'Someone opens my OM' },
+            { k: 'weekly', l: 'Weekly performance report' },
+          ].map((n) => (
+            <div key={n.k} className="flex items-center justify-between py-3">
+              <span className="text-sm text-slate-700">{n.l}</span>
+              <Toggle on={notif[n.k]} onChange={(v) => setNotif((s) => ({ ...s, [n.k]: v }))} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const TEAM_SETTINGS_MEMBERS = [
+  { id: 'u1', name: 'Waqas', email: 'waqasdev@gmail.com', role: 'Owner', status: 'Active', initials: 'W' },
+  { id: 'u2', name: 'Maya Chen', email: 'maya@valuereis.com', role: 'Manager', status: 'Active', initials: 'MC' },
+  { id: 'u3', name: 'Devon Park', email: 'devon@valuereis.com', role: 'Member', status: 'Active', initials: 'DP' },
+  { id: 'u4', name: 'Sam Rivera', email: 'sam@valuereis.com', role: 'Admin', status: 'Active', initials: 'SR' },
+  { id: 'u5', name: 'Priya N.', email: 'priya@valuereis.com', role: 'Member', status: 'Invited', initials: 'PN' },
+]
+
+function TeamSettingsPage() {
+  const notify = useToast()
+  const [members, setMembers] = useState(TEAM_SETTINGS_MEMBERS)
+  const [teamName, setTeamName] = useState('Value REIS')
+  const setRole = (id, role) => { setMembers((l) => l.map((m) => (m.id === id ? { ...m, role } : m))); notify('Role updated') }
+  const remove = (id) => { setMembers((l) => l.filter((m) => m.id !== id)); notify('Member removed', 'error') }
+  const seats = members.filter((m) => m.status === 'Active').length
+  const roleBadge = (r) => ({ Owner: 'bg-amber-50 text-amber-700', Admin: 'bg-rose-50 text-rose-700', Manager: 'bg-indigo-50 text-indigo-700', Member: 'bg-slate-100 text-slate-600' }[r] || 'bg-slate-100 text-slate-600')
+  const th = 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500'
+  const td = 'px-4 py-3 text-sm text-slate-700'
+
+  return (
+    <div className="mx-auto max-w-[1200px] p-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2">
+          <Users className="h-6 w-6 text-brand" />
+          <h1 className="text-2xl font-extrabold text-slate-900">Team Settings</h1>
+        </div>
+        <PrimaryButton icon={Plus} onClick={() => notify('Invite sent — demo')}>Invite Member</PrimaryButton>
+      </div>
+
+      {/* Team + plan */}
+      <div className="mt-6 grid gap-4 lg:grid-cols-3">
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
+          <p className="text-sm font-bold text-slate-900">Team</p>
+          <div className="mt-3 max-w-sm"><SettingsField label="Team name" value={teamName} onChange={(e) => setTeamName(e.target.value)} /></div>
+          <div className="mt-3 flex justify-end"><button onClick={() => notify('Team saved')} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Save</button></div>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="text-sm font-bold text-slate-900">Plan & Billing</p>
+          <p className="mt-2 text-2xl font-extrabold text-slate-900">Pro</p>
+          <p className="text-xs text-slate-400">{seats} of 10 paid seats used</p>
+          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-brand" style={{ width: `${(seats / 10) * 100}%` }} /></div>
+          <p className="mt-3 flex items-center gap-1.5 text-sm font-semibold text-slate-700"><DollarSign className="h-4 w-4 text-emerald-500" />{currency(seats * 49)}/mo</p>
+          <button onClick={() => notify('Billing — demo')} className="mt-3 w-full rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Manage Billing</button>
+        </div>
+      </div>
+
+      {/* Members */}
+      <div className="mt-5 scrollbar-slim overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+        <table className="w-full min-w-[720px]">
+          <thead className="border-b border-slate-100 bg-slate-50"><tr><th className={th}>Member</th><th className={th}>Role</th><th className={th}>Status</th><th className={th + ' text-right'}>Actions</th></tr></thead>
+          <tbody className="divide-y divide-slate-100">
+            {members.map((m) => (
+              <tr key={m.id} className="hover:bg-slate-50">
+                <td className={td}>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-500">{m.initials}</div>
+                    <div><p className="font-semibold text-slate-800">{m.name}</p><p className="text-xs text-slate-400">{m.email}</p></div>
+                  </div>
+                </td>
+                <td className={td}>
+                  {m.role === 'Owner' ? (
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${roleBadge(m.role)}`}>Owner</span>
+                  ) : (
+                    <select value={m.role} onChange={(e) => setRole(m.id, e.target.value)} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-700 outline-none focus:border-orange-400">
+                      {ROLES.filter((r) => r !== 'Owner').map((r) => <option key={r}>{r}</option>)}
+                    </select>
+                  )}
+                </td>
+                <td className={td}><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${m.status === 'Active' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>{m.status}</span></td>
+                <td className={td + ' text-right'}>{m.role !== 'Owner' && <IconButton icon={Trash2} label="Remove" tone="danger" onClick={() => remove(m.id)} />}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
 function PlaceholderPage({ label, icon: Icon }) {
   const notify = useToast()
   return (
@@ -11180,6 +11372,10 @@ export default function App() {
         return <DealRoomsPage dealRooms={dealRooms} setDealRooms={setDealRooms} onEditDocument={resumeDraft} openTarget={dealRoomTarget} onOpenHandled={() => setDealRoomTarget(null)} />
       case 'team':
         return <TeamPermissionsPage myUid={myUid} />
+      case 'profile':
+        return <ProfileSettingsPage user={user} />
+      case 'teamsettings':
+        return <TeamSettingsPage />
       case 'documents':
         return <PlaceholderPage label="Documents" icon={FileText} />
       case 'crm':
