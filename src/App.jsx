@@ -10488,6 +10488,11 @@ function CRMPage({ user }) {
   const [contactList, setContactList] = usePersistentState('crm_contacts', CRM_CONTACTS)
   const [contactView, setContactView] = useState('people')
   const [contactChip, setContactChip] = useState(null)
+  const [addContactOpen, setAddContactOpen] = useState(false)
+  const [newContact, setNewContact] = useState({ name: '', email: '', phone: '', company: '', source: 'Inquiry', tag: 'Warm', type: 'Buyer' })
+  const [accounts, setAccounts] = usePersistentState('crm_accounts', [])
+  const [addAccountOpen, setAddAccountOpen] = useState(false)
+  const [newAccount, setNewAccount] = useState({ name: '', industry: '' })
 
   const mine = (arr) => (scope === 'mine' ? arr.filter((x) => x.owner === me) : arr)
   const leads = mine(CRM_LEADS).filter((l) => (l.name + l.company).toLowerCase().includes(search.toLowerCase()))
@@ -10735,6 +10740,25 @@ function CRMPage({ user }) {
           if (contactChip && contactChip !== 'Hot first') rows = rows.filter((c) => (TAGS.includes(contactChip) ? c.tag === contactChip : c.type === contactChip))
           if (contactChip === 'Hot first') rows = [...rows].sort((a, b) => b.score - a.score)
           const dupes = 1
+          const inCls = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400'
+          const addContact = () => {
+            if (!newContact.name.trim()) { notify('Enter a contact name', 'error'); return }
+            const today = new Date().toLocaleDateString('en-GB')
+            setContactList((list) => [{ id: uid(), name: newContact.name.trim(), email: newContact.email.trim() || '—', phone: newContact.phone.trim() || '—', company: newContact.company.trim() || '—', source: newContact.source, score: 50, tag: newContact.tag, type: newContact.type, activity: 1, lastSeen: today, owner: me }, ...list])
+            notify('Contact added')
+            setAddContactOpen(false)
+            setNewContact({ name: '', email: '', phone: '', company: '', source: 'Inquiry', tag: 'Warm', type: 'Buyer' })
+          }
+          const myAccounts = scope === 'mine' ? accounts.filter((a) => a.owner === me) : accounts
+          const accountRows = myAccounts.filter((a) => a.name.toLowerCase().includes(search.toLowerCase()))
+          const addAccount = () => {
+            if (!newAccount.name.trim()) { notify('Enter a firm name', 'error'); return }
+            setAccounts((list) => [{ id: uid(), name: newAccount.name.trim(), industry: newAccount.industry.trim() || '—', owner: me }, ...list])
+            notify('Account created')
+            setAddAccountOpen(false)
+            setNewAccount({ name: '', industry: '' })
+          }
+          const firmCount = (firm) => contactList.filter((c) => c.company === firm).length
           return (
           <div className="space-y-5">
             {/* People / Companies */}
@@ -10744,6 +10768,8 @@ function CRMPage({ user }) {
               ))}
             </div>
 
+            {contactView === 'people' ? (
+            <>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="-mt-1 text-sm text-slate-500">Everyone you know — buyers, tenants, owners and brokers. One row per person.</p>
@@ -10755,13 +10781,33 @@ function CRMPage({ user }) {
                 <button onClick={() => notify('Reviewing possible duplicates')} className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-100"><Copy className="h-4 w-4" /> {dupes} possible duplicate</button>
                 <button onClick={() => notify('Exported contacts to CSV')} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"><Download className="h-4 w-4" /> Export</button>
                 <button onClick={() => notify('Import contacts — demo')} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"><Upload className="h-4 w-4" /> Import</button>
-                <PrimaryButton icon={Plus} onClick={() => notify('Add contact — demo')}>Add contact</PrimaryButton>
+                <PrimaryButton icon={Plus} onClick={() => setAddContactOpen(true)}>Add contact</PrimaryButton>
               </div>
             </div>
 
+            {addContactOpen && (
+              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex items-center justify-between"><p className="text-sm font-bold text-slate-900">Add Contact</p><button onClick={() => setAddContactOpen(false)} className="text-slate-400 hover:text-slate-700"><X className="h-5 w-5" /></button></div>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  <div><label className="mb-1 block text-xs font-semibold text-slate-500">Name *</label><input value={newContact.name} onChange={(e) => setNewContact((f) => ({ ...f, name: e.target.value }))} placeholder="Full name" className={inCls} /></div>
+                  <div><label className="mb-1 block text-xs font-semibold text-slate-500">Email</label><input value={newContact.email} onChange={(e) => setNewContact((f) => ({ ...f, email: e.target.value }))} placeholder="name@email.com" className={inCls} /></div>
+                  <div><label className="mb-1 block text-xs font-semibold text-slate-500">Phone</label><input value={newContact.phone} onChange={(e) => setNewContact((f) => ({ ...f, phone: e.target.value }))} placeholder="Phone" className={inCls} /></div>
+                  <div><label className="mb-1 block text-xs font-semibold text-slate-500">Company</label><input value={newContact.company} onChange={(e) => setNewContact((f) => ({ ...f, company: e.target.value }))} placeholder="Company" className={inCls} /></div>
+                  <div><label className="mb-1 block text-xs font-semibold text-slate-500">Source</label><select value={newContact.source} onChange={(e) => setNewContact((f) => ({ ...f, source: e.target.value }))} className={inCls}><option>Inquiry</option><option>NDA</option><option>Download</option><option>Email</option></select></div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><label className="mb-1 block text-xs font-semibold text-slate-500">Temp.</label><select value={newContact.tag} onChange={(e) => setNewContact((f) => ({ ...f, tag: e.target.value }))} className={inCls}><option>Hot</option><option>Warm</option><option>Cold</option></select></div>
+                    <div><label className="mb-1 block text-xs font-semibold text-slate-500">Type</label><select value={newContact.type} onChange={(e) => setNewContact((f) => ({ ...f, type: e.target.value }))} className={inCls}><option>Buyer</option><option>Tenant Rep</option><option>Seller</option><option>Landlord</option><option>Investor</option><option>Other</option></select></div>
+                  </div>
+                </div>
+                <div className="mt-4 flex justify-end gap-2">
+                  <button onClick={() => setAddContactOpen(false)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
+                  <PrimaryButton icon={Plus} onClick={addContact}>Add contact</PrimaryButton>
+                </div>
+              </div>
+            )}
+
             <button onClick={() => notify('View saved')} className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-500 transition hover:bg-slate-50"><Bookmark className="h-4 w-4" /> Save this view</button>
 
-            {/* Search + chips */}
             <div className="flex flex-wrap items-center gap-3">
               <div className="relative w-72 max-w-full"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name, email, or company..." className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100" /></div>
               <div className="flex flex-wrap gap-2">
@@ -10771,7 +10817,6 @@ function CRMPage({ user }) {
               </div>
             </div>
 
-            {/* Table */}
             <div className="scrollbar-slim overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
               <table className="w-full min-w-[860px]">
                 <thead className="border-b border-slate-100 bg-slate-50"><tr><th className={th}>Contact</th><th className={th}>Company</th><th className={th}>Source</th><th className={th}>Score</th><th className={th}>Activity</th><th className={th}>Last seen</th><th className={th + ' text-right'}></th></tr></thead>
@@ -10791,6 +10836,56 @@ function CRMPage({ user }) {
                 </tbody>
               </table>
             </div>
+            </>
+            ) : (
+            <>
+            {/* Companies → Accounts */}
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="-mt-1 text-sm text-slate-500">The businesses your people work for, so you can see everyone at a firm together.</p>
+                <h2 className="mt-1 text-xl font-extrabold text-slate-900">Accounts</h2>
+                <p className="text-sm text-slate-500">The firms your contacts belong to — with deal rollups.</p>
+              </div>
+              <PrimaryButton icon={Plus} onClick={() => setAddAccountOpen(true)}>New account</PrimaryButton>
+            </div>
+
+            {addAccountOpen && (
+              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex items-center justify-between"><p className="text-sm font-bold text-slate-900">New Account</p><button onClick={() => setAddAccountOpen(false)} className="text-slate-400 hover:text-slate-700"><X className="h-5 w-5" /></button></div>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div><label className="mb-1 block text-xs font-semibold text-slate-500">Firm name *</label><input value={newAccount.name} onChange={(e) => setNewAccount((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Value Net Lease Partners" className={inCls} /></div>
+                  <div><label className="mb-1 block text-xs font-semibold text-slate-500">Industry</label><input value={newAccount.industry} onChange={(e) => setNewAccount((f) => ({ ...f, industry: e.target.value }))} placeholder="e.g. Net Lease Investment" className={inCls} /></div>
+                </div>
+                <div className="mt-4 flex justify-end gap-2">
+                  <button onClick={() => setAddAccountOpen(false)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
+                  <PrimaryButton icon={Plus} onClick={addAccount}>Create account</PrimaryButton>
+                </div>
+              </div>
+            )}
+
+            <div className="relative w-96 max-w-full"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search firms..." className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100" /></div>
+
+            {accountRows.length ? (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {accountRows.map((a) => (
+                  <div key={a.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 text-slate-400"><Building2 className="h-5 w-5" /></div>
+                      <div className="min-w-0 flex-1"><p className="truncate font-bold text-slate-900">{a.name}</p><p className="truncate text-xs text-slate-400">{a.industry}</p></div>
+                    </div>
+                    <p className="mt-3 text-sm text-slate-500">{firmCount(a.name)} contact{firmCount(a.name) === 1 ? '' : 's'} at this firm</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 py-20 text-center">
+                <Building2 className="h-10 w-10 text-slate-300" />
+                <p className="mt-4 text-base font-bold text-slate-800">No accounts yet</p>
+                <p className="mt-1 max-w-md text-sm text-slate-500">Accounts group your contacts by firm. Create one here, then file contacts under it from a contact&apos;s page or the firm&apos;s &quot;Add&quot; button.</p>
+              </div>
+            )}
+            </>
+            )}
           </div>
           )
         })()}
