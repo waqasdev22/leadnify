@@ -10572,6 +10572,11 @@ function CRMPage({ user, onNavigate }) {
   const [addContactOpen, setAddContactOpen] = useState(false)
   const [newContact, setNewContact] = useState({ email: '', name: '', title: '', phone: '', company: '', leadType: 'Unset', note: '' })
   const [editContact, setEditContact] = useState(null) // contact being edited, or null
+  const [delContact, setDelContact] = useState(null) // contact pending delete confirm, or null
+  const [saveViewOpen, setSaveViewOpen] = useState(false)
+  const [viewName, setViewName] = useState('')
+  const [viewShare, setViewShare] = useState(false)
+  const [savedViews, setSavedViews] = usePersistentState('crm_contact_views', [])
   const [accounts, setAccounts] = usePersistentState('crm_accounts', [])
   const [addAccountOpen, setAddAccountOpen] = useState(false)
   const [newAccount, setNewAccount] = useState({ name: '', industry: '' })
@@ -10992,7 +10997,24 @@ function CRMPage({ user, onNavigate }) {
               </div>
             </div>
 
-            <button onClick={() => notify('View saved')} className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-500 transition hover:bg-slate-50"><Bookmark className="h-4 w-4" /> Save this view</button>
+            <div className="flex flex-wrap items-center gap-2">
+              {savedViews.map((v) => (
+                <span key={v.id} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold ${contactChip === v.chip ? 'bg-brand text-white' : 'bg-slate-100 text-slate-600'}`}>
+                  <button onClick={() => { setContactChip(v.chip || null); setSearch(v.search || '') }} className="inline-flex items-center gap-1.5"><Bookmark className="h-3.5 w-3.5" /> {v.name}{v.shared && <Users className="h-3 w-3 opacity-70" />}</button>
+                  <button onClick={() => setSavedViews((l) => l.filter((x) => x.id !== v.id))} className="opacity-60 hover:opacity-100"><X className="h-3 w-3" /></button>
+                </span>
+              ))}
+              {saveViewOpen ? (
+                <div className="inline-flex items-center gap-2 rounded-lg border border-orange-300 bg-white px-2 py-1.5 shadow-sm">
+                  <input autoFocus value={viewName} onChange={(e) => setViewName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { if (!viewName.trim()) { notify('Name this view', 'error'); return } setSavedViews((l) => [...l, { id: uid(), name: viewName.trim(), shared: viewShare, chip: contactChip, search }]); notify('View saved'); setSaveViewOpen(false); setViewName(''); setViewShare(false) } }} placeholder="Name this view" className="w-36 rounded-md border border-slate-200 px-2 py-1 text-sm outline-none focus:border-orange-400" />
+                  <label className="inline-flex items-center gap-1.5 text-sm text-slate-600"><input type="checkbox" checked={viewShare} onChange={(e) => setViewShare(e.target.checked)} className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-orange-400" /> Share with team</label>
+                  <button onClick={() => { if (!viewName.trim()) { notify('Name this view', 'error'); return } setSavedViews((l) => [...l, { id: uid(), name: viewName.trim(), shared: viewShare, chip: contactChip, search }]); notify('View saved'); setSaveViewOpen(false); setViewName(''); setViewShare(false) }} className="inline-flex items-center gap-1 rounded-md bg-brand px-3 py-1 text-sm font-semibold text-white transition hover:bg-orange-600"><Check className="h-3.5 w-3.5" /> Save</button>
+                  <button onClick={() => { setSaveViewOpen(false); setViewName(''); setViewShare(false) }} className="text-sm font-semibold text-slate-500 hover:text-slate-800">Cancel</button>
+                </div>
+              ) : (
+                <button onClick={() => { setSaveViewOpen(true); setViewName(''); setViewShare(false) }} className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-500 transition hover:bg-slate-50"><Bookmark className="h-4 w-4" /> Save this view</button>
+              )}
+            </div>
 
             <div className="flex flex-wrap items-center gap-3">
               <div className="relative w-72 max-w-full"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name, email, or company..." className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100" /></div>
@@ -11019,6 +11041,7 @@ function CRMPage({ user, onNavigate }) {
                         <div className="flex items-center justify-end gap-1">
                           <IconButton icon={Pencil} label="Edit contact" onClick={() => setEditContact({ ...c })} />
                           <IconButton icon={Mail} label="Email" onClick={() => { window.location.href = `mailto:${c.email}` }} />
+                          <IconButton icon={Trash2} label="Delete contact" tone="danger" onClick={() => setDelContact(c)} />
                         </div>
                       </td>
                     </tr>
@@ -11051,6 +11074,18 @@ function CRMPage({ user, onNavigate }) {
                       notify('Contact updated')
                       setEditContact(null)
                     }}>Save changes</PrimaryButton>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {delContact && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setDelContact(null)}>
+                <div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-50 text-rose-500"><Trash2 className="h-5 w-5" /></span><div><p className="text-sm font-bold text-slate-900">Delete this contact?</p><p className="mt-1 text-sm text-slate-500"><span className="font-semibold text-slate-700">{delContact.name}</span> will be removed from your contacts. This can't be undone.</p></div></div>
+                  <div className="mt-4 flex justify-end gap-2">
+                    <button onClick={() => setDelContact(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
+                    <button onClick={() => { setContactList((list) => list.filter((x) => x.id !== delContact.id)); notify('Contact deleted', 'error'); setDelContact(null) }} className="rounded-lg bg-rose-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-600">Delete</button>
                   </div>
                 </div>
               </div>
