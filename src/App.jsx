@@ -71,6 +71,7 @@ import {
   AlertTriangle,
   Info,
   Ban,
+  Flame,
   Zap,
   ClipboardList,
   TrendingUp,
@@ -10366,14 +10367,23 @@ const CRM_CONTACT_CHIPS = ['Hot first', 'Hot', 'Warm', 'Cold', 'Buyer', 'Tenant 
 const crmContactSrcBadge = (s) => ({ NDA: 'bg-violet-50 text-violet-700', Inquiry: 'bg-sky-50 text-sky-700', Download: 'bg-emerald-50 text-emerald-700', Email: 'bg-blue-50 text-blue-700' }[s] || 'bg-slate-100 text-slate-600')
 const crmScoreDot = (tag) => (tag === 'Hot' ? 'bg-rose-500' : tag === 'Warm' ? 'bg-amber-500' : 'bg-sky-400')
 
-const CRM_STAGES = ['New', 'Contacted', 'Qualified', 'Proposal', 'Closed Won']
+const CRM_STAGES = ['Inquiry', 'NDA Signed', 'Tour', 'LOI', 'Under Contract', 'Closed Won', 'Closed Lost']
+const CRM_STAGE_META = {
+  Inquiry: { pct: 10, bar: 'border-t-blue-500' },
+  'NDA Signed': { pct: 25, bar: 'border-t-violet-500' },
+  Tour: { pct: 40, bar: 'border-t-amber-500' },
+  LOI: { pct: 60, bar: 'border-t-orange-500' },
+  'Under Contract': { pct: 80, bar: 'border-t-emerald-500' },
+  'Closed Won': { pct: 100, bar: 'border-t-emerald-600' },
+  'Closed Lost': { pct: 0, bar: 'border-t-slate-400' },
+}
 const CRM_DEALS = [
-  { id: 'd1', title: 'Olive Grove Plaza', company: 'Miller Capital', value: 10900000, stage: 'Proposal', owner: 'Waqas' },
-  { id: 'd2', title: 'Summit Retail Center', company: 'Everest Holdings', value: 8700000, stage: 'Qualified', owner: 'Waqas' },
-  { id: 'd3', title: 'Cypress Corporate Tower', company: 'Lee Retail Group', value: 14250000, stage: 'New', owner: 'Maya Chen' },
-  { id: 'd4', title: 'Riverside Business Park', company: 'Ramirez Ventures', value: 6300000, stage: 'Contacted', owner: 'Devon Park' },
-  { id: 'd5', title: 'Northgate Logistics Hub', company: 'Cole Net Lease', value: 12750000, stage: 'Closed Won', owner: 'Sam Rivera' },
-  { id: 'd6', title: 'Metro Office Plaza', company: 'Summit Realty', value: 5100000, stage: 'Proposal', owner: 'Waqas' },
+  { id: 'd1', title: 'Neil Naran — Test', contact: 'Neil Naran', company: 'Value Net Lease Partners', value: 1500000, stage: 'NDA Signed', days: 14, owner: 'Waqas' },
+  { id: 'd2', title: 'Neil Naran — Test', contact: 'Neil Naran', company: 'Value Net Lease Partners', value: 1500000, stage: 'NDA Signed', days: 14, owner: 'Waqas' },
+  { id: 'd3', title: 'Neil Naran — Test', contact: 'Neil Naran', company: 'Value Net Lease Partners', value: 1500000, stage: 'NDA Signed', days: 14, owner: 'Waqas' },
+  { id: 'd4', title: 'Olive Grove Plaza', contact: 'Jordan Miller', company: 'Miller Capital', value: 10900000, stage: 'Tour', days: 6, owner: 'Maya Chen' },
+  { id: 'd5', title: 'Summit Retail Center', contact: 'Priya Shah', company: 'Everest Holdings', value: 8700000, stage: 'LOI', days: 9, owner: 'Devon Park' },
+  { id: 'd6', title: 'Northgate Logistics Hub', contact: 'Aaron Cole', company: 'Cole Net Lease', value: 12750000, stage: 'Under Contract', days: 21, owner: 'Sam Rivera' },
 ]
 
 const CRM_TASKS_SEED = [
@@ -10417,7 +10427,7 @@ function CrmKpi({ icon: Icon, label, value, tone = 'text-brand' }) {
   )
 }
 
-const CRM_STAGE_WEIGHT = { New: 0.1, Contacted: 0.25, Qualified: 0.5, Proposal: 0.75, 'Closed Won': 1 }
+const CRM_STAGE_WEIGHT = { Inquiry: 0.1, 'NDA Signed': 0.25, Tour: 0.4, LOI: 0.6, 'Under Contract': 0.8, 'Closed Won': 1, 'Closed Lost': 0 }
 const CRM_INQUIRIES = [
   { id: 'iq1', name: 'Neil Naran', property: 'Olive Grove Plaza', owner: 'Waqas' },
   { id: 'iq2', name: 'Sofia Ramirez', property: 'Summit Retail Center', owner: 'Devon Park' },
@@ -10493,11 +10503,13 @@ function CRMPage({ user }) {
   const [accounts, setAccounts] = usePersistentState('crm_accounts', [])
   const [addAccountOpen, setAddAccountOpen] = useState(false)
   const [newAccount, setNewAccount] = useState({ name: '', industry: '' })
+  const [dealsList, setDealsList] = usePersistentState('crm_deals', CRM_DEALS)
+  const [pipeTab, setPipeTab] = useState('Deals')
 
   const mine = (arr) => (scope === 'mine' ? arr.filter((x) => x.owner === me) : arr)
   const leads = mine(CRM_LEADS).filter((l) => (l.name + l.company).toLowerCase().includes(search.toLowerCase()))
   const contacts = (scope === 'mine' ? contactList.filter((c) => c.owner === me) : contactList).filter((c) => (c.name + c.email + c.company).toLowerCase().includes(search.toLowerCase()))
-  const deals = mine(CRM_DEALS)
+  const deals = mine(dealsList)
   const myTasks = mine(tasks)
   const scripts = mine(CRM_SCRIPTS)
   const automations = mine(autos)
@@ -10925,30 +10937,80 @@ function CRMPage({ user }) {
         })()}
 
         {/* PIPELINES */}
-        {tab === 'pipelines' && (
-          <div className="scrollbar-slim flex gap-4 overflow-x-auto pb-2">
-            {CRM_STAGES.map((stage) => {
-              const col = deals.filter((d) => d.stage === stage)
-              const total = col.reduce((s, d) => s + d.value, 0)
-              return (
-                <div key={stage} className="w-72 shrink-0">
-                  <div className="mb-2 flex items-center justify-between px-1"><span className="text-sm font-bold text-slate-700">{stage}</span><span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500">{col.length}</span></div>
-                  <p className="mb-2 px-1 text-xs font-semibold text-slate-400">{currency(total)}</p>
-                  <div className="space-y-2 rounded-xl bg-slate-50 p-2">
-                    {col.map((d) => (
-                      <div key={d.id} className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
-                        <p className="text-sm font-bold text-slate-800">{d.title}</p>
-                        <p className="text-xs text-slate-400">{d.company}</p>
-                        <div className="mt-2 flex items-center justify-between"><span className="text-sm font-extrabold text-slate-900">{currency(d.value)}</span><span className="text-xs text-slate-400">{d.owner}</span></div>
+        {tab === 'pipelines' && (() => {
+          const money = (n) => (n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `$${Math.round(n / 1e3)}K` : `$${n}`)
+          const moveTo = (id, stage) => { setDealsList((list) => list.map((d) => (d.id === id ? { ...d, stage } : d))); notify(`Moved to ${stage}`) }
+          return (
+          <div className="space-y-5">
+            {/* Sub-tabs */}
+            <div className="flex flex-wrap gap-2">
+              {['Deals', 'Assignments', 'Listings'].map((t) => (
+                <button key={t} onClick={() => setPipeTab(t)} className={`rounded-full border px-4 py-1.5 text-sm font-semibold transition ${pipeTab === t ? 'border-brand bg-orange-50 text-brand' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>{t}</button>
+              ))}
+            </div>
+
+            {pipeTab === 'Deals' ? (
+              <>
+              <div>
+                <p className="-mt-1 text-sm text-slate-500">Transactions you expect to get paid on. Move a card right as it gets closer to closing.</p>
+                <h2 className="mt-1 text-xl font-extrabold text-slate-900">Deals</h2>
+                <p className="text-sm text-slate-500">Deals appear automatically when prospects engage — drag them forward as conversations progress.</p>
+              </div>
+              <div className="scrollbar-slim flex gap-4 overflow-x-auto pb-2">
+                {CRM_STAGES.map((stage) => {
+                  const meta = CRM_STAGE_META[stage]
+                  const col = deals.filter((d) => d.stage === stage)
+                  const total = col.reduce((s, d) => s + d.value, 0)
+                  const weighted = total * (CRM_STAGE_WEIGHT[stage] || 0)
+                  return (
+                    <div key={stage} className={`flex w-80 shrink-0 flex-col rounded-xl border border-t-4 border-slate-200 ${meta.bar} bg-slate-50/60`}>
+                      <div className="px-3 pt-3">
+                        <div className="flex items-center justify-between">
+                          <span className="flex items-center gap-2 text-sm font-bold text-slate-800">{stage} <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-500">{col.length}</span></span>
+                          <span className="text-xs font-semibold text-slate-400">{meta.pct}%</span>
+                        </div>
+                        {col.length > 0 && <p className="mt-1 text-xs font-semibold text-slate-500">{money(total)} <span className="font-normal text-slate-400">· {money(weighted)} weighted</span></p>}
                       </div>
-                    ))}
-                    {!col.length && <p className="py-6 text-center text-xs text-slate-300">—</p>}
-                  </div>
-                </div>
-              )
-            })}
+                      <div className="scrollbar-slim mt-2 max-h-[520px] space-y-2 overflow-y-auto p-2">
+                        {col.map((d) => (
+                          <div key={d.id} className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+                            <div className="flex items-center gap-2">
+                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-xs font-bold text-emerald-600">{d.contact.split(' ').map((n) => n[0]).join('').slice(0, 2)}</div>
+                              <div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-slate-800">{d.contact}</p><p className="truncate text-xs text-slate-400">{d.title} · {d.company}</p></div>
+                            </div>
+                            <div className="mt-2 flex items-center gap-2">
+                              <span className="text-sm font-extrabold text-emerald-600">{currency(d.value)}</span>
+                              <span className="inline-flex items-center gap-0.5 rounded bg-orange-50 px-1.5 py-0.5 text-xs font-semibold text-orange-600"><Flame className="h-3 w-3" /> {d.days}d</span>
+                            </div>
+                            <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-100 pt-2">
+                              <button onClick={() => notify(`Opening ${d.title}`)} className="text-sm font-semibold text-brand hover:underline">Open deal</button>
+                              <div className="flex items-center gap-1">
+                                <button onClick={() => notify('Assign owner — demo')} className="rounded p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"><User className="h-4 w-4" /></button>
+                                <select value="" onChange={(e) => e.target.value && moveTo(d.id, e.target.value)} className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 outline-none focus:border-orange-400">
+                                  <option value="">Move to…</option>
+                                  {CRM_STAGES.filter((s) => s !== stage).map((s) => <option key={s} value={s}>{s}</option>)}
+                                </select>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        {!col.length && <div className="flex items-center justify-center rounded-lg border border-dashed border-slate-200 py-10 text-center text-sm text-slate-400">No deals here yet</div>}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 py-20 text-center">
+                <TrendingUp className="h-10 w-10 text-slate-300" />
+                <p className="mt-4 text-base font-bold text-slate-800">{pipeTab}</p>
+                <p className="mt-1 max-w-md text-sm text-slate-500">{pipeTab === 'Assignments' ? 'Buyer-side assignments you are actively working — coming soon.' : 'Your active listings pipeline — coming soon.'}</p>
+              </div>
+            )}
           </div>
-        )}
+          )
+        })()}
 
         {/* TASKS */}
         {tab === 'tasks' && (
