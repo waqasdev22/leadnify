@@ -12200,21 +12200,49 @@ function SettingsField({ label, value, onChange, type = 'text', placeholder }) {
   )
 }
 
+const PROFILE_TIMEZONES = ['Follow my company (not set) — UTC', 'Pacific — America/Los_Angeles', 'Mountain — America/Denver', 'Central — America/Chicago', 'Eastern — America/New_York', 'UTC']
+const OFFICE_TIMEZONES = ['Not set — the CRM uses UTC', 'Pacific — America/Los_Angeles', 'Mountain — America/Denver', 'Central — America/Chicago', 'Eastern — America/New_York', 'UTC']
+
+function ProfileSectionHead({ icon: Icon, tone, title, sub }) {
+  return (
+    <div className="flex items-start gap-3">
+      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${tone}`}><Icon className="h-5 w-5" /></span>
+      <div>
+        <p className="text-sm font-bold uppercase tracking-wide text-slate-800">{title}</p>
+        {sub && <p className="text-xs text-slate-400">{sub}</p>}
+      </div>
+    </div>
+  )
+}
+
+function ProfileField({ label, value, onChange, type = 'text', placeholder, hint, disabled }) {
+  return (
+    <div>
+      <label className="mb-1 block text-xs font-semibold text-slate-500">{label}</label>
+      <input value={value} onChange={onChange} type={type} placeholder={placeholder} disabled={disabled} className={`w-full rounded-lg border px-3 py-2 text-sm outline-none focus:border-orange-400 ${disabled ? 'cursor-not-allowed border-slate-200 bg-slate-50 text-slate-500' : 'border-slate-300 bg-white text-slate-700'}`} />
+      {hint && <p className="mt-1 text-xs text-slate-400">{hint}</p>}
+    </div>
+  )
+}
+
 function ProfileSettingsPage({ user }) {
   const notify = useToast()
-  const [form, setForm] = useState({
-    name: user?.name || CURRENT_USER.name,
-    email: user?.email || CURRENT_USER.email,
-    phone: '(602) 555-8100',
-    title: 'Broker',
-    company: 'MyCREBlueprint',
-    license: 'BR-0654321',
+  const [form, setForm] = usePersistentState('profile_settings', {
+    firstName: (user?.name || CURRENT_USER.name).split(' ')[0] || '',
+    lastName: (user?.name || CURRENT_USER.name).split(' ').slice(1).join(' ') || '',
+    phone: '', phoneType: '', title: 'Agent', license: '', crmTz: PROFILE_TIMEZONES[0], bio: '',
+    companyName: '', companyLicense: '', officePhone: '', website: '', officeAddress: '', city: '', state: '', zip: '', officeTz: OFFICE_TIMEZONES[0],
+    photo: '', logo: '',
   })
+  const email = user?.email || CURRENT_USER.email
   const [pw, setPw] = useState({ current: '', next: '', confirm: '' })
-  const [notif, setNotif] = useState({ newLead: true, ndaSigned: true, omOpened: false, weekly: true })
+  const [delOpen, setDelOpen] = useState(false)
+  const [delText, setDelText] = useState('')
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
   const setP = (k) => (e) => setPw((p) => ({ ...p, [k]: e.target.value }))
-  const initials = (form.name || 'U').split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
+  const initials = ((form.firstName || '') + ' ' + (form.lastName || '')).trim().split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() || 'U'
+  const sel = 'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-orange-400'
+  const toolBtn = 'flex h-7 w-7 items-center justify-center rounded text-slate-500 transition hover:bg-slate-100 hover:text-slate-700'
 
   const changePw = () => {
     if (!pw.current || !pw.next) { notify('Fill in your current and new password', 'error'); return }
@@ -12225,64 +12253,136 @@ function ProfileSettingsPage({ user }) {
 
   return (
     <div className="mx-auto max-w-[900px] p-6">
-      <div className="flex items-center gap-2">
-        <Contact className="h-6 w-6 text-brand" />
-        <h1 className="text-2xl font-extrabold text-slate-900">Profile Settings</h1>
-      </div>
+      <h1 className="text-2xl font-extrabold text-slate-900">Profile Settings</h1>
+      <p className="text-sm text-slate-500">Changes are applied to all your marketing documents.</p>
 
-      {/* Profile */}
-      <div className="mt-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex items-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-orange-600 text-xl font-bold text-white">{initials}</div>
+      {/* PERSONAL INFORMATION */}
+      <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 border-l-4 border-l-blue-400 bg-white p-5 shadow-sm">
+        <ProfileSectionHead icon={User} tone="bg-blue-50 text-blue-500" title="Personal information" />
+        <div className="mt-5 flex items-center gap-4">
+          <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-orange-400 to-orange-600 text-lg font-bold text-white ring-2 ring-orange-200">{form.photo ? <img src={form.photo} alt="" className="h-full w-full object-cover" /> : initials}</div>
           <div>
-            <p className="text-lg font-bold text-slate-900">{form.name}</p>
-            <p className="text-sm text-slate-500">{form.title} · {form.company}</p>
+            <p className="text-sm font-semibold text-slate-600">Profile Photo</p>
+            <button onClick={() => notify('Photo upload — demo')} className="text-sm font-semibold text-brand hover:underline">Upload</button>
           </div>
         </div>
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          <SettingsField label="Full name" value={form.name} onChange={set('name')} />
-          <SettingsField label="Email" value={form.email} onChange={set('email')} type="email" />
-          <SettingsField label="Phone" value={form.phone} onChange={set('phone')} />
-          <SettingsField label="Title" value={form.title} onChange={set('title')} />
-          <SettingsField label="Company" value={form.company} onChange={set('company')} />
-          <SettingsField label="License #" value={form.license} onChange={set('license')} />
+          <ProfileField label="First Name" value={form.firstName} onChange={set('firstName')} placeholder="First name" />
+          <ProfileField label="Last Name" value={form.lastName} onChange={set('lastName')} placeholder="Last name" />
+          <ProfileField label="Email" value={email} onChange={() => {}} disabled hint="Cannot be changed" />
+          <ProfileField label="Phone" value={form.phone} onChange={set('phone')} placeholder="(602) 555-0100" />
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-slate-500">Phone Type</label>
+            <select value={form.phoneType} onChange={set('phoneType')} className={sel}><option value="">Select…</option>{['Mobile', 'Office', 'Home', 'Direct'].map((o) => <option key={o}>{o}</option>)}</select>
+          </div>
+          <ProfileField label="Title" value={form.title} onChange={set('title')} placeholder="Agent" />
+          <ProfileField label="License #" value={form.license} onChange={set('license')} placeholder="e.g. DRE# 01234567" />
+        </div>
+        <div className="mt-4">
+          <label className="mb-1 block text-xs font-semibold text-slate-500">CRM time zone</label>
+          <select value={form.crmTz} onChange={set('crmTz')} className={sel}>{PROFILE_TIMEZONES.map((t) => <option key={t}>{t}</option>)}</select>
+          <p className="mt-1 text-xs text-slate-400">Sets what day the CRM calls "today" — due dates, the week's tasks, and the countdown to a lease expiring. Only override this if you work in a different time zone from your office.</p>
+        </div>
+        <div className="mt-4">
+          <div className="mb-1 flex items-center justify-between">
+            <label className="text-xs font-semibold text-slate-500">Bio</label>
+            <span className="text-xs text-slate-400">Appears on the Advisor Bio / Closing page of your documents (currently the CS template).</span>
+          </div>
+          <div className="rounded-lg border border-slate-300 focus-within:border-orange-400">
+            <div className="flex items-center gap-1 border-b border-slate-200 px-2 py-1.5">
+              <button className={toolBtn} title="Bold"><Bold className="h-3.5 w-3.5" /></button>
+              <button className={toolBtn} title="Italic"><Italic className="h-3.5 w-3.5" /></button>
+              <button className={toolBtn} title="Underline"><Underline className="h-3.5 w-3.5" /></button>
+              <span className="mx-1 h-4 w-px bg-slate-200" />
+              <button className={toolBtn} title="Bulleted list"><List className="h-3.5 w-3.5" /></button>
+              <button className={toolBtn} title="Numbered list"><ListOrdered className="h-3.5 w-3.5" /></button>
+              <button className={toolBtn} title="Link"><Link2 className="h-3.5 w-3.5" /></button>
+              <span className="mx-1 h-4 w-px bg-slate-200" />
+              <button className={toolBtn} title="Undo"><Undo2 className="h-3.5 w-3.5" /></button>
+              <button className={toolBtn} title="Redo"><Redo2 className="h-3.5 w-3.5" /></button>
+              <span className="ml-auto text-xs text-slate-400">{(form.bio || '').length}/4000</span>
+            </div>
+            <textarea value={form.bio} onChange={set('bio')} maxLength={4000} rows={5} placeholder="A brief professional background — your experience, designations (SIOR, CCIM), notable closings, education, community involvement." className="w-full resize-y rounded-b-lg bg-white px-3 py-2 text-sm leading-relaxed text-slate-700 outline-none" />
+          </div>
+        </div>
+      </div>
+
+      {/* COMPANY INFORMATION */}
+      <div className="mt-5 overflow-hidden rounded-xl border border-slate-200 border-l-4 border-l-emerald-400 bg-white p-5 shadow-sm">
+        <ProfileSectionHead icon={Building2} tone="bg-emerald-50 text-emerald-500" title="Company information" sub="This info appears in your marketing documents." />
+        <div className="mt-5 flex items-center gap-4">
+          <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-lg border border-dashed border-slate-300 bg-slate-50 text-slate-300">{form.logo ? <img src={form.logo} alt="" className="h-full w-full object-cover" /> : <ImageIcon className="h-6 w-6" />}</div>
+          <div>
+            <p className="text-sm font-semibold text-slate-600">Company Logo</p>
+            <button onClick={() => notify('Logo upload — demo')} className="text-sm font-semibold text-brand hover:underline">Upload</button>
+          </div>
+        </div>
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          <ProfileField label="Company Name" value={form.companyName} onChange={set('companyName')} placeholder="Company name" />
+          <ProfileField label="Company License #" value={form.companyLicense} onChange={set('companyLicense')} placeholder="e.g. BRE# 01234567" />
+          <ProfileField label="Office Phone" value={form.officePhone} onChange={set('officePhone')} placeholder="(602) 555-0100" />
+          <ProfileField label="Website" value={form.website} onChange={set('website')} placeholder="https://" />
+        </div>
+        <div className="mt-4"><ProfileField label="Office Address" value={form.officeAddress} onChange={set('officeAddress')} placeholder="Street address" /></div>
+        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          <ProfileField label="City" value={form.city} onChange={set('city')} placeholder="City" />
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-slate-500">State</label>
+            <select value={form.state} onChange={set('state')} className={sel}><option value="">Select…</option>{US_STATES.map((s) => <option key={s}>{s}</option>)}</select>
+          </div>
+          <ProfileField label="Zip Code" value={form.zip} onChange={set('zip')} placeholder="Zip" />
+        </div>
+        <div className="mt-4">
+          <label className="mb-1 block text-xs font-semibold text-slate-500">Office time zone</label>
+          <select value={form.officeTz} onChange={set('officeTz')} className={sel}>{OFFICE_TIMEZONES.map((t) => <option key={t}>{t}</option>)}</select>
+          <p className="mt-1 text-xs text-slate-400">The default for everyone on the team. Leaving it unset means the CRM ends the day at UTC midnight, which is the afternoon before in North America.</p>
         </div>
         <div className="mt-5 flex justify-end">
           <PrimaryButton icon={Check} onClick={() => notify('Profile saved')}>Save Changes</PrimaryButton>
         </div>
       </div>
 
-      {/* Password */}
-      <div className="mt-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <p className="text-sm font-bold text-slate-900">Password</p>
-        <p className="text-xs text-slate-400">Update the password you use to sign in.</p>
-        <div className="mt-4 grid gap-4 sm:grid-cols-3">
-          <SettingsField label="Current password" value={pw.current} onChange={setP('current')} type="password" placeholder="••••••••" />
-          <SettingsField label="New password" value={pw.next} onChange={setP('next')} type="password" placeholder="••••••••" />
-          <SettingsField label="Confirm new password" value={pw.confirm} onChange={setP('confirm')} type="password" placeholder="••••••••" />
+      {/* CHANGE PASSWORD */}
+      <div className="mt-5 overflow-hidden rounded-xl border border-slate-200 border-l-4 border-l-amber-400 bg-white p-5 shadow-sm">
+        <ProfileSectionHead icon={Lock} tone="bg-amber-50 text-amber-500" title="Change password" />
+        <div className="mt-5 grid gap-4 sm:grid-cols-3">
+          <ProfileField label="Current Password" value={pw.current} onChange={setP('current')} type="password" placeholder="••••••••" />
+          <ProfileField label="New Password" value={pw.next} onChange={setP('next')} type="password" placeholder="••••••••" />
+          <ProfileField label="Confirm New" value={pw.confirm} onChange={setP('confirm')} type="password" placeholder="••••••••" />
         </div>
         <div className="mt-4 flex justify-end">
-          <button onClick={changePw} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Change Password</button>
+          <button onClick={changePw} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Change Password</button>
         </div>
       </div>
 
-      {/* Notifications */}
-      <div className="mt-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <p className="text-sm font-bold text-slate-900">Email notifications</p>
-        <div className="mt-3 divide-y divide-slate-100">
-          {[
-            { k: 'newLead', l: 'New lead assigned to me' },
-            { k: 'ndaSigned', l: 'NDA / CA executed on a deal room' },
-            { k: 'omOpened', l: 'Someone opens my OM' },
-            { k: 'weekly', l: 'Weekly performance report' },
-          ].map((n) => (
-            <div key={n.k} className="flex items-center justify-between py-3">
-              <span className="text-sm text-slate-700">{n.l}</span>
-              <Toggle on={notif[n.k]} onChange={(v) => setNotif((s) => ({ ...s, [n.k]: v }))} />
-            </div>
-          ))}
+      {/* DELETE ACCOUNT */}
+      <div className="mt-5 overflow-hidden rounded-xl border border-slate-200 border-l-4 border-l-rose-400 bg-white p-5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <ProfileSectionHead icon={Trash2} tone="bg-rose-50 text-rose-500" title="Delete account" sub="Permanently delete your account and all associated data." />
+          <button onClick={() => { setDelOpen(true); setDelText('') }} className="text-sm font-semibold text-rose-500 hover:underline">Delete My Account</button>
         </div>
       </div>
+
+      {/* Delete confirm */}
+      {delOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setDelOpen(false)}>
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-50 text-rose-500"><Trash2 className="h-5 w-5" /></span>
+              <div>
+                <p className="text-sm font-bold text-slate-900">Delete your account?</p>
+                <p className="mt-1 text-sm text-slate-500">This permanently deletes your account and all associated data — deals, contacts, documents. This cannot be undone.</p>
+              </div>
+            </div>
+            <label className="mt-4 block text-xs font-semibold text-slate-500">Type <span className="font-mono text-rose-500">DELETE</span> to confirm</label>
+            <input value={delText} onChange={(e) => setDelText(e.target.value)} placeholder="DELETE" className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-rose-400" />
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => setDelOpen(false)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
+              <button disabled={delText !== 'DELETE'} onClick={() => { setDelOpen(false); notify('Account deletion requested — demo', 'error') }} className={`rounded-lg px-4 py-2 text-sm font-semibold text-white transition ${delText === 'DELETE' ? 'bg-rose-500 hover:bg-rose-600' : 'cursor-not-allowed bg-rose-300'}`}>Delete My Account</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
