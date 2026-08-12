@@ -12119,7 +12119,7 @@ function EmailBlastPage({ user }) {
   const inputCls = 'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-orange-400'
 
   return (
-    <div className="mx-auto max-w-[1600px] p-6">
+    <div className="mx-auto max-w-[1000px] p-6">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
@@ -12151,8 +12151,13 @@ function EmailBlastPage({ user }) {
                   <span className="inline-flex items-center gap-1 text-sm font-semibold text-emerald-600"><CheckCircle2 className="h-4 w-4" /> Always ready</span>
                 ) : p.action === 'setup' ? (
                   <button onClick={() => notify(`${p.name} setup — demo`)} className="text-sm font-semibold text-brand hover:underline">Set up →</button>
+                ) : on ? (
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700"><CheckCircle2 className="h-4 w-4" /> Connected</span>
+                    <button onClick={() => toggleConn(p)} className="text-xs font-medium text-slate-400 hover:text-rose-500">Disconnect</button>
+                  </div>
                 ) : (
-                  <button onClick={() => toggleConn(p)} className={`rounded-full px-4 py-1 text-sm font-semibold transition ${on ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' : 'bg-orange-50 text-brand hover:bg-orange-100'}`}>{on ? 'Connected' : 'Connect'}</button>
+                  <button onClick={() => toggleConn(p)} className="rounded-full bg-orange-50 px-4 py-1 text-sm font-semibold text-brand transition hover:bg-orange-100">Connect</button>
                 )}
               </div>
             </div>
