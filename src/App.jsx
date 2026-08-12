@@ -10579,7 +10579,8 @@ function CRMPage({ user, onNavigate }) {
   const scrollBoard = (dir) => {
     const el = document.querySelector('.crm-board')
     if (!el) return
-    el.scrollLeft = Math.max(0, Math.min(el.scrollWidth - el.clientWidth, el.scrollLeft + dir * 340))
+    const target = Math.max(0, Math.min(el.scrollWidth - el.clientWidth, el.scrollLeft + dir * 340))
+    el.scrollTo({ left: target, behavior: 'smooth' })
   }
   const [dealView, setDealView] = usePersistentState('crm_dealview', 'board')
   const [assignList, setAssignList] = usePersistentState('crm_assignments', CRM_ASSIGNMENTS)
