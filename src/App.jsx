@@ -139,6 +139,7 @@ import {
   Lightbulb,
   ChevronUp,
   Percent,
+  Trophy,
   Calendar,
   Library,
   Car,
@@ -10459,6 +10460,23 @@ const crmStatusBadge = (s) => ({
   'Closed Won': 'bg-teal-50 text-teal-700',
 }[s] || 'bg-slate-100 text-slate-600')
 
+// Reports: recent activity event counts (last 30 days). Demo counts for the activity strip.
+const CRM_ACTIVITY_SEED = [
+  { label: 'Stage Changed', count: 5 },
+  { label: 'Om Viewed', count: 3 },
+  { label: 'Access Requested', count: 2 },
+  { label: 'File Downloaded', count: 2 },
+  { label: 'Om Downloaded', count: 2 },
+  { label: 'Room Viewed', count: 2 },
+  { label: 'Task Completed', count: 2 },
+  { label: 'Email Sent', count: 1 },
+  { label: 'Inquiry Received', count: 1 },
+  { label: 'Nda Signed', count: 1 },
+]
+// Source display names + bar colours for the Reports source breakdowns.
+const REPORT_SOURCE_LABEL = { Inquiry: 'Inquiries', NDA: 'NDA signers', Download: 'Downloads', Email: 'Email', Website: 'Website', Referral: 'Referral', 'Cold Call': 'Cold Call', 'Listing Hub': 'Listing Hub', 'Email Blast': 'Email Blast' }
+const REPORT_STAGE_BAR = { Inquiry: 'bg-blue-500', 'NDA Signed': 'bg-violet-500', Tour: 'bg-amber-500', LOI: 'bg-orange-500', 'Under Contract': 'bg-emerald-500' }
+
 function CrmKpi({ icon: Icon, label, value, tone = 'text-brand' }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -10563,6 +10581,7 @@ function CRMPage({ user }) {
   const [scriptEdit, setScriptEdit] = useState(null) // script being added/edited (object) or null
   const [scriptDelId, setScriptDelId] = useState(null) // id pending delete confirm
   const scriptBodyRef = useRef(null)
+  const [reportRange, setReportRange] = useState('30d')
   const [taskTab, setTaskTab] = useState('todo') // 'todo' | 'leases'
   const [showDone, setShowDone] = useState(false)
   const [addTaskOpen, setAddTaskOpen] = useState(false)
@@ -11722,31 +11741,211 @@ function CRMPage({ user }) {
         )}
 
         {/* REPORTS */}
-        {tab === 'reports' && (
+        {tab === 'reports' && (() => {
+          const openStages = ['Inquiry', 'NDA Signed', 'Tour', 'LOI', 'Under Contract']
+          const openDeals = deals.filter((d) => !['Closed Won', 'Closed Lost'].includes(d.stage))
+          const openVal = openDeals.reduce((s, d) => s + d.value, 0)
+          const weighted = deals.reduce((s, d) => s + d.value * (CRM_STAGE_WEIGHT[d.stage] || 0), 0)
+          const wonDeals = deals.filter((d) => d.stage === 'Closed Won')
+          const wonVal = wonDeals.reduce((s, d) => s + d.value, 0)
+          const lostCount = deals.filter((d) => d.stage === 'Closed Lost').length
+          const winRate = wonDeals.length + lostCount ? Math.round((wonDeals.length / (wonDeals.length + lostCount)) * 100) : 0
+          const gci = (v) => v * 0.03
+          const money = (n) => (n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `$${Math.round(n / 1e3)}K` : `$${Math.round(n)}`)
+          // Pipeline by stage
+          const stageAgg = openStages.map((s) => { const col = deals.filter((d) => d.stage === s); return { stage: s, value: col.reduce((a, d) => a + d.value, 0), count: col.length } })
+          const maxStageVal = Math.max(1, ...stageAgg.map((s) => s.value))
+          // Reachable funnel (a deal at stage i has reached every stage <= i)
+          const idxOf = (st) => CRM_STAGES.indexOf(st)
+          const reached = openStages.map((s) => deals.filter((d) => idxOf(d.stage) >= idxOf(s) && idxOf(d.stage) <= idxOf('Under Contract')).length)
+          // Leads (scope-filtered contacts) by source & type
+          const repContacts = scope === 'mine' ? contactList.filter((c) => c.owner === me) : contactList
+          const bySource = {}; repContacts.forEach((c) => { const k = c.source || 'Other'; bySource[k] = (bySource[k] || 0) + 1 })
+          const sourceRows = Object.entries(bySource).sort((a, b) => b[1] - a[1])
+          const maxSrc = Math.max(1, ...sourceRows.map((r) => r[1]))
+          const byType = {}; repContacts.forEach((c) => { if (c.type) byType[c.type] = (byType[c.type] || 0) + 1 })
+          const typeRows = Object.entries(byType).sort((a, b) => b[1] - a[1])
+          const maxType = Math.max(1, ...typeRows.map((r) => r[1]))
+          // Deal aging buckets (by days in current stage)
+          const aging = [
+            { label: '< 2 wk', tone: 'text-emerald-600', n: openDeals.filter((d) => d.days <= 14).length },
+            { label: '2–4 wk', tone: 'text-slate-700', n: openDeals.filter((d) => d.days > 14 && d.days <= 28).length },
+            { label: '1–2 mo', tone: 'text-amber-600', n: openDeals.filter((d) => d.days > 28 && d.days <= 60).length },
+            { label: '2 mo+', tone: 'text-rose-600', n: openDeals.filter((d) => d.days > 60).length },
+          ]
+          // Source -> revenue (group deals by their contact's source)
+          const contactSrc = {}; repContacts.forEach((c) => { if (!contactSrc[c.name]) contactSrc[c.name] = c.source })
+          const srcRev = {}; deals.forEach((d) => { const k = contactSrc[d.contact] || 'Other'; if (!srcRev[k]) srcRev[k] = { deals: 0, won: 0, gci: 0 }; srcRev[k].deals++; if (d.stage === 'Closed Won') { srcRev[k].won++; srcRev[k].gci += gci(d.value) } })
+          const srcRevRows = Object.entries(srcRev).sort((a, b) => b[1].deals - a[1].deals)
+          const srcLabel = (s) => REPORT_SOURCE_LABEL[s] || s
+          return (
           <div className="space-y-6">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <CrmKpi icon={Target} label="Total Leads" value={leads.length} tone="text-blue-500" />
-              <CrmKpi icon={TrendingUp} label="Open Deals" value={deals.filter((d) => d.stage !== 'Closed Won').length} tone="text-violet-500" />
-              <CrmKpi icon={DollarSign} label="Pipeline Value" value={currency(pipelineValue)} tone="text-emerald-500" />
-              <CrmKpi icon={Check} label="Closed Won" value={deals.filter((d) => d.stage === 'Closed Won').length} tone="text-teal-500" />
+            {/* Header + range toggle */}
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="-mt-1 text-sm text-slate-500">How your pipeline is actually doing — where deals come from and where they stall.</p>
+                <h2 className="mt-1 text-xl font-extrabold text-slate-900">Reports</h2>
+                <p className="text-sm text-slate-500">Pipeline, win rate, and where your leads come from.</p>
+              </div>
+              <div className="flex items-center gap-1 rounded-lg bg-slate-100 p-1">
+                {['All time', '30d', '90d', '1yr'].map((r) => (
+                  <button key={r} onClick={() => setReportRange(r === 'All time' ? 'all' : r)} className={`rounded-md px-3 py-1 text-sm font-semibold transition ${(reportRange === 'all' ? 'All time' : reportRange) === r ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>{r}</button>
+                ))}
+              </div>
             </div>
+
+            {/* KPI cards */}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-600"><span className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 text-blue-500"><DollarSign className="h-4 w-4" /></span> Open pipeline</div>
+                <p className="mt-2 text-3xl font-extrabold text-slate-900">{money(openVal)}</p>
+                <p className="mt-1 text-xs text-slate-400">{openDeals.length} open {openDeals.length === 1 ? 'deal' : 'deals'} · {money(0)} GCI</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-600"><span className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-50 text-violet-500"><Target className="h-4 w-4" /></span> Weighted value</div>
+                <p className="mt-2 text-3xl font-extrabold text-slate-900">{money(weighted)}</p>
+                <p className="mt-1 text-xs text-slate-400">by stage probability</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-600"><span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-50 text-emerald-500"><Trophy className="h-4 w-4" /></span> Won</div>
+                <p className="mt-2 text-3xl font-extrabold text-slate-900">{money(wonVal)}</p>
+                <p className="mt-1 text-xs text-slate-400">{wonDeals.length} {wonDeals.length === 1 ? 'deal' : 'deals'} · {money(gci(wonVal))} GCI</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-600"><span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-50 text-amber-500"><Percent className="h-4 w-4" /></span> Win rate</div>
+                <p className="mt-2 text-3xl font-extrabold text-slate-900">{winRate}%</p>
+                <p className="mt-1 text-xs text-slate-400">{wonDeals.length}W / {lostCount}L</p>
+              </div>
+            </div>
+
+            {/* Pipeline by stage */}
             <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-sm font-bold text-slate-900">Deals by stage</p>
+              <p className="flex items-center gap-2 text-sm font-bold text-slate-900"><TrendingUp className="h-4 w-4 text-slate-400" /> Pipeline by stage</p>
               <div className="mt-4 space-y-3">
-                {CRM_STAGES.map((stage) => {
-                  const col = deals.filter((d) => d.stage === stage)
-                  const pct = deals.length ? Math.round((col.length / deals.length) * 100) : 0
-                  return (
-                    <div key={stage}>
-                      <div className="mb-1 flex items-center justify-between text-xs"><span className="font-semibold text-slate-600">{stage}</span><span className="text-slate-400">{col.length} · {currency(col.reduce((s, d) => s + d.value, 0))}</span></div>
-                      <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-brand" style={{ width: `${pct}%` }} /></div>
+                {stageAgg.map((s) => (
+                  <div key={s.stage} className="flex items-center gap-3">
+                    <span className="w-28 shrink-0 text-sm text-slate-600">{s.stage}</span>
+                    <div className="relative h-6 flex-1 overflow-hidden rounded-md bg-slate-100">
+                      <div className={`flex h-full items-center justify-end rounded-md ${REPORT_STAGE_BAR[s.stage]} px-2`} style={{ width: `${Math.max(s.value ? 6 : 0, (s.value / maxStageVal) * 100)}%` }}>{s.value > 0 && <span className="text-xs font-bold text-white">{money(s.value)}</span>}</div>
                     </div>
-                  )
-                })}
+                    <span className="w-6 shrink-0 text-right text-sm text-slate-400">{s.count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Leads by source + type */}
+            <div className="grid gap-6 lg:grid-cols-2">
+              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex items-center justify-between"><p className="flex items-center gap-2 text-sm font-bold text-slate-900"><Users className="h-4 w-4 text-slate-400" /> Leads by source</p><span className="text-xs font-semibold text-slate-400">{repContacts.length} total</span></div>
+                {sourceRows.length > 0 ? (
+                  <div className="mt-4 space-y-3">
+                    {sourceRows.map(([src, n], i) => (
+                      <div key={src} className="flex items-center gap-3">
+                        <span className="w-24 shrink-0 text-sm text-slate-600">{srcLabel(src)}</span>
+                        <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${i % 2 ? 'bg-violet-500' : 'bg-blue-500'}`} style={{ width: `${(n / maxSrc) * 100}%` }} /></div>
+                        <span className="w-6 shrink-0 text-right text-sm text-slate-400">{n}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : <p className="mt-4 text-sm text-slate-400">No leads yet.</p>}
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <p className="flex items-center gap-2 text-sm font-bold text-slate-900"><Target className="h-4 w-4 text-slate-400" /> Leads by type</p>
+                {typeRows.length > 0 ? (
+                  <div className="mt-4 space-y-3">
+                    {typeRows.map(([t, n]) => (
+                      <div key={t} className="flex items-center gap-3">
+                        <span className="w-24 shrink-0 text-sm text-slate-600">{t}</span>
+                        <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${(n / maxType) * 100}%` }} /></div>
+                        <span className="w-6 shrink-0 text-right text-sm text-slate-400">{n}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : <p className="mt-4 text-sm text-slate-500">No lead types set yet — categorize contacts as buyer / tenant-rep / etc.</p>}
+              </div>
+            </div>
+
+            {/* Closing forecast + deal aging */}
+            <div className="grid gap-6 lg:grid-cols-2">
+              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <p className="flex items-center gap-2 text-sm font-bold text-slate-900"><Calendar className="h-4 w-4 text-slate-400" /> Closing forecast</p>
+                <p className="mt-3 text-sm text-slate-500">No open deals have a close date yet — set one on a deal to forecast.</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex items-center justify-between"><p className="flex items-center gap-2 text-sm font-bold text-slate-900"><Clock className="h-4 w-4 text-slate-400" /> Deal aging</p><span className="text-xs text-slate-400">time in stage</span></div>
+                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {aging.map((a) => (
+                    <div key={a.label} className="rounded-lg border border-slate-200 py-3 text-center">
+                      <p className={`text-xl font-extrabold ${a.tone}`}>{a.n}</p>
+                      <p className="mt-0.5 text-xs text-slate-400">{a.label}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Funnel & velocity */}
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+              <p className="px-5 pt-5 text-sm font-bold text-slate-900">Funnel &amp; velocity</p>
+              <div className="scrollbar-slim mt-3 overflow-x-auto">
+                <table className="w-full min-w-[560px] text-left text-sm">
+                  <thead><tr className="border-y border-slate-100 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-400"><th className="px-5 py-2.5">Stage</th><th className="px-5 py-2.5 text-right">Reached</th><th className="px-5 py-2.5 text-right">From prev</th><th className="px-5 py-2.5 text-right">Avg days in stage</th></tr></thead>
+                  <tbody>
+                    {openStages.map((s, i) => {
+                      const col = deals.filter((d) => d.stage === s)
+                      const avgDays = col.length ? (col.reduce((a, d) => a + d.days, 0) / col.length).toFixed(1) + 'd' : '—'
+                      const prev = i === 0 ? null : (reached[i - 1] ? Math.round((reached[i] / reached[i - 1]) * 100) : null)
+                      return (
+                        <tr key={s} className="border-b border-slate-100 last:border-0">
+                          <td className="px-5 py-2.5 text-slate-700">{s}</td>
+                          <td className="px-5 py-2.5 text-right font-semibold text-slate-800">{reached[i]}</td>
+                          <td className={`px-5 py-2.5 text-right font-semibold ${prev === null ? 'text-slate-300' : prev >= 50 ? 'text-emerald-600' : 'text-amber-600'}`}>{prev === null ? '—' : `${prev}%`}</td>
+                          <td className="px-5 py-2.5 text-right text-slate-500">{avgDays}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Source -> revenue */}
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+              <p className="px-5 pt-5 text-sm font-bold text-slate-900">Source → revenue</p>
+              <div className="scrollbar-slim mt-3 overflow-x-auto">
+                <table className="w-full min-w-[520px] text-left text-sm">
+                  <thead><tr className="border-y border-slate-100 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-400"><th className="px-5 py-2.5">Source</th><th className="px-5 py-2.5 text-right">Deals</th><th className="px-5 py-2.5 text-right">Won</th><th className="px-5 py-2.5 text-right">GCI</th></tr></thead>
+                  <tbody>
+                    {srcRevRows.length === 0 && <tr><td colSpan={4} className="px-5 py-8 text-center text-sm text-slate-400">No deals yet.</td></tr>}
+                    {srcRevRows.map(([src, r]) => (
+                      <tr key={src} className="border-b border-slate-100 last:border-0">
+                        <td className="px-5 py-2.5 text-slate-700">{srcLabel(src)}</td>
+                        <td className="px-5 py-2.5 text-right text-slate-700">{r.deals}</td>
+                        <td className="px-5 py-2.5 text-right text-slate-700">{r.won}</td>
+                        <td className="px-5 py-2.5 text-right font-semibold text-emerald-600">{money(r.gci)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Activity */}
+            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+              <p className="text-sm font-bold text-slate-900">Activity — last 30 days</p>
+              <div className="scrollbar-slim mt-4 flex gap-3 overflow-x-auto pb-1">
+                {CRM_ACTIVITY_SEED.map((a) => (
+                  <div key={a.label} className="flex min-w-[92px] shrink-0 flex-col rounded-lg border border-slate-200 px-3 py-2.5">
+                    <span className="text-lg font-extrabold text-slate-900">{a.count}</span>
+                    <span className="mt-0.5 text-xs text-slate-400">{a.label}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
-        )}
+          )
+        })()}
       </div>
     </div>
   )
