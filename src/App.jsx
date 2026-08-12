@@ -11796,14 +11796,15 @@ function CRMPage({ user, onNavigate }) {
         {tab === 'tasks' && (() => {
           const openTasks = myTasks.filter((t) => !t.done)
           const doneTasks = myTasks.filter((t) => t.done)
-          const dueBadge = (due) => (due === 'Today' ? 'bg-amber-50 text-amber-700' : due === 'Tomorrow' ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-500')
           const calUrl = `https://app.mycreblueprint.com/cal/${(me || 'user').toLowerCase().replace(/\s+/g, '')}-${uid()}.ics`
+          const fmtDue = (t) => { if (t.dueAt) { const d = new Date(t.dueAt); if (!isNaN(d)) return `due ${d.toLocaleString('en-GB')}` } return t.due && t.due !== 'No date' ? `due ${t.due}` : 'No due date' }
           const TaskRow = (t) => (
-            <div key={t.id} className="flex items-center gap-3 rounded-lg border border-slate-100 bg-white p-3">
-              <button onClick={() => toggleTask(t.id)} className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${t.done ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-slate-300 hover:border-emerald-400'}`}>{t.done && <Check className="h-3 w-3" />}</button>
-              <span className={`flex-1 text-sm ${t.done ? 'text-slate-400 line-through' : 'text-slate-700'}`}>{t.title}</span>
-              {t.related && t.related !== '—' && <span className="hidden text-xs text-slate-400 sm:inline">{t.related}</span>}
-              <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${dueBadge(t.due)}`}>{t.due}</span>
+            <div key={t.id} className="flex items-start gap-3 rounded-lg border border-slate-100 bg-white p-3">
+              <button onClick={() => toggleTask(t.id)} className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 ${t.done ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-slate-300 hover:border-emerald-400'}`}>{t.done && <Check className="h-3 w-3" />}</button>
+              <div className="min-w-0 flex-1">
+                <p className={`text-sm ${t.done ? 'text-slate-400 line-through' : 'font-semibold text-slate-800'}`}>{t.title}</p>
+                <p className="text-xs text-slate-400">{fmtDue(t)}{t.related && t.related !== '—' ? ` · ${t.related}` : ''}</p>
+              </div>
             </div>
           )
           return (
