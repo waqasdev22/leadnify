@@ -10377,6 +10377,18 @@ const CRM_STAGE_META = {
   'Closed Won': { pct: 100, bar: 'border-t-emerald-600' },
   'Closed Lost': { pct: 0, bar: 'border-t-slate-400' },
 }
+// Assignments = owners you are pitching to win the listing (pre-mandate).
+const ASSIGN_STAGES = ['Discovery', 'BOV / Pitch', 'Meeting', 'Proposal', 'Exclusive', 'Won', 'Lost']
+const ASSIGN_STAGE_META = {
+  Discovery: { pct: 10, bar: 'border-t-blue-500' },
+  'BOV / Pitch': { pct: 25, bar: 'border-t-violet-500' },
+  Meeting: { pct: 40, bar: 'border-t-amber-500' },
+  Proposal: { pct: 60, bar: 'border-t-orange-500' },
+  Exclusive: { pct: 85, bar: 'border-t-emerald-500' },
+  Won: { pct: 100, bar: 'border-t-emerald-600' },
+  Lost: { pct: 0, bar: 'border-t-slate-400' },
+}
+const CRM_ASSIGNMENTS = []
 const CRM_DEALS = [
   { id: 'd1', title: 'Neil Naran — Test', contact: 'Neil Naran', company: 'Value Net Lease Partners', value: 1500000, stage: 'NDA Signed', days: 14, owner: 'Waqas' },
   { id: 'd2', title: 'Neil Naran — Test', contact: 'Neil Naran', company: 'Value Net Lease Partners', value: 1500000, stage: 'NDA Signed', days: 14, owner: 'Waqas' },
@@ -10510,11 +10522,15 @@ function CRMPage({ user }) {
   const [dragDeal, setDragDeal] = useState(null)
   const [dragStage, setDragStage] = useState(null)
   const [dealView, setDealView] = usePersistentState('crm_dealview', 'board')
+  const [assignList, setAssignList] = usePersistentState('crm_assignments', CRM_ASSIGNMENTS)
+  const [addAssignStage, setAddAssignStage] = useState(null)
+  const [newAssign, setNewAssign] = useState({ contact: '', title: '', company: '', value: '', days: '0' })
 
   const mine = (arr) => (scope === 'mine' ? arr.filter((x) => x.owner === me) : arr)
   const leads = mine(CRM_LEADS).filter((l) => (l.name + l.company).toLowerCase().includes(search.toLowerCase()))
   const contacts = (scope === 'mine' ? contactList.filter((c) => c.owner === me) : contactList).filter((c) => (c.name + c.email + c.company).toLowerCase().includes(search.toLowerCase()))
   const deals = mine(dealsList)
+  const assignments = mine(assignList)
   const myTasks = mine(tasks)
   const scripts = mine(CRM_SCRIPTS)
   const automations = mine(autos)
@@ -10953,6 +10969,14 @@ function CRMPage({ user }) {
             setAddDealOpen(false)
             setNewDeal({ contact: '', title: '', company: '', value: '', stage: 'Inquiry', days: '0' })
           }
+          const moveAssign = (id, stage) => { setAssignList((list) => list.map((a) => (a.id === id ? { ...a, stage } : a))); notify(`Moved to ${stage}`) }
+          const addAssign = () => {
+            if (!newAssign.contact.trim() && !newAssign.title.trim()) { notify('Enter an owner or property', 'error'); return }
+            setAssignList((list) => [{ id: uid(), title: newAssign.title.trim() || newAssign.contact.trim(), contact: newAssign.contact.trim() || newAssign.title.trim(), company: newAssign.company.trim() || '—', value: Number(newAssign.value) || 0, stage: addAssignStage, days: Number(newAssign.days) || 0, owner: me }, ...list])
+            notify('Assignment added')
+            setAddAssignStage(null)
+            setNewAssign({ contact: '', title: '', company: '', value: '', days: '0' })
+          }
           return (
           <div className="space-y-5">
             {/* Sub-tabs */}
@@ -11099,11 +11123,143 @@ function CRMPage({ user }) {
                 </div>
               )}
               </>
+            ) : pipeTab === 'Assignments' ? (
+              <>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-xl font-extrabold text-slate-900">Assignments</h2>
+                  <p className="mt-1 max-w-2xl text-sm text-slate-500">Owners you are pitching to win the listing — the work before a signed mandate. Not buyers, and not properties you already represent.</p>
+                </div>
+                <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1">
+                  <button onClick={() => setDealView('board')} title="Board view" className={`flex h-8 w-8 items-center justify-center rounded-md transition ${dealView === 'board' ? 'bg-orange-50 text-brand' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'}`}><LayoutGrid className="h-4 w-4" /></button>
+                  <button onClick={() => setDealView('list')} title="List view" className={`flex h-8 w-8 items-center justify-center rounded-md transition ${dealView === 'list' ? 'bg-orange-50 text-brand' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'}`}><List className="h-4 w-4" /></button>
+                </div>
+              </div>
+
+              {addAssignStage && (
+                <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="flex items-center justify-between"><p className="text-sm font-bold text-slate-900">New Assignment · <span className="text-brand">{addAssignStage}</span></p><button onClick={() => setAddAssignStage(null)} className="text-slate-400 hover:text-slate-700"><X className="h-5 w-5" /></button></div>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    <div><label className="mb-1 block text-xs font-semibold text-slate-500">Owner / Contact</label><input value={newAssign.contact} onChange={(e) => setNewAssign((f) => ({ ...f, contact: e.target.value }))} placeholder="e.g. Jordan Miller" className={dealIn} /></div>
+                    <div><label className="mb-1 block text-xs font-semibold text-slate-500">Property / Listing</label><input value={newAssign.title} onChange={(e) => setNewAssign((f) => ({ ...f, title: e.target.value }))} placeholder="e.g. Olive Grove Plaza" className={dealIn} /></div>
+                    <div><label className="mb-1 block text-xs font-semibold text-slate-500">Company</label><input value={newAssign.company} onChange={(e) => setNewAssign((f) => ({ ...f, company: e.target.value }))} placeholder="Company" className={dealIn} /></div>
+                    <div><label className="mb-1 block text-xs font-semibold text-slate-500">Est. listing value ($)</label><input value={newAssign.value} onChange={(e) => setNewAssign((f) => ({ ...f, value: e.target.value }))} type="number" placeholder="5000000" className={dealIn} /></div>
+                    <div><label className="mb-1 block text-xs font-semibold text-slate-500">Age (days)</label><input value={newAssign.days} onChange={(e) => setNewAssign((f) => ({ ...f, days: e.target.value }))} type="number" placeholder="0" className={dealIn} /></div>
+                  </div>
+                  <div className="mt-4 flex justify-end gap-2">
+                    <button onClick={() => setAddAssignStage(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
+                    <PrimaryButton icon={Plus} onClick={addAssign}>Add assignment</PrimaryButton>
+                  </div>
+                </div>
+              )}
+
+              {dealView === 'board' ? (
+              <div className="scrollbar-slim flex gap-4 overflow-x-auto pb-2">
+                {ASSIGN_STAGES.map((stage) => {
+                  const meta = ASSIGN_STAGE_META[stage]
+                  const col = assignments.filter((a) => a.stage === stage)
+                  const total = col.reduce((s, a) => s + a.value, 0)
+                  return (
+                    <div
+                      key={stage}
+                      onDragOver={(e) => { if (dragDeal) { e.preventDefault(); if (dragStage !== stage) setDragStage(stage) } }}
+                      onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragStage((s) => (s === stage ? null : s)) }}
+                      onDrop={(e) => { e.preventDefault(); if (dragDeal) moveAssign(dragDeal, stage); setDragDeal(null); setDragStage(null) }}
+                      className={`flex w-80 shrink-0 flex-col rounded-xl border border-t-4 border-slate-200 ${meta.bar} transition ${dragStage === stage ? 'bg-orange-50 ring-2 ring-orange-300' : 'bg-slate-50/60'}`}
+                    >
+                      <div className="px-3 pt-3">
+                        <div className="flex items-center justify-between">
+                          <span className="flex items-center gap-2 text-sm font-bold text-slate-800">{stage} <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-500">{col.length}</span></span>
+                          <span className="text-xs font-semibold text-slate-400">{meta.pct}%</span>
+                        </div>
+                        {col.length > 0 && <p className="mt-1 text-xs font-semibold text-slate-500">{money(total)}</p>}
+                      </div>
+                      <div className="scrollbar-slim mt-2 max-h-[520px] space-y-2 overflow-y-auto p-2">
+                        {col.map((a) => (
+                          <div
+                            key={a.id}
+                            draggable
+                            onDragStart={(e) => { setDragDeal(a.id); e.dataTransfer.effectAllowed = 'move' }}
+                            onDragEnd={() => { setDragDeal(null); setDragStage(null) }}
+                            className={`cursor-grab rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition active:cursor-grabbing ${dragDeal === a.id ? 'opacity-40' : 'hover:shadow-md'}`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-xs font-bold text-indigo-600">{a.contact.split(' ').map((n) => n[0]).join('').slice(0, 2)}</div>
+                              <div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-slate-800">{a.contact}</p><p className="truncate text-xs text-slate-400">{a.title} · {a.company}</p></div>
+                            </div>
+                            {a.value > 0 && (
+                              <div className="mt-2 flex items-center gap-2">
+                                <span className="text-sm font-extrabold text-indigo-600">{currency(a.value)}</span>
+                                <span className="inline-flex items-center gap-0.5 rounded bg-orange-50 px-1.5 py-0.5 text-xs font-semibold text-orange-600"><Flame className="h-3 w-3" /> {a.days}d</span>
+                              </div>
+                            )}
+                            <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-100 pt-2">
+                              <button onClick={() => notify(`Opening ${a.title}`)} className="text-sm font-semibold text-brand hover:underline">Open</button>
+                              <select value="" onChange={(e) => e.target.value && moveAssign(a.id, e.target.value)} className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 outline-none focus:border-orange-400">
+                                <option value="">Move to…</option>
+                                {ASSIGN_STAGES.filter((s) => s !== stage).map((s) => <option key={s} value={s}>{s}</option>)}
+                              </select>
+                            </div>
+                          </div>
+                        ))}
+                        {!col.length && <div className="flex items-center justify-center rounded-lg border border-dashed border-slate-200 py-10 text-center text-sm text-slate-400">No assignments here yet</div>}
+                        <button onClick={() => { setAddAssignStage(stage); setNewAssign({ contact: '', title: '', company: '', value: '', days: '0' }) }} className="flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-slate-300 py-2 text-sm font-semibold text-slate-500 transition hover:border-orange-400 hover:bg-orange-50 hover:text-brand"><Plus className="h-4 w-4" /> Add</button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              ) : (
+                <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                  <div className="scrollbar-slim overflow-x-auto">
+                    <table className="w-full min-w-[720px] text-left text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          <th className="px-4 py-3">Owner</th>
+                          <th className="px-4 py-3">Property / Listing</th>
+                          <th className="px-4 py-3">Company</th>
+                          <th className="px-4 py-3 text-right">Est. value</th>
+                          <th className="px-4 py-3">Stage</th>
+                          <th className="px-4 py-3 text-right">Age</th>
+                          <th className="px-4 py-3 text-right">Move to</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {assignments.length === 0 && (
+                          <tr><td colSpan={7} className="px-4 py-12 text-center text-sm text-slate-400">No assignments yet — use “+ Add” in any stage to pitch an owner.</td></tr>
+                        )}
+                        {ASSIGN_STAGES.flatMap((stage) => assignments.filter((a) => a.stage === stage)).map((a) => (
+                          <tr key={a.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-xs font-bold text-indigo-600">{a.contact.split(' ').map((n) => n[0]).join('').slice(0, 2)}</div>
+                                <span className="font-semibold text-slate-800">{a.contact}</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-slate-600">{a.title}</td>
+                            <td className="px-4 py-3 text-slate-500">{a.company}</td>
+                            <td className="px-4 py-3 text-right font-extrabold text-indigo-600">{a.value > 0 ? currency(a.value) : '—'}</td>
+                            <td className="px-4 py-3"><span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">{a.stage}</span></td>
+                            <td className="px-4 py-3 text-right"><span className="inline-flex items-center gap-0.5 text-xs font-semibold text-orange-600"><Flame className="h-3 w-3" /> {a.days}d</span></td>
+                            <td className="px-4 py-3 text-right">
+                              <select value="" onChange={(e) => e.target.value && moveAssign(a.id, e.target.value)} className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 outline-none focus:border-orange-400">
+                                <option value="">Move to…</option>
+                                {ASSIGN_STAGES.filter((s) => s !== a.stage).map((s) => <option key={s} value={s}>{s}</option>)}
+                              </select>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+              </>
             ) : (
               <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 py-20 text-center">
                 <TrendingUp className="h-10 w-10 text-slate-300" />
                 <p className="mt-4 text-base font-bold text-slate-800">{pipeTab}</p>
-                <p className="mt-1 max-w-md text-sm text-slate-500">{pipeTab === 'Assignments' ? 'Buyer-side assignments you are actively working — coming soon.' : 'Your active listings pipeline — coming soon.'}</p>
+                <p className="mt-1 max-w-md text-sm text-slate-500">Your active listings pipeline — coming soon.</p>
               </div>
             )}
           </div>
