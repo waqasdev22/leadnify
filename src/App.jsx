@@ -10577,6 +10577,7 @@ function CRMPage({ user, onNavigate }) {
   const [viewName, setViewName] = useState('')
   const [viewShare, setViewShare] = useState(false)
   const [savedViews, setSavedViews] = usePersistentState('crm_contact_views', [])
+  const contactFileRef = useRef(null)
   const [accounts, setAccounts] = usePersistentState('crm_accounts', [])
   const [addAccountOpen, setAddAccountOpen] = useState(false)
   const [newAccount, setNewAccount] = useState({ name: '', industry: '' })
@@ -10605,6 +10606,7 @@ function CRMPage({ user, onNavigate }) {
   const [scriptDelId, setScriptDelId] = useState(null) // id pending delete confirm
   const scriptBodyRef = useRef(null)
   const [reportRange, setReportRange] = useState('30d')
+  const [showWeekTable, setShowWeekTable] = useState(false)
   const [taskTab, setTaskTab] = useState('todo') // 'todo' | 'leases'
   const [showDone, setShowDone] = useState(false)
   const [addTaskOpen, setAddTaskOpen] = useState(false)
@@ -10615,6 +10617,43 @@ function CRMPage({ user, onNavigate }) {
   const mine = (arr) => (scope === 'mine' ? arr.filter((x) => x.owner === me) : arr)
   const leads = mine(CRM_LEADS).filter((l) => (l.name + l.company).toLowerCase().includes(search.toLowerCase()))
   const contacts = (scope === 'mine' ? contactList.filter((c) => c.owner === me) : contactList).filter((c) => (c.name + c.email + c.company).toLowerCase().includes(search.toLowerCase()))
+  const parseCsvLine = (line) => { const out = []; let cur = '', q = false; for (let i = 0; i < line.length; i++) { const ch = line[i]; if (q) { if (ch === '"') { if (line[i + 1] === '"') { cur += '"'; i++ } else q = false } else cur += ch } else if (ch === ',') { out.push(cur); cur = '' } else if (ch === '"') q = true; else cur += ch } out.push(cur); return out }
+  const exportContacts = () => {
+    const list = scope === 'mine' ? contactList.filter((c) => c.owner === me) : contactList
+    if (!list.length) { notify('No contacts to export', 'error'); return }
+    const cols = ['Name', 'Email', 'Phone', 'Company', 'Title', 'Type', 'Source', 'Tag', 'Score', 'Activity', 'LastSeen']
+    const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`
+    const lines = [cols.join(',')]
+    list.forEach((c) => lines.push([c.name, c.email, c.phone, c.company, c.title, c.type, c.source, c.tag, c.score, c.activity, c.lastSeen].map(esc).join(',')))
+    const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href = url; a.download = 'contacts.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url)
+    notify(`Exported ${list.length} ${list.length === 1 ? 'contact' : 'contacts'} to CSV`)
+  }
+  const importContacts = (file) => {
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      const rows = String(reader.result).split(/\r?\n/).filter((l) => l.trim())
+      if (rows.length < 2) { notify('CSV looks empty', 'error'); return }
+      const header = parseCsvLine(rows[0]).map((h) => h.trim().toLowerCase())
+      const idx = (n) => header.indexOf(n)
+      const ni = idx('name'), ei = idx('email'), pi = idx('phone'), ci = idx('company'), ti = idx('type')
+      const day = new Date().toLocaleDateString('en-GB')
+      const added = []
+      for (let i = 1; i < rows.length; i++) {
+        const cells = parseCsvLine(rows[i])
+        const name = ((ni >= 0 ? cells[ni] : cells[0]) || '').trim()
+        const email = ((ei >= 0 ? cells[ei] : cells[1]) || '').trim()
+        if (!name && !email) continue
+        added.push({ id: uid(), name: name || email.split('@')[0], email, phone: ((pi >= 0 ? cells[pi] : '') || '').trim() || '—', company: ((ci >= 0 ? cells[ci] : '') || '').trim() || '—', title: '', source: 'Import', score: 50, tag: 'Warm', type: ((ti >= 0 ? cells[ti] : '') || 'Buyer').trim() || 'Buyer', activity: 0, lastSeen: day, owner: me })
+      }
+      if (!added.length) { notify('No valid rows found in the CSV', 'error'); return }
+      setContactList((list) => [...added, ...list])
+      notify(`Imported ${added.length} ${added.length === 1 ? 'contact' : 'contacts'}`)
+    }
+    reader.readAsText(file)
+  }
   const deals = mine(dealsList)
   const assignments = mine(assignList)
   const listings = mine(listingList)
@@ -10991,8 +11030,9 @@ function CRMPage({ user, onNavigate }) {
               <div className="flex flex-wrap items-center gap-2">
                 <button onClick={() => notify('Guided tour coming soon')} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50"><HelpCircle className="h-4 w-4" /> Show me around</button>
                 <button onClick={() => notify('Reviewing possible duplicates')} className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-100"><Copy className="h-4 w-4" /> {dupes} possible duplicate</button>
-                <button onClick={() => notify('Exported contacts to CSV')} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"><Download className="h-4 w-4" /> Export</button>
-                <button onClick={() => notify('Import contacts — demo')} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"><Upload className="h-4 w-4" /> Import</button>
+                <button onClick={exportContacts} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"><Download className="h-4 w-4" /> Export</button>
+                <input ref={contactFileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={(e) => { importContacts(e.target.files[0]); e.target.value = '' }} />
+                <button onClick={() => contactFileRef.current && contactFileRef.current.click()} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"><Upload className="h-4 w-4" /> Import</button>
                 <PrimaryButton icon={Plus} onClick={() => setAddContactOpen(true)}>Add contact</PrimaryButton>
               </div>
             </div>
@@ -12138,6 +12178,65 @@ function CRMPage({ user, onNavigate }) {
                 ))}
               </div>
             </div>
+
+            {/* Last 12 weeks */}
+            {(() => {
+              const weekStart = (d) => { const x = new Date(d); const day = (x.getDay() + 6) % 7; x.setDate(x.getDate() - day); x.setHours(0, 0, 0, 0); return x }
+              const now = new Date()
+              const weeks = []
+              for (let i = 11; i >= 0; i--) { const ws = weekStart(now); ws.setDate(ws.getDate() - i * 7); weeks.push({ t: ws.getTime(), label: ws.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }), newLeads: 0, opened: 0, won: 0, lost: 0 }) }
+              const bidx = (date) => { const t = weekStart(date).getTime(); return weeks.findIndex((w) => w.t === t) }
+              deals.forEach((d) => { const o = new Date(now); o.setDate(o.getDate() - (Number(d.days) || 0)); const b = bidx(o); if (b >= 0) { weeks[b].opened++; if (d.stage === 'Closed Won') weeks[b].won++; if (d.stage === 'Closed Lost') weeks[b].lost++ } })
+              const repC = scope === 'mine' ? contactList.filter((c) => c.owner === me) : contactList
+              repC.forEach((c) => { const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(c.lastSeen || ''); if (!m) return; const dt = new Date(+m[3], +m[2] - 1, +m[1]); const b = bidx(dt); if (b >= 0) weeks[b].newLeads++ })
+              const tot = weeks.reduce((a, w) => ({ newLeads: a.newLeads + w.newLeads, opened: a.opened + w.opened, won: a.won + w.won, lost: a.lost + w.lost }), { newLeads: 0, opened: 0, won: 0, lost: 0 })
+              const closed = tot.won + tot.lost
+              const winRate = closed ? `${Math.round((tot.won / closed) * 100)}%` : '—'
+              const closedDays = deals.filter((d) => ['Closed Won', 'Closed Lost'].includes(d.stage)).map((d) => Number(d.days) || 0).sort((a, b) => a - b)
+              const median = closedDays.length ? `${closedDays[Math.floor(closedDays.length / 2)]}d` : '—'
+              const Spark = ({ vals }) => { const max = Math.max(1, ...vals); return (<div className="mt-3 flex h-10 items-end gap-0.5">{vals.map((v, i) => <div key={i} className="flex-1 rounded-sm bg-slate-200" style={{ height: `${v ? Math.max(12, (v / max) * 100) : 4}%` }} />)}</div>) }
+              const StatCard = ({ label, value, vals, empty }) => (
+                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{label}</p>
+                  <p className="mt-1 text-3xl font-extrabold text-slate-900">{value}</p>
+                  {empty ? <p className="mt-2 text-xs text-slate-400">{empty}</p> : vals ? <Spark vals={vals} /> : null}
+                </div>
+              )
+              return (
+                <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-bold text-slate-900">Last 12 weeks</p>
+                    <button onClick={() => setShowWeekTable((v) => !v)} className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 transition hover:text-slate-800"><LayoutList className="h-4 w-4" /> {showWeekTable ? 'Hide table' : 'Show table'}</button>
+                  </div>
+                  <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <StatCard label="New leads" value={tot.newLeads} vals={weeks.map((w) => w.newLeads)} />
+                    <StatCard label="Deals opened" value={tot.opened} vals={weeks.map((w) => w.opened)} />
+                    <StatCard label="Won" value={tot.won} vals={weeks.map((w) => w.won)} />
+                    <StatCard label="Lost" value={tot.lost} vals={weeks.map((w) => w.lost)} />
+                    <StatCard label="Win rate" value={winRate} empty={closed ? null : 'No deals closed yet'} />
+                    <StatCard label="Median days to close" value={median} empty={closed ? null : 'No deals closed yet'} />
+                  </div>
+                  {showWeekTable && (
+                    <div className="scrollbar-slim mt-5 overflow-x-auto rounded-xl border border-slate-200">
+                      <table className="w-full min-w-[560px] text-left text-sm">
+                        <thead><tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-400"><th className="px-4 py-2.5">Week of</th><th className="px-4 py-2.5 text-right">New leads</th><th className="px-4 py-2.5 text-right">Deals opened</th><th className="px-4 py-2.5 text-right">Won</th><th className="px-4 py-2.5 text-right">Lost</th></tr></thead>
+                        <tbody>
+                          {weeks.map((w) => (
+                            <tr key={w.t} className="border-b border-slate-100 last:border-0 odd:bg-slate-50/40">
+                              <td className="px-4 py-2.5 text-slate-700">{w.label}</td>
+                              <td className="px-4 py-2.5 text-right text-slate-600">{w.newLeads}</td>
+                              <td className="px-4 py-2.5 text-right text-slate-600">{w.opened}</td>
+                              <td className="px-4 py-2.5 text-right text-slate-600">{w.won}</td>
+                              <td className="px-4 py-2.5 text-right text-slate-600">{w.lost}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
           </div>
           )
         })()}
