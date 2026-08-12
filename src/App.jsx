@@ -149,6 +149,7 @@ import {
   Cloud,
   Feather,
   Loader2,
+  MousePointerClick,
   Calendar,
   Library,
   Car,
@@ -12117,6 +12118,13 @@ function beginOAuth(providerKey) {
 
 const EMAIL_CAMPAIGNS_SEED = []
 
+const EMAIL_TOUR = [
+  { icon: Send, tile: 'bg-violet-50 text-violet-500', title: 'Welcome to Email Blasts', body: "Turn any completed listing into a polished marketing email and get it in front of the right buyers — without leaving MyCREBlueprint or paying for another blast tool. Here's a quick 4-stop tour of how it works.", place: 'center' },
+  { icon: MousePointerClick, tile: 'bg-emerald-50 text-emerald-500', title: 'Start from a listing', body: 'Hit New email blast and pick a completed property — the email builds itself from its cover photo, price, cap rate, NOI, highlights, and your broker card. Choose two or more and it becomes a single portfolio email with an index and stacked property cards.', place: 'top' },
+  { icon: Mail, tile: 'bg-blue-50 text-blue-500', title: 'Deliver through your own account', body: 'Create a campaign in your Mailchimp account, send directly through your own Amazon SES setup, or download the finished HTML for another provider. Your sending account and reputation stay yours. Manage connections any time under Integrations.', place: 'center' },
+  { icon: FileText, tile: 'bg-orange-50 text-brand', title: 'Recipients & autosaving drafts', body: 'On a direct send through your own SES you pick recipients straight from your CRM — by tag, pipeline stage, or the buyers whose buy-box fits this listing; Mailchimp uses its own audience instead. Either way, every blast autosaves as a draft right here, so you can step away and pick up later, or duplicate a past one.', place: 'bottom' },
+]
+
 // Skyline (multi-building) icon for the multi-property email option.
 function BuildingsIcon(props) {
   return (
@@ -12137,6 +12145,7 @@ function EmailBlastPage({ user }) {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [connectTarget, setConnectTarget] = useState(null)
   const [connecting, setConnecting] = useState(false)
+  const [tourStep, setTourStep] = useState(-1) // -1 = closed, 0..3 = step
   const drafts = campaigns.filter((c) => c.status === 'Draft')
   const sent = campaigns.filter((c) => c.status === 'Sent')
 
@@ -12181,7 +12190,7 @@ function EmailBlastPage({ user }) {
           <p className="text-sm text-brand">Turn any completed property into a polished email — drafts save automatically as you work.</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => notify('Quick tour — demo')} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"><HelpCircle className="h-4 w-4" /> Show me around</button>
+          <button onClick={() => setTourStep(0)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"><HelpCircle className="h-4 w-4" /> Show me around</button>
           <PrimaryButton icon={Plus} onClick={startBlast}>New email blast</PrimaryButton>
         </div>
       </div>
@@ -12268,6 +12277,42 @@ function EmailBlastPage({ user }) {
           </div>
         </div>
       )}
+
+      {/* Guided tour */}
+      {tourStep >= 0 && (() => {
+        const s = EMAIL_TOUR[tourStep]
+        const Icon = s.icon
+        const place = s.place === 'top' ? 'items-start justify-center pt-24' : s.place === 'bottom' ? 'items-end justify-center pb-24' : 'items-center justify-center'
+        const last = tourStep === EMAIL_TOUR.length - 1
+        return (
+          <div className={`fixed inset-0 z-50 flex p-4 ${place} bg-black/50`} onClick={() => setTourStep(-1)}>
+            <div key={tourStep} className="tour-step-in w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-start justify-between">
+                <span className={`flex h-11 w-11 items-center justify-center rounded-xl ${s.tile}`}><Icon className="h-6 w-6" /></span>
+                <button onClick={() => setTourStep(-1)} className="text-slate-400 hover:text-slate-700"><X className="h-5 w-5" /></button>
+              </div>
+              <p className="mt-4 text-lg font-bold text-slate-900">{s.title}</p>
+              <p className="mt-2 text-sm leading-relaxed text-slate-500">{s.body}</p>
+              <div className="mt-5 flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  {EMAIL_TOUR.map((_, i) => <span key={i} className={`h-1.5 rounded-full transition-all ${i === tourStep ? 'w-5 bg-brand' : 'w-1.5 bg-slate-200'}`} />)}
+                </div>
+                <div className="flex items-center gap-3">
+                  {tourStep === 0 ? (
+                    <button onClick={() => setTourStep(-1)} className="text-sm font-semibold text-slate-500 hover:text-slate-800">Skip</button>
+                  ) : (
+                    <button onClick={() => setTourStep((n) => n - 1)} className="inline-flex items-center gap-1 text-sm font-semibold text-slate-500 hover:text-slate-800"><ArrowLeft className="h-4 w-4" /> Back</button>
+                  )}
+                  <button onClick={() => (last ? setTourStep(-1) : setTourStep((n) => n + 1))} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-bold text-white transition hover:bg-orange-600">
+                    {tourStep === 0 ? 'Show me' : last ? 'Done' : 'Next'} {!last && <ArrowRight className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+              <p className="mt-3 text-right text-xs text-slate-400">{tourStep + 1} of {EMAIL_TOUR.length}</p>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Connect / authorize modal */}
       {connectTarget && (() => {
