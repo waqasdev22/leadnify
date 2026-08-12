@@ -10641,8 +10641,13 @@ function CRMPage({ user }) {
                   <button key={f} onClick={() => setLeadFilter(f)} className={`rounded-full px-3 py-1.5 text-sm font-semibold transition ${leadFilter === f ? 'bg-brand text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{f}</button>
                 ))}
               </div>
-              <div className="relative w-56 max-w-full"><Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search leads..." className="w-full rounded-lg border border-slate-200 py-2 pl-8 pr-3 text-sm outline-none focus:border-orange-400" /></div>
-              <span className="text-sm font-semibold text-slate-400">{rows.length} leads</span>
+              <div className="flex items-center gap-3">
+                <div className="relative w-72 max-w-full">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search leads..." className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100" />
+                </div>
+                <span className="hidden shrink-0 text-sm font-semibold text-slate-400 sm:inline">{rows.length} leads</span>
+              </div>
             </div>
 
             {/* Table */}
