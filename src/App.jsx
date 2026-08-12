@@ -141,6 +141,10 @@ import {
   Percent,
   Trophy,
   Archive,
+  Inbox,
+  KanbanSquare,
+  CheckSquare,
+  ScrollText,
   Calendar,
   Library,
   Car,
@@ -10338,12 +10342,12 @@ function DealCard({ deal, accent, dragging, onDragStart, onDragEnd, onDelete }) 
 /* -------------------------------------------------------------------------- */
 
 const CRM_TABS = [
-  { key: 'today', label: 'Today', icon: Clock },
-  { key: 'leads', label: 'Leads', icon: Target },
-  { key: 'contacts', label: 'Contacts', icon: Contact },
-  { key: 'pipelines', label: 'Pipelines', icon: TrendingUp },
-  { key: 'tasks', label: 'Tasks', icon: ClipboardList },
-  { key: 'scripts', label: 'Scripts', icon: FileText },
+  { key: 'today', label: 'Today', icon: LayoutGrid },
+  { key: 'leads', label: 'Leads', icon: Inbox },
+  { key: 'contacts', label: 'Contacts', icon: Users },
+  { key: 'pipelines', label: 'Pipelines', icon: KanbanSquare },
+  { key: 'tasks', label: 'Tasks', icon: CheckSquare },
+  { key: 'scripts', label: 'Scripts', icon: ScrollText },
   { key: 'automations', label: 'Automations', icon: Zap },
   { key: 'reports', label: 'Reports', icon: BarChart3 },
 ]
@@ -10572,6 +10576,11 @@ function CRMPage({ user, onNavigate }) {
   const [dragDeal, setDragDeal] = useState(null)
   const [dragStage, setDragStage] = useState(null)
   const [dealDetailId, setDealDetailId] = useState(null)
+  const scrollBoard = (dir) => {
+    const el = document.querySelector('.crm-board')
+    if (!el) return
+    el.scrollLeft = Math.max(0, Math.min(el.scrollWidth - el.clientWidth, el.scrollLeft + dir * 340))
+  }
   const [dealView, setDealView] = usePersistentState('crm_dealview', 'board')
   const [assignList, setAssignList] = usePersistentState('crm_assignments', CRM_ASSIGNMENTS)
   const [addAssignStage, setAddAssignStage] = useState(null)
@@ -10659,12 +10668,16 @@ function CRMPage({ user, onNavigate }) {
       </div>
 
       {/* Top bar tabs */}
-      <div className="scrollbar-slim mt-5 flex gap-1 overflow-x-auto border-b border-slate-200">
-        {CRM_TABS.map(({ key, label, icon: Icon }) => (
-          <button key={key} onClick={() => setTab(key)} className={`inline-flex shrink-0 items-center gap-1.5 border-b-2 px-4 py-2.5 text-sm font-semibold transition ${tab === key ? 'border-brand text-brand' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>
-            <Icon className="h-4 w-4" /> {label}
-          </button>
-        ))}
+      <div className="scrollbar-slim mt-5 flex gap-1 overflow-x-auto rounded-xl bg-slate-100 p-1">
+        {CRM_TABS.map(({ key, label, icon: Icon }) => {
+          const badge = key === 'leads' ? inbox.filter((l) => l.unread).length : 0
+          return (
+            <button key={key} onClick={() => setTab(key)} className={`relative inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold transition ${tab === key ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>
+              <Icon className={`h-4 w-4 ${tab === key ? 'text-brand' : ''}`} /> {label}
+              {badge > 0 && <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-brand px-1 text-[10px] font-bold text-white">{badge}</span>}
+            </button>
+          )
+        })}
       </div>
 
       <div className="mt-6">
@@ -11177,6 +11190,12 @@ function CRMPage({ user, onNavigate }) {
                   <p className="text-sm text-slate-500">Deals appear automatically when prospects engage — drag them forward as conversations progress.</p>
                 </div>
                 <div className="flex items-center gap-2">
+                  {dealView === 'board' && (
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => scrollBoard(-1)} title="Scroll left" className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 transition hover:bg-slate-50 hover:text-slate-700"><ChevronLeft className="h-4 w-4" /></button>
+                      <button onClick={() => scrollBoard(1)} title="Scroll right" className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 transition hover:bg-slate-50 hover:text-slate-700"><ChevronRight className="h-4 w-4" /></button>
+                    </div>
+                  )}
                   <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1">
                     <button onClick={() => setDealView('board')} title="Board view" className={`flex h-8 w-8 items-center justify-center rounded-md transition ${dealView === 'board' ? 'bg-orange-50 text-brand' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'}`}><LayoutGrid className="h-4 w-4" /></button>
                     <button onClick={() => setDealView('list')} title="List view" className={`flex h-8 w-8 items-center justify-center rounded-md transition ${dealView === 'list' ? 'bg-orange-50 text-brand' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'}`}><List className="h-4 w-4" /></button>
@@ -11203,7 +11222,7 @@ function CRMPage({ user, onNavigate }) {
                 </div>
               )}
               {dealView === 'board' ? (
-              <div className="scrollbar-slim flex gap-4 overflow-x-auto pb-2">
+              <div className="crm-board scrollbar-slim flex gap-4 overflow-x-auto pb-2">
                 {CRM_STAGES.map((stage) => {
                   const meta = CRM_STAGE_META[stage]
                   const col = deals.filter((d) => d.stage === stage)
@@ -11321,9 +11340,17 @@ function CRMPage({ user, onNavigate }) {
                   <h2 className="text-xl font-extrabold text-slate-900">Assignments</h2>
                   <p className="mt-1 max-w-2xl text-sm text-slate-500">Owners you are pitching to win the listing — the work before a signed mandate. Not buyers, and not properties you already represent.</p>
                 </div>
-                <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1">
-                  <button onClick={() => setDealView('board')} title="Board view" className={`flex h-8 w-8 items-center justify-center rounded-md transition ${dealView === 'board' ? 'bg-orange-50 text-brand' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'}`}><LayoutGrid className="h-4 w-4" /></button>
-                  <button onClick={() => setDealView('list')} title="List view" className={`flex h-8 w-8 items-center justify-center rounded-md transition ${dealView === 'list' ? 'bg-orange-50 text-brand' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'}`}><List className="h-4 w-4" /></button>
+                <div className="flex items-center gap-2">
+                  {dealView === 'board' && (
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => scrollBoard(-1)} title="Scroll left" className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 transition hover:bg-slate-50 hover:text-slate-700"><ChevronLeft className="h-4 w-4" /></button>
+                      <button onClick={() => scrollBoard(1)} title="Scroll right" className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 transition hover:bg-slate-50 hover:text-slate-700"><ChevronRight className="h-4 w-4" /></button>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1">
+                    <button onClick={() => setDealView('board')} title="Board view" className={`flex h-8 w-8 items-center justify-center rounded-md transition ${dealView === 'board' ? 'bg-orange-50 text-brand' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'}`}><LayoutGrid className="h-4 w-4" /></button>
+                    <button onClick={() => setDealView('list')} title="List view" className={`flex h-8 w-8 items-center justify-center rounded-md transition ${dealView === 'list' ? 'bg-orange-50 text-brand' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'}`}><List className="h-4 w-4" /></button>
+                  </div>
                 </div>
               </div>
 
@@ -11345,7 +11372,7 @@ function CRMPage({ user, onNavigate }) {
               )}
 
               {dealView === 'board' ? (
-              <div className="scrollbar-slim flex gap-4 overflow-x-auto pb-2">
+              <div className="crm-board scrollbar-slim flex gap-4 overflow-x-auto pb-2">
                 {ASSIGN_STAGES.map((stage) => {
                   const meta = ASSIGN_STAGE_META[stage]
                   const col = assignments.filter((a) => a.stage === stage)
@@ -11453,9 +11480,17 @@ function CRMPage({ user, onNavigate }) {
                   <h2 className="text-xl font-extrabold text-slate-900">Listings</h2>
                   <p className="mt-1 max-w-2xl text-sm text-slate-500">Properties you already represent, tracked from prep through closing. Buyers pursuing them live on the Deals board.</p>
                 </div>
-                <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1">
-                  <button onClick={() => setDealView('board')} title="Board view" className={`flex h-8 w-8 items-center justify-center rounded-md transition ${dealView === 'board' ? 'bg-orange-50 text-brand' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'}`}><LayoutGrid className="h-4 w-4" /></button>
-                  <button onClick={() => setDealView('list')} title="List view" className={`flex h-8 w-8 items-center justify-center rounded-md transition ${dealView === 'list' ? 'bg-orange-50 text-brand' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'}`}><List className="h-4 w-4" /></button>
+                <div className="flex items-center gap-2">
+                  {dealView === 'board' && (
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => scrollBoard(-1)} title="Scroll left" className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 transition hover:bg-slate-50 hover:text-slate-700"><ChevronLeft className="h-4 w-4" /></button>
+                      <button onClick={() => scrollBoard(1)} title="Scroll right" className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 transition hover:bg-slate-50 hover:text-slate-700"><ChevronRight className="h-4 w-4" /></button>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1">
+                    <button onClick={() => setDealView('board')} title="Board view" className={`flex h-8 w-8 items-center justify-center rounded-md transition ${dealView === 'board' ? 'bg-orange-50 text-brand' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'}`}><LayoutGrid className="h-4 w-4" /></button>
+                    <button onClick={() => setDealView('list')} title="List view" className={`flex h-8 w-8 items-center justify-center rounded-md transition ${dealView === 'list' ? 'bg-orange-50 text-brand' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'}`}><List className="h-4 w-4" /></button>
+                  </div>
                 </div>
               </div>
 
@@ -11477,7 +11512,7 @@ function CRMPage({ user, onNavigate }) {
               )}
 
               {dealView === 'board' ? (
-              <div className="scrollbar-slim flex gap-4 overflow-x-auto pb-2">
+              <div className="crm-board scrollbar-slim flex gap-4 overflow-x-auto pb-2">
                 {LISTING_STAGES.map((stage) => {
                   const meta = LISTING_STAGE_META[stage]
                   const col = listings.filter((l) => l.stage === stage)
