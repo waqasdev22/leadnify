@@ -10668,7 +10668,7 @@ function CRMPage({ user, onNavigate }) {
   const [taskTab, setTaskTab] = useState('todo') // 'todo' | 'leases'
   const [showDone, setShowDone] = useState(false)
   const [addTaskOpen, setAddTaskOpen] = useState(false)
-  const [newTask, setNewTask] = useState({ title: '', related: '', due: 'Today' })
+  const [newTask, setNewTask] = useState({ title: '', related: '', due: '' })
   const [leaseList] = usePersistentState('crm_leases', CRM_LEASES_SEED)
   const [leaseHorizon, setLeaseHorizon] = useState(18)
 
@@ -10722,12 +10722,23 @@ function CRMPage({ user, onNavigate }) {
 
   const toggleTask = (id) => setTasks((l) => l.map((t) => (t.id === id ? { ...t, done: !t.done } : t)))
   const leases = mine(leaseList)
+  const dueLabelFromDate = (val) => {
+    if (!val) return 'No date'
+    const d = new Date(val); if (isNaN(d)) return 'No date'
+    const t0 = new Date(); t0.setHours(0, 0, 0, 0)
+    const dd = new Date(d); dd.setHours(0, 0, 0, 0)
+    const diff = Math.round((dd - t0) / 86400000)
+    if (diff === 0) return 'Today'
+    if (diff === 1) return 'Tomorrow'
+    if (diff === -1) return 'Yesterday'
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  }
   const addTask = () => {
     if (!newTask.title.trim()) { notify('Enter a task', 'error'); return }
-    setTasks((l) => [{ id: uid(), title: newTask.title.trim(), related: newTask.related.trim() || '—', due: newTask.due, owner: me, done: false }, ...l])
+    setTasks((l) => [{ id: uid(), title: newTask.title.trim(), related: (newTask.related || '').trim() || '—', due: dueLabelFromDate(newTask.due), dueAt: newTask.due || '', owner: me, done: false }, ...l])
     notify('Task added')
     setAddTaskOpen(false)
-    setNewTask({ title: '', related: '', due: 'Today' })
+    setNewTask({ title: '', related: '', due: '' })
   }
   const saveScript = () => {
     const s = scriptEdit
@@ -11812,23 +11823,10 @@ function CRMPage({ user, onNavigate }) {
                   <h2 className="mt-1 text-xl font-extrabold text-slate-900">Tasks</h2>
                   <p className="text-sm text-slate-500">Follow-ups on your contacts and deals. Due tasks email you a reminder.</p>
                 </div>
-                <PrimaryButton icon={Plus} onClick={() => setAddTaskOpen(true)}>New task</PrimaryButton>
+                {addTaskOpen
+                  ? <PrimaryButton icon={Plus} onClick={() => { setAddTaskOpen(false); setNewTask({ title: '', related: '', due: '' }) }}>Cancel</PrimaryButton>
+                  : <PrimaryButton icon={Plus} onClick={() => setAddTaskOpen(true)}>New task</PrimaryButton>}
               </div>
-
-              {addTaskOpen && (
-                <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                  <div className="flex items-center justify-between"><p className="text-sm font-bold text-slate-900">New Task</p><button onClick={() => setAddTaskOpen(false)} className="text-slate-400 hover:text-slate-700"><X className="h-5 w-5" /></button></div>
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    <div className="sm:col-span-2 lg:col-span-1"><label className="mb-1 block text-xs font-semibold text-slate-500">Task</label><input value={newTask.title} onChange={(e) => setNewTask((f) => ({ ...f, title: e.target.value }))} placeholder="e.g. Call Jordan re: OM" className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" /></div>
-                    <div><label className="mb-1 block text-xs font-semibold text-slate-500">Related to</label><input value={newTask.related} onChange={(e) => setNewTask((f) => ({ ...f, related: e.target.value }))} placeholder="Contact / deal / listing" className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" /></div>
-                    <div><label className="mb-1 block text-xs font-semibold text-slate-500">Due</label><select value={newTask.due} onChange={(e) => setNewTask((f) => ({ ...f, due: e.target.value }))} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400">{['Today', 'Tomorrow', 'This week', 'Next week', 'No date'].map((d) => <option key={d}>{d}</option>)}</select></div>
-                  </div>
-                  <div className="mt-4 flex justify-end gap-2">
-                    <button onClick={() => setAddTaskOpen(false)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
-                    <PrimaryButton icon={Plus} onClick={addTask}>Add task</PrimaryButton>
-                  </div>
-                </div>
-              )}
 
               {/* Calendar sync card */}
               <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -11845,6 +11843,23 @@ function CRMPage({ user, onNavigate }) {
                   </div>
                 </div>
               </div>
+
+              {/* New task inline row */}
+              {addTaskOpen && (
+                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                    <div className="flex-1">
+                      <label className="mb-1 block text-sm font-medium text-slate-500">Task</label>
+                      <input autoFocus value={newTask.title} onChange={(e) => setNewTask((f) => ({ ...f, title: e.target.value }))} onKeyDown={(e) => { if (e.key === 'Enter') addTask() }} placeholder="Call Quincy about the LOI…" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-orange-400" />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-slate-500">Due</label>
+                      <input type="datetime-local" value={newTask.due} onChange={(e) => setNewTask((f) => ({ ...f, due: e.target.value }))} className="rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-orange-400" />
+                    </div>
+                    <button onClick={addTask} disabled={!newTask.title.trim()} className={`rounded-lg px-5 py-2.5 text-sm font-bold text-white transition ${newTask.title.trim() ? 'bg-brand hover:bg-orange-600' : 'cursor-not-allowed bg-orange-300'}`}>Add</button>
+                  </div>
+                </div>
+              )}
 
               {/* Task list / empty state */}
               {openTasks.length > 0 ? (
@@ -11899,7 +11914,7 @@ function CRMPage({ user, onNavigate }) {
                               <td className="px-4 py-3 text-slate-600">{lx.property}</td>
                               <td className="px-4 py-3 text-slate-500">{lx.expires}</td>
                               <td className="px-4 py-3 text-right"><span className={`inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-semibold ${lx.monthsOut <= 6 ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>{lx.monthsOut} mo</span></td>
-                              <td className="px-4 py-3 text-right"><button onClick={() => { setTaskTab('todo'); setAddTaskOpen(true); setNewTask({ title: `Renewal outreach — ${lx.tenant}`, related: lx.property, due: 'This week' }) }} className="text-sm font-semibold text-brand hover:underline">Add task</button></td>
+                              <td className="px-4 py-3 text-right"><button onClick={() => { setTaskTab('todo'); setAddTaskOpen(true); setNewTask({ title: `Renewal outreach — ${lx.tenant}`, related: lx.property, due: '' }) }} className="text-sm font-semibold text-brand hover:underline">Add task</button></td>
                             </tr>
                           ))}
                         </tbody>
