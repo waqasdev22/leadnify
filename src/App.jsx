@@ -128,6 +128,7 @@ import {
   Code2,
   HelpCircle,
   Upload,
+  Bookmark,
   Bold,
   Italic,
   Underline,
@@ -10354,12 +10355,16 @@ const CRM_LEADS = [
 ]
 
 const CRM_CONTACTS = [
-  { id: 'c1', name: 'Jordan Miller', title: 'Principal', company: 'Miller Capital', email: 'jordan@millercap.com', phone: '(602) 555-0142', owner: 'Waqas' },
-  { id: 'c2', name: 'Priya Shah', title: 'Acquisitions', company: 'Everest Holdings', email: 'priya@everest.com', phone: '(480) 555-0199', owner: 'Waqas' },
-  { id: 'c3', name: 'Marcus Lee', title: 'Managing Partner', company: 'Lee Retail Group', email: 'marcus@leerg.com', phone: '(602) 555-0177', owner: 'Maya Chen' },
-  { id: 'c4', name: 'Sofia Ramirez', title: 'Investor', company: 'Ramirez Ventures', email: 'sofia@rventures.com', phone: '(520) 555-0110', owner: 'Devon Park' },
-  { id: 'c5', name: 'Aaron Cole', title: 'Director', company: 'Cole Net Lease', email: 'aaron@colenl.com', phone: '(602) 555-0164', owner: 'Sam Rivera' },
+  { id: 'c1', name: 'Neil Naran', email: 'neil@valuenetlease.com', phone: '9498429202', company: 'Value Net Lease Partners', source: 'NDA', score: 31, tag: 'Cold', type: 'Investor', activity: 5, lastSeen: '12/08/2026', owner: 'Waqas' },
+  { id: 'c2', name: 'Neil Naran', email: 'naran.neil@gmail.com', phone: '9498429202', company: 'Value Net Lease Partners', source: 'Inquiry', score: 57, tag: 'Warm', type: 'Buyer', activity: 12, lastSeen: '29/07/2026', owner: 'Waqas' },
+  { id: 'c3', name: 'Jordan Miller', email: 'jordan@millercap.com', phone: '6025550142', company: 'Miller Capital', source: 'Download', score: 82, tag: 'Hot', type: 'Buyer', activity: 24, lastSeen: '10/08/2026', owner: 'Maya Chen' },
+  { id: 'c4', name: 'Priya Shah', email: 'priya@everest.com', phone: '4805550199', company: 'Everest Holdings', source: 'Inquiry', score: 64, tag: 'Warm', type: 'Investor', activity: 9, lastSeen: '05/08/2026', owner: 'Devon Park' },
+  { id: 'c5', name: 'Aaron Cole', email: 'aaron@colenl.com', phone: '6025550164', company: 'Cole Net Lease', source: 'NDA', score: 78, tag: 'Hot', type: 'Seller', activity: 16, lastSeen: '02/08/2026', owner: 'Sam Rivera' },
+  { id: 'c6', name: 'Marcus Lee', email: 'marcus@leerg.com', phone: '6025550177', company: 'Lee Retail Group', source: 'Email', score: 22, tag: 'Cold', type: 'Landlord', activity: 3, lastSeen: '20/07/2026', owner: 'Maya Chen' },
 ]
+const CRM_CONTACT_CHIPS = ['Hot first', 'Hot', 'Warm', 'Cold', 'Buyer', 'Tenant Rep', 'Seller', 'Landlord', 'Investor', 'Other']
+const crmContactSrcBadge = (s) => ({ NDA: 'bg-violet-50 text-violet-700', Inquiry: 'bg-sky-50 text-sky-700', Download: 'bg-emerald-50 text-emerald-700', Email: 'bg-blue-50 text-blue-700' }[s] || 'bg-slate-100 text-slate-600')
+const crmScoreDot = (tag) => (tag === 'Hot' ? 'bg-rose-500' : tag === 'Warm' ? 'bg-amber-500' : 'bg-sky-400')
 
 const CRM_STAGES = ['New', 'Contacted', 'Qualified', 'Proposal', 'Closed Won']
 const CRM_DEALS = [
@@ -10480,10 +10485,13 @@ function CRMPage({ user }) {
   const [addLeadOpen, setAddLeadOpen] = useState(false)
   const [newLead, setNewLead] = useState({ name: '', email: '', type: 'Inquiry', company: '', listing: '' })
   const [selLeads, setSelLeads] = useState([])
+  const [contactList, setContactList] = usePersistentState('crm_contacts', CRM_CONTACTS)
+  const [contactView, setContactView] = useState('people')
+  const [contactChip, setContactChip] = useState(null)
 
   const mine = (arr) => (scope === 'mine' ? arr.filter((x) => x.owner === me) : arr)
   const leads = mine(CRM_LEADS).filter((l) => (l.name + l.company).toLowerCase().includes(search.toLowerCase()))
-  const contacts = mine(CRM_CONTACTS).filter((c) => (c.name + c.company).toLowerCase().includes(search.toLowerCase()))
+  const contacts = (scope === 'mine' ? contactList.filter((c) => c.owner === me) : contactList).filter((c) => (c.name + c.email + c.company).toLowerCase().includes(search.toLowerCase()))
   const deals = mine(CRM_DEALS)
   const myTasks = mine(tasks)
   const scripts = mine(CRM_SCRIPTS)
@@ -10591,7 +10599,7 @@ function CRMPage({ user }) {
           const ndaCount = scopedInbox.filter((l) => l.type === 'NDA Signer').length
           const typeFor = { All: () => true, Inquiries: (l) => l.type === 'Inquiry', 'NDA Signers': (l) => l.type === 'NDA Signer', 'Email Leads': (l) => l.type === 'Email Lead', Forwarded: (l) => l.type === 'Forwarded' }
           const rows = scopedInbox.filter(typeFor[leadFilter]).filter((l) => (l.name + l.email + l.company).toLowerCase().includes(search.toLowerCase()))
-          const markRead = (id) => setInbox((list) => list.map((l) => (l.id === id ? { ...l, unread: false, status: 'Read' } : l)))
+          const markRead = (id) => setInbox((list) => list.map((l) => (l.id === id ? { ...l, unread: !l.unread, status: !l.unread ? 'Unread' : 'Read' } : l)))
           const del = (id) => setInbox((list) => list.filter((l) => l.id !== id))
           const revoke = (id) => setInbox((list) => list.map((l) => (l.id === id ? { ...l, status: 'Revoked' } : l)))
           const addLead = () => {
@@ -10705,7 +10713,7 @@ function CRMPage({ user }) {
                           l.status === 'Revoked' ? <span className="text-xs text-slate-400">Revoked</span> : <button onClick={() => revoke(l.id)} className="inline-flex items-center gap-1 text-sm font-semibold text-slate-600 transition hover:text-rose-600"><Ban className="h-4 w-4" /> Revoke</button>
                         ) : (
                           <span className="inline-flex items-center gap-1">
-                            <IconButton icon={EyeOff} label="Mark read" onClick={() => markRead(l.id)} />
+                            <IconButton icon={EyeOff} label="Toggle read/unread" onClick={() => markRead(l.id)} />
                             <IconButton icon={Trash2} label="Delete" tone="danger" onClick={() => del(l.id)} />
                           </span>
                         )}
@@ -10721,31 +10729,71 @@ function CRMPage({ user }) {
         })()}
 
         {/* CONTACTS */}
-        {tab === 'contacts' && (
-          <div>
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <div className="relative w-64 max-w-full"><Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search contacts..." className="w-full rounded-lg border border-slate-200 py-2 pl-8 pr-3 text-sm outline-none focus:border-orange-400" /></div>
-              <PrimaryButton icon={Plus} onClick={() => notify('New contact — demo')}>New Contact</PrimaryButton>
+        {tab === 'contacts' && (() => {
+          const TAGS = ['Hot', 'Warm', 'Cold']
+          let rows = contacts
+          if (contactChip && contactChip !== 'Hot first') rows = rows.filter((c) => (TAGS.includes(contactChip) ? c.tag === contactChip : c.type === contactChip))
+          if (contactChip === 'Hot first') rows = [...rows].sort((a, b) => b.score - a.score)
+          const dupes = 1
+          return (
+          <div className="space-y-5">
+            {/* People / Companies */}
+            <div className="inline-flex rounded-lg bg-slate-100 p-1">
+              {[{ k: 'people', l: 'People' }, { k: 'companies', l: 'Companies' }].map((v) => (
+                <button key={v.k} onClick={() => setContactView(v.k)} className={`rounded-md px-4 py-1.5 text-sm font-semibold transition ${contactView === v.k ? 'bg-white text-brand shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>{v.l}</button>
+              ))}
             </div>
+
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="-mt-1 text-sm text-slate-500">Everyone you know — buyers, tenants, owners and brokers. One row per person.</p>
+                <h2 className="mt-1 text-xl font-extrabold text-slate-900">Contacts</h2>
+                <p className="max-w-2xl text-sm text-slate-500">Every prospect who inquired, signed an NDA, or downloaded from a deal room — captured automatically and unified by email.</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button onClick={() => notify('Guided tour coming soon')} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50"><HelpCircle className="h-4 w-4" /> Show me around</button>
+                <button onClick={() => notify('Reviewing possible duplicates')} className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-100"><Copy className="h-4 w-4" /> {dupes} possible duplicate</button>
+                <button onClick={() => notify('Exported contacts to CSV')} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"><Download className="h-4 w-4" /> Export</button>
+                <button onClick={() => notify('Import contacts — demo')} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"><Upload className="h-4 w-4" /> Import</button>
+                <PrimaryButton icon={Plus} onClick={() => notify('Add contact — demo')}>Add contact</PrimaryButton>
+              </div>
+            </div>
+
+            <button onClick={() => notify('View saved')} className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-500 transition hover:bg-slate-50"><Bookmark className="h-4 w-4" /> Save this view</button>
+
+            {/* Search + chips */}
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative w-72 max-w-full"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name, email, or company..." className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100" /></div>
+              <div className="flex flex-wrap gap-2">
+                {CRM_CONTACT_CHIPS.map((c) => (
+                  <button key={c} onClick={() => setContactChip((v) => (v === c ? null : c))} className={`rounded-full px-3 py-1.5 text-sm font-semibold transition ${contactChip === c ? 'bg-brand text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{c === 'Hot first' && '🔥 '}{c}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* Table */}
             <div className="scrollbar-slim overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-              <table className="w-full min-w-[720px]">
-                <thead className="border-b border-slate-100 bg-slate-50"><tr><th className={th}>Name</th><th className={th}>Company</th><th className={th}>Email</th><th className={th}>Phone</th><th className={th}>Owner</th></tr></thead>
+              <table className="w-full min-w-[860px]">
+                <thead className="border-b border-slate-100 bg-slate-50"><tr><th className={th}>Contact</th><th className={th}>Company</th><th className={th}>Source</th><th className={th}>Score</th><th className={th}>Activity</th><th className={th}>Last seen</th><th className={th + ' text-right'}></th></tr></thead>
                 <tbody className="divide-y divide-slate-100">
-                  {contacts.map((c) => (
+                  {rows.map((c) => (
                     <tr key={c.id} className="hover:bg-slate-50">
-                      <td className={td}><p className="font-semibold text-slate-800">{c.name}</p><p className="text-xs text-slate-400">{c.title}</p></td>
-                      <td className={td}>{c.company}</td>
-                      <td className={td}><a href={`mailto:${c.email}`} className="text-brand hover:underline">{c.email}</a></td>
-                      <td className={td}>{c.phone}</td>
-                      <td className={td}>{c.owner}</td>
+                      <td className={td}><p className="font-semibold text-slate-800">{c.name}</p><p className="text-xs text-slate-400">{c.email} · {c.phone}</p></td>
+                      <td className={`${td} text-brand`}>{c.company}</td>
+                      <td className={td}><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${crmContactSrcBadge(c.source)}`}>{c.source}</span></td>
+                      <td className={td}><span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-bold text-amber-700"><span className={`h-2 w-2 rounded-full ${crmScoreDot(c.tag)}`} /> {c.score}</span></td>
+                      <td className={td}>{c.activity} events</td>
+                      <td className={td}>{c.lastSeen}</td>
+                      <td className={td + ' text-right'}><IconButton icon={Mail} label="Email" onClick={() => { window.location.href = `mailto:${c.email}` }} /></td>
                     </tr>
                   ))}
-                  {!contacts.length && <tr><td colSpan={5} className="py-10 text-center text-sm text-slate-400">No contacts.</td></tr>}
+                  {!rows.length && <tr><td colSpan={7} className="py-10 text-center text-sm text-slate-400">No contacts.</td></tr>}
                 </tbody>
               </table>
             </div>
           </div>
-        )}
+          )
+        })()}
 
         {/* PIPELINES */}
         {tab === 'pipelines' && (
