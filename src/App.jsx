@@ -12447,6 +12447,18 @@ function TeamSettingsPage() {
   const [savedCa, setSavedCa] = usePersistentState('team_ca', DEFAULT_CA_TEXT)
   const [caDraft, setCaDraft] = useState(savedCa)
   const [tplOpen, setTplOpen] = useState(false)
+  const [inviteOpen, setInviteOpen] = useState(false)
+  const [inviteStep, setInviteStep] = useState(1)
+  const [inviteEmails, setInviteEmails] = useState([])
+  const [inviteInput, setInviteInput] = useState('')
+  const [inviteRole, setInviteRole] = useState('Member')
+  const commitEmail = () => { const e = inviteInput.trim().replace(/,$/, '').trim(); if (e && /\S+@\S+\.\S+/.test(e) && !inviteEmails.includes(e)) { setInviteEmails((l) => [...l, e]); setInviteInput('') } else if (e) { notify('Enter a valid email', 'error') } }
+  const sendInvites = () => {
+    if (!inviteEmails.length) { notify('Add at least one email', 'error'); return }
+    setMembers((l) => [...l, ...inviteEmails.map((em) => ({ id: uid(), name: em.split('@')[0], email: em, role: inviteRole, docs: 0, active: 'Invited', you: false, initials: em.slice(0, 1).toUpperCase() }))])
+    notify(`${inviteEmails.length} invite${inviteEmails.length === 1 ? '' : 's'} sent`)
+    setInviteOpen(false)
+  }
   const setRole = (id, role) => { setMembers((l) => l.map((m) => (m.id === id ? { ...m, role } : m))); notify('Role updated') }
   const seats = members.length
   const unsaved = caDraft !== savedCa
@@ -12455,11 +12467,11 @@ function TeamSettingsPage() {
   const td = 'px-4 py-3 text-sm text-slate-700'
 
   return (
-    <div className="mx-auto max-w-[1000px] p-6">
+    <div className="mx-auto max-w-[1600px] p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-extrabold text-slate-900">Team Management</h1>
-          <button onClick={() => notify('Invite sent — demo')} className="inline-flex items-center gap-1.5 rounded-full bg-brand px-3 py-1.5 text-xs font-bold text-white transition hover:bg-orange-600"><Zap className="h-3.5 w-3.5" /> Invite Member</button>
+          <button onClick={() => { setInviteOpen(true); setInviteStep(1); setInviteEmails([]); setInviteInput(''); setInviteRole('Member') }} className="inline-flex items-center gap-1.5 rounded-full bg-brand px-3 py-1.5 text-xs font-bold text-white transition hover:bg-orange-600"><Zap className="h-3.5 w-3.5" /> Invite Member</button>
         </div>
       </div>
       <p className="mt-1 text-sm font-semibold text-brand">{seats} paid seat{seats === 1 ? '' : 's'}</p>
@@ -12566,6 +12578,66 @@ function TeamSettingsPage() {
         </div>
         <p className="mt-2 text-xs text-slate-400">This agreement will appear on all team member documents and cannot be changed by members.</p>
       </div>
+
+      {/* Invite Member modal */}
+      {inviteOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setInviteOpen(false)}>
+          <div className="w-full max-w-lg rounded-2xl bg-white p-7 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between">
+              <p className="text-xs font-bold uppercase tracking-wide text-brand">Team · Step {inviteStep} of 2</p>
+              <button onClick={() => setInviteOpen(false)} className="text-slate-400 hover:text-slate-700"><X className="h-5 w-5" /></button>
+            </div>
+            {inviteStep === 1 ? (
+              <>
+                <h2 className="mt-2 text-2xl font-extrabold text-slate-900">Invite team members</h2>
+                <p className="mt-2 text-sm text-slate-500">Each new member gets their own login, document workspace, and full Pro access.</p>
+                <div className="mt-6 flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Email address</label>
+                  <span className="text-xs text-slate-400">Enter or comma to add</span>
+                </div>
+                <div className="mt-1 flex flex-wrap items-center gap-2 rounded-lg border border-slate-300 px-3 py-2.5 focus-within:border-orange-400">
+                  {inviteEmails.map((em) => (
+                    <span key={em} className="inline-flex items-center gap-1 rounded-full bg-orange-50 px-2 py-0.5 text-xs font-semibold text-brand">{em}<button onClick={() => setInviteEmails((l) => l.filter((x) => x !== em))} className="text-brand/60 hover:text-brand"><X className="h-3 w-3" /></button></span>
+                  ))}
+                  <input value={inviteInput} onChange={(e) => setInviteInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); commitEmail() } }} onBlur={commitEmail} placeholder={inviteEmails.length ? '' : 'colleague@company.com'} className="min-w-[160px] flex-1 bg-transparent text-sm outline-none placeholder:text-slate-400" />
+                </div>
+                <p className="mt-6 text-xs font-bold uppercase tracking-wide text-slate-500">Role guide</p>
+                <div className="mt-2 space-y-2.5">
+                  {[{ r: 'Member', dot: 'bg-slate-400', d: 'Own documents, all features. Paid seat.' }, { r: 'Admin', dot: 'bg-orange-500', d: 'Everything a Member has, plus team management & billing.' }, { r: 'Coordinator', dot: 'bg-emerald-500', d: 'Creates documents on behalf of others. Free seat.' }].map((x) => (
+                    <div key={x.r} className="flex gap-3 text-sm">
+                      <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${x.dot}`} />
+                      <p><span className="font-bold text-slate-800">{x.r}</span> <span className="ml-8 text-slate-500">{x.d}</span></p>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-7 flex items-center justify-end gap-3">
+                  <button onClick={() => setInviteOpen(false)} className="text-sm font-semibold text-slate-500 hover:text-slate-800">Cancel</button>
+                  <button onClick={() => { commitEmail(); if (inviteEmails.length || /\S+@\S+\.\S+/.test(inviteInput)) setInviteStep(2); else notify('Add at least one email', 'error') }} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-5 py-2.5 text-sm font-bold text-white transition hover:bg-orange-600">Continue <ArrowRight className="h-4 w-4" /></button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h2 className="mt-2 text-2xl font-extrabold text-slate-900">Assign a role</h2>
+                <p className="mt-2 text-sm text-slate-500">Inviting <span className="font-semibold text-slate-700">{inviteEmails.length} {inviteEmails.length === 1 ? 'person' : 'people'}</span> — pick the role they'll start with.</p>
+                <div className="mt-4 flex flex-wrap gap-2">{inviteEmails.map((em) => <span key={em} className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">{em}</span>)}</div>
+                <p className="mt-6 text-xs font-bold uppercase tracking-wide text-slate-500">Role</p>
+                <div className="mt-2 space-y-2">
+                  {[{ r: 'Member', d: 'Own documents, all features. Paid seat.' }, { r: 'Admin', d: 'Everything a Member has, plus team management & billing.' }, { r: 'Coordinator', d: 'Creates documents on behalf of others. Free seat.' }].map((x) => (
+                    <button key={x.r} onClick={() => setInviteRole(x.r)} className={`flex w-full items-start gap-3 rounded-xl border p-3 text-left transition ${inviteRole === x.r ? 'border-orange-300 bg-orange-50/50' : 'border-slate-200 hover:bg-slate-50'}`}>
+                      <span className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${inviteRole === x.r ? 'border-brand' : 'border-slate-300'}`}>{inviteRole === x.r && <span className="h-2 w-2 rounded-full bg-brand" />}</span>
+                      <p className="text-sm"><span className="font-bold text-slate-800">{x.r}</span> <span className="text-slate-500">— {x.d}</span></p>
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-7 flex items-center justify-between gap-3">
+                  <button onClick={() => setInviteStep(1)} className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-slate-800"><ArrowLeft className="h-4 w-4" /> Back</button>
+                  <button onClick={sendInvites} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-5 py-2.5 text-sm font-bold text-white transition hover:bg-orange-600">Send {inviteEmails.length} invite{inviteEmails.length === 1 ? '' : 's'}</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
