@@ -10544,7 +10544,7 @@ function CrmMetric({ label, value, sub }) {
   )
 }
 
-function CRMPage({ user }) {
+function CRMPage({ user, onNavigate }) {
   const notify = useToast()
   const me = user?.name || CURRENT_USER.name
   const [tab, setTab] = useState('today')
@@ -10701,7 +10701,7 @@ function CRMPage({ user }) {
               <CrmAttentionCard icon={Mail} label="Unread inquiries" count={inquiries.length} onViewAll={() => setTab('leads')}>
                 <div className="space-y-1.5">{inquiries.map((i) => <div key={i.id} className="flex justify-between text-sm"><span className="truncate text-slate-700">{i.name}</span><span className="shrink-0 text-xs text-slate-400">{i.property}</span></div>)}</div>
               </CrmAttentionCard>
-              <CrmAttentionCard icon={Clock} label="Access expiring (7d)" count={0} onViewAll={() => setTab('pipelines')} />
+              <CrmAttentionCard icon={Clock} label="Access expiring (7d)" count={0} onViewAll={() => onNavigate && onNavigate('deals')} />
             </div>
 
             {/* Pipeline summary */}
@@ -12756,7 +12756,7 @@ export default function App() {
       case 'documents':
         return <PlaceholderPage label="Documents" icon={FileText} />
       case 'crm':
-        return <CRMPage user={user} />
+        return <CRMPage user={user} onNavigate={navigate} />
       case 'email':
         return <EmailBlastPage user={user} />
       case 'templates':
