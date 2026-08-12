@@ -12091,6 +12091,30 @@ const EMAIL_PROVIDERS = [
 
 const EMAIL_AUDIENCES = ['All Contacts', 'Qualified Leads', 'New Leads', 'Active Deal Room Prospects']
 
+// Real OAuth endpoints. Clicking "Continue" opens the provider's genuine sign-in screen
+// ONLY when a client ID is configured in .env.local — otherwise the demo connect runs.
+const EMAIL_OAUTH = {
+  gmail: {
+    authorize: 'https://accounts.google.com/o/oauth2/v2/auth',
+    clientId: import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID,
+    scope: 'https://www.googleapis.com/auth/gmail.send',
+    extra: { access_type: 'offline', prompt: 'select_account', include_granted_scopes: 'true' },
+  },
+  outlook: {
+    authorize: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
+    clientId: import.meta.env.VITE_MS_OAUTH_CLIENT_ID,
+    scope: 'https://graph.microsoft.com/Mail.Send offline_access',
+    extra: { prompt: 'select_account' },
+  },
+}
+function beginOAuth(providerKey) {
+  const cfg = EMAIL_OAUTH[providerKey]
+  if (!cfg || !cfg.clientId) return false
+  const params = new URLSearchParams({ client_id: cfg.clientId, redirect_uri: window.location.origin, response_type: 'code', scope: cfg.scope, state: providerKey, ...cfg.extra })
+  window.location.href = `${cfg.authorize}?${params.toString()}`
+  return true
+}
+
 const EMAIL_CAMPAIGNS_SEED = []
 
 // Skyline (multi-building) icon for the multi-property email option.
@@ -12121,9 +12145,22 @@ function EmailBlastPage({ user }) {
   const confirmConnect = () => {
     const p = connectTarget
     setConnecting(true)
-    // Real OAuth would redirect to the provider here; this authorizes the demo connection.
+    // If a real OAuth client ID is configured, redirect to the provider's genuine sign-in screen.
+    if (beginOAuth(p.key)) return
+    // Otherwise, authorize the demo connection.
     setTimeout(() => { setConnected(p, true); setConnecting(false); setConnectTarget(null); notify(`Connected ${p.name}`, 'success') }, 900)
   }
+  // Handle the OAuth redirect back (?code=…&state=provider) — mark that provider connected.
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search)
+    const code = q.get('code'), state = q.get('state')
+    if (code && state && EMAIL_OAUTH[state]) {
+      setConns((c) => ({ ...c, [state]: true }))
+      notify(`Connected ${EMAIL_PROVIDERS.find((x) => x.key === state)?.name || state}`, 'success')
+      const url = new URL(window.location.href); url.searchParams.delete('code'); url.searchParams.delete('state'); url.searchParams.delete('scope'); window.history.replaceState({}, '', url.pathname + url.search)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const startBlast = () => setPickerOpen(true)
   const chooseType = (type) => { setForm({ audience: EMAIL_AUDIENCES[0], subject: '', body: '', type }); setPickerOpen(false); setComposeOpen(true) }
   const audienceCounts = { 'All Contacts': 842, 'Qualified Leads': 214, 'New Leads': 128, 'Active Deal Room Prospects': 96 }
