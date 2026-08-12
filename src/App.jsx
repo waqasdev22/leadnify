@@ -10462,6 +10462,8 @@ function CRMPage({ user }) {
   const [autos, setAutos] = useState(CRM_AUTOMATIONS_SEED)
   const [inbox, setInbox] = useState(CRM_INBOX_SEED)
   const [leadFilter, setLeadFilter] = useState('All')
+  const [addLeadOpen, setAddLeadOpen] = useState(false)
+  const [newLead, setNewLead] = useState({ name: '', email: '', type: 'Inquiry', company: '', listing: '' })
 
   const mine = (arr) => (scope === 'mine' ? arr.filter((x) => x.owner === me) : arr)
   const leads = mine(CRM_LEADS).filter((l) => (l.name + l.company).toLowerCase().includes(search.toLowerCase()))
@@ -10576,6 +10578,19 @@ function CRMPage({ user }) {
           const markRead = (id) => setInbox((list) => list.map((l) => (l.id === id ? { ...l, unread: false, status: 'Read' } : l)))
           const del = (id) => setInbox((list) => list.filter((l) => l.id !== id))
           const revoke = (id) => setInbox((list) => list.map((l) => (l.id === id ? { ...l, status: 'Revoked' } : l)))
+          const addLead = () => {
+            if (!newLead.name.trim()) { notify('Enter a lead name', 'error'); return }
+            const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+            const isInq = newLead.type === 'Inquiry'
+            setInbox((list) => [{
+              id: uid(), name: newLead.name.trim(), email: newLead.email.trim() || '—', type: newLead.type,
+              company: newLead.company.trim() || '—', listing: newLead.listing.trim() || 'Unknown',
+              date: today, status: isInq ? 'Unread' : 'New', unread: isInq, owner: me,
+            }, ...list])
+            notify('Lead added')
+            setAddLeadOpen(false)
+            setNewLead({ name: '', email: '', type: 'Inquiry', company: '', listing: '' })
+          }
           return (
           <div className="space-y-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -10584,8 +10599,29 @@ function CRMPage({ user }) {
                 <h2 className="mt-1 text-xl font-extrabold text-slate-900">Leads</h2>
                 <p className="text-sm text-slate-500">{unreadCount} unread inquiry · {ndaCount} active NDA signers</p>
               </div>
-              <button onClick={() => notify('Exported inquiries to CSV')} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50" title="Export inquiries to CSV"><Download className="h-4 w-4" /> Export</button>
+              <div className="flex items-center gap-2">
+                <button onClick={() => notify('Exported inquiries to CSV')} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50" title="Export inquiries to CSV"><Download className="h-4 w-4" /> Export</button>
+                <PrimaryButton icon={Plus} onClick={() => setAddLeadOpen(true)}>Add Lead</PrimaryButton>
+              </div>
             </div>
+
+            {/* Add lead form */}
+            {addLeadOpen && (
+              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex items-center justify-between"><p className="text-sm font-bold text-slate-900">Add Lead</p><button onClick={() => setAddLeadOpen(false)} className="text-slate-400 hover:text-slate-700"><X className="h-5 w-5" /></button></div>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  <div><label className="mb-1 block text-xs font-semibold text-slate-500">Name *</label><input value={newLead.name} onChange={(e) => setNewLead((f) => ({ ...f, name: e.target.value }))} placeholder="Full name" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-orange-400" /></div>
+                  <div><label className="mb-1 block text-xs font-semibold text-slate-500">Email</label><input value={newLead.email} onChange={(e) => setNewLead((f) => ({ ...f, email: e.target.value }))} placeholder="name@email.com" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-orange-400" /></div>
+                  <div><label className="mb-1 block text-xs font-semibold text-slate-500">Type</label><select value={newLead.type} onChange={(e) => setNewLead((f) => ({ ...f, type: e.target.value }))} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400"><option>Inquiry</option><option>Email Lead</option><option>NDA Signer</option><option>Forwarded</option></select></div>
+                  <div><label className="mb-1 block text-xs font-semibold text-slate-500">Company</label><input value={newLead.company} onChange={(e) => setNewLead((f) => ({ ...f, company: e.target.value }))} placeholder="Company" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-orange-400" /></div>
+                  <div><label className="mb-1 block text-xs font-semibold text-slate-500">Listing</label><input value={newLead.listing} onChange={(e) => setNewLead((f) => ({ ...f, listing: e.target.value }))} placeholder="#12345" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-orange-400" /></div>
+                </div>
+                <div className="mt-4 flex justify-end gap-2">
+                  <button onClick={() => setAddLeadOpen(false)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
+                  <PrimaryButton icon={Plus} onClick={addLead}>Add Lead</PrimaryButton>
+                </div>
+              </div>
+            )}
 
             {/* Forward-in address */}
             <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
