@@ -12146,6 +12146,8 @@ function EmailBlastPage({ user }) {
   const [connectTarget, setConnectTarget] = useState(null)
   const [connecting, setConnecting] = useState(false)
   const [tourStep, setTourStep] = useState(-1) // -1 = closed, 0..3 = step
+  const [tourPos, setTourPos] = useState(null) // {top,left} when anchored below a target
+  const tourCardRef = useRef(null)
   const drafts = campaigns.filter((c) => c.status === 'Draft')
   const sent = campaigns.filter((c) => c.status === 'Sent')
 
@@ -12159,6 +12161,21 @@ function EmailBlastPage({ user }) {
     // Otherwise, authorize the demo connection.
     setTimeout(() => { setConnected(p, true); setConnecting(false); setConnectTarget(null); notify(`Connected ${p.name}`, 'success') }, 900)
   }
+  // Anchor the tour card just below the highlighted target (step 0 stays centered).
+  useEffect(() => {
+    if (tourStep <= 0) { setTourPos(null); return }
+    const target = document.querySelector(`[data-tour-target="${tourStep}"]`)
+    const card = tourCardRef.current
+    if (!target) { setTourPos(null); return }
+    const r = target.getBoundingClientRect()
+    const cardW = card?.offsetWidth || 448
+    const cardH = card?.offsetHeight || 340
+    let left = r.left + r.width / 2 - cardW / 2
+    left = Math.max(12, Math.min(window.innerWidth - cardW - 12, left))
+    let top = r.bottom + 12
+    if (top + cardH > window.innerHeight - 12) top = Math.max(12, window.innerHeight - cardH - 12)
+    setTourPos({ top, left })
+  }, [tourStep])
   // Handle the OAuth redirect back (?code=…&state=provider) — mark that provider connected.
   useEffect(() => {
     const q = new URLSearchParams(window.location.search)
@@ -12193,12 +12210,12 @@ function EmailBlastPage({ user }) {
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setTourStep(0)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"><HelpCircle className="h-4 w-4" /> Show me around</button>
-          <span className={`inline-block ${tourHi(1)}`}><PrimaryButton icon={Plus} onClick={startBlast}>New email blast</PrimaryButton></span>
+          <span data-tour-target="1" className={`inline-block ${tourHi(1)}`}><PrimaryButton icon={Plus} onClick={startBlast}>New email blast</PrimaryButton></span>
         </div>
       </div>
 
       {/* SEND WITH */}
-      <div className={`mt-7 ${tourHi(2)} ${tourStep === 2 ? 'bg-white p-4' : ''}`}>
+      <div data-tour-target="2" className={`mt-7 ${tourHi(2)} ${tourStep === 2 ? 'bg-white p-4' : ''}`}>
       <div className="flex items-center justify-between">
         <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-500"><Send className="h-3.5 w-3.5" /> Send with</p>
         <button onClick={() => notify('Manage integrations — demo')} className="text-xs font-semibold text-brand hover:underline">Manage in Integrations →</button>
@@ -12233,7 +12250,7 @@ function EmailBlastPage({ user }) {
       </div>
 
       {/* DRAFTS */}
-      <div className={`mt-8 ${tourHi(3)} ${tourStep === 3 ? 'bg-white p-4' : ''}`}>
+      <div data-tour-target="3" className={`mt-8 ${tourHi(3)} ${tourStep === 3 ? 'bg-white p-4' : ''}`}>
       <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-500"><FileText className="h-3.5 w-3.5" /> Drafts</p>
       {drafts.length === 0 ? (
         <div className="mt-3 flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 py-10 text-center">
@@ -12288,13 +12305,19 @@ function EmailBlastPage({ user }) {
       {tourStep >= 0 && (() => {
         const s = EMAIL_TOUR[tourStep]
         const Icon = s.icon
-        const place = s.place === 'top' ? 'items-start justify-center pt-24' : s.place === 'bottom' ? 'items-end justify-center pb-24' : 'items-center justify-center'
         const last = tourStep === EMAIL_TOUR.length - 1
+        const anchored = tourPos && tourStep > 0
         return (
           <>
           <div className="fixed inset-0 z-40 bg-black/50" onClick={() => setTourStep(-1)} />
-          <div className={`pointer-events-none fixed inset-0 z-50 flex p-4 ${place}`}>
-            <div key={tourStep} className="tour-step-in pointer-events-auto w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className={`pointer-events-none fixed inset-0 z-50 ${anchored ? '' : 'flex items-center justify-center p-4'}`}>
+            <div
+              key={tourStep}
+              ref={tourCardRef}
+              style={anchored ? { top: tourPos.top, left: tourPos.left } : {}}
+              className={`tour-step-in pointer-events-auto w-[448px] max-w-[calc(100vw-2rem)] rounded-2xl bg-white p-6 shadow-2xl ${anchored ? 'fixed' : ''}`}
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="flex items-start justify-between">
                 <span className={`flex h-11 w-11 items-center justify-center rounded-xl ${s.tile}`}><Icon className="h-6 w-6" /></span>
                 <button onClick={() => setTourStep(-1)} className="text-slate-400 hover:text-slate-700"><X className="h-5 w-5" /></button>
