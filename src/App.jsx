@@ -12425,8 +12425,10 @@ function EmailBlastPage({ user, onNavigate }) {
     if (!sesForm.accessKeyId.trim() || !sesForm.secret.trim()) { notify('Enter your AWS Access Key ID and Secret', 'error'); return }
     setConns((c) => ({ ...c, ses: true }))
     setConnDates((d) => ({ ...d, ses: new Date().toLocaleDateString('en-GB') }))
-    // Note: the secret key is NOT stored in the browser — only the non-secret display info.
-    setSesConfig({ label: sesForm.label.trim() || 'Amazon SES', region: sesForm.region.trim(), fromEmail: sesForm.fromEmail.trim(), fromName: sesForm.fromName.trim() })
+    // Persist all fields (incl. keys) so they survive a page refresh / dev-server restart.
+    // NOTE: keys are stored in this browser's localStorage — fine for local use, but do NOT
+    // deploy/share this build with real keys entered, as localStorage is plain text.
+    setSesConfig({ label: sesForm.label.trim() || 'Amazon SES', accessKeyId: sesForm.accessKeyId.trim(), secret: sesForm.secret.trim(), region: sesForm.region.trim(), fromEmail: sesForm.fromEmail.trim(), fromName: sesForm.fromName.trim() })
     notify('Amazon SES connected')
     setSesFormOpen(false)
     setSesForm({ label: '', accessKeyId: '', secret: '', region: '', fromEmail: '', fromName: '' })
@@ -12573,14 +12575,14 @@ function EmailBlastPage({ user, onNavigate }) {
                             <div><label className="mb-1 block text-xs font-semibold text-slate-500">Region</label><input value={sesForm.region} onChange={(e) => setSesForm((f) => ({ ...f, region: e.target.value }))} placeholder="us-east-1" className={inputCls} /></div>
                             <div><label className="mb-1 block text-xs font-semibold text-slate-500">From email</label><input type="email" value={sesForm.fromEmail} onChange={(e) => setSesForm((f) => ({ ...f, fromEmail: e.target.value }))} placeholder="broker@example.com" className={inputCls} /></div>
                             <div><label className="mb-1 block text-xs font-semibold text-slate-500">From name</label><input value={sesForm.fromName} onChange={(e) => setSesForm((f) => ({ ...f, fromName: e.target.value }))} placeholder="Broker Name" className={inputCls} /></div>
-                            <p className="text-xs text-slate-400">Make sure the From email is a verified identity in your SES account, or your SES is out of sandbox. Keys are used only to send — the secret is never stored in your browser.</p>
+                            <p className="text-xs text-slate-400">Make sure the From email is a verified identity in your SES account, or your SES is out of sandbox. Your keys are saved in this browser so they stay after a refresh — only use this on your own device, and don't deploy or share this build with real keys entered.</p>
                             <button onClick={saveSes} className="rounded-lg bg-brand px-4 py-2 text-sm font-bold text-white transition hover:bg-orange-600">Save keys</button>
                           </div>
                         </>
                       ) : on ? (
                         <div>
                           <p className="text-xs text-slate-400">{sesConfig?.label || 'Amazon SES'} · connected {connDates.ses || new Date().toLocaleDateString('en-GB')}{sesConfig?.region ? ` · ${sesConfig.region}` : ''}</p>
-                          <div className="mt-1.5 flex items-center gap-4 text-sm font-semibold"><button onClick={() => { setSesForm({ label: sesConfig?.label || '', accessKeyId: '', secret: '', region: sesConfig?.region || '', fromEmail: sesConfig?.fromEmail || '', fromName: sesConfig?.fromName || '' }); setSesFormOpen(true) }} className="text-brand hover:underline">Update</button><button onClick={() => { setConns((c) => ({ ...c, ses: false })); notify('Disconnected Amazon SES', 'error') }} className="text-slate-400 hover:text-rose-500">Disconnect</button></div>
+                          <div className="mt-1.5 flex items-center gap-4 text-sm font-semibold"><button onClick={() => { setSesForm({ label: sesConfig?.label || '', accessKeyId: sesConfig?.accessKeyId || '', secret: sesConfig?.secret || '', region: sesConfig?.region || '', fromEmail: sesConfig?.fromEmail || '', fromName: sesConfig?.fromName || '' }); setSesFormOpen(true) }} className="text-brand hover:underline">Update</button><button onClick={() => { setConns((c) => ({ ...c, ses: false })); notify('Disconnected Amazon SES', 'error') }} className="text-slate-400 hover:text-rose-500">Disconnect</button></div>
                         </div>
                       ) : (
                         <button onClick={() => { setSesForm({ label: '', accessKeyId: '', secret: '', region: '', fromEmail: '', fromName: '' }); setSesFormOpen(true) }} className="rounded-full bg-orange-50 px-4 py-1.5 text-sm font-semibold text-brand transition hover:bg-orange-100">Connect Amazon SES</button>
