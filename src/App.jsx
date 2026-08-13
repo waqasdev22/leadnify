@@ -12397,8 +12397,10 @@ function EmailBlastPage({ user, onNavigate }) {
   const [sesFormOpen, setSesFormOpen] = useState(false)
   const [sesForm, setSesForm] = useState({ label: '', accessKeyId: '', secret: '', region: '', fromEmail: '', fromName: '' })
   const [sesConfig, setSesConfig] = usePersistentState('email_ses', null) // non-secret display info only
-  const [signature, setSignature] = usePersistentState('email_signature', '')
+  const [signature, setSignature] = usePersistentState('email_signature', '') // SAVED signature (shown in preview)
   const [signatureLogo, setSignatureLogo] = usePersistentState('email_signature_logo', '')
+  const [sigDraft, setSigDraft] = useState(signature) // live-editing draft; committed to saved on Save
+  const [sigLogoDraft, setSigLogoDraft] = useState(signatureLogo)
   const [useSignature, setUseSignature] = usePersistentState('email_use_signature', false)
   const [socialConns, setSocialConns] = usePersistentState('email_social', {})
   const drafts = campaigns.filter((c) => c.status === 'Draft')
@@ -12478,7 +12480,7 @@ function EmailBlastPage({ user, onNavigate }) {
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900">Integrations</h1>
           <p className="text-sm text-slate-500">Connect your email service to send marketing blasts, and your social accounts to post listings — all from any completed document.</p>
-          <p className="mt-1 text-sm text-slate-500">On a direct SES send, recipients come straight from your <button onClick={() => onNavigate && onNavigate('crm')} className="font-semibold text-brand hover:underline">CRM</button> — filter by tag, pipeline stage, or the buyers whose buy-box fits a listing (Mailchimp uses its own audience). New to this? Read the <button onClick={() => notify('Email Blast guide — coming soon')} className="font-semibold text-brand">Email Blast guide</button>.</p>
+          <p className="mt-1 text-sm text-slate-500">On a direct SES send, recipients come straight from your <button onClick={() => onNavigate && onNavigate('crm')} className="font-semibold text-brand hover:underline">CRM</button> — filter by tag, pipeline stage, or the buyers whose buy-box fits a listing (Mailchimp uses its own audience). New to this? Read the <span className="font-semibold text-brand">Email Blast guide</span>.</p>
         </div>
 
         {/* MyCREBlueprint Mail (coming soon) */}
@@ -12528,7 +12530,7 @@ function EmailBlastPage({ user, onNavigate }) {
                       ) : on ? (
                         <div>
                           <p className="text-xs text-slate-400">{sesConfig?.label || 'Amazon SES'} · connected {connDates.ses || new Date().toLocaleDateString('en-GB')}{sesConfig?.region ? ` · ${sesConfig.region}` : ''}</p>
-                          <div className="mt-1.5 flex items-center gap-4 text-sm font-semibold"><button onClick={() => { setSesForm({ label: sesConfig?.label || '', accessKeyId: '', secret: '', region: sesConfig?.region || '', fromEmail: sesConfig?.fromEmail || '', fromName: sesConfig?.fromName || '' }); setSesFormOpen(true) }} className="text-brand hover:underline">Reconnect</button><button onClick={() => { setConns((c) => ({ ...c, ses: false })); notify('Disconnected Amazon SES', 'error') }} className="text-slate-400 hover:text-rose-500">Disconnect</button></div>
+                          <div className="mt-1.5 flex items-center gap-4 text-sm font-semibold"><button onClick={() => { setSesForm({ label: sesConfig?.label || '', accessKeyId: '', secret: '', region: sesConfig?.region || '', fromEmail: sesConfig?.fromEmail || '', fromName: sesConfig?.fromName || '' }); setSesFormOpen(true) }} className="text-brand hover:underline">Update</button><button onClick={() => { setConns((c) => ({ ...c, ses: false })); notify('Disconnected Amazon SES', 'error') }} className="text-slate-400 hover:text-rose-500">Disconnect</button></div>
                         </div>
                       ) : (
                         <button onClick={() => { setSesForm({ label: '', accessKeyId: '', secret: '', region: '', fromEmail: '', fromName: '' }); setSesFormOpen(true) }} className="rounded-full bg-orange-50 px-4 py-1.5 text-sm font-semibold text-brand transition hover:bg-orange-100">Connect Amazon SES</button>
@@ -12572,19 +12574,19 @@ function EmailBlastPage({ user, onNavigate }) {
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div className="flex items-start gap-3">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-brand"><Pencil className="h-4 w-4" /></span>
-              <div><p className="text-sm font-bold text-slate-900">Email signature</p><p className="max-w-xl text-xs text-slate-400">Added to the bottom of every email blast you send. Paste your signature straight out of Gmail or Outlook — common tables, logos and links are preserved.</p></div>
+              <div><p className="text-sm font-bold text-slate-900">Email signature</p><p className="max-w-xl text-sm text-slate-400">Added to the bottom of every email blast you send. Paste your signature straight out of Gmail or Outlook — common tables, logos and links are preserved.</p></div>
             </div>
             <label className="inline-flex items-center gap-1.5 text-sm text-slate-600"><input type="checkbox" checked={useSignature} onChange={(e) => setUseSignature(e.target.checked)} className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-orange-400" /> Use it</label>
           </div>
           <label className="mt-4 block text-xs font-semibold text-slate-500">Signature</label>
-          <textarea value={signature} onChange={(e) => setSignature(e.target.value)} rows={4} placeholder="Your Name | Broker | mycreblueprint.com | 555-000-0000" className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" />
+          <textarea value={sigDraft} onChange={(e) => setSigDraft(e.target.value)} rows={4} placeholder="Your Name | Broker | mycreblueprint.com | 555-000-0000" className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" />
           <label className="mt-3 block text-xs font-semibold text-slate-500">Logo URL (optional)</label>
-          <input value={signatureLogo} onChange={(e) => setSignatureLogo(e.target.value)} placeholder="https://.../logo.png" className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" />
+          <input value={sigLogoDraft} onChange={(e) => setSigLogoDraft(e.target.value)} placeholder="https://.../logo.png" className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" />
           <p className="mt-1 text-xs text-slate-400">Must be a public http(s) image link — mail clients can't read an uploaded file.</p>
           <div className="mt-3 flex items-center gap-2">
-            <button onClick={() => notify('Signature saved')} className="rounded-lg bg-brand px-4 py-2 text-sm font-bold text-white transition hover:bg-orange-600">Save signature</button>
-            {(signature || signatureLogo) && (
-              <button onClick={() => { setSignature(''); setSignatureLogo(''); setUseSignature(false); notify('Signature deleted', 'error') }} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-4 w-4" /> Delete</button>
+            <button onClick={() => { setSignature(sigDraft); setSignatureLogo(sigLogoDraft); notify(sigDraft || sigLogoDraft ? 'Signature saved' : 'Signature cleared') }} className="rounded-lg bg-brand px-4 py-2 text-sm font-bold text-white transition hover:bg-orange-600">Save signature</button>
+            {(sigDraft || sigLogoDraft || signature || signatureLogo) && (
+              <button onClick={() => { setSigDraft(''); setSigLogoDraft(''); setSignature(''); setSignatureLogo(''); setUseSignature(false); notify('Signature deleted', 'error') }} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-4 w-4" /> Delete</button>
             )}
           </div>
           {(signature || signatureLogo) && (
