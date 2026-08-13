@@ -12350,14 +12350,22 @@ const EMAIL_OAUTH = {
     extra: {},
   },
 }
+// Opens the provider's sign-in in a POPUP so the main dashboard never reloads.
+// Returns the popup window (poll .closed), 'redirect' if popups were blocked (full redirect),
+// or false if no client ID is configured (caller falls back to the demo connect).
 function beginOAuth(providerKey) {
   const cfg = EMAIL_OAUTH[providerKey]
   if (!cfg || !cfg.clientId) return false
   const base = { client_id: cfg.clientId, redirect_uri: window.location.origin, response_type: 'code', state: providerKey, ...cfg.extra }
   if (cfg.scope) base.scope = cfg.scope
-  const params = new URLSearchParams(base)
-  window.location.href = `${cfg.authorize}?${params.toString()}`
-  return true
+  const url = `${cfg.authorize}?${new URLSearchParams(base).toString()}`
+  const w = 600, h = 720
+  const left = window.screenX + Math.max(0, (window.outerWidth - w) / 2)
+  const top = window.screenY + Math.max(0, (window.outerHeight - h) / 2)
+  const popup = window.open(url, 'oauth_connect', `width=${w},height=${h},left=${left},top=${top}`)
+  if (!popup) { window.location.href = url; return 'redirect' } // popups blocked → full redirect
+  popup.focus && popup.focus()
+  return popup
 }
 
 const EMAIL_CAMPAIGNS_SEED = []
@@ -12427,12 +12435,19 @@ function EmailBlastPage({ user, onNavigate }) {
     // Otherwise, authorize the demo connection.
     setTimeout(() => { setConnected(p, true); setConnecting(false); setConnectTarget(null); notify(`Connected ${p.name}`, 'success') }, 900)
   }
-  // Connect directly (no confirm popup): show "Opening…" briefly, then open the provider / connect.
+  // Connect directly (no confirm popup): show "Opening…" briefly, then open the provider in a
+  // popup (dashboard never reloads) or connect. The message listener below finishes the connect.
   const startConnect = (p) => {
     if (openingKey) return
     setOpeningKey(p.key)
     setTimeout(() => {
-      if (beginOAuth(p.key)) return // redirects away to the real provider sign-in
+      const res = beginOAuth(p.key)
+      if (res === 'redirect') return // full-page redirect fallback (navigates away)
+      if (res) { // popup window opened — reset the button if the user closes it without authorizing
+        const iv = setInterval(() => { if (res.closed) { clearInterval(iv); setOpeningKey((k) => (k === p.key ? null : k)) } }, 500)
+        return
+      }
+      // No client ID configured → demo connect.
       setConnected(p, true)
       setOpeningKey(null)
       notify(`Connected ${p.name}`, 'success')
@@ -12469,6 +12484,22 @@ function EmailBlastPage({ user, onNavigate }) {
       notify(`Connected ${EMAIL_PROVIDERS.find((x) => x.key === state)?.name || state}`, 'success')
       const url = new URL(window.location.href); url.searchParams.delete('code'); url.searchParams.delete('state'); url.searchParams.delete('scope'); window.history.replaceState({}, '', url.pathname + url.search)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  // Finish a popup-based connect: the popup posts the code back here — no page reload.
+  useEffect(() => {
+    const onMsg = (e) => {
+      if (e.origin !== window.location.origin) return
+      const d = e.data
+      if (d && d.type === 'oauth-connect' && d.state && EMAIL_OAUTH[d.state]) {
+        setConns((c) => ({ ...c, [d.state]: true }))
+        setConnDates((dd) => ({ ...dd, [d.state]: new Date().toLocaleDateString('en-GB') }))
+        setOpeningKey(null)
+        notify(`Connected ${EMAIL_PROVIDERS.find((x) => x.key === d.state)?.name || d.state}`, 'success')
+      }
+    }
+    window.addEventListener('message', onMsg)
+    return () => window.removeEventListener('message', onMsg)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   const startBlast = () => setPickerOpen(true)

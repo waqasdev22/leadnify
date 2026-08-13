@@ -13,7 +13,22 @@ import './index.css'
 // work in any new tab.
 const params = new URLSearchParams(window.location.search)
 
-if (params.get('hub') !== null) {
+// OAuth popup callback: when a "Connect" popup returns here with ?code&state and it was
+// opened by the dashboard, hand the code back to the opener and close — the main window
+// never reloads. (Only runs inside the popup, i.e. when window.opener exists.)
+if (params.get('code') !== null && params.get('state') !== null && window.opener && !window.opener.closed) {
+  try {
+    window.opener.postMessage(
+      { type: 'oauth-connect', code: params.get('code'), state: params.get('state') },
+      window.location.origin,
+    )
+  } catch (e) {
+    /* ignore */
+  }
+  document.body.style.cssText = 'display:flex;align-items:center;justify-content:center;font-family:Inter,sans-serif;color:#64748b'
+  document.body.textContent = 'Connected — you can close this window.'
+  window.close()
+} else if (params.get('hub') !== null) {
   let saved = null
   try {
     saved = JSON.parse(localStorage.getItem('crebuilder_hub') || 'null')
