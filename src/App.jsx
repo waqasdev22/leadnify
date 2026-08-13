@@ -12588,10 +12588,10 @@ function EmailBlastPage({ user, onNavigate }) {
                     ) : on ? (
                       <div>
                         <p className="text-xs text-slate-400">{p.name} · connected {connDates[p.key] || new Date().toLocaleDateString('en-GB')}</p>
-                        <div className="mt-1.5 flex items-center gap-4 text-sm font-semibold"><button disabled={openingKey === p.key} onClick={() => startConnect(p)} className="text-brand hover:underline disabled:opacity-70">{openingKey === p.key ? 'Redirecting…' : 'Reconnect'}</button><button onClick={() => disconnect(p)} className="text-slate-400 hover:text-rose-500">Disconnect</button></div>
+                        <div className="mt-1.5 flex items-center gap-4 text-sm font-semibold"><button disabled={openingKey === p.key} onClick={() => startConnect(p)} className="text-brand hover:underline disabled:opacity-70">{openingKey === p.key ? 'Opening…' : 'Reconnect'}</button><button onClick={() => disconnect(p)} className="text-slate-400 hover:text-rose-500">Disconnect</button></div>
                       </div>
                     ) : (
-                      <button disabled={openingKey === p.key} onClick={() => startConnect(p)} className="rounded-full bg-orange-50 px-4 py-1.5 text-sm font-semibold text-brand transition hover:bg-orange-100 disabled:opacity-70">{openingKey === p.key ? 'Redirecting…' : `Connect ${p.name}`}</button>
+                      <button disabled={openingKey === p.key} onClick={() => startConnect(p)} className="rounded-full bg-orange-50 px-4 py-1.5 text-sm font-semibold text-brand transition hover:bg-orange-100 disabled:opacity-70">{openingKey === p.key ? 'Opening…' : `Connect ${p.name}`}</button>
                     )}
                   </div>
                   {EMAIL_INTEGRATION_INFO[p.key]?.foot && !on && <p className="mt-2 text-xs text-slate-400">{EMAIL_INTEGRATION_INFO[p.key].foot}</p>}
@@ -12691,7 +12691,7 @@ function EmailBlastPage({ user, onNavigate }) {
                     <button onClick={() => disconnect(p)} className="text-xs font-medium text-slate-400 hover:text-rose-500">Disconnect</button>
                   </div>
                 ) : (
-                  <button disabled={openingKey === p.key} onClick={() => startConnect(p)} className="rounded-full bg-orange-50 px-4 py-1 text-sm font-semibold text-brand transition hover:bg-orange-100 disabled:opacity-70">{openingKey === p.key ? 'Redirecting…' : 'Connect'}</button>
+                  <button disabled={openingKey === p.key} onClick={() => startConnect(p)} className="rounded-full bg-orange-50 px-4 py-1 text-sm font-semibold text-brand transition hover:bg-orange-100 disabled:opacity-70">{openingKey === p.key ? 'Opening…' : 'Connect'}</button>
                 )}
               </div>
             </div>
