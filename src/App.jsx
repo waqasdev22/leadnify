@@ -12298,12 +12298,11 @@ const AwsLogo = (props) => (
 )
 const MailchimpLogo = (props) => (
   <svg viewBox="0 0 32 32" {...props}>
-    <circle cx="8.5" cy="12.5" r="2.8" fill="#241c15" />
-    <circle cx="23.5" cy="12.5" r="2.8" fill="#241c15" />
-    <ellipse cx="16" cy="17.5" rx="9" ry="8.5" fill="#241c15" />
-    <circle cx="12.6" cy="15.5" r="1.7" fill="#fff" /><circle cx="12.6" cy="15.5" r="0.8" fill="#241c15" />
-    <circle cx="19.4" cy="15.5" r="1.7" fill="#fff" /><circle cx="19.4" cy="15.5" r="0.8" fill="#241c15" />
-    <path d="M12.5 20.5q3.5 2.6 7 0" stroke="#ffe01b" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+    <path d="M14.6 6.2c0.4-1.4 2.2-1.4 2.6 0" stroke="#241c15" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+    <ellipse cx="16" cy="18" rx="9.5" ry="9" fill="#241c15" />
+    <circle cx="12.4" cy="16" r="1.7" fill="#fff" /><circle cx="12.4" cy="16" r="0.85" fill="#241c15" />
+    <path d="M18.2 16.2h2.8" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" />
+    <path d="M12.4 21q3.6 2.4 7.2 0" stroke="#ffe01b" strokeWidth="1.5" fill="none" strokeLinecap="round" />
   </svg>
 )
 const ConstantContactLogo = (props) => (
@@ -12381,7 +12380,7 @@ function BuildingsIcon(props) {
   )
 }
 
-function EmailBlastPage({ user }) {
+function EmailBlastPage({ user, onNavigate }) {
   const notify = useToast()
   const [conns, setConns] = usePersistentState('email_conns', {})
   const [campaigns, setCampaigns] = usePersistentState('email_campaigns', EMAIL_CAMPAIGNS_SEED)
@@ -12478,7 +12477,8 @@ function EmailBlastPage({ user }) {
         <button onClick={() => setIntegrationsOpen(false)} className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:underline"><ArrowLeft className="h-4 w-4" /> Email Blasts</button>
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900">Integrations</h1>
-          <p className="text-sm text-slate-500">Connect your email account to send marketing blasts, and your social accounts to post listings — all from your completed documents.</p>
+          <p className="text-sm text-slate-500">Connect your email service to send marketing blasts, and your social accounts to post listings — all from any completed document.</p>
+          <p className="mt-1 text-sm text-slate-500">On a direct SES send, recipients come straight from your <button onClick={() => onNavigate && onNavigate('crm')} className="font-semibold text-brand hover:underline">CRM</button> — filter by tag, pipeline stage, or the buyers whose buy-box fits a listing (Mailchimp uses its own audience). New to this? Read the <button onClick={() => notify('Email Blast guide — coming soon')} className="font-semibold text-brand">Email Blast guide</button>.</p>
         </div>
 
         {/* MyCREBlueprint Mail (coming soon) */}
@@ -13662,7 +13662,7 @@ export default function App() {
       case 'crm':
         return <CRMPage user={user} onNavigate={navigate} />
       case 'email':
-        return <EmailBlastPage user={user} />
+        return <EmailBlastPage user={user} onNavigate={navigate} />
       case 'templates':
         return <PlaceholderPage label="Custom Templates" icon={Wand2} />
       case 'knowledge':
