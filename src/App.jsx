@@ -150,6 +150,7 @@ import {
   Feather,
   Loader2,
   MousePointerClick,
+  Instagram,
   Calendar,
   Library,
   Car,
@@ -12392,6 +12393,11 @@ function EmailBlastPage({ user }) {
   const [tourStep, setTourStep] = useState(-1) // -1 = closed, 0..3 = step
   const [tourPos, setTourPos] = useState(null) // {top,left} when anchored below a target
   const tourCardRef = useRef(null)
+  const [integrationsOpen, setIntegrationsOpen] = useState(false)
+  const [signature, setSignature] = usePersistentState('email_signature', '')
+  const [signatureLogo, setSignatureLogo] = usePersistentState('email_signature_logo', '')
+  const [useSignature, setUseSignature] = usePersistentState('email_use_signature', false)
+  const [socialConns, setSocialConns] = usePersistentState('email_social', {})
   const drafts = campaigns.filter((c) => c.status === 'Draft')
   const sent = campaigns.filter((c) => c.status === 'Sent')
 
@@ -12452,6 +12458,89 @@ function EmailBlastPage({ user }) {
 
   return (
     <div className="mx-auto max-w-[1000px] p-6">
+      {integrationsOpen ? (
+      <div className="space-y-6">
+        <button onClick={() => setIntegrationsOpen(false)} className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:underline"><ArrowLeft className="h-4 w-4" /> Email Blasts</button>
+        <div>
+          <h1 className="text-2xl font-extrabold text-slate-900">Integrations</h1>
+          <p className="text-sm text-slate-500">Connect your email account to send marketing blasts, and your social accounts to post listings — all from your completed documents.</p>
+        </div>
+
+        {/* MyCREBlueprint Mail (coming soon) */}
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-start gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-brand"><Send className="h-5 w-5" /></span>
+            <div className="min-w-0 flex-1">
+              <p className="flex flex-wrap items-center gap-2 text-sm font-bold text-slate-900">MyCREBlueprint Mail — direct send <span className="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Coming soon</span></p>
+              <p className="mt-0.5 text-sm text-slate-500">Send property emails straight from your own domain — no Mailchimp, Gmail, or AWS account to connect. You'll add three DNS records and your mail goes out as you. Until then, use one of the services below.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Email services */}
+        <div>
+          <p className="text-sm font-bold text-slate-900">Email services</p>
+          <p className="text-xs text-slate-400">Or connect an account you already have. Most brokers use Mailchimp.</p>
+          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+            {EMAIL_PROVIDERS.filter((p) => p.key !== 'download').map((p) => {
+              const on = conns[p.key]
+              const Icon = p.icon
+              return (
+                <div key={p.key} className="flex flex-col rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${p.tile}`}><Icon className="h-5 w-5" /></span>
+                      <div><p className="text-sm font-bold text-slate-900">{p.name}{p.action === 'setup' && <span className="ml-1.5 text-xs font-normal text-slate-400">(Advanced)</span>}</p><p className="text-xs text-slate-400">{p.sub}</p></div>
+                    </div>
+                    {on && <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">Connected</span>}
+                  </div>
+                  <div className="mt-3">
+                    {on ? (
+                      <div className="flex items-center gap-4 text-sm font-semibold"><button onClick={() => setConnectTarget(p)} className="text-brand hover:underline">Reconnect</button><button onClick={() => disconnect(p)} className="text-slate-400 hover:text-rose-500">Disconnect</button></div>
+                    ) : (
+                      <button onClick={() => setConnectTarget(p)} className="rounded-full bg-orange-50 px-4 py-1.5 text-sm font-semibold text-brand transition hover:bg-orange-100">Connect {p.name}</button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Social accounts */}
+        <div>
+          <p className="text-sm font-bold text-slate-900">Social accounts</p>
+          <p className="text-xs text-slate-400">Connect your own profiles to post listings directly from the Share to Social wizard.</p>
+          <div className="mt-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:max-w-sm">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-pink-500 to-orange-400 text-white"><Instagram className="h-5 w-5" /></span>
+              <div className="min-w-0 flex-1"><p className="text-sm font-bold text-slate-900">Instagram</p><p className="text-xs text-slate-400">Post a carousel or Story to your Instagram business account.</p></div>
+            </div>
+            <div className="mt-3">
+              {socialConns.instagram ? (
+                <div className="flex items-center gap-3 text-sm font-semibold"><span className="rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-700">Connected</span><button onClick={() => { setSocialConns((s) => ({ ...s, instagram: false })); notify('Disconnected Instagram', 'error') }} className="text-slate-400 hover:text-rose-500">Disconnect</button></div>
+              ) : (
+                <button onClick={() => { setSocialConns((s) => ({ ...s, instagram: true })); notify('Connected Instagram') }} className="rounded-full bg-orange-50 px-4 py-1.5 text-sm font-semibold text-brand transition hover:bg-orange-100">Connect Instagram</button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Email signature */}
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div><p className="text-sm font-bold text-slate-900">Email signature</p><p className="text-xs text-slate-400">Added to the bottom of every email blast you send.</p></div>
+            <label className="inline-flex items-center gap-1.5 text-sm text-slate-600"><input type="checkbox" checked={useSignature} onChange={(e) => setUseSignature(e.target.checked)} className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-orange-400" /> Use it</label>
+          </div>
+          <label className="mt-3 block text-xs font-semibold text-slate-500">Signature</label>
+          <textarea value={signature} onChange={(e) => setSignature(e.target.value)} rows={4} placeholder="Your Name | Broker | mycreblueprint.com | 555-000-0000" className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" />
+          <label className="mt-3 block text-xs font-semibold text-slate-500">Logo URL (optional)</label>
+          <input value={signatureLogo} onChange={(e) => setSignatureLogo(e.target.value)} placeholder="https://.../logo.png" className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" />
+          <div className="mt-3"><button onClick={() => notify('Signature saved')} className="rounded-lg bg-brand px-4 py-2 text-sm font-bold text-white transition hover:bg-orange-600">Save signature</button></div>
+        </div>
+      </div>
+      ) : (
+      <>
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
@@ -12468,7 +12557,7 @@ function EmailBlastPage({ user }) {
       <div data-tour-target="2" className={`mt-7 ${tourHi(2)} ${tourStep === 2 ? 'bg-white p-4' : ''}`}>
       <div className="flex items-center justify-between">
         <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-500"><Send className="h-3.5 w-3.5" /> Send with</p>
-        <button onClick={() => notify('Manage integrations — demo')} className="text-xs font-semibold text-brand hover:underline">Manage in Integrations →</button>
+        <button onClick={() => setIntegrationsOpen(true)} className="text-xs font-semibold text-brand hover:underline">Manage in Integrations →</button>
       </div>
       <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {EMAIL_PROVIDERS.map((p) => {
@@ -12549,6 +12638,8 @@ function EmailBlastPage({ user }) {
             </table>
           </div>
         </div>
+      )}
+      </>
       )}
 
       {/* Guided tour */}
