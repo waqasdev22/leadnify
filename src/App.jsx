@@ -12857,9 +12857,12 @@ function EmailBlastPage({ user, onNavigate }) {
             <div className="mt-4"><label className="mb-1 block text-xs font-semibold text-slate-500">Audience</label><select value={form.audience} onChange={(e) => setForm((f) => ({ ...f, audience: e.target.value }))} className={inputCls}>{EMAIL_AUDIENCES.map((a) => <option key={a}>{a} ({audienceCounts[a].toLocaleString()})</option>)}</select></div>
             <div className="mt-3"><label className="mb-1 block text-xs font-semibold text-slate-500">Subject</label><input value={form.subject} onChange={(e) => setForm((f) => ({ ...f, subject: e.target.value }))} placeholder="e.g. New Off-Market Retail Opportunity" className={inputCls} /></div>
             <div className="mt-3"><label className="mb-1 block text-xs font-semibold text-slate-500">Message</label><textarea value={form.body} onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))} rows={6} placeholder="Write your email…" className={`${inputCls} resize-y`} /></div>
-            <div className="mt-4 flex justify-end gap-2">
-              <button onClick={() => saveOrSend(true)} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Save draft</button>
-              <PrimaryButton icon={Send} onClick={() => saveOrSend(false)}>Send blast</PrimaryButton>
+            <div className="mt-4 flex items-center justify-between gap-2">
+              <p className="text-xs text-slate-400">{form.type === 'multi' ? 'Multi-property sending is coming soon — save it as a draft for now.' : ''}</p>
+              <div className="flex gap-2">
+                <button onClick={() => saveOrSend(true)} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Save draft</button>
+                <button disabled={form.type === 'multi'} onClick={() => saveOrSend(false)} title={form.type === 'multi' ? 'Coming soon for multi-property' : ''} className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-bold text-white transition ${form.type === 'multi' ? 'cursor-not-allowed bg-orange-300' : 'bg-brand hover:bg-orange-600'}`}><Send className="h-4 w-4" /> Send blast</button>
+              </div>
             </div>
           </div>
         </div>
