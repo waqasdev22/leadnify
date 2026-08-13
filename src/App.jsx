@@ -12270,12 +12270,53 @@ function CRMPage({ user, onNavigate }) {
 /*  Email Blasts                                                               */
 /* -------------------------------------------------------------------------- */
 
+// Brand-style provider marks (inline SVG) for the "Send with" integration cards.
+const GmailLogo = (props) => (
+  <svg viewBox="0 0 48 48" {...props}>
+    <path fill="#4caf50" d="M45 16.2l-5 2.75-5 4.75L35 40h7c1.657 0 3-1.343 3-3V16.2z" />
+    <path fill="#1e88e5" d="M3 16.2l3.614 1.71L13 23.7V40H6c-1.657 0-3-1.343-3-3V16.2z" />
+    <polygon fill="#e53935" points="35,11.2 24,19.45 13,11.2 12,17 13,23.7 24,31.95 35,23.7 36,17" />
+    <path fill="#c62828" d="M3 12.298V16.2l10 7.5V11.2L9.876 8.859C9.132 8.301 8.228 8 7.298 8 4.924 8 3 9.924 3 12.298z" />
+    <path fill="#fbc02d" d="M45 12.298V16.2l-10 7.5V11.2l3.124-2.341C38.868 8.301 39.772 8 40.702 8 43.076 8 45 9.924 45 12.298z" />
+  </svg>
+)
+const OutlookLogo = (props) => (
+  <svg viewBox="0 0 32 32" fill="none" {...props}>
+    <rect x="13" y="10" width="15" height="12.5" rx="1.4" fill="#fff" />
+    <path d="M13.6 11.4L20.5 16.4l6.9-5" stroke="#0a4a8f" strokeWidth="1.6" />
+    <ellipse cx="9.6" cy="16" rx="7.6" ry="8.6" fill="#0a4a8f" />
+    <ellipse cx="9.6" cy="16" rx="3.1" ry="4.1" fill="#fff" />
+  </svg>
+)
+const AwsLogo = (props) => (
+  <svg viewBox="0 0 48 30" {...props}>
+    <text x="24" y="15" textAnchor="middle" fontSize="13" fontWeight="700" fill="#fff" fontFamily="Arial, sans-serif">aws</text>
+    <path d="M10 21c8 4 20 4 28 0" stroke="#ff9900" strokeWidth="2.6" fill="none" strokeLinecap="round" />
+    <path d="M35 20.5l3.2 0.6-1.6 2.8z" fill="#ff9900" />
+  </svg>
+)
+const MailchimpLogo = (props) => (
+  <svg viewBox="0 0 32 32" {...props}>
+    <circle cx="8.5" cy="12.5" r="2.8" fill="#241c15" />
+    <circle cx="23.5" cy="12.5" r="2.8" fill="#241c15" />
+    <ellipse cx="16" cy="17.5" rx="9" ry="8.5" fill="#241c15" />
+    <circle cx="12.6" cy="15.5" r="1.7" fill="#fff" /><circle cx="12.6" cy="15.5" r="0.8" fill="#241c15" />
+    <circle cx="19.4" cy="15.5" r="1.7" fill="#fff" /><circle cx="19.4" cy="15.5" r="0.8" fill="#241c15" />
+    <path d="M12.5 20.5q3.5 2.6 7 0" stroke="#ffe01b" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+  </svg>
+)
+const ConstantContactLogo = (props) => (
+  <svg viewBox="0 0 32 32" fill="none" {...props}>
+    <path d="M7 21c1.5-8 9-12 18-10-5 0-9 2.5-11 7 3-1.5 6-1.5 9 .5-4 4.5-11 6-16 2.5z" fill="#fff" />
+  </svg>
+)
+
 const EMAIL_PROVIDERS = [
-  { key: 'mailchimp', name: 'Mailchimp', sub: 'Draft campaigns in your account', account: 'you@mailchimp.com', action: 'connect', tile: 'bg-yellow-400 text-slate-900', icon: Mail },
-  { key: 'constant', name: 'Constant Contact', sub: 'Draft campaigns in your account', account: 'you@constantcontact.com', action: 'connect', tile: 'bg-blue-500 text-white', icon: Feather },
-  { key: 'ses', name: 'Amazon SES', sub: 'Send direct from your AWS', account: 'AWS SES', action: 'setup', tile: 'bg-slate-900 text-amber-400', icon: Cloud },
-  { key: 'gmail', name: 'Gmail', sub: 'Send from your Gmail', account: 'you@gmail.com', action: 'connect', tile: 'bg-white ring-1 ring-slate-200 text-rose-500', icon: Mail },
-  { key: 'outlook', name: 'Outlook', sub: 'Send from your Outlook', account: 'you@outlook.com', action: 'connect', tile: 'bg-blue-600 text-white', icon: Mail },
+  { key: 'mailchimp', name: 'Mailchimp', sub: 'Draft campaigns in your account', account: 'you@mailchimp.com', action: 'connect', tile: 'bg-yellow-400', icon: MailchimpLogo },
+  { key: 'constant', name: 'Constant Contact', sub: 'Draft campaigns in your account', account: 'you@constantcontact.com', action: 'connect', tile: 'bg-blue-500', icon: ConstantContactLogo },
+  { key: 'ses', name: 'Amazon SES', sub: 'Send direct from your AWS', account: 'AWS SES', action: 'setup', tile: 'bg-slate-900', icon: AwsLogo },
+  { key: 'gmail', name: 'Gmail', sub: 'Send from your Gmail', account: 'you@gmail.com', action: 'connect', tile: 'bg-white ring-1 ring-slate-200', icon: GmailLogo },
+  { key: 'outlook', name: 'Outlook', sub: 'Send from your Outlook', account: 'you@outlook.com', action: 'connect', tile: 'bg-blue-600', icon: OutlookLogo },
   { key: 'download', name: 'Download HTML', sub: 'Use any email program', account: '', action: 'ready', tile: 'bg-slate-800 text-white', icon: Download },
 ]
 
