@@ -12389,6 +12389,7 @@ function EmailBlastPage({ user, onNavigate }) {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [connectTarget, setConnectTarget] = useState(null)
   const [connecting, setConnecting] = useState(false)
+  const [openingKey, setOpeningKey] = useState(null)
   const [tourStep, setTourStep] = useState(-1) // -1 = closed, 0..3 = step
   const [tourPos, setTourPos] = useState(null) // {top,left} when anchored below a target
   const tourCardRef = useRef(null)
@@ -12425,6 +12426,17 @@ function EmailBlastPage({ user, onNavigate }) {
     if (beginOAuth(p.key)) return
     // Otherwise, authorize the demo connection.
     setTimeout(() => { setConnected(p, true); setConnecting(false); setConnectTarget(null); notify(`Connected ${p.name}`, 'success') }, 900)
+  }
+  // Connect directly (no confirm popup): show "Opening…" briefly, then open the provider / connect.
+  const startConnect = (p) => {
+    if (openingKey) return
+    setOpeningKey(p.key)
+    setTimeout(() => {
+      if (beginOAuth(p.key)) return // redirects away to the real provider sign-in
+      setConnected(p, true)
+      setOpeningKey(null)
+      notify(`Connected ${p.name}`, 'success')
+    }, 900)
   }
   // Anchor the tour card to the highlighted target (step 0 stays centered).
   useEffect(() => {
@@ -12538,10 +12550,10 @@ function EmailBlastPage({ user, onNavigate }) {
                     ) : on ? (
                       <div>
                         <p className="text-xs text-slate-400">{p.name} · connected {connDates[p.key] || new Date().toLocaleDateString('en-GB')}</p>
-                        <div className="mt-1.5 flex items-center gap-4 text-sm font-semibold"><button onClick={() => setConnectTarget(p)} className="text-brand hover:underline">Reconnect</button><button onClick={() => disconnect(p)} className="text-slate-400 hover:text-rose-500">Disconnect</button></div>
+                        <div className="mt-1.5 flex items-center gap-4 text-sm font-semibold"><button disabled={openingKey === p.key} onClick={() => startConnect(p)} className="text-brand hover:underline disabled:opacity-70">{openingKey === p.key ? 'Opening…' : 'Reconnect'}</button><button onClick={() => disconnect(p)} className="text-slate-400 hover:text-rose-500">Disconnect</button></div>
                       </div>
                     ) : (
-                      <button onClick={() => setConnectTarget(p)} className="rounded-full bg-orange-50 px-4 py-1.5 text-sm font-semibold text-brand transition hover:bg-orange-100">Connect {p.name}</button>
+                      <button disabled={openingKey === p.key} onClick={() => startConnect(p)} className="rounded-full bg-orange-50 px-4 py-1.5 text-sm font-semibold text-brand transition hover:bg-orange-100 disabled:opacity-70">{openingKey === p.key ? 'Opening…' : `Connect ${p.name}`}</button>
                     )}
                   </div>
                 </div>
@@ -12640,7 +12652,7 @@ function EmailBlastPage({ user, onNavigate }) {
                     <button onClick={() => disconnect(p)} className="text-xs font-medium text-slate-400 hover:text-rose-500">Disconnect</button>
                   </div>
                 ) : (
-                  <button onClick={() => setConnectTarget(p)} className="rounded-full bg-orange-50 px-4 py-1 text-sm font-semibold text-brand transition hover:bg-orange-100">Connect</button>
+                  <button disabled={openingKey === p.key} onClick={() => startConnect(p)} className="rounded-full bg-orange-50 px-4 py-1 text-sm font-semibold text-brand transition hover:bg-orange-100 disabled:opacity-70">{openingKey === p.key ? 'Opening…' : 'Connect'}</button>
                 )}
               </div>
             </div>
