@@ -12359,9 +12359,13 @@ function beginOAuth(providerKey) {
   const base = { client_id: cfg.clientId, redirect_uri: window.location.origin, response_type: 'code', state: providerKey, ...cfg.extra }
   if (cfg.scope) base.scope = cfg.scope
   const url = `${cfg.authorize}?${new URLSearchParams(base).toString()}`
-  const w = 600, h = 720
-  const left = window.screenX + Math.max(0, (window.outerWidth - w) / 2)
-  const top = window.screenY + Math.max(0, (window.outerHeight - h) / 2)
+  // Large, near-full-screen popup so it feels like a full window (but stays a popup → no reload).
+  const sw = window.screen.availWidth || window.innerWidth
+  const sh = window.screen.availHeight || window.innerHeight
+  const w = Math.min(1100, Math.floor(sw * 0.92))
+  const h = Math.min(900, Math.floor(sh * 0.92))
+  const left = Math.max(0, Math.floor((sw - w) / 2))
+  const top = Math.max(0, Math.floor((sh - h) / 2))
   const popup = window.open(url, 'oauth_connect', `width=${w},height=${h},left=${left},top=${top}`)
   if (!popup) { window.location.href = url; return 'redirect' } // popups blocked → full redirect
   popup.focus && popup.focus()
