@@ -12394,6 +12394,7 @@ function EmailBlastPage({ user }) {
   const [tourPos, setTourPos] = useState(null) // {top,left} when anchored below a target
   const tourCardRef = useRef(null)
   const [integrationsOpen, setIntegrationsOpen] = useState(false)
+  const [connDates, setConnDates] = usePersistentState('email_conn_dates', {})
   const [signature, setSignature] = usePersistentState('email_signature', '')
   const [signatureLogo, setSignatureLogo] = usePersistentState('email_signature_logo', '')
   const [useSignature, setUseSignature] = usePersistentState('email_use_signature', false)
@@ -12401,7 +12402,7 @@ function EmailBlastPage({ user }) {
   const drafts = campaigns.filter((c) => c.status === 'Draft')
   const sent = campaigns.filter((c) => c.status === 'Sent')
 
-  const setConnected = (p, on) => setConns((c) => ({ ...c, [p.key]: on }))
+  const setConnected = (p, on) => { setConns((c) => ({ ...c, [p.key]: on })); if (on) setConnDates((d) => ({ ...d, [p.key]: new Date().toLocaleDateString('en-GB') })) }
   const disconnect = (p) => { setConnected(p, false); notify(`Disconnected ${p.name}`, 'error') }
   const confirmConnect = () => {
     const p = connectTarget
@@ -12438,6 +12439,7 @@ function EmailBlastPage({ user }) {
     const code = q.get('code'), state = q.get('state')
     if (code && state && EMAIL_OAUTH[state]) {
       setConns((c) => ({ ...c, [state]: true }))
+      setConnDates((d) => ({ ...d, [state]: new Date().toLocaleDateString('en-GB') }))
       notify(`Connected ${EMAIL_PROVIDERS.find((x) => x.key === state)?.name || state}`, 'success')
       const url = new URL(window.location.href); url.searchParams.delete('code'); url.searchParams.delete('state'); url.searchParams.delete('scope'); window.history.replaceState({}, '', url.pathname + url.search)
     }
@@ -12496,7 +12498,10 @@ function EmailBlastPage({ user }) {
                   </div>
                   <div className="mt-3">
                     {on ? (
-                      <div className="flex items-center gap-4 text-sm font-semibold"><button onClick={() => setConnectTarget(p)} className="text-brand hover:underline">Reconnect</button><button onClick={() => disconnect(p)} className="text-slate-400 hover:text-rose-500">Disconnect</button></div>
+                      <div>
+                        <p className="text-xs text-slate-400">{p.name} · connected {connDates[p.key] || new Date().toLocaleDateString('en-GB')}</p>
+                        <div className="mt-1.5 flex items-center gap-4 text-sm font-semibold"><button onClick={() => setConnectTarget(p)} className="text-brand hover:underline">Reconnect</button><button onClick={() => disconnect(p)} className="text-slate-400 hover:text-rose-500">Disconnect</button></div>
+                      </div>
                     ) : (
                       <button onClick={() => setConnectTarget(p)} className="rounded-full bg-orange-50 px-4 py-1.5 text-sm font-semibold text-brand transition hover:bg-orange-100">Connect {p.name}</button>
                     )}
@@ -12528,15 +12533,33 @@ function EmailBlastPage({ user }) {
 
         {/* Email signature */}
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div><p className="text-sm font-bold text-slate-900">Email signature</p><p className="text-xs text-slate-400">Added to the bottom of every email blast you send.</p></div>
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div className="flex items-start gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-brand"><Pencil className="h-4 w-4" /></span>
+              <div><p className="text-sm font-bold text-slate-900">Email signature</p><p className="max-w-xl text-xs text-slate-400">Added to the bottom of every email blast you send. Paste your signature straight out of Gmail or Outlook — common tables, logos and links are preserved.</p></div>
+            </div>
             <label className="inline-flex items-center gap-1.5 text-sm text-slate-600"><input type="checkbox" checked={useSignature} onChange={(e) => setUseSignature(e.target.checked)} className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-orange-400" /> Use it</label>
           </div>
-          <label className="mt-3 block text-xs font-semibold text-slate-500">Signature</label>
+          <label className="mt-4 block text-xs font-semibold text-slate-500">Signature</label>
           <textarea value={signature} onChange={(e) => setSignature(e.target.value)} rows={4} placeholder="Your Name | Broker | mycreblueprint.com | 555-000-0000" className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" />
           <label className="mt-3 block text-xs font-semibold text-slate-500">Logo URL (optional)</label>
           <input value={signatureLogo} onChange={(e) => setSignatureLogo(e.target.value)} placeholder="https://.../logo.png" className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" />
-          <div className="mt-3"><button onClick={() => notify('Signature saved')} className="rounded-lg bg-brand px-4 py-2 text-sm font-bold text-white transition hover:bg-orange-600">Save signature</button></div>
+          <p className="mt-1 text-xs text-slate-400">Must be a public http(s) image link — mail clients can't read an uploaded file.</p>
+          <div className="mt-3 flex items-center gap-2">
+            <button onClick={() => notify('Signature saved')} className="rounded-lg bg-brand px-4 py-2 text-sm font-bold text-white transition hover:bg-orange-600">Save signature</button>
+            {(signature || signatureLogo) && (
+              <button onClick={() => { setSignature(''); setSignatureLogo(''); setUseSignature(false); notify('Signature deleted', 'error') }} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-4 w-4" /> Delete</button>
+            )}
+          </div>
+          {(signature || signatureLogo) && (
+            <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50/60">
+              <p className="border-b border-slate-200 px-4 py-2 text-xs font-semibold text-slate-500">Preview — exactly what recipients will see</p>
+              <div className="px-4 py-3">
+                {signatureLogo && <img src={signatureLogo} alt="" className="mb-2 max-h-16 object-contain" onError={(e) => { e.currentTarget.style.display = 'none' }} />}
+                <p className="whitespace-pre-line text-sm text-slate-700">{signature}</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
       ) : (
