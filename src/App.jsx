@@ -12298,11 +12298,13 @@ const AwsLogo = (props) => (
 )
 const MailchimpLogo = (props) => (
   <svg viewBox="0 0 32 32" {...props}>
-    <path d="M14.6 6.2c0.4-1.4 2.2-1.4 2.6 0" stroke="#241c15" strokeWidth="1.6" fill="none" strokeLinecap="round" />
-    <ellipse cx="16" cy="18" rx="9.5" ry="9" fill="#241c15" />
-    <circle cx="12.4" cy="16" r="1.7" fill="#fff" /><circle cx="12.4" cy="16" r="0.85" fill="#241c15" />
-    <path d="M18.2 16.2h2.8" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" />
-    <path d="M12.4 21q3.6 2.4 7.2 0" stroke="#ffe01b" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+    <ellipse cx="8.5" cy="13" rx="3" ry="3.4" fill="#241c15" />
+    <ellipse cx="23.5" cy="13" rx="3" ry="3.4" fill="#241c15" />
+    <path d="M13.4 6.6c.6-1.7 4.6-1.7 5.2 0" stroke="#241c15" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+    <ellipse cx="16" cy="18" rx="9" ry="8.6" fill="#241c15" />
+    <circle cx="12.6" cy="16" r="1.8" fill="#fff" /><circle cx="12.6" cy="16.3" r="0.9" fill="#241c15" />
+    <circle cx="19.4" cy="16" r="1.8" fill="#fff" /><circle cx="19.4" cy="16.3" r="0.9" fill="#241c15" />
+    <path d="M12.8 21q3.2 2.2 6.4 0" stroke="#ffe01b" strokeWidth="1.5" fill="none" strokeLinecap="round" />
   </svg>
 )
 const ConstantContactLogo = (props) => (
@@ -12661,11 +12663,11 @@ function EmailBlastPage({ user, onNavigate }) {
           const on = conns[p.key]
           const Icon = p.icon
           return (
-            <div key={p.key} className="flex flex-col items-center rounded-xl border border-slate-200 bg-white p-5 text-center shadow-sm">
-              <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${p.tile}`}><Icon className="h-6 w-6" /></div>
-              <p className="mt-3 text-sm font-bold text-slate-900">{p.name}</p>
+            <div key={p.key} className="flex flex-col items-center rounded-xl border border-slate-200 bg-white p-4 text-center shadow-sm">
+              <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${p.tile}`}><Icon className="h-5 w-5" /></div>
+              <p className="mt-2 text-sm font-bold text-slate-900">{p.name}</p>
               <p className="mt-0.5 text-xs text-slate-400">{p.sub}</p>
-              <div className="mt-3">
+              <div className="mt-2.5">
                 {p.action === 'ready' ? (
                   <span className="inline-flex items-center gap-1 text-sm font-semibold text-emerald-600"><CheckCircle2 className="h-4 w-4" /> Always ready</span>
                 ) : p.action === 'setup' ? (
@@ -13511,7 +13513,7 @@ function TeamPermissionsPage({ myUid }) {
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [authReady, setAuthReady] = useState(false)
-  const [active, setActive] = useState('dashboard')
+  const [active, setActive] = usePersistentState('active_view', 'dashboard') // survives page refresh
   const [user, setUser] = useState(CURRENT_USER)
   const [myUid, setMyUid] = useState(null)
   const [role, setRole] = useState('Member')
