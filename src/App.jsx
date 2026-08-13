@@ -12396,7 +12396,7 @@ function EmailBlastPage({ user, onNavigate }) {
   const [tourStep, setTourStep] = useState(-1) // -1 = closed, 0..3 = step
   const [tourPos, setTourPos] = useState(null) // {top,left} when anchored below a target
   const tourCardRef = useRef(null)
-  const [integrationsOpen, setIntegrationsOpen] = useState(false)
+  const [integrationsOpen, setIntegrationsOpen] = usePersistentState('email_integrations_open', false) // survives OAuth redirect / refresh
   const [connDates, setConnDates] = usePersistentState('email_conn_dates', {})
   const [sesFormOpen, setSesFormOpen] = useState(false)
   const [sesForm, setSesForm] = useState({ label: '', accessKeyId: '', secret: '', region: '', fromEmail: '', fromName: '' })
