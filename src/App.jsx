@@ -12324,6 +12324,15 @@ const EMAIL_PROVIDERS = [
 
 const EMAIL_AUDIENCES = ['All Contacts', 'Qualified Leads', 'New Leads', 'Active Deal Room Prospects']
 
+// Richer per-provider copy shown on the Integrations page (original wording).
+const EMAIL_INTEGRATION_INFO = {
+  mailchimp: { desc: 'Draft a campaign in your Mailchimp audience, then review and send it from Mailchimp.', foot: 'Log in to Mailchimp once — no API key to copy.' },
+  constant: { desc: 'Draft a campaign, then review and send it from Constant Contact.' },
+  ses: { desc: 'Advanced — send directly from your own Amazon SES account with your keys. Not sure? Use Mailchimp instead.' },
+  gmail: { desc: 'Send each email from your own Gmail account.', note: "Google shows an “unverified app” warning during sign-in — that's normal while our app is under review. Choose Advanced, then continue. MyCREBlueprint only sends the emails you build here; it never reads your inbox." },
+  outlook: { desc: 'Creates a draft in your Outlook that you review and send yourself.', note: 'Microsoft may flag the publisher as unverified — verification is in progress and it is safe to continue. We only place the draft in your mailbox; you send it.' },
+}
+
 // Real OAuth endpoints. Clicking "Continue" opens the provider's genuine sign-in screen
 // ONLY when a client ID is configured in .env.local — otherwise the demo connect runs.
 const EMAIL_OAUTH = {
@@ -12545,10 +12554,13 @@ function EmailBlastPage({ user, onNavigate }) {
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3">
                       <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${p.tile}`}><Icon className="h-5 w-5" /></span>
-                      <div><p className="text-sm font-bold text-slate-900">{p.name}{p.action === 'setup' && <span className="ml-1.5 text-xs font-normal text-slate-400">(Advanced)</span>}</p><p className="text-xs text-slate-400">{p.sub}</p></div>
+                      <div><p className="text-sm font-bold text-slate-900">{p.name}{p.action === 'setup' && <span className="ml-1.5 text-xs font-normal text-slate-400">(Advanced)</span>}</p><p className="text-xs text-slate-400">{EMAIL_INTEGRATION_INFO[p.key]?.desc || p.sub}</p></div>
                     </div>
                     {on && <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">Connected</span>}
                   </div>
+                  {EMAIL_INTEGRATION_INFO[p.key]?.note && !(p.key === 'ses' && sesFormOpen) && (
+                    <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800">{EMAIL_INTEGRATION_INFO[p.key].note}</p>
+                  )}
                   <div className="mt-3">
                     {p.key === 'ses' ? (
                       sesFormOpen ? (
@@ -12582,6 +12594,7 @@ function EmailBlastPage({ user, onNavigate }) {
                       <button disabled={openingKey === p.key} onClick={() => startConnect(p)} className="rounded-full bg-orange-50 px-4 py-1.5 text-sm font-semibold text-brand transition hover:bg-orange-100 disabled:opacity-70">{openingKey === p.key ? 'Redirecting…' : `Connect ${p.name}`}</button>
                     )}
                   </div>
+                  {EMAIL_INTEGRATION_INFO[p.key]?.foot && !on && <p className="mt-2 text-xs text-slate-400">{EMAIL_INTEGRATION_INFO[p.key].foot}</p>}
                 </div>
               )
             })}
