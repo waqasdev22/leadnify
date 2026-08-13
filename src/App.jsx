@@ -12337,11 +12337,25 @@ const EMAIL_OAUTH = {
     scope: 'https://graph.microsoft.com/Mail.Send offline_access',
     extra: { prompt: 'select_account' },
   },
+  mailchimp: {
+    authorize: 'https://login.mailchimp.com/oauth2/authorize',
+    clientId: import.meta.env.VITE_MAILCHIMP_CLIENT_ID,
+    scope: '',
+    extra: {},
+  },
+  constant: {
+    authorize: 'https://authz.constantcontact.com/oauth2/default/v1/authorize',
+    clientId: import.meta.env.VITE_CONSTANT_CLIENT_ID,
+    scope: 'contact_data campaign_data offline_access',
+    extra: {},
+  },
 }
 function beginOAuth(providerKey) {
   const cfg = EMAIL_OAUTH[providerKey]
   if (!cfg || !cfg.clientId) return false
-  const params = new URLSearchParams({ client_id: cfg.clientId, redirect_uri: window.location.origin, response_type: 'code', scope: cfg.scope, state: providerKey, ...cfg.extra })
+  const base = { client_id: cfg.clientId, redirect_uri: window.location.origin, response_type: 'code', state: providerKey, ...cfg.extra }
+  if (cfg.scope) base.scope = cfg.scope
+  const params = new URLSearchParams(base)
   window.location.href = `${cfg.authorize}?${params.toString()}`
   return true
 }
