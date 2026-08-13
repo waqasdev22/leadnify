@@ -12350,26 +12350,15 @@ const EMAIL_OAUTH = {
     extra: {},
   },
 }
-// Opens the provider's sign-in in a POPUP so the main dashboard never reloads.
-// Returns the popup window (poll .closed), 'redirect' if popups were blocked (full redirect),
+// Opens the provider's sign-in in the SAME tab (full page). Returns 'redirect' when it navigated,
 // or false if no client ID is configured (caller falls back to the demo connect).
 function beginOAuth(providerKey) {
   const cfg = EMAIL_OAUTH[providerKey]
   if (!cfg || !cfg.clientId) return false
   const base = { client_id: cfg.clientId, redirect_uri: window.location.origin, response_type: 'code', state: providerKey, ...cfg.extra }
   if (cfg.scope) base.scope = cfg.scope
-  const url = `${cfg.authorize}?${new URLSearchParams(base).toString()}`
-  // Large, near-full-screen popup so it feels like a full window (but stays a popup → no reload).
-  const sw = window.screen.availWidth || window.innerWidth
-  const sh = window.screen.availHeight || window.innerHeight
-  const w = Math.min(1100, Math.floor(sw * 0.92))
-  const h = Math.min(900, Math.floor(sh * 0.92))
-  const left = Math.max(0, Math.floor((sw - w) / 2))
-  const top = Math.max(0, Math.floor((sh - h) / 2))
-  const popup = window.open(url, 'oauth_connect', `width=${w},height=${h},left=${left},top=${top}`)
-  if (!popup) { window.location.href = url; return 'redirect' } // popups blocked → full redirect
-  popup.focus && popup.focus()
-  return popup
+  window.location.href = `${cfg.authorize}?${new URLSearchParams(base).toString()}`
+  return 'redirect'
 }
 
 const EMAIL_CAMPAIGNS_SEED = []
