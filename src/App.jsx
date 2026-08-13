@@ -12572,7 +12572,7 @@ function EmailBlastPage({ user }) {
                 {p.action === 'ready' ? (
                   <span className="inline-flex items-center gap-1 text-sm font-semibold text-emerald-600"><CheckCircle2 className="h-4 w-4" /> Always ready</span>
                 ) : p.action === 'setup' ? (
-                  <button onClick={() => notify(`${p.name} setup — demo`)} className="text-sm font-semibold text-brand hover:underline">Set up →</button>
+                  <button onClick={() => setIntegrationsOpen(true)} className="text-sm font-semibold text-brand hover:underline">Set up →</button>
                 ) : on ? (
                   <div className="flex flex-col items-center gap-1">
                     <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700"><CheckCircle2 className="h-4 w-4" /> Connected</span>
