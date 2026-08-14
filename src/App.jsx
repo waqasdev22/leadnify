@@ -10817,6 +10817,17 @@ const CRM_FORWARD_ADDR = 'leads+qx-s_yJEz4LH5tklhdOK0ojxlZpObhOYFJda7A442mY@inbo
 const LEAD_PROFILES = ['Broker', 'Principal']
 const LEAD_PIPELINES = ['Active', 'Call for Offers', 'Highest and Best', 'Under Contract', 'Closed', 'On Hold', 'No Longer for Sale']
 const LEAD_SOURCES = ['Listing Website', 'Social Media', 'Email', 'Text', 'Website']
+// Fields the CSV import maps onto (Milestone II 3.7). `name` is required.
+const LEAD_IMPORT_FIELDS = [
+  { key: 'name', label: 'Name', required: true, aliases: ['name', 'full name', 'contact', 'lead'] },
+  { key: 'email', label: 'Email', aliases: ['email', 'e-mail', 'mail'] },
+  { key: 'company', label: 'Company', aliases: ['company', 'organization', 'organisation', 'firm'] },
+  { key: 'type', label: 'Type', aliases: ['type', 'category'] },
+  { key: 'profile', label: 'Profile', aliases: ['profile', 'broker or principal', 'role'] },
+  { key: 'property', label: 'Listing / Property', aliases: ['property', 'listing', 'deal'] },
+  { key: 'pipeline', label: 'Pipeline', aliases: ['pipeline', 'stage'] },
+  { key: 'source', label: 'Source', aliases: ['source', 'origin'] },
+]
 const LEAD_PIPELINE_BADGE = {
   Active: 'bg-emerald-50 text-emerald-700',
   'Call for Offers': 'bg-blue-50 text-blue-700',
@@ -10906,6 +10917,8 @@ function CRMPage({ user, onNavigate }) {
   const [addLeadOpen, setAddLeadOpen] = useState(false)
   const [newLead, setNewLead] = useState({ name: '', email: '', type: 'Inquiry', company: '', listing: '', property: '', profile: 'Principal', pipeline: 'Active', source: 'Website' })
   const [selLeads, setSelLeads] = useState([])
+  const leadFileRef = useRef(null)
+  const [leadImport, setLeadImport] = useState(null) // { headers:[], data:[[]], map:{field:colIndex} }
   const [contactList, setContactList] = usePersistentState('crm_contacts', CRM_CONTACTS)
   const [contactView, setContactView] = useState('people')
   const [contactChip, setContactChip] = useState(null)
@@ -11142,6 +11155,76 @@ function CRMPage({ user, onNavigate }) {
           const ndaCount = scopedInbox.filter((l) => l.type === 'NDA Signer').length
           const typeFor = { All: () => true, Inquiries: (l) => l.type === 'Inquiry', 'NDA Signers': (l) => l.type === 'NDA Signer', 'Email Leads': (l) => l.type === 'Email Lead', Forwarded: (l) => l.type === 'Forwarded' }
           const rows = scopedInbox.filter(typeFor[leadFilter]).filter((l) => (l.name + l.email + l.company).toLowerCase().includes(search.toLowerCase()))
+          // 3.7 Export — respects Mine/Whole Team scope + the current filter/search (exports `rows`).
+          const exportLeads = () => {
+            if (!rows.length) { notify('No leads to export', 'error'); return }
+            const cols = ['Name', 'Email', 'Type', 'Profile', 'Company', 'Listing', 'Date', 'Status', 'Pipeline', 'Source', 'Owner']
+            const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`
+            const lines = [cols.join(',')]
+            rows.forEach((l) => lines.push([l.name, l.email, l.type, l.profile, l.company, l.property || l.listing, l.date, l.active || 'Active', l.pipeline, l.source, l.owner].map(esc).join(',')))
+            const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a'); a.href = url; a.download = 'leads.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url)
+            notify(`Exported ${rows.length} lead${rows.length === 1 ? '' : 's'} to CSV`)
+          }
+          // 3.7 Import — parse CSV, auto-guess a column→field map, then open the mapping screen.
+          const onLeadFile = (file) => {
+            if (!file) return
+            const reader = new FileReader()
+            reader.onload = () => {
+              const lines = String(reader.result).split(/\r?\n/).filter((l) => l.trim())
+              if (lines.length < 2) { notify('CSV looks empty', 'error'); return }
+              const headers = parseCsvLine(lines[0]).map((h) => h.trim())
+              const data = lines.slice(1).map((ln) => parseCsvLine(ln))
+              const lower = headers.map((h) => h.toLowerCase())
+              const map = {}
+              LEAD_IMPORT_FIELDS.forEach((f) => {
+                let idx = lower.findIndex((h) => f.aliases.some((a) => h === a))
+                if (idx < 0) idx = lower.findIndex((h) => f.aliases.some((a) => h.includes(a)))
+                map[f.key] = idx
+              })
+              setLeadImport({ headers, data, map })
+            }
+            reader.readAsText(file)
+          }
+          const runLeadImport = () => {
+            const { data, map } = leadImport
+            const existingEmails = new Set(inbox.map((l) => (l.email || '').trim().toLowerCase()).filter(Boolean))
+            const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+            const get = (cells, key) => (map[key] >= 0 ? (cells[map[key]] || '').trim() : '')
+            const added = []; let invalid = 0; let dupes = 0; const seen = new Set()
+            data.forEach((cells) => {
+              const name = get(cells, 'name')
+              if (!name) { invalid++; return }
+              const email = get(cells, 'email').toLowerCase()
+              if (email && (existingEmails.has(email) || seen.has(email))) { dupes++; return }
+              if (email) seen.add(email)
+              added.push({
+                id: uid(), name, email: get(cells, 'email') || '—', type: get(cells, 'type') || 'Inquiry',
+                profile: get(cells, 'profile') || 'Principal', company: get(cells, 'company') || '—',
+                listing: 'Imported', property: get(cells, 'property') || '',
+                pipeline: get(cells, 'pipeline') || 'Active', source: get(cells, 'source') || 'Website',
+                active: 'Active', date: today, status: 'New', unread: false, owner: me,
+              })
+            })
+            if (!added.length) { notify(`Nothing imported — ${invalid} invalid, ${dupes} duplicate`, 'error'); return }
+            setInbox((list) => [...added, ...list])
+            notify(`Imported ${added.length} lead${added.length === 1 ? '' : 's'}${dupes ? ` · skipped ${dupes} duplicate${dupes === 1 ? '' : 's'}` : ''}${invalid ? ` · ${invalid} invalid row${invalid === 1 ? '' : 's'}` : ''}`)
+            setLeadImport(null)
+          }
+          const importPreview = leadImport ? (() => {
+            const { data, map } = leadImport
+            const existingEmails = new Set(inbox.map((l) => (l.email || '').trim().toLowerCase()).filter(Boolean))
+            let valid = 0, invalid = 0, dupes = 0; const seen = new Set()
+            data.forEach((cells) => {
+              const name = map.name >= 0 ? (cells[map.name] || '').trim() : ''
+              if (!name) { invalid++; return }
+              const email = (map.email >= 0 ? (cells[map.email] || '').trim() : '').toLowerCase()
+              if (email && (existingEmails.has(email) || seen.has(email))) { dupes++; return }
+              if (email) seen.add(email); valid++
+            })
+            return { valid, invalid, dupes, total: data.length }
+          })() : null
           const markRead = (id) => setInbox((list) => list.map((l) => (l.id === id ? { ...l, unread: !l.unread, status: !l.unread ? 'Unread' : 'Read' } : l)))
           const del = (id) => setInbox((list) => list.filter((l) => l.id !== id))
           const revoke = (id) => setInbox((list) => list.map((l) => (l.id === id ? { ...l, status: 'Revoked' } : l)))
@@ -11172,7 +11255,9 @@ function CRMPage({ user, onNavigate }) {
                 <p className="text-sm text-slate-500">{unreadCount} unread inquiry · {ndaCount} active NDA signers</p>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={() => notify('Exported inquiries to CSV')} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50" title="Export inquiries to CSV"><Download className="h-4 w-4" /> Export</button>
+                <input ref={leadFileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={(e) => { onLeadFile(e.target.files[0]); e.target.value = '' }} />
+                <button onClick={() => leadFileRef.current && leadFileRef.current.click()} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50" title="Import leads from a CSV (Crexi, LoopNet, etc.)"><Upload className="h-4 w-4" /> Import</button>
+                <button onClick={exportLeads} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50" title="Export the leads shown (respects Mine/Whole Team + filters)"><Download className="h-4 w-4" /> Export</button>
                 <PrimaryButton icon={Plus} onClick={() => setAddLeadOpen(true)}>Add Lead</PrimaryButton>
               </div>
             </div>
@@ -11195,6 +11280,57 @@ function CRMPage({ user, onNavigate }) {
                 <div className="mt-4 flex justify-end gap-2">
                   <button onClick={() => setAddLeadOpen(false)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
                   <PrimaryButton icon={Plus} onClick={addLead}>Add Lead</PrimaryButton>
+                </div>
+              </div>
+            )}
+
+            {/* Import mapping modal (3.7) */}
+            {leadImport && (
+              <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4">
+                <div className="my-8 w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-lg font-bold text-slate-900">Import leads</p>
+                      <p className="text-sm text-slate-500">Match your spreadsheet columns to lead fields, then import.</p>
+                    </div>
+                    <button onClick={() => setLeadImport(null)} className="text-slate-400 hover:text-slate-700"><X className="h-5 w-5" /></button>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    {LEAD_IMPORT_FIELDS.map((f) => (
+                      <div key={f.key}>
+                        <label className="mb-1 block text-xs font-semibold text-slate-500">{f.label}{f.required && <span className="text-rose-500"> *</span>}</label>
+                        <select value={leadImport.map[f.key]} onChange={(e) => setLeadImport((s) => ({ ...s, map: { ...s.map, [f.key]: Number(e.target.value) } }))} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400">
+                          <option value={-1}>— Not mapped —</option>
+                          {leadImport.headers.map((h, i) => <option key={i} value={i}>{h || `Column ${i + 1}`}</option>)}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs font-semibold">
+                    <span className="text-slate-600">{importPreview.total} rows</span>
+                    <span className="text-emerald-600">✓ {importPreview.valid} to import</span>
+                    <span className="text-amber-600">⟳ {importPreview.dupes} duplicate</span>
+                    <span className="text-rose-500">✕ {importPreview.invalid} invalid (no name)</span>
+                  </div>
+
+                  <div className="mt-3 scrollbar-slim max-h-40 overflow-auto rounded-lg border border-slate-100">
+                    <table className="w-full min-w-[420px] text-left text-xs">
+                      <thead className="bg-slate-50"><tr>{LEAD_IMPORT_FIELDS.slice(0, 5).map((f) => <th key={f.key} className="px-2 py-1.5 font-semibold text-slate-500">{f.label}</th>)}</tr></thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {leadImport.data.slice(0, 5).map((cells, ri) => (
+                          <tr key={ri}>{LEAD_IMPORT_FIELDS.slice(0, 5).map((f) => <td key={f.key} className="px-2 py-1.5 text-slate-600">{leadImport.map[f.key] >= 0 ? (cells[leadImport.map[f.key]] || '') : '—'}</td>)}</tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {importPreview.total > 5 && <p className="mt-1 text-[11px] text-slate-400">Showing first 5 of {importPreview.total} rows.</p>}
+
+                  <div className="mt-5 flex justify-end gap-2">
+                    <button onClick={() => setLeadImport(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
+                    <button onClick={runLeadImport} disabled={importPreview.valid === 0 || leadImport.map.name < 0} className={`rounded-lg px-4 py-2 text-sm font-bold text-white transition ${importPreview.valid === 0 || leadImport.map.name < 0 ? 'cursor-not-allowed bg-orange-300' : 'bg-brand hover:bg-orange-600'}`}>Import {importPreview.valid} lead{importPreview.valid === 1 ? '' : 's'}</button>
+                  </div>
                 </div>
               </div>
             )}
