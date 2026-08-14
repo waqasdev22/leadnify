@@ -10988,6 +10988,25 @@ function CRMPage({ user, onNavigate }) {
   const [leadImport, setLeadImport] = useState(null) // { headers:[], data:[[]], map:{field:colIndex} }
   const [leadPage, setLeadPage] = useState(1) // 4.3 — paginate large lead tables
   const [contactList, setContactList] = usePersistentState('crm_contacts', CRM_CONTACTS)
+  // Sync leads + contacts to the backend (MongoDB) when it's reachable; localStorage stays the
+  // offline fallback. Loads from the server on mount, then saves on every change.
+  const [crmDbLoaded, setCrmDbLoaded] = useState(false)
+  useEffect(() => {
+    let alive = true
+    ;(async () => {
+      try {
+        const [ld, cd] = await Promise.all([getCol('leads'), getCol('contacts')])
+        if (!alive) return
+        if (ld && ld.length) setInbox(ld); else await putCol('leads', inbox)
+        if (cd && cd.length) setContactList(cd); else await putCol('contacts', contactList)
+      } catch { /* backend offline — keep localStorage data */ }
+      if (alive) setCrmDbLoaded(true)
+    })()
+    return () => { alive = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  useEffect(() => { if (crmDbLoaded) putCol('leads', inbox).catch(() => {}) }, [inbox, crmDbLoaded])
+  useEffect(() => { if (crmDbLoaded) putCol('contacts', contactList).catch(() => {}) }, [contactList, crmDbLoaded])
   const [contactView, setContactView] = useState('people')
   const [contactChip, setContactChip] = useState(null)
   const [addContactOpen, setAddContactOpen] = useState(false)

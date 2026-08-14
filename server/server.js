@@ -30,8 +30,8 @@ const DataSchema = new mongoose.Schema({
 
 const DashboardData = mongoose.model('DashboardData', DataSchema);
 
-// Dynamic Collections setup (packages, listings, dealrooms)
-const COLLECTIONS = ['packages', 'listings', 'dealrooms'];
+// Dynamic Collections setup (packages, listings, dealrooms, leads, contacts)
+const COLLECTIONS = ['packages', 'listings', 'dealrooms', 'leads', 'contacts'];
 const collectionModels = {};
 for (const name of COLLECTIONS) {
   collectionModels[name] = mongoose.model(
