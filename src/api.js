@@ -4,7 +4,22 @@
 // - If no backend is reachable (e.g. the static Firebase site with no hosted API),
 //   everything falls back to localStorage so create/edit/delete still persist
 //   across reloads in that browser.
+import { auth } from './firebase'
+
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
+
+// Attach the signed-in user's Firebase ID token so the backend can verify each request.
+// Waits for Firebase to restore the session first (so the very first load is authenticated).
+async function authHeader() {
+  try {
+    if (auth.authStateReady) await auth.authStateReady()
+    const u = auth.currentUser
+    if (u) return { Authorization: `Bearer ${await u.getIdToken()}` }
+  } catch {
+    /* not signed in / offline — request goes without a token */
+  }
+  return {}
+}
 
 // ---- localStorage cache -----------------------------------------------------
 const LS_KEY = (col) => `crebuilder_db_${col}`
@@ -24,8 +39,9 @@ const lsSet = (col, arr) => {
   }
 }
 
-async function request(path, options) {
-  const res = await fetch(BASE + path, options)
+async function request(path, options = {}) {
+  const authH = await authHeader()
+  const res = await fetch(BASE + path, { ...options, headers: { ...(options.headers || {}), ...authH } })
   if (!res.ok) throw new Error(`API ${res.status}`)
   return res.json()
 }

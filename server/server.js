@@ -2,8 +2,11 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { readFileSync } from 'fs';
 import express from 'express';
 import mongoose from 'mongoose';
+import { initializeApp as initAdmin, cert } from 'firebase-admin/app';
+import { getAuth as getAdminAuth } from 'firebase-admin/auth';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,6 +16,30 @@ dotenv.config({ path: path.join(__dirname, '.env') });
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// 🔐 Firebase Admin — verify the ID token the frontend sends on each API call.
+// If the service-account key is missing, auth is disabled (dev fallback) with a warning.
+let authEnabled = false;
+try {
+  const serviceAccount = JSON.parse(readFileSync(path.join(__dirname, 'serviceAccount.json'), 'utf8'));
+  initAdmin({ credential: cert(serviceAccount) });
+  authEnabled = true;
+  console.log('🔐 Firebase Admin ready — API is protected.');
+} catch (e) {
+  console.warn('⚠️  API auth DISABLED —', e.message);
+}
+const requireAuth = async (req, res, next) => {
+  if (!authEnabled) return next(); // no key configured — allow (dev only)
+  const header = req.headers.authorization || '';
+  const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+  if (!token) return res.status(401).json({ error: 'Sign in required' });
+  try {
+    req.user = await getAdminAuth().verifyIdToken(token);
+    next();
+  } catch (e) {
+    return res.status(401).json({ error: 'Invalid or expired session — please sign in again' });
+  }
+};
 
 // 1️⃣ SCHEMAS & MODELS
 const UserSchema = new mongoose.Schema({ 
@@ -70,6 +97,8 @@ app.use('/api', (req, res, next) => {
   }
   next();
 });
+// Every /api route now requires a valid signed-in user.
+app.use('/api', requireAuth);
 
 // 4️⃣ API ROUTES (SPECIFIC ROUTES PEHLE RAKHEIN)
 
