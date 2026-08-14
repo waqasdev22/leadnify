@@ -10752,7 +10752,7 @@ function openPropertyReportPrint(props, totals, weeks, reach, label) {
   const bars = weeks.map((w) => `<span style="display:inline-block;width:6%;height:${Math.max(4, (w / maxW) * 80)}px;background:#F97316;margin-right:1%;vertical-align:bottom"></span>`).join('')
   const propRows = props.map((p) => `<tr><td>${esc(p.name)}</td><td>${n(p.impressions)}</td><td>${n(p.pageViews)}</td><td>${n(p.visitors)}</td><td>${n(p.openOms)}</td><td>${n(p.executedCa)}</td></tr>`).join('')
   const reachRows = reach.map((r) => `<tr><td>${esc(r.t)}</td><td>${n(r.n)}</td></tr>`).join('')
-  const tiles = [['Total Impressions', totals.impressions], ['Page Views', totals.pageViews], ['Visitors', totals.visitors], ['Open OMs', totals.openOms], ['Executed CA', totals.executedCa]]
+  const tiles = [['Leads captured', totals.leads ?? 0], ['Total Impressions', totals.impressions], ['Page Views', totals.pageViews], ['Visitors', totals.visitors], ['Open OMs', totals.openOms], ['Executed CA', totals.executedCa]]
     .map(([k, v]) => `<div class="tile"><div class="v">${n(v)}</div><div class="k">${k}</div></div>`).join('')
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>Marketing Report</title>
 <style>body{font-family:Inter,Arial,sans-serif;color:#0f172a;margin:40px;max-width:820px}h1{font-size:22px;margin:0}.sub{color:#64748b;font-size:13px;margin:2px 0 20px}
@@ -12582,8 +12582,13 @@ function CRMPage({ user, onNavigate }) {
               const reach = MARKETING_TYPES.map((t) => ({ t, n: sel.reduce((a, p) => a + (p.reach[t] || 0), 0) }))
               const maxReach = Math.max(1, ...reach.map((r) => r.n))
               const fmt = (v) => v.toLocaleString()
-              const totals = { impressions: sum('impressions'), pageViews: sum('pageViews'), visitors: sum('visitors'), openOms: sum('openOms'), executedCa: sum('executedCa') }
+              // Live: real leads YOU captured (from My Leads), filtered to the selected property + scope.
+              const liveLeads = inbox
+                .filter((l) => (scope === 'mine' ? l.owner === me : true))
+                .filter((l) => (reportProperty === 'all' ? true : l.property === reportProperty)).length
+              const totals = { impressions: sum('impressions'), pageViews: sum('pageViews'), visitors: sum('visitors'), openOms: sum('openOms'), executedCa: sum('executedCa'), leads: liveLeads }
               const tiles = [
+                { label: 'Leads captured', v: liveLeads, icon: UserPlus, tone: 'bg-orange-50 text-brand', live: true },
                 { label: 'Total Impressions', v: totals.impressions, icon: Eye, tone: 'bg-blue-50 text-blue-500' },
                 { label: 'Page Views', v: totals.pageViews, icon: BarChart3, tone: 'bg-violet-50 text-violet-500' },
                 { label: 'Visitors', v: totals.visitors, icon: Users, tone: 'bg-emerald-50 text-emerald-500' },
@@ -12605,10 +12610,13 @@ function CRMPage({ user, onNavigate }) {
                       <button onClick={() => { if (!openPropertyReportPrint(sel, totals, weeks, reach, reportProperty)) notify('Allow pop-ups to open the report', 'error') }} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"><Printer className="h-4 w-4" /> Print / Export</button>
                     </div>
                   </div>
-                  <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                  <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
                     {tiles.map((t) => { const I = t.icon; return (
-                      <div key={t.label} className="rounded-lg border border-slate-100 bg-slate-50 p-3">
-                        <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${t.tone}`}><I className="h-4 w-4" /></div>
+                      <div key={t.label} className={`rounded-lg border p-3 ${t.live ? 'border-orange-200 bg-orange-50/40' : 'border-slate-100 bg-slate-50'}`}>
+                        <div className="flex items-center justify-between">
+                          <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${t.tone}`}><I className="h-4 w-4" /></div>
+                          {t.live && <span className="rounded-full bg-brand px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">Live</span>}
+                        </div>
                         <p className="mt-2 text-2xl font-extrabold text-slate-900">{fmt(t.v)}</p>
                         <p className="text-xs text-slate-400">{t.label}</p>
                       </div>
