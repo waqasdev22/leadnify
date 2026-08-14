@@ -10851,6 +10851,14 @@ const CRM_INQUIRIES = [
   { id: 'iq2', name: 'Sofia Ramirez', property: 'Summit Retail Center', owner: 'Devon Park' },
 ]
 
+// Milestone III — listing platforms you can gather leads from (connect / import / forward).
+const LEAD_PLATFORMS = [
+  { key: 'crexi', name: 'Crexi', color: 'bg-sky-500' },
+  { key: 'loopnet', name: 'LoopNet', color: 'bg-blue-700' },
+  { key: 'bizbuysell', name: 'BizBuySell', color: 'bg-emerald-600' },
+  { key: 'costar', name: 'CoStar', color: 'bg-indigo-600' },
+  { key: 'marketplace', name: 'Marketplace', color: 'bg-rose-500' },
+]
 // Leads "inbox" — raw enquiries, NDA signers, email/forwarded leads.
 const CRM_FORWARD_ADDR = 'leads+qx-s_yJEz4LH5tklhdOK0ojxlZpObhOYFJda7A442mY@inbound.mycreblueprint.com'
 // Milestone II 3.5 — required column value sets for the Leads table.
@@ -10933,6 +10941,7 @@ function CRMPage({ user, onNavigate }) {
   const [tasks, setTasks] = usePersistentState('crm_tasks', CRM_TASKS_SEED)
   const [autos, setAutos] = usePersistentState('crm_autos', CRM_AUTOMATIONS_SEED)
   const [autoLog, setAutoLog] = usePersistentState('crm_auto_log', []) // 3.10 — activity log
+  const [leadSources, setLeadSources] = usePersistentState('crm_lead_sources', {}) // Milestone III — connected platforms
   const [inbox, setInbox] = usePersistentState('crm_inbox', CRM_INBOX_SEED)
   // One-time backfill: older saved inboxes predate the per-lead `property` tag, so the seed
   // demo leads had no property and wouldn't show in their Deal Room. Restore it from the seed.
@@ -11397,6 +11406,34 @@ function CRMPage({ user, onNavigate }) {
                 </div>
               </div>
             )}
+
+            {/* Gather leads from listing platforms (Milestone III) */}
+            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="flex items-center gap-2 text-sm font-bold text-slate-900"><Globe className="h-4 w-4 text-slate-400" /> Gather leads from anywhere</p>
+                  <p className="mt-0.5 text-xs text-slate-500">Connect a listing platform, import a spreadsheet, or forward a lead email — everything lands in this one list.</p>
+                </div>
+                <button onClick={() => leadFileRef.current && leadFileRef.current.click()} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-sm font-bold text-white transition hover:bg-orange-600"><Upload className="h-4 w-4" /> Import CSV</button>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+                {LEAD_PLATFORMS.map((p) => {
+                  const on = !!leadSources[p.key]
+                  return (
+                    <div key={p.key} className="flex flex-col items-center rounded-lg border border-slate-100 bg-slate-50 p-3 text-center">
+                      <span className={`flex h-9 w-9 items-center justify-center rounded-lg text-xs font-extrabold text-white ${p.color}`}>{p.name.slice(0, 2)}</span>
+                      <p className="mt-1.5 text-xs font-bold text-slate-800">{p.name}</p>
+                      {on ? (
+                        <button onClick={() => { setLeadSources((s) => ({ ...s, [p.key]: false })); notify(`Disconnected ${p.name}`, 'error') }} className="mt-1 text-[11px] font-semibold text-emerald-600 hover:text-rose-500">Connected ✓</button>
+                      ) : (
+                        <button onClick={() => { setLeadSources((s) => ({ ...s, [p.key]: true })); notify(`Connected ${p.name}`) }} className="mt-1 text-[11px] font-semibold text-brand hover:underline">Connect</button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+              <p className="mt-3 text-[11px] text-slate-400">Connected platforms sync new leads automatically; you can also import a CSV export or forward lead emails below.</p>
+            </div>
 
             {/* Forward-in address */}
             <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
