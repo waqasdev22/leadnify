@@ -538,10 +538,10 @@ const downloadPdf = (item, notify) => {
 
 const NAV_ITEMS = [
   { key: 'dashboard', label: 'Dashboard', icon: Home },
-  { key: 'listings', label: 'Listing Hub', icon: Globe },
+  { key: 'listings', label: 'My Listings', icon: Globe },
   { key: 'deals', label: 'Deal Rooms', icon: FolderLock },
-  { key: 'crm', label: 'CRM', icon: Contact },
-  { key: 'email', label: 'Email Blasts', icon: Send },
+  { key: 'crm', label: 'My Leads', icon: Contact },
+  { key: 'email', label: 'Distribution', icon: Send },
 ]
 
 /* -------------------------------------------------------------------------- */
@@ -7592,7 +7592,7 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
       )
     }
 
-    notify(finished ? 'Document saved' : 'Draft saved — resume it anytime from Listing Hub')
+    notify(finished ? 'Document saved' : 'Draft saved — resume it anytime from My Listings')
     setBuilderOpen(false)
     setBuilderInitial(null)
     setBuilderDraftId(null)
@@ -8934,13 +8934,13 @@ function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onRes
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Globe className="h-5 w-5 text-brand" />
-          <h1 className="text-xl font-extrabold text-slate-900">Listing Hub</h1>
+          <h1 className="text-xl font-extrabold text-slate-900">My Listings</h1>
           <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-600 ring-1 ring-inset ring-emerald-600/20">
             Active
           </span>
         </div>
         <button
-          onClick={() => shareItem({ id: 'hub', title: 'Listing Hub', address: hubUrl }, notify)}
+          onClick={() => shareItem({ id: 'hub', title: 'My Listings', address: hubUrl }, notify)}
           className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
         >
           <Share2 className="h-4 w-4" />
@@ -9026,7 +9026,7 @@ function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onRes
               <ExternalLink className="h-4 w-4 text-brand" /> Your own domain
             </p>
             <p className="mt-1 text-xs text-slate-500">
-              Host your Listing Hub on your own web address. Add a CNAME record, point it to us and we handle the SSL and hosting automatically.
+              Host your listings page on your own web address. Add a CNAME record, point it to us and we handle the SSL and hosting automatically.
             </p>
             <div className="mt-3 flex gap-2">
               <input
@@ -9296,7 +9296,7 @@ function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onRes
       <Modal open={embedOpen} onClose={() => setEmbedOpen(false)} title="Embed on Your Website" maxWidth="max-w-lg">
         <div className="space-y-3">
           <p className="text-sm text-slate-500">
-            Copy this snippet and paste it into any web page to embed your live Listing Hub.
+            Copy this snippet and paste it into any web page to embed your live listings page.
           </p>
           <pre className="scrollbar-slim overflow-x-auto rounded-lg bg-slate-900 p-4 text-xs leading-relaxed text-slate-100">
 {embedCode}
@@ -9718,7 +9718,7 @@ function DocumentHubView({ room, onBack, notify, onEditDocument }) {
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-500"><Globe className="h-5 w-5" /></div>
               <div><p className="text-sm font-bold text-slate-900">Public Listing</p><p className="text-xs text-slate-500">Your listing page + who can access the materials</p></div>
             </div>
-            <button onClick={() => notify('Opening Listing Hub')} className="text-xs font-semibold text-brand hover:underline">Listing Hub →</button>
+            <button onClick={() => notify('Opening My Listings')} className="text-xs font-semibold text-brand hover:underline">My Listings →</button>
           </div>
           <div className="mt-4 flex items-center justify-between">
             <span className="text-sm font-semibold text-slate-700">Listed on your public page</span>
@@ -9777,7 +9777,7 @@ function DocumentHubView({ room, onBack, notify, onEditDocument }) {
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-orange-50 text-brand"><Send className="h-5 w-5" /></div>
               <div><p className="text-sm font-bold text-slate-900">Outreach</p><p className="text-xs text-slate-500">Email campaigns built from this property</p></div>
             </div>
-            <button onClick={() => notify('Opening Email Blasts')} className="text-xs font-semibold text-brand hover:underline">Email Blasts →</button>
+            <button onClick={() => notify('Opening Distribution')} className="text-xs font-semibold text-brand hover:underline">Distribution →</button>
           </div>
           <button onClick={() => notify('Creating an email blast…')} className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"><Send className="h-4 w-4" /> Create an email blast</button>
         </div>
@@ -10015,14 +10015,14 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
           {/* Prospects */}
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <p className="flex items-center gap-2 text-sm font-bold text-slate-900">
-              Prospects <span className="rounded-full bg-slate-100 px-1.5 text-xs font-semibold text-slate-500">{prospects.length}</span>
+              My Leads <span className="rounded-full bg-slate-100 px-1.5 text-xs font-semibold text-slate-500">{prospects.length}</span>
             </p>
             <p className="text-xs text-slate-400">Everyone who passed (or requested) access to this room</p>
             <div className="scrollbar-slim mt-3 overflow-x-auto">
               <table className="w-full min-w-[560px] text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-100 text-[11px] uppercase tracking-wide text-slate-400">
-                    <th className="py-2 pr-3 font-semibold">Prospect</th>
+                    <th className="py-2 pr-3 font-semibold">Lead</th>
                     <th className="py-2 pr-3 font-semibold">Access</th>
                     <th className="py-2 pr-3 font-semibold">Engagement</th>
                     <th className="py-2 pr-3 font-semibold">Status</th>
@@ -10779,7 +10779,7 @@ function CRMPage({ user, onNavigate }) {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           <Contact className="h-6 w-6 text-brand" />
-          <h1 className="text-2xl font-extrabold text-slate-900">CRM</h1>
+          <h1 className="text-2xl font-extrabold text-slate-900">My Leads</h1>
         </div>
         {/* Mine / Whole Team toggle */}
         <div className="inline-flex rounded-lg bg-slate-100 p-1">
@@ -12322,7 +12322,7 @@ const EMAIL_PROVIDERS = [
   { key: 'download', name: 'Download HTML', sub: 'Use any email program', account: '', action: 'ready', tile: 'bg-slate-800 text-white', icon: Download },
 ]
 
-const EMAIL_AUDIENCES = ['All Contacts', 'Qualified Leads', 'New Leads', 'Active Deal Room Prospects']
+const EMAIL_AUDIENCES = ['All Contacts', 'Qualified Leads', 'New Leads', 'Active Deal Room Leads']
 
 // Richer per-provider copy shown on the Integrations page (original wording).
 const EMAIL_INTEGRATION_INFO = {
@@ -12375,7 +12375,7 @@ function beginOAuth(providerKey) {
 const EMAIL_CAMPAIGNS_SEED = []
 
 const EMAIL_TOUR = [
-  { icon: Send, tile: 'bg-violet-50 text-violet-500', title: 'Welcome to Email Blasts', body: "Turn any completed listing into a polished marketing email and get it in front of the right buyers — without leaving MyCREBlueprint or paying for another blast tool. Here's a quick 4-stop tour of how it works.", place: 'center' },
+  { icon: Send, tile: 'bg-violet-50 text-violet-500', title: 'Welcome to Distribution', body: "Turn any completed listing into a polished marketing email and get it in front of the right buyers — without leaving MyCREBlueprint or paying for another blast tool. Here's a quick 4-stop tour of how it works.", place: 'center' },
   { icon: MousePointerClick, tile: 'bg-emerald-50 text-emerald-500', title: 'Start from a listing', body: 'Hit New email blast and pick a completed property — the email builds itself from its cover photo, price, cap rate, NOI, highlights, and your broker card. Choose two or more and it becomes a single portfolio email with an index and stacked property cards.', place: 'top' },
   { icon: Mail, tile: 'bg-blue-50 text-blue-500', title: 'Deliver through your own account', body: 'Create a campaign in your Mailchimp account, send directly through your own Amazon SES setup, or download the finished HTML for another provider. Your sending account and reputation stay yours. Manage connections any time under Integrations.', place: 'center' },
   { icon: FileText, tile: 'bg-orange-50 text-brand', title: 'Recipients & autosaving drafts', body: 'On a direct send through your own SES you pick recipients straight from your CRM — by tag, pipeline stage, or the buyers whose buy-box fits this listing; Mailchimp uses its own audience instead. Either way, every blast autosaves as a draft right here, so you can step away and pick up later, or duplicate a past one.', place: 'bottom' },
@@ -12510,7 +12510,7 @@ function EmailBlastPage({ user, onNavigate }) {
   }, [])
   const startBlast = () => setPickerOpen(true)
   const chooseType = (type) => { setForm({ audience: EMAIL_AUDIENCES[0], subject: '', body: '', type }); setPickerOpen(false); setComposeOpen(true) }
-  const audienceCounts = { 'All Contacts': 842, 'Qualified Leads': 214, 'New Leads': 128, 'Active Deal Room Prospects': 96 }
+  const audienceCounts = { 'All Contacts': 842, 'Qualified Leads': 214, 'New Leads': 128, 'Active Deal Room Leads': 96 }
   const saveOrSend = (asDraft) => {
     if (!form.subject.trim()) { notify('Add a subject first', 'error'); return }
     setCampaigns((list) => [{ id: uid(), name: form.subject, audience: form.audience, recipients: audienceCounts[form.audience], opens: 0, clicks: 0, status: asDraft ? 'Draft' : 'Sent', date: asDraft ? 'just now' : 'just now' }, ...list])
@@ -12525,11 +12525,11 @@ function EmailBlastPage({ user, onNavigate }) {
     <div className="mx-auto max-w-[1000px] p-6">
       {integrationsOpen ? (
       <div className="space-y-6">
-        <button onClick={() => setIntegrationsOpen(false)} className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:underline"><ArrowLeft className="h-4 w-4" /> Email Blasts</button>
+        <button onClick={() => setIntegrationsOpen(false)} className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:underline"><ArrowLeft className="h-4 w-4" /> Distribution</button>
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900">Integrations</h1>
           <p className="text-sm text-slate-500">Connect your email service to send marketing blasts, and your social accounts to post listings — all from any completed document.</p>
-          <p className="mt-1 text-sm text-slate-500">On a direct SES send, recipients come straight from your <button onClick={() => onNavigate && onNavigate('crm')} className="font-semibold text-brand hover:underline">CRM</button> — filter by tag, pipeline stage, or the buyers whose buy-box fits a listing (Mailchimp uses its own audience). New to this? Read the <span className="font-semibold text-brand">Email Blast guide</span>.</p>
+          <p className="mt-1 text-sm text-slate-500">On a direct SES send, recipients come straight from your <button onClick={() => onNavigate && onNavigate('crm')} className="font-semibold text-brand hover:underline">My Leads</button> — filter by tag, pipeline stage, or the buyers whose buy-box fits a listing (Mailchimp uses its own audience). New to this? Read the <span className="font-semibold text-brand">Distribution guide</span>.</p>
         </div>
 
         {/* MyCREBlueprint Mail (coming soon) */}
@@ -12658,7 +12658,7 @@ function EmailBlastPage({ user, onNavigate }) {
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900">Email Blasts</h1>
+          <h1 className="text-2xl font-extrabold text-slate-900">Distribution</h1>
           <p className="text-sm text-brand">Turn any completed property into a polished email — drafts save automatically as you work.</p>
         </div>
         <div className="flex items-center gap-2">
