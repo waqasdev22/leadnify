@@ -123,6 +123,7 @@ import {
   ExternalLink,
   Link2,
   Download,
+  Printer,
   LayoutGrid,
   Rows3,
   Maximize2,
@@ -10733,6 +10734,43 @@ const CRM_ACTIVITY_SEED = [
 ]
 // Source display names + bar colours for the Reports source breakdowns.
 const REPORT_SOURCE_LABEL = { Inquiry: 'Inquiries', NDA: 'NDA signers', Download: 'Downloads', Email: 'Email', Website: 'Website', Referral: 'Referral', 'Cold Call': 'Cold Call', 'Listing Hub': 'Listing Hub', 'Email Blast': 'Email Blast' }
+
+// Milestone II 3.8 — per-property marketing metrics for the property-level report.
+const MARKETING_TYPES = ['Listing Services', 'Social', 'Email', 'Text', 'Website']
+const PROPERTY_MARKETING = [
+  { name: 'Riverside Business Park', owner: 'Waqas', impressions: 18420, pageViews: 2140, visitors: 1290, openOms: 312, executedCa: 47, weeklyViews: [40, 55, 62, 58, 71, 80, 76, 90, 102, 96, 110, 124], reach: { 'Listing Services': 9200, Social: 4100, Email: 2600, Text: 900, Website: 1620 } },
+  { name: 'Summit Retail Center', owner: 'Maya Chen', impressions: 12760, pageViews: 1580, visitors: 940, openOms: 208, executedCa: 29, weeklyViews: [22, 30, 41, 38, 44, 52, 49, 61, 58, 66, 72, 80], reach: { 'Listing Services': 6100, Social: 3200, Email: 1900, Text: 560, Website: 1000 } },
+  { name: 'The Foundry Lofts', owner: 'Waqas', impressions: 9840, pageViews: 1120, visitors: 690, openOms: 154, executedCa: 18, weeklyViews: [12, 18, 24, 30, 28, 35, 40, 44, 39, 48, 55, 61], reach: { 'Listing Services': 4300, Social: 2600, Email: 1400, Text: 420, Website: 1120 } },
+  { name: 'Northgate Logistics Hub', owner: 'Sam Rivera', impressions: 15230, pageViews: 1870, visitors: 1110, openOms: 266, executedCa: 34, weeklyViews: [33, 40, 48, 52, 60, 58, 66, 72, 80, 76, 88, 95], reach: { 'Listing Services': 7800, Social: 3100, Email: 2200, Text: 700, Website: 1430 } },
+  { name: 'Cypress Corporate Tower', owner: 'Devon Park', impressions: 7420, pageViews: 860, visitors: 520, openOms: 98, executedCa: 12, weeklyViews: [8, 14, 19, 22, 26, 24, 30, 33, 38, 41, 46, 52], reach: { 'Listing Services': 3200, Social: 1900, Email: 1100, Text: 320, Website: 900 } },
+]
+// 3.8 — open a clean, owner-shareable report in a new tab (print or save as PDF from there).
+function openPropertyReportPrint(props, totals, weeks, reach, label) {
+  const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))
+  const n = (v) => Number(v).toLocaleString()
+  const maxW = Math.max(1, ...weeks)
+  const bars = weeks.map((w) => `<span style="display:inline-block;width:6%;height:${Math.max(4, (w / maxW) * 80)}px;background:#F97316;margin-right:1%;vertical-align:bottom"></span>`).join('')
+  const propRows = props.map((p) => `<tr><td>${esc(p.name)}</td><td>${n(p.impressions)}</td><td>${n(p.pageViews)}</td><td>${n(p.visitors)}</td><td>${n(p.openOms)}</td><td>${n(p.executedCa)}</td></tr>`).join('')
+  const reachRows = reach.map((r) => `<tr><td>${esc(r.t)}</td><td>${n(r.n)}</td></tr>`).join('')
+  const tiles = [['Total Impressions', totals.impressions], ['Page Views', totals.pageViews], ['Visitors', totals.visitors], ['Open OMs', totals.openOms], ['Executed CA', totals.executedCa]]
+    .map(([k, v]) => `<div class="tile"><div class="v">${n(v)}</div><div class="k">${k}</div></div>`).join('')
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Marketing Report</title>
+<style>body{font-family:Inter,Arial,sans-serif;color:#0f172a;margin:40px;max-width:820px}h1{font-size:22px;margin:0}.sub{color:#64748b;font-size:13px;margin:2px 0 20px}
+.tiles{display:flex;gap:12px;flex-wrap:wrap;margin:16px 0}.tile{flex:1;min-width:120px;border:1px solid #e2e8f0;border-radius:10px;padding:12px}.tile .v{font-size:22px;font-weight:800}.tile .k{color:#64748b;font-size:12px}
+h2{font-size:14px;text-transform:uppercase;letter-spacing:.04em;color:#64748b;margin:26px 0 8px}table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:8px;border-bottom:1px solid #e2e8f0}th{color:#64748b;font-weight:600}
+.chart{height:90px;border-bottom:1px solid #e2e8f0;padding-top:8px}.btn{background:#F97316;color:#fff;border:0;border-radius:8px;padding:8px 16px;font-weight:700;cursor:pointer;margin-bottom:16px}@media print{.btn{display:none}}</style></head>
+<body><button class="btn" onclick="window.print()">Print / Save as PDF</button>
+<h1>Property Marketing Report</h1><div class="sub">${esc(label === 'all' ? 'All properties' : label)} · generated for the property owner</div>
+<div class="tiles">${tiles}</div>
+<h2>Views — week over week</h2><div class="chart">${bars}</div>
+<h2>Per-property summary</h2><table><thead><tr><th>Property</th><th>Impressions</th><th>Page Views</th><th>Visitors</th><th>Open OMs</th><th>Executed CA</th></tr></thead><tbody>${propRows}</tbody></table>
+<h2>Total reach by marketing type</h2><table><thead><tr><th>Marketing type</th><th>Reach</th></tr></thead><tbody>${reachRows}</tbody></table>
+</body></html>`
+  const w = window.open('', '_blank')
+  if (!w) return false
+  w.document.write(html); w.document.close()
+  return true
+}
 const REPORT_STAGE_BAR = { Inquiry: 'bg-blue-500', 'NDA Signed': 'bg-violet-500', Tour: 'bg-amber-500', LOI: 'bg-orange-500', 'Under Contract': 'bg-emerald-500' }
 
 function Last12Weeks({ deals, contactList, scope, me }) {
@@ -10959,6 +10997,7 @@ function CRMPage({ user, onNavigate }) {
   const [scriptDelId, setScriptDelId] = useState(null) // id pending delete confirm
   const scriptBodyRef = useRef(null)
   const [reportRange, setReportRange] = useState('30d')
+  const [reportProperty, setReportProperty] = useState('all') // property-level report filter
   const [taskTab, setTaskTab] = useState('todo') // 'todo' | 'leases'
   const [showDone, setShowDone] = useState(false)
   const [addTaskOpen, setAddTaskOpen] = useState(false)
@@ -12532,6 +12571,76 @@ function CRMPage({ user, onNavigate }) {
                 ))}
               </div>
             </div>
+
+            {/* Property-level marketing report (Milestone II 3.8) */}
+            {(() => {
+              const scoped = PROPERTY_MARKETING.filter((p) => (scope === 'mine' ? p.owner === me : true))
+              const sel = reportProperty === 'all' ? scoped : scoped.filter((p) => p.name === reportProperty)
+              const sum = (k) => sel.reduce((a, p) => a + p[k], 0)
+              const weeks = Array.from({ length: 12 }, (_, i) => sel.reduce((a, p) => a + (p.weeklyViews[i] || 0), 0))
+              const maxWeek = Math.max(1, ...weeks)
+              const reach = MARKETING_TYPES.map((t) => ({ t, n: sel.reduce((a, p) => a + (p.reach[t] || 0), 0) }))
+              const maxReach = Math.max(1, ...reach.map((r) => r.n))
+              const fmt = (v) => v.toLocaleString()
+              const totals = { impressions: sum('impressions'), pageViews: sum('pageViews'), visitors: sum('visitors'), openOms: sum('openOms'), executedCa: sum('executedCa') }
+              const tiles = [
+                { label: 'Total Impressions', v: totals.impressions, icon: Eye, tone: 'bg-blue-50 text-blue-500' },
+                { label: 'Page Views', v: totals.pageViews, icon: BarChart3, tone: 'bg-violet-50 text-violet-500' },
+                { label: 'Visitors', v: totals.visitors, icon: Users, tone: 'bg-emerald-50 text-emerald-500' },
+                { label: 'Open OMs', v: totals.openOms, icon: FileText, tone: 'bg-amber-50 text-amber-500' },
+                { label: 'Executed CA', v: totals.executedCa, icon: CheckSquare, tone: 'bg-rose-50 text-rose-500' },
+              ]
+              return (
+                <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-bold text-slate-900">Property marketing</p>
+                      <p className="text-xs text-slate-400">Reach & engagement per property{scope === 'mine' ? ' — your listings' : ' — whole team'}.</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <select value={reportProperty} onChange={(e) => setReportProperty(e.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-orange-400">
+                        <option value="all">All properties</option>
+                        {scoped.map((p) => <option key={p.name} value={p.name}>{p.name}</option>)}
+                      </select>
+                      <button onClick={() => { if (!openPropertyReportPrint(sel, totals, weeks, reach, reportProperty)) notify('Allow pop-ups to open the report', 'error') }} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"><Printer className="h-4 w-4" /> Print / Export</button>
+                    </div>
+                  </div>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                    {tiles.map((t) => { const I = t.icon; return (
+                      <div key={t.label} className="rounded-lg border border-slate-100 bg-slate-50 p-3">
+                        <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${t.tone}`}><I className="h-4 w-4" /></div>
+                        <p className="mt-2 text-2xl font-extrabold text-slate-900">{fmt(t.v)}</p>
+                        <p className="text-xs text-slate-400">{t.label}</p>
+                      </div>
+                    )})}
+                  </div>
+                  <div className="mt-5 grid gap-5 lg:grid-cols-2">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Views — week over week</p>
+                      <div className="mt-3 flex h-32 items-end gap-1.5">
+                        {weeks.map((w, i) => (
+                          <div key={i} className="flex-1" title={`Week ${i + 1}: ${w} views`}>
+                            <div className="w-full rounded-t bg-brand/80" style={{ height: `${Math.max(4, (w / maxWeek) * 100)}%` }} />
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-1 flex justify-between text-[10px] text-slate-400"><span>12 wks ago</span><span>this week</span></div>
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Total reach by marketing type</p>
+                      <div className="mt-3 space-y-2">
+                        {reach.map((r) => (
+                          <div key={r.t}>
+                            <div className="flex justify-between text-xs"><span className="font-semibold text-slate-600">{r.t}</span><span className="text-slate-400">{fmt(r.n)}</span></div>
+                            <div className="mt-1 h-2 rounded-full bg-slate-100"><div className="h-2 rounded-full bg-brand" style={{ width: `${(r.n / maxReach) * 100}%` }} /></div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            })()}
 
             {/* KPI cards */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
