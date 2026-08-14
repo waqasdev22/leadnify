@@ -9879,6 +9879,14 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
   const [addingContact, setAddingContact] = useState(false)
   const [borDraft, setBorDraft] = useState({ name: '', company: '', license: '' })
   const [editingBor, setEditingBor] = useState(false)
+  // Deal Room "My Leads": pulled from the central leads, auto-filtered to THIS property,
+  // shown with the same columns as the central My Leads page (Milestone II 3.3).
+  const ME = 'Waqas' // current user (demo)
+  const [leadScope, setLeadScope] = useState('team') // 'mine' | 'team'
+  const [openLeadId, setOpenLeadId] = useState(null)
+  const roomLeads = CRM_INBOX_SEED
+    .filter((l) => l.property === room.name)
+    .filter((l) => (leadScope === 'mine' ? l.owner === ME : true))
   const saveContact = () => {
     if (!contactDraft.name.trim()) { notify('Add a contact name', 'error'); return }
     if (dealContacts.length >= 4) { notify('A deal can have at most 4 contacts', 'error'); return }
@@ -10103,10 +10111,87 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
             </div>
           </div>
 
+          {/* My Leads — central leads, auto-filtered to this property (Milestone II 3.3) */}
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                  My Leads <span className="rounded-full bg-slate-100 px-1.5 text-xs font-semibold text-slate-500">{roomLeads.length}</span>
+                </p>
+                <p className="text-xs text-slate-400">Leads for this property, straight from your My Leads — same columns.</p>
+              </div>
+              <div className="inline-flex rounded-lg bg-slate-100 p-0.5 text-xs font-semibold">
+                <button onClick={() => setLeadScope('mine')} className={`rounded-md px-2.5 py-1 transition ${leadScope === 'mine' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>Mine</button>
+                <button onClick={() => setLeadScope('team')} className={`rounded-md px-2.5 py-1 transition ${leadScope === 'team' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>Whole Team</button>
+              </div>
+            </div>
+            <div className="scrollbar-slim mt-3 overflow-x-auto">
+              <table className="w-full min-w-[620px] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-slate-100 text-[11px] uppercase tracking-wide text-slate-400">
+                    <th className="py-2 pr-3 font-semibold">Lead</th>
+                    <th className="py-2 pr-3 font-semibold">Type</th>
+                    <th className="py-2 pr-3 font-semibold">Company</th>
+                    <th className="py-2 pr-3 font-semibold">Listing</th>
+                    <th className="py-2 pr-3 font-semibold">Date</th>
+                    <th className="py-2 pr-3 font-semibold">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {roomLeads.map((l) => {
+                    const open = openLeadId === l.id
+                    const history = CRM_INBOX_SEED.filter((x) => x.email === l.email)
+                    return (
+                    <React.Fragment key={l.id}>
+                    <tr className="cursor-pointer hover:bg-slate-50" onClick={() => setOpenLeadId(open ? null : l.id)}>
+                      <td className="py-2.5 pr-3">
+                        <div className="flex items-center gap-2">
+                          <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+                          <div><p className="font-semibold text-slate-800">{l.name}</p><p className="text-xs text-slate-400">{l.email}</p></div>
+                        </div>
+                      </td>
+                      <td className="py-2.5 pr-3"><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${crmLeadTypeBadge(l.type)}`}>{l.type}</span></td>
+                      <td className="py-2.5 pr-3 text-slate-600">{l.company}</td>
+                      <td className="py-2.5 pr-3 text-slate-600">{l.property}</td>
+                      <td className="py-2.5 pr-3 text-slate-500">{l.date}</td>
+                      <td className="py-2.5 pr-3">{l.status === 'Unread' ? <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">Unread</span> : <span className="text-xs text-slate-500">{l.status}</span>}</td>
+                    </tr>
+                    {open && (
+                      <tr className="bg-slate-50/70">
+                        <td colSpan={6} className="px-3 pb-4 pt-1">
+                          <div className="rounded-lg border border-slate-200 bg-white p-4">
+                            <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
+                              <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Name</p><p className="mt-0.5 text-sm font-semibold text-slate-800">{l.name}</p></div>
+                              <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Company</p><p className="mt-0.5 text-sm font-semibold text-slate-800">{l.company}</p></div>
+                              <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Email</p><p className="mt-0.5 text-sm font-semibold text-slate-800">{l.email}</p></div>
+                              <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Owner</p><p className="mt-0.5 text-sm font-semibold text-slate-800">{l.owner}</p></div>
+                            </div>
+                            <p className="mt-4 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Listing history</p>
+                            <div className="mt-1.5 space-y-1">
+                              {history.map((h) => (
+                                <div key={h.id} className="flex items-center justify-between text-sm">
+                                  <span className="text-slate-700">{h.property} <span className="text-xs text-slate-400">· {h.type}</span></span>
+                                  <span className="text-xs text-slate-400">{h.date}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    </React.Fragment>
+                    )
+                  })}
+                  {!roomLeads.length && <tr><td colSpan={6} className="py-8 text-center text-sm text-slate-400">No leads for this property{leadScope === 'mine' ? ' assigned to you' : ''} yet.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
           {/* Prospects */}
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <p className="flex items-center gap-2 text-sm font-bold text-slate-900">
-              My Leads <span className="rounded-full bg-slate-100 px-1.5 text-xs font-semibold text-slate-500">{prospects.length}</span>
+              Access &amp; engagement <span className="rounded-full bg-slate-100 px-1.5 text-xs font-semibold text-slate-500">{prospects.length}</span>
             </p>
             <p className="text-xs text-slate-400">Everyone who passed (or requested) access to this room</p>
             <div className="scrollbar-slim mt-3 overflow-x-auto">
@@ -10722,12 +10807,12 @@ const CRM_INQUIRIES = [
 // Leads "inbox" — raw enquiries, NDA signers, email/forwarded leads.
 const CRM_FORWARD_ADDR = 'leads+qx-s_yJEz4LH5tklhdOK0ojxlZpObhOYFJda7A442mY@inbound.mycreblueprint.com'
 const CRM_INBOX_SEED = [
-  { id: 'in1', name: 'Neil Naran', email: 'neil@valuenetlease.com', type: 'NDA Signer', company: 'Value Net Lease Partners', listing: '#41195', date: 'Jul 29, 2026', status: 'expires 28/08/2026', owner: 'Waqas' },
-  { id: 'in2', name: 'Neil Naran', email: 'naran.neil@gmail.com', type: 'Email Lead', company: 'Value Net Lease Partners', listing: '#41195', date: 'Jul 29, 2026', status: 'expires 28/08/2026', owner: 'Waqas' },
-  { id: 'in3', name: 'Neil Naran', email: 'naran.neil@gmail.com', type: 'Inquiry', company: '—', listing: 'Unknown', date: 'Jul 28, 2026', status: 'Unread', unread: true, owner: 'Waqas' },
-  { id: 'in4', name: 'Jordan Miller', email: 'jordan@millercap.com', type: 'Forwarded', company: 'Miller Capital', listing: '#38210', date: 'Jul 27, 2026', status: 'LoopNet', owner: 'Maya Chen' },
-  { id: 'in5', name: 'Priya Shah', email: 'priya@everest.com', type: 'Inquiry', company: '—', listing: 'Unknown', date: 'Jul 26, 2026', status: 'Unread', unread: true, owner: 'Devon Park' },
-  { id: 'in6', name: 'Aaron Cole', email: 'aaron@colenl.com', type: 'NDA Signer', company: 'Cole Net Lease', listing: '#41822', date: 'Jul 25, 2026', status: 'expires 25/08/2026', owner: 'Sam Rivera' },
+  { id: 'in1', name: 'Neil Naran', email: 'neil@valuenetlease.com', type: 'NDA Signer', company: 'Value Net Lease Partners', listing: '#41195', property: 'Riverside Business Park', date: 'Jul 29, 2026', status: 'expires 28/08/2026', owner: 'Waqas' },
+  { id: 'in2', name: 'Neil Naran', email: 'naran.neil@gmail.com', type: 'Email Lead', company: 'Value Net Lease Partners', listing: '#41195', property: 'Riverside Business Park', date: 'Jul 29, 2026', status: 'expires 28/08/2026', owner: 'Waqas' },
+  { id: 'in3', name: 'Neil Naran', email: 'naran.neil@gmail.com', type: 'Inquiry', company: '—', listing: 'Unknown', property: 'Riverside Business Park', date: 'Jul 28, 2026', status: 'Unread', unread: true, owner: 'Waqas' },
+  { id: 'in4', name: 'Jordan Miller', email: 'jordan@millercap.com', type: 'Forwarded', company: 'Miller Capital', listing: '#38210', property: 'Summit Retail Center', date: 'Jul 27, 2026', status: 'LoopNet', owner: 'Maya Chen' },
+  { id: 'in5', name: 'Priya Shah', email: 'priya@everest.com', type: 'Inquiry', company: '—', listing: 'Unknown', property: 'The Foundry Lofts', date: 'Jul 26, 2026', status: 'Unread', unread: true, owner: 'Devon Park' },
+  { id: 'in6', name: 'Aaron Cole', email: 'aaron@colenl.com', type: 'NDA Signer', company: 'Cole Net Lease', listing: '#41822', property: 'Northgate Logistics Hub', date: 'Jul 25, 2026', status: 'expires 25/08/2026', owner: 'Sam Rivera' },
 ]
 const crmLeadTypeBadge = (t) => ({
   'NDA Signer': 'bg-violet-50 text-violet-700',
