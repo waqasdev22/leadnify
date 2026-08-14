@@ -35,16 +35,26 @@ const requireAuth = async (req, res, next) => {
   if (!token) return res.status(401).json({ error: 'Sign in required' });
   try {
     req.user = await getAdminAuth().verifyIdToken(token);
+    // Look up the user's role (stored on login). Team-wide roles see everything; a Member
+    // sees only their own records. Unknown user → treated as Member (least privilege).
+    try {
+      const dbUser = await User.findOne({ email: req.user.email });
+      req.user.role = dbUser?.role || 'Member';
+    } catch { req.user.role = 'Member'; }
+    req.user.owner = req.user.name || req.user.email; // matches the "owner" field on records
     next();
   } catch (e) {
     return res.status(401).json({ error: 'Invalid or expired session — please sign in again' });
   }
 };
+const isTeamWide = (role) => ['Owner', 'Admin', 'Manager'].includes(role);
+const OWNER_SCOPED = ['leads', 'contacts']; // filtered per-user for Members; listings/deals stay team-wide
 
 // 1️⃣ SCHEMAS & MODELS
-const UserSchema = new mongoose.Schema({ 
-  name: String, 
-  email: String 
+const UserSchema = new mongoose.Schema({
+  name: String,
+  email: String,
+  role: String
 }, { timestamps: true });
 
 const User = mongoose.model('User', UserSchema);
@@ -136,16 +146,18 @@ app.get('/api/users', async (req, res) => {
 // SAVE a user on login -> POST /api/users { name, email }
 app.post('/api/users', async (req, res) => {
   try {
-    const { name, email } = req.body;
+    const { name, email, role } = req.body;
 
     // Safety check: Agar email empty hai to error respond karein, DB crash mat hone dein
     if (!email) {
       return res.status(400).json({ error: 'Email is required to save user' });
     }
 
+    const update = { name: name || 'Anonymous', email };
+    if (role) update.role = role; // store the role so the API can enforce permissions
     const user = await User.findOneAndUpdate(
       { email },
-      { name: name || 'Anonymous', email },
+      update,
       { new: true, upsert: true, setDefaultsOnInsert: true }
     );
     res.status(201).json({ message: '✅ Login user saved!', user });
@@ -171,7 +183,10 @@ app.get('/api/:col', async (req, res) => {
   if (!Model) return res.status(404).json({ error: `Unknown collection: ${col}` });
   
   try {
-    const docs = await Model.find().lean();
+    // A Member only sees their OWN leads/contacts; Managers/Admins/Owners see everything.
+    const scoped = OWNER_SCOPED.includes(col) && !isTeamWide(req.user.role);
+    const filter = scoped ? { owner: req.user.owner } : {};
+    const docs = await Model.find(filter).lean();
     res.json(docs.map(({ _id, ...rest }) => rest));
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -183,9 +198,17 @@ app.put('/api/:col', async (req, res) => {
   const { col } = req.params;
   const Model = collectionModels[col];
   if (!Model) return res.status(404).json({ error: `Unknown collection: ${col}` });
-  
+
   try {
     const items = Array.isArray(req.body) ? req.body : [];
+    // A Member's save replaces ONLY their own records (others' data is preserved).
+    const scoped = OWNER_SCOPED.includes(col) && !isTeamWide(req.user.role);
+    if (scoped) {
+      await Model.deleteMany({ owner: req.user.owner });
+      const own = items.filter((i) => (i.owner || req.user.owner) === req.user.owner);
+      if (own.length) await Model.insertMany(own.map((i) => ({ ...i, owner: req.user.owner })), { ordered: false });
+      return res.json({ ok: true, count: own.length, scoped: true });
+    }
     await Model.deleteMany({});
     if (items.length) await Model.insertMany(items, { ordered: false });
     res.json({ ok: true, count: items.length });

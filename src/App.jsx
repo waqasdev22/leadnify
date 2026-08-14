@@ -14325,7 +14325,6 @@ export default function App() {
         setUser({ ...CURRENT_USER, name, email: u.email || '', initials: name.slice(0, 1).toUpperCase() })
         setMyUid(u.uid)
         setIsLoggedIn(true)
-        saveUser({ name, email: u.email }).catch(() => {})
         let profile = null
         try {
           const usersSnap = await dbGet(dbRef(db, 'users'))
@@ -14342,6 +14341,8 @@ export default function App() {
         }
         setRole(profile.role || 'Member')
         setPerms(resolvePerms(profile.role || 'Member', decodeOverrides(profile.overrides)))
+        // Store the user + role in the backend so the API can enforce permissions server-side.
+        saveUser({ name, email: u.email, role: profile.role || 'Member' }).catch(() => {})
       } else {
         setIsLoggedIn(false)
         setRole('Member')
