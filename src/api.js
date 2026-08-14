@@ -78,6 +78,14 @@ export const putCol = async (col, arr) => {
   }
 }
 
+// Send a real email through the backend (SMTP). Throws if the backend rejects it.
+export const sendEmail = (payload) =>
+  request('/send-email', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+
 // Save the logged-in user (best-effort; ignored when the backend is offline).
 export const saveUser = async (user) => {
   lsSet('user', user)

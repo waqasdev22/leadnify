@@ -9,7 +9,7 @@ import React, {
 import { jsPDF } from 'jspdf'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { getCol, putCol, saveUser } from './api'
+import { getCol, putCol, saveUser, sendEmail } from './api'
 import { auth, googleProvider, db, createMemberAccount, uploadToStorage } from './firebase'
 import { ref as dbRef, get as dbGet, set as dbSet, update as dbUpdate, onValue } from 'firebase/database'
 import { PERMISSION_GROUPS, ROLE_PRESETS, ROLES, ROLE_INFO, resolvePerms, decodeOverrides, encodeOverrides } from './permissions'
@@ -13070,7 +13070,8 @@ function EmailBlastPage({ user, onNavigate, role = 'Member' }) {
   const [conns, setConns] = usePersistentState('email_conns', {})
   const [campaigns, setCampaigns] = usePersistentState('email_campaigns', EMAIL_CAMPAIGNS_SEED)
   const [composeOpen, setComposeOpen] = useState(false)
-  const [form, setForm] = useState({ audience: EMAIL_AUDIENCES[0], subject: '', body: '', type: 'individual' })
+  const [form, setForm] = useState({ audience: EMAIL_AUDIENCES[0], subject: '', body: '', type: 'individual', to: '' })
+  const [sending, setSending] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [templates, setTemplates] = usePersistentState('email_templates', EMAIL_TEMPLATES_SEED)
   const [tplEdit, setTplEdit] = useState(null) // template being edited (Manager+)
@@ -13083,7 +13084,7 @@ function EmailBlastPage({ user, onNavigate, role = 'Member' }) {
     setTplEdit(null)
     notify('Template saved for the whole team')
   }
-  const useTemplate = (t) => { setForm({ audience: EMAIL_AUDIENCES[0], subject: t.subject, body: t.body, type: 'individual' }); setComposeOpen(true) }
+  const useTemplate = (t) => { setForm({ audience: EMAIL_AUDIENCES[0], subject: t.subject, body: t.body, type: 'individual', to: '' }); setComposeOpen(true) }
   const scheduleLinkedIn = () => {
     if (!liPost.listing) { notify('Pick a listing', 'error'); return }
     setLiScheduled((l) => [{ id: uid(), listing: liPost.listing, when: liPost.when || 'ASAP', status: 'Scheduled' }, ...l])
@@ -13200,12 +13201,30 @@ function EmailBlastPage({ user, onNavigate, role = 'Member' }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   const startBlast = () => setPickerOpen(true)
-  const chooseType = (type) => { setForm({ audience: EMAIL_AUDIENCES[0], subject: '', body: '', type }); setPickerOpen(false); setComposeOpen(true) }
+  const chooseType = (type) => { setForm({ audience: EMAIL_AUDIENCES[0], subject: '', body: '', type, to: '' }); setPickerOpen(false); setComposeOpen(true) }
   const audienceCounts = { 'All Contacts': 842, 'Qualified Leads': 214, 'New Leads': 128, 'Active Deal Room Leads': 96 }
-  const saveOrSend = (asDraft) => {
+  const saveOrSend = async (asDraft) => {
     if (!form.subject.trim()) { notify('Add a subject first', 'error'); return }
-    setCampaigns((list) => [{ id: uid(), name: form.subject, audience: form.audience, recipients: audienceCounts[form.audience], opens: 0, clicks: 0, status: asDraft ? 'Draft' : 'Sent', date: asDraft ? 'just now' : 'just now' }, ...list])
-    notify(asDraft ? 'Draft saved automatically' : `Blast sent to ${form.audience}`)
+    // Real send: if a recipient email is given, actually deliver it through the backend.
+    if (!asDraft && form.to.trim()) {
+      if (sending) return // guard against double-send
+      setSending(true)
+      try {
+        const recipients = form.to.split(',').map((s) => s.trim()).filter(Boolean)
+        await sendEmail({ to: recipients, subject: form.subject, body: (form.body || '').replace(/\n/g, '<br>'), fromName: user?.name })
+        setCampaigns((list) => [{ id: uid(), name: form.subject, audience: recipients.join(', '), recipients: recipients.length, opens: 0, clicks: 0, status: 'Sent', date: 'just now' }, ...list])
+        notify(`Email sent to ${recipients.length} recipient${recipients.length === 1 ? '' : 's'}`)
+        setComposeOpen(false)
+      } catch (e) {
+        notify(`Send failed — ${String(e.message || e).includes('not configured') ? 'add Gmail App Password in server/.env' : 'check the recipient & try again'}`, 'error')
+      } finally {
+        setSending(false)
+      }
+      return
+    }
+    // No recipient (or saving a draft): keep the campaign record only.
+    setCampaigns((list) => [{ id: uid(), name: form.subject, audience: form.audience, recipients: audienceCounts[form.audience], opens: 0, clicks: 0, status: asDraft ? 'Draft' : 'Sent', date: 'just now' }, ...list])
+    notify(asDraft ? 'Draft saved automatically' : `Blast queued for ${form.audience}`)
     setComposeOpen(false)
   }
   const inputCls = 'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-orange-400'
@@ -13634,13 +13653,14 @@ function EmailBlastPage({ user, onNavigate, role = 'Member' }) {
           <div className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between"><p className="text-base font-bold text-slate-900">New email blast <span className="font-normal text-slate-400">· {form.type === 'multi' ? 'Multi-property' : 'Individual property'}</span></p><button onClick={() => setComposeOpen(false)} className="text-slate-400 hover:text-slate-700"><X className="h-5 w-5" /></button></div>
             <div className="mt-4"><label className="mb-1 block text-xs font-semibold text-slate-500">Audience</label><select value={form.audience} onChange={(e) => setForm((f) => ({ ...f, audience: e.target.value }))} className={inputCls}>{EMAIL_AUDIENCES.map((a) => <option key={a}>{a} ({audienceCounts[a].toLocaleString()})</option>)}</select></div>
+            <div className="mt-3"><label className="mb-1 block text-xs font-semibold text-slate-500">To <span className="font-normal text-slate-400">(recipient email — sends a real email; comma-separate for many)</span></label><input value={form.to} onChange={(e) => setForm((f) => ({ ...f, to: e.target.value }))} placeholder="buyer@example.com, agent@example.com" className={inputCls} /></div>
             <div className="mt-3"><label className="mb-1 block text-xs font-semibold text-slate-500">Subject</label><input value={form.subject} onChange={(e) => setForm((f) => ({ ...f, subject: e.target.value }))} placeholder="e.g. New Off-Market Retail Opportunity" className={inputCls} /></div>
             <div className="mt-3"><label className="mb-1 block text-xs font-semibold text-slate-500">Message</label><textarea value={form.body} onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))} rows={6} placeholder="Write your email…" className={`${inputCls} resize-y`} /></div>
             <div className="mt-4 flex items-center justify-between gap-2">
               <p className="text-xs text-slate-400">{form.type === 'multi' ? 'Multi-property sending is coming soon — save it as a draft for now.' : ''}</p>
               <div className="flex gap-2">
                 <button onClick={() => saveOrSend(true)} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Save draft</button>
-                <button disabled={form.type === 'multi'} onClick={() => saveOrSend(false)} title={form.type === 'multi' ? 'Coming soon for multi-property' : ''} className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-bold text-white transition ${form.type === 'multi' ? 'cursor-not-allowed bg-orange-300' : 'bg-brand hover:bg-orange-600'}`}><Send className="h-4 w-4" /> Send blast</button>
+                <button disabled={form.type === 'multi' || sending} onClick={() => saveOrSend(false)} title={form.type === 'multi' ? 'Coming soon for multi-property' : ''} className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-bold text-white transition ${form.type === 'multi' || sending ? 'cursor-not-allowed bg-orange-300' : 'bg-brand hover:bg-orange-600'}`}><Send className="h-4 w-4" /> {sending ? 'Sending…' : form.to.trim() ? 'Send email' : 'Send blast'}</button>
               </div>
             </div>
           </div>
