@@ -9884,7 +9884,10 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
   const ME = 'Waqas' // current user (demo)
   const [leadScope, setLeadScope] = useState('team') // 'mine' | 'team'
   const [openLeadId, setOpenLeadId] = useState(null)
-  const roomLeads = CRM_INBOX_SEED
+  // Read the SAME live leads list the central My Leads writes to, so a lead created there
+  // (with this property selected) shows up here automatically.
+  const [allLeads] = usePersistentState('crm_inbox', CRM_INBOX_SEED)
+  const roomLeads = allLeads
     .filter((l) => l.property === room.name)
     .filter((l) => (leadScope === 'mine' ? l.owner === ME : true))
   const saveContact = () => {
@@ -10140,7 +10143,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
                 <tbody className="divide-y divide-slate-100">
                   {roomLeads.map((l) => {
                     const open = openLeadId === l.id
-                    const history = CRM_INBOX_SEED.filter((x) => x.email === l.email)
+                    const history = allLeads.filter((x) => x.email === l.email)
                     return (
                     <React.Fragment key={l.id}>
                     <tr className="cursor-pointer hover:bg-slate-50" onClick={() => setOpenLeadId(open ? null : l.id)}>
@@ -10862,9 +10865,25 @@ function CRMPage({ user, onNavigate }) {
   const [tasks, setTasks] = usePersistentState('crm_tasks', CRM_TASKS_SEED)
   const [autos, setAutos] = usePersistentState('crm_autos', CRM_AUTOMATIONS_SEED)
   const [inbox, setInbox] = usePersistentState('crm_inbox', CRM_INBOX_SEED)
+  // One-time backfill: older saved inboxes predate the per-lead `property` tag, so the seed
+  // demo leads had no property and wouldn't show in their Deal Room. Restore it from the seed.
+  useEffect(() => {
+    setInbox((list) => {
+      let changed = false
+      const next = list.map((l) => {
+        if (!l.property) {
+          const seed = CRM_INBOX_SEED.find((s) => s.id === l.id)
+          if (seed && seed.property) { changed = true; return { ...l, property: seed.property } }
+        }
+        return l
+      })
+      return changed ? next : list
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const [leadFilter, setLeadFilter] = useState('All')
   const [addLeadOpen, setAddLeadOpen] = useState(false)
-  const [newLead, setNewLead] = useState({ name: '', email: '', type: 'Inquiry', company: '', listing: '' })
+  const [newLead, setNewLead] = useState({ name: '', email: '', type: 'Inquiry', company: '', listing: '', property: '' })
   const [selLeads, setSelLeads] = useState([])
   const [contactList, setContactList] = usePersistentState('crm_contacts', CRM_CONTACTS)
   const [contactView, setContactView] = useState('people')
@@ -11112,11 +11131,11 @@ function CRMPage({ user, onNavigate }) {
             setInbox((list) => [{
               id: uid(), name: newLead.name.trim(), email: newLead.email.trim() || '—', type: newLead.type,
               company: newLead.company.trim() || '—', listing: newLead.listing.trim() || 'Unknown',
-              date: today, status: isInq ? 'Unread' : 'New', unread: isInq, owner: me,
+              property: newLead.property || '', date: today, status: isInq ? 'Unread' : 'New', unread: isInq, owner: me,
             }, ...list])
-            notify('Lead added')
+            notify(newLead.property ? `Lead added to ${newLead.property}` : 'Lead added')
             setAddLeadOpen(false)
-            setNewLead({ name: '', email: '', type: 'Inquiry', company: '', listing: '' })
+            setNewLead({ name: '', email: '', type: 'Inquiry', company: '', listing: '', property: '' })
           }
           const allSelected = rows.length > 0 && rows.every((l) => selLeads.includes(l.id))
           const toggleSel = (id) => setSelLeads((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))
@@ -11146,6 +11165,7 @@ function CRMPage({ user, onNavigate }) {
                   <div><label className="mb-1 block text-xs font-semibold text-slate-500">Type</label><select value={newLead.type} onChange={(e) => setNewLead((f) => ({ ...f, type: e.target.value }))} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400"><option>Inquiry</option><option>Email Lead</option><option>NDA Signer</option><option>Forwarded</option></select></div>
                   <div><label className="mb-1 block text-xs font-semibold text-slate-500">Company</label><input value={newLead.company} onChange={(e) => setNewLead((f) => ({ ...f, company: e.target.value }))} placeholder="Company" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-orange-400" /></div>
                   <div><label className="mb-1 block text-xs font-semibold text-slate-500">Listing</label><input value={newLead.listing} onChange={(e) => setNewLead((f) => ({ ...f, listing: e.target.value }))} placeholder="#12345" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-orange-400" /></div>
+                  <div><label className="mb-1 block text-xs font-semibold text-slate-500">Property <span className="font-normal text-slate-400">(shows in its Deal Room)</span></label><select value={newLead.property} onChange={(e) => setNewLead((f) => ({ ...f, property: e.target.value }))} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400"><option value="">— None —</option>{INITIAL_LISTINGS.map((l) => <option key={l.id} value={l.name}>{l.name}</option>)}</select></div>
                 </div>
                 <div className="mt-4 flex justify-end gap-2">
                   <button onClick={() => setAddLeadOpen(false)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
