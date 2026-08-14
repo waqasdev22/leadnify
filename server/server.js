@@ -8,6 +8,7 @@ import mongoose from 'mongoose';
 import nodemailer from 'nodemailer';
 import { initializeApp as initAdmin, cert } from 'firebase-admin/app';
 import { getAuth as getAdminAuth } from 'firebase-admin/auth';
+import { getStorage as getAdminStorage } from 'firebase-admin/storage';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,7 +24,7 @@ app.use(express.json());
 let authEnabled = false;
 try {
   const serviceAccount = JSON.parse(readFileSync(path.join(__dirname, 'serviceAccount.json'), 'utf8'));
-  initAdmin({ credential: cert(serviceAccount) });
+  initAdmin({ credential: cert(serviceAccount), storageBucket: 'cre-dashboard-ba596.firebasestorage.app' });
   authEnabled = true;
   console.log('🔐 Firebase Admin ready — API is protected.');
 } catch (e) {
@@ -67,6 +68,13 @@ const DataSchema = new mongoose.Schema({
 });
 
 const DashboardData = mongoose.model('DashboardData', DataSchema);
+
+// NDA executions — recorded when a deal-room visitor signs the confidentiality agreement.
+// A visitor can only fetch a confidential file after an NDA record exists for (roomId, email).
+const NdaSchema = new mongoose.Schema({
+  roomId: String, name: String, email: String,
+}, { timestamps: true });
+const Nda = mongoose.model('Nda', NdaSchema);
 
 // Dynamic Collections setup (packages, listings, dealrooms, leads, contacts)
 const COLLECTIONS = ['packages', 'listings', 'dealrooms', 'leads', 'contacts'];
@@ -134,6 +142,30 @@ app.post('/api/lead-capture', async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
+});
+
+// PUBLIC — a deal-room visitor signs the NDA/confidentiality agreement for a room.
+app.post('/api/nda-sign', async (req, res) => {
+  try {
+    const { roomId, name, email } = req.body || {};
+    if (!roomId || !email) return res.status(400).json({ error: 'Room and email are required.' });
+    await Nda.findOneAndUpdate({ roomId, email }, { roomId, name: name || '', email }, { upsert: true, setDefaultsOnInsert: true });
+    res.status(201).json({ ok: true });
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// PUBLIC — hand out a short-lived (15-min) signed URL for a confidential file, but ONLY when the
+// requesting visitor has an NDA record for that room. Files themselves stay private (no public URL).
+app.post('/api/file-access', async (req, res) => {
+  try {
+    const { roomId, path: filePath, email } = req.body || {};
+    if (!roomId || !filePath || !email) return res.status(400).json({ error: 'Room, file and email are required.' });
+    const signed = await Nda.findOne({ roomId, email });
+    if (!signed) return res.status(403).json({ error: 'Sign the confidentiality agreement first.' });
+    if (!authEnabled) return res.status(503).json({ error: 'File service not configured on the server.' });
+    const [url] = await getAdminStorage().bucket().file(filePath).getSignedUrl({ action: 'read', expires: Date.now() + 15 * 60 * 1000 });
+    res.json({ ok: true, url, expiresInMinutes: 15 });
+  } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
 // Every /api route below now requires a valid signed-in user.
