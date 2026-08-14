@@ -7,7 +7,7 @@ export const PERMISSION_GROUPS = [
     group: 'Pages',
     perms: [
       { key: 'dashboard.view', label: 'View Dashboard' },
-      { key: 'listings.view', label: 'View Listing Hub' },
+      { key: 'listings.view', label: 'View My Listings' },
       { key: 'dealrooms.view', label: 'View Deal Rooms' },
     ],
   },
@@ -18,6 +18,7 @@ export const PERMISSION_GROUPS = [
       { key: 'listing.edit', label: 'Edit listing' },
       { key: 'listing.delete', label: 'Delete listing' },
       { key: 'listing.publish', label: 'Publish / unpublish listing' },
+      { key: 'listing.feature', label: 'Set featured listing' },
     ],
   },
   {
@@ -60,7 +61,8 @@ export const ROLE_PRESETS = {
   Owner: [...ALL_PERMS],
   Admin: [...ALL_PERMS],
   Manager: ALL_PERMS.filter((k) => !NO_TEAM_MGMT.includes(k)),
-  Member: ALL_PERMS.filter((k) => !NO_TEAM_MGMT.includes(k) && k !== 'team.view_all_leads'),
+  // Member sees only their own data and cannot feature listings (Milestone I 2.7).
+  Member: ALL_PERMS.filter((k) => !NO_TEAM_MGMT.includes(k) && k !== 'team.view_all_leads' && k !== 'listing.feature'),
 }
 
 export const ROLES = Object.keys(ROLE_PRESETS)

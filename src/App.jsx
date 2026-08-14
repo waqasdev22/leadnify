@@ -9180,7 +9180,12 @@ function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onRes
                         </div>
                       </td>
                       <td className="py-2.5 pr-3 text-center">
-                        <button onClick={() => patch(l.id, { featured: !l.featured })} title="Featured">
+                        <button
+                          onClick={() => can('listing.feature') && patch(l.id, { featured: !l.featured })}
+                          disabled={!can('listing.feature')}
+                          title={can('listing.feature') ? 'Featured' : 'Only Manager, Admin or Owner can feature a listing'}
+                          className={can('listing.feature') ? '' : 'cursor-not-allowed'}
+                        >
                           <Star className={`mx-auto h-4 w-4 ${l.featured ? 'fill-amber-400 text-amber-400' : 'text-slate-300'}`} />
                         </button>
                       </td>
