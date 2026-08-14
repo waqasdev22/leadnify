@@ -8077,6 +8077,20 @@ function AppearanceThumb({ name, color, selected, onSelect, dark }) {
 const MICROSITE_TEMPLATES = ['Modern', 'Executive', 'Metro', 'Gold', 'Cypress', 'Vail', 'Evergreen']
 const PROPERTY_TEMPLATES = ['Match Listings', 'Modern', 'Executive', 'Metro', 'Bold', 'Cypress', 'Vail', 'Evergreen']
 const ACCESS_OPTIONS = ['Public', 'Password Protected', 'Registered Users', 'Private']
+// Listing status controls (Milestone I 2.3). Statuses that keep a listing public vs. pull it
+// from the public map/microsite are decided in PUBLIC_STATUSES (Milestone II 3.6 visibility).
+const STATUS_OPTIONS = ['Active', 'Inactive', 'Call for Offers', 'Highest and Best', 'Under Contract', 'Closed', 'On Hold', 'No Longer for Sale']
+const PUBLIC_STATUSES = ['Active', 'Call for Offers', 'Highest and Best', 'Under Contract']
+const STATUS_BADGE = {
+  Active: 'bg-emerald-50 text-emerald-700',
+  Inactive: 'bg-slate-100 text-slate-500',
+  'Call for Offers': 'bg-blue-50 text-blue-700',
+  'Highest and Best': 'bg-violet-50 text-violet-700',
+  'Under Contract': 'bg-amber-50 text-amber-700',
+  Closed: 'bg-slate-200 text-slate-600',
+  'On Hold': 'bg-orange-50 text-orange-700',
+  'No Longer for Sale': 'bg-rose-50 text-rose-700',
+}
 const HUB_VIEWS = [
   { key: 'grid', icon: Grid2X2 },
   { key: 'card', icon: LayoutGrid },
@@ -8827,11 +8841,13 @@ function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onRes
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [confirm, setConfirm] = useState(null)
+  const [expandedId, setExpandedId] = useState(null) // row whose expanded detail is open
 
   const withDefaults = (l) => ({
     featured: false,
     listed: true,
     access: 'Public',
+    status: 'Active',
     ...l,
   })
   const rows = listings.map(withDefaults)
@@ -8883,8 +8899,8 @@ function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onRes
     setCname('')
   }
   const exportCsv = () => {
-    const head = ['Property', 'Address', 'Type', 'Featured', 'Listed', 'Access']
-    const body = filtered.map((l) => [l.name, l.address, l.type, l.featured ? 'Yes' : 'No', l.listed ? 'Yes' : 'No', l.access])
+    const head = ['Property', 'Address', 'Type', 'Status', 'Featured', 'Listed', 'Access']
+    const body = filtered.map((l) => [l.name, l.address, l.type, l.status, l.featured ? 'Yes' : 'No', l.listed ? 'Yes' : 'No', l.access])
     const csv = [head, ...body].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
     const url = window.URL.createObjectURL(blob)
@@ -8906,7 +8922,7 @@ function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onRes
       notify('Listing updated')
     } else {
       setListings((list) => [
-        { id: uid(), image: propertyImage('1497366216548-37526070297c'), featured: false, listed: true, access: 'Public', ...data },
+        { id: uid(), image: propertyImage('1497366216548-37526070297c'), featured: false, listed: true, access: 'Public', status: 'Active', ...data },
         ...list,
       ])
       notify('Property added')
@@ -9097,12 +9113,13 @@ function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onRes
             </div>
 
             <div className="scrollbar-slim mt-3 overflow-x-auto">
-              <table className="w-full min-w-[760px] text-left text-sm">
+              <table className="w-full min-w-[920px] text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-100 text-[11px] uppercase tracking-wide text-slate-400">
                     <th className="py-2 pr-3 font-semibold">Property</th>
                     <th className="py-2 pr-3 font-semibold">Address</th>
                     <th className="py-2 pr-3 font-semibold">Type</th>
+                    <th className="py-2 pr-3 font-semibold">Status</th>
                     <th className="py-2 pr-3 text-center font-semibold">Featured</th>
                     <th className="py-2 pr-3 text-center font-semibold">Listed</th>
                     <th className="py-2 pr-3 font-semibold">Access</th>
@@ -9110,10 +9127,21 @@ function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onRes
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filtered.map((l, i) => (
-                    <tr key={(l.id ?? 'row') + '-' + i} className="hover:bg-slate-50">
+                  {filtered.map((l, i) => {
+                    const isOpen = expandedId === l.id
+                    return (
+                    <React.Fragment key={(l.id ?? 'row') + '-' + i}>
+                    <tr className="hover:bg-slate-50">
                       <td className="py-2.5 pr-3">
                         <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setExpandedId(isOpen ? null : l.id)}
+                            className="shrink-0 rounded p-0.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                            title={isOpen ? 'Hide details' : 'Show details'}
+                            aria-label={isOpen ? 'Hide details' : 'Show details'}
+                          >
+                            <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                          </button>
                           <img src={l.image} onError={(e) => (e.currentTarget.src = FALLBACK_IMG)} alt="" className="h-8 w-10 rounded object-cover" />
                           <button
                             onClick={() => (l._draft ? onResumeDraft(l._draft) : (setEditing(l), setModalOpen(true)))}
@@ -9134,6 +9162,21 @@ function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onRes
                         <div className="flex flex-wrap gap-1">
                           <span className="rounded bg-orange-50 px-1.5 py-0.5 text-[10px] font-semibold text-orange-700">OM</span>
                           <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">{l.type}</span>
+                        </div>
+                      </td>
+                      <td className="py-2.5 pr-3">
+                        <div className="relative">
+                          <select
+                            value={l.status}
+                            onChange={(e) => patch(l.id, { status: e.target.value })}
+                            className={`w-full appearance-none rounded-lg border-0 py-1.5 pl-2.5 pr-7 text-xs font-semibold outline-none ring-1 ring-inset ring-transparent focus:ring-orange-400 ${STATUS_BADGE[l.status] || 'bg-slate-100 text-slate-600'}`}
+                            title={PUBLIC_STATUSES.includes(l.status) ? 'Public on your microsite' : 'Hidden from your public microsite'}
+                          >
+                            {STATUS_OPTIONS.map((o) => (
+                              <option key={o} value={o} className="bg-white text-slate-700">{o}</option>
+                            ))}
+                          </select>
+                          <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-current opacity-60" />
                         </div>
                       </td>
                       <td className="py-2.5 pr-3 text-center">
@@ -9170,10 +9213,30 @@ function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onRes
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    {isOpen && (
+                      <tr className="bg-slate-50/70">
+                        <td colSpan={8} className="px-3 pb-4 pt-1">
+                          <div className="grid grid-cols-2 gap-x-6 gap-y-3 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-4">
+                            <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Price</p><p className="mt-0.5 text-sm font-semibold text-slate-800">{typeof l.price === 'number' ? '$' + l.price.toLocaleString() : (l.price || '—')}</p></div>
+                            <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Size</p><p className="mt-0.5 text-sm font-semibold text-slate-800">{l.size || '—'}</p></div>
+                            <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Property type</p><p className="mt-0.5 text-sm font-semibold text-slate-800">{l.type}</p></div>
+                            <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Status</p><p className="mt-0.5"><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_BADGE[l.status] || 'bg-slate-100 text-slate-600'}`}>{l.status}</span></p></div>
+                            <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Access gate</p><p className="mt-0.5 text-sm font-semibold text-slate-800">{l.access}</p></div>
+                            <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Public visibility</p><p className="mt-0.5 text-sm font-semibold text-slate-800">{l.listed && PUBLIC_STATUSES.includes(l.status) ? 'Visible on microsite' : 'Hidden'}</p></div>
+                            <div className="col-span-2 flex items-end gap-2 sm:col-span-2">
+                              <button onClick={() => (setEditing(l), setModalOpen(true))} className="rounded-lg bg-brand px-3 py-1.5 text-xs font-bold text-white transition hover:bg-orange-600">Edit listing</button>
+                              <button onClick={() => { const w = window.open(`${hubUrl}&p=${l.id}`, '_blank'); if (!w) notify('Please allow pop-ups to open the preview', 'error') }} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">Preview</button>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    </React.Fragment>
+                    )
+                  })}
                   {filtered.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="py-10 text-center text-sm text-slate-400">
+                      <td colSpan={8} className="py-10 text-center text-sm text-slate-400">
                         No listings match this filter.
                       </td>
                     </tr>
