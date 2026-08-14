@@ -8774,7 +8774,7 @@ export const toMicrositeItems = (listings) =>
       }
     })
 
-function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onResumeDraft, can = () => true }) {
+function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onResumeDraft, onOpenDealRoom, can = () => true }) {
   const notify = useToast()
 
   const [slug, setSlug] = useState('vaziamts')
@@ -9144,9 +9144,9 @@ function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onRes
                           </button>
                           <img src={l.image} onError={(e) => (e.currentTarget.src = FALLBACK_IMG)} alt="" className="h-8 w-10 rounded object-cover" />
                           <button
-                            onClick={() => (l._draft ? onResumeDraft(l._draft) : (setEditing(l), setModalOpen(true)))}
+                            onClick={() => (l._draft ? onResumeDraft(l._draft) : (onOpenDealRoom ? onOpenDealRoom(l) : (setEditing(l), setModalOpen(true))))}
                             className="font-semibold text-slate-800 hover:text-brand"
-                            title={l._draft ? 'Resume where you left off' : 'Edit listing'}
+                            title={l._draft ? 'Resume where you left off' : 'Open Deal Room'}
                           >
                             {l.name}
                           </button>
@@ -13769,7 +13769,7 @@ export default function App() {
       case 'dashboard':
         return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} resume={resume} onResumeHandled={() => setResume(null)} onNavigate={navigate} onSignOut={handleSignOut} onOpenDealRoom={openDealRoomFor} user={user} can={can} />
       case 'listings':
-        return <ListingHubPage listings={listings} setListings={setListings} globalQuery={query} onCreateNew={startCreate} onResumeDraft={resumeDraft} can={can} />
+        return <ListingHubPage listings={listings} setListings={setListings} globalQuery={query} onCreateNew={startCreate} onResumeDraft={resumeDraft} onOpenDealRoom={openDealRoomFor} can={can} />
       case 'deals':
         return <DealRoomsPage dealRooms={dealRooms} setDealRooms={setDealRooms} onEditDocument={resumeDraft} openTarget={dealRoomTarget} onOpenHandled={() => setDealRoomTarget(null)} />
       case 'team':
