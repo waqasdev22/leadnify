@@ -10590,12 +10590,13 @@ function DealCard({ deal, accent, dragging, onDragStart, onDragEnd, onDelete }) 
 /*  CRM                                                                        */
 /* -------------------------------------------------------------------------- */
 
+// Milestone II 3.4 — Pipelines and Tasks are removed from the final user-facing top panel.
+// Their views/foundation still exist (tab === 'pipelines' / 'tasks' render blocks are kept per
+// Milestone I 2.5); they are simply no longer surfaced as tabs here.
 const CRM_TABS = [
   { key: 'today', label: 'Today', icon: LayoutGrid },
   { key: 'leads', label: 'Leads', icon: Inbox },
   { key: 'contacts', label: 'Contacts', icon: Users },
-  { key: 'pipelines', label: 'Pipelines', icon: KanbanSquare },
-  { key: 'tasks', label: 'Tasks', icon: CheckSquare },
   { key: 'scripts', label: 'Scripts', icon: ScrollText },
   { key: 'automations', label: 'Automations', icon: Zap },
   { key: 'reports', label: 'Reports', icon: BarChart3 },
