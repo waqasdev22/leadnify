@@ -8259,7 +8259,7 @@ function MicrositePreview({ open, onClose, listings, primary }) {
 
   if (!open) return null
 
-  let items = listings.filter((l) => l.listed !== false).map(micrositeFields)
+  let items = listings.filter((l) => l.listed !== false && PUBLIC_STATUSES.includes(l.status || 'Active')).map(micrositeFields)
   if (filter !== 'All') items = items.filter((l) => l.saleType === filter)
   if (type !== 'All Types') items = items.filter((l) => l.type === type)
   if (search.trim()) {
@@ -8754,7 +8754,10 @@ function dl(){var t="OFFERING MEMORANDUM\\n\\n"+NAME+"\\n"+ADDR+"\\n\\nConfident
 // Maps raw listings into the public-microsite item shape (coords, price label, etc.)
 export const toMicrositeItems = (listings) =>
   (listings || [])
-    .filter((l) => l.listed !== false)
+    // Milestone II 3.6 — public only when Listed AND the status/pipeline is a public one
+    // (Active, Call for Offers, Highest and Best, Under Contract). Inactive/Closed/On Hold/
+    // No Longer for Sale are pulled from the public map & listing feature.
+    .filter((l) => l.listed !== false && PUBLIC_STATUSES.includes(l.status || 'Active'))
     .map((l) => {
       const m = micrositeFields(l)
       const [lat, lng] = coordsFor(l)
