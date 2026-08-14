@@ -9873,6 +9873,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
   const [wmStyle, setWmStyle] = useState('Standard')
   const [nda, setNda] = useState({ name: 'NDA Agreement.pdf' })
   const [omFlyer, setOmFlyer] = useState(null) // single OM/Flyer shown above the gate
+  const [uploadPct, setUploadPct] = useState(null) // 4.3 — upload progress (null = idle)
   const fileRef = useRef(null)
   const omRef = useRef(null)
   const ndaRef = useRef(null)
@@ -9975,23 +9976,27 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
     notify('Prospect activity downloaded')
   }
 
+  // 4.3 — show real read progress while a file uploads, with a clear error state.
+  const readWithProgress = (f, done) => {
+    const reader = new FileReader()
+    setUploadPct(0)
+    reader.onprogress = (ev) => { if (ev.lengthComputable) setUploadPct(Math.round((ev.loaded / ev.total) * 100)) }
+    reader.onload = () => { setUploadPct(100); setTimeout(() => setUploadPct(null), 400); done() }
+    reader.onerror = () => { setUploadPct(null); notify('Upload failed — please try again', 'error') }
+    reader.readAsDataURL(f)
+  }
+  const fileSize = (f) => { const mb = f.size / (1024 * 1024); return mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.max(1, Math.round(f.size / 1024))} KB` }
   const onUpload = (e) => {
     const f = e.target.files && e.target.files[0]
     if (!f) return
-    const mb = f.size / (1024 * 1024)
-    const size = mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.max(1, Math.round(f.size / 1024))} KB`
-    setFiles((list) => [{ name: f.name, size, date: new Date().toLocaleDateString('en-GB') }, ...list])
-    notify('File uploaded')
+    readWithProgress(f, () => { setFiles((list) => [{ name: f.name, size: fileSize(f), date: new Date().toLocaleDateString('en-GB') }, ...list]); notify('File uploaded') })
     e.target.value = ''
   }
   // OM / Flyer — a single marketing document shown above the gate (only 1 file).
   const onOmUpload = (e) => {
     const f = e.target.files && e.target.files[0]
     if (!f) return
-    const mb = f.size / (1024 * 1024)
-    const size = mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.max(1, Math.round(f.size / 1024))} KB`
-    setOmFlyer({ name: f.name, size, date: new Date().toLocaleDateString('en-GB') })
-    notify('OM / Flyer uploaded')
+    readWithProgress(f, () => { setOmFlyer({ name: f.name, size: fileSize(f), date: new Date().toLocaleDateString('en-GB') }); notify('OM / Flyer uploaded') })
     e.target.value = ''
   }
   const copy = async (text, msg) => {
@@ -10068,7 +10073,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
                 <p className="text-xs text-slate-400">One marketing document (Offering Memorandum or Flyer) shown before the gate.</p>
               </div>
               {!omFlyer && (
-                <PrimaryButton icon={Upload} onClick={() => omRef.current && omRef.current.click()}>Upload</PrimaryButton>
+                <PrimaryButton icon={Upload} onClick={() => uploadPct === null && omRef.current && omRef.current.click()}>Upload</PrimaryButton>
               )}
               <input ref={omRef} type="file" accept=".pdf,.doc,.docx,image/*" className="hidden" onChange={onOmUpload} />
             </div>
@@ -10090,6 +10095,12 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
                 <span className="text-xs text-slate-400">PDF, Word, or image · one file only</span>
               </button>
             )}
+            {uploadPct !== null && (
+              <div className="mt-3">
+                <div className="mb-1 flex justify-between text-xs font-semibold text-slate-500"><span>Uploading…</span><span>{uploadPct}%</span></div>
+                <div className="h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-2 rounded-full bg-brand transition-all" style={{ width: `${uploadPct}%` }} /></div>
+              </div>
+            )}
           </div>
 
           {/* Confidential files */}
@@ -10101,9 +10112,15 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
                 </p>
                 <p className="text-xs text-slate-400">PDF, Excel, Word, CSV, or images · 50 MB per file</p>
               </div>
-              <PrimaryButton icon={Upload} onClick={() => fileRef.current && fileRef.current.click()}>Upload</PrimaryButton>
+              <PrimaryButton icon={Upload} onClick={() => uploadPct === null && fileRef.current && fileRef.current.click()}>Upload</PrimaryButton>
               <input ref={fileRef} type="file" className="hidden" onChange={onUpload} />
             </div>
+            {uploadPct !== null && (
+              <div className="mt-3">
+                <div className="mb-1 flex justify-between text-xs font-semibold text-slate-500"><span>Uploading…</span><span>{uploadPct}%</span></div>
+                <div className="h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-2 rounded-full bg-brand transition-all" style={{ width: `${uploadPct}%` }} /></div>
+              </div>
+            )}
             <div className="mt-3 space-y-2">
               {files.map((f, i) => (
                 <div key={i} className="flex items-center gap-3 rounded-lg border border-slate-100 p-3">
