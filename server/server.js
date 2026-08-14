@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { readFileSync } from 'fs';
 import express from 'express';
 import mongoose from 'mongoose';
+import nodemailer from 'nodemailer';
 import { initializeApp as initAdmin, cert } from 'firebase-admin/app';
 import { getAuth as getAdminAuth } from 'firebase-admin/auth';
 
@@ -163,6 +164,31 @@ app.post('/api/users', async (req, res) => {
     res.status(201).json({ message: '✅ Login user saved!', user });
   } catch (error) {
     console.error('Error saving user:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Send a REAL email through SMTP (Gmail App Password in .env). Requires a signed-in user.
+app.post('/api/send-email', async (req, res) => {
+  const { to, subject, body, fromName } = req.body || {};
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    return res.status(400).json({ error: 'Email not configured — add SMTP_USER and SMTP_PASS (Gmail App Password) to server/.env' });
+  }
+  if (!to || !subject) return res.status(400).json({ error: 'Recipient (to) and subject are required' });
+  try {
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    });
+    const recipients = Array.isArray(to) ? to.join(',') : to;
+    const info = await transporter.sendMail({
+      from: `"${fromName || 'MyCREBlueprint'}" <${process.env.SMTP_USER}>`,
+      to: recipients,
+      subject,
+      html: body || '',
+    });
+    res.json({ ok: true, id: info.messageId, sentBy: req.user?.email });
+  } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
