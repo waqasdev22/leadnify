@@ -10810,13 +10810,26 @@ const CRM_INQUIRIES = [
 
 // Leads "inbox" — raw enquiries, NDA signers, email/forwarded leads.
 const CRM_FORWARD_ADDR = 'leads+qx-s_yJEz4LH5tklhdOK0ojxlZpObhOYFJda7A442mY@inbound.mycreblueprint.com'
+// Milestone II 3.5 — required column value sets for the Leads table.
+const LEAD_PROFILES = ['Broker', 'Principal']
+const LEAD_PIPELINES = ['Active', 'Call for Offers', 'Highest and Best', 'Under Contract', 'Closed', 'On Hold', 'No Longer for Sale']
+const LEAD_SOURCES = ['Listing Website', 'Social Media', 'Email', 'Text', 'Website']
+const LEAD_PIPELINE_BADGE = {
+  Active: 'bg-emerald-50 text-emerald-700',
+  'Call for Offers': 'bg-blue-50 text-blue-700',
+  'Highest and Best': 'bg-violet-50 text-violet-700',
+  'Under Contract': 'bg-amber-50 text-amber-700',
+  Closed: 'bg-slate-200 text-slate-600',
+  'On Hold': 'bg-orange-50 text-orange-700',
+  'No Longer for Sale': 'bg-rose-50 text-rose-700',
+}
 const CRM_INBOX_SEED = [
-  { id: 'in1', name: 'Neil Naran', email: 'neil@valuenetlease.com', type: 'NDA Signer', company: 'Value Net Lease Partners', listing: '#41195', property: 'Riverside Business Park', date: 'Jul 29, 2026', status: 'expires 28/08/2026', owner: 'Waqas' },
-  { id: 'in2', name: 'Neil Naran', email: 'naran.neil@gmail.com', type: 'Email Lead', company: 'Value Net Lease Partners', listing: '#41195', property: 'Riverside Business Park', date: 'Jul 29, 2026', status: 'expires 28/08/2026', owner: 'Waqas' },
-  { id: 'in3', name: 'Neil Naran', email: 'naran.neil@gmail.com', type: 'Inquiry', company: '—', listing: 'Unknown', property: 'Riverside Business Park', date: 'Jul 28, 2026', status: 'Unread', unread: true, owner: 'Waqas' },
-  { id: 'in4', name: 'Jordan Miller', email: 'jordan@millercap.com', type: 'Forwarded', company: 'Miller Capital', listing: '#38210', property: 'Summit Retail Center', date: 'Jul 27, 2026', status: 'LoopNet', owner: 'Maya Chen' },
-  { id: 'in5', name: 'Priya Shah', email: 'priya@everest.com', type: 'Inquiry', company: '—', listing: 'Unknown', property: 'The Foundry Lofts', date: 'Jul 26, 2026', status: 'Unread', unread: true, owner: 'Devon Park' },
-  { id: 'in6', name: 'Aaron Cole', email: 'aaron@colenl.com', type: 'NDA Signer', company: 'Cole Net Lease', listing: '#41822', property: 'Northgate Logistics Hub', date: 'Jul 25, 2026', status: 'expires 25/08/2026', owner: 'Sam Rivera' },
+  { id: 'in1', name: 'Neil Naran', email: 'neil@valuenetlease.com', type: 'NDA Signer', profile: 'Broker', company: 'Value Net Lease Partners', listing: '#41195', property: 'Riverside Business Park', date: 'Jul 29, 2026', status: 'expires 28/08/2026', active: 'Active', pipeline: 'Under Contract', source: 'Listing Website', owner: 'Waqas' },
+  { id: 'in2', name: 'Neil Naran', email: 'naran.neil@gmail.com', type: 'Email Lead', profile: 'Broker', company: 'Value Net Lease Partners', listing: '#41195', property: 'Riverside Business Park', date: 'Jul 29, 2026', status: 'expires 28/08/2026', active: 'Active', pipeline: 'Call for Offers', source: 'Email', owner: 'Waqas' },
+  { id: 'in3', name: 'Neil Naran', email: 'naran.neil@gmail.com', type: 'Inquiry', profile: 'Principal', company: '—', listing: 'Unknown', property: 'Riverside Business Park', date: 'Jul 28, 2026', status: 'Unread', unread: true, active: 'Active', pipeline: 'Active', source: 'Website', owner: 'Waqas' },
+  { id: 'in4', name: 'Jordan Miller', email: 'jordan@millercap.com', type: 'Forwarded', profile: 'Principal', company: 'Miller Capital', listing: '#38210', property: 'Summit Retail Center', date: 'Jul 27, 2026', status: 'LoopNet', active: 'Active', pipeline: 'Active', source: 'Social Media', owner: 'Maya Chen' },
+  { id: 'in5', name: 'Priya Shah', email: 'priya@everest.com', type: 'Inquiry', profile: 'Principal', company: '—', listing: 'Unknown', property: 'The Foundry Lofts', date: 'Jul 26, 2026', status: 'Unread', unread: true, active: 'Active', pipeline: 'Active', source: 'Website', owner: 'Devon Park' },
+  { id: 'in6', name: 'Aaron Cole', email: 'aaron@colenl.com', type: 'NDA Signer', profile: 'Broker', company: 'Cole Net Lease', listing: '#41822', property: 'Northgate Logistics Hub', date: 'Jul 25, 2026', status: 'expires 25/08/2026', active: 'Inactive', pipeline: 'Closed', source: 'Text', owner: 'Sam Rivera' },
 ]
 const crmLeadTypeBadge = (t) => ({
   'NDA Signer': 'bg-violet-50 text-violet-700',
@@ -10872,10 +10885,14 @@ function CRMPage({ user, onNavigate }) {
     setInbox((list) => {
       let changed = false
       const next = list.map((l) => {
-        if (!l.property) {
-          const seed = CRM_INBOX_SEED.find((s) => s.id === l.id)
-          if (seed && seed.property) { changed = true; return { ...l, property: seed.property } }
-        }
+        const seed = CRM_INBOX_SEED.find((s) => s.id === l.id)
+        const patch = {}
+        if (!l.property && seed && seed.property) patch.property = seed.property
+        if (!l.profile) patch.profile = (seed && seed.profile) || 'Principal'
+        if (!l.pipeline) patch.pipeline = (seed && seed.pipeline) || 'Active'
+        if (!l.source) patch.source = (seed && seed.source) || 'Website'
+        if (!l.active) patch.active = (seed && seed.active) || 'Active'
+        if (Object.keys(patch).length) { changed = true; return { ...l, ...patch } }
         return l
       })
       return changed ? next : list
@@ -10884,7 +10901,7 @@ function CRMPage({ user, onNavigate }) {
   }, [])
   const [leadFilter, setLeadFilter] = useState('All')
   const [addLeadOpen, setAddLeadOpen] = useState(false)
-  const [newLead, setNewLead] = useState({ name: '', email: '', type: 'Inquiry', company: '', listing: '', property: '' })
+  const [newLead, setNewLead] = useState({ name: '', email: '', type: 'Inquiry', company: '', listing: '', property: '', profile: 'Principal', pipeline: 'Active', source: 'Website' })
   const [selLeads, setSelLeads] = useState([])
   const [contactList, setContactList] = usePersistentState('crm_contacts', CRM_CONTACTS)
   const [contactView, setContactView] = useState('people')
@@ -11132,11 +11149,12 @@ function CRMPage({ user, onNavigate }) {
             setInbox((list) => [{
               id: uid(), name: newLead.name.trim(), email: newLead.email.trim() || '—', type: newLead.type,
               company: newLead.company.trim() || '—', listing: newLead.listing.trim() || 'Unknown',
-              property: newLead.property || '', date: today, status: isInq ? 'Unread' : 'New', unread: isInq, owner: me,
+              property: newLead.property || '', profile: newLead.profile, pipeline: newLead.pipeline, source: newLead.source, active: 'Active',
+              date: today, status: isInq ? 'Unread' : 'New', unread: isInq, owner: me,
             }, ...list])
             notify(newLead.property ? `Lead added to ${newLead.property}` : 'Lead added')
             setAddLeadOpen(false)
-            setNewLead({ name: '', email: '', type: 'Inquiry', company: '', listing: '', property: '' })
+            setNewLead({ name: '', email: '', type: 'Inquiry', company: '', listing: '', property: '', profile: 'Principal', pipeline: 'Active', source: 'Website' })
           }
           const allSelected = rows.length > 0 && rows.every((l) => selLeads.includes(l.id))
           const toggleSel = (id) => setSelLeads((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))
@@ -11167,6 +11185,9 @@ function CRMPage({ user, onNavigate }) {
                   <div><label className="mb-1 block text-xs font-semibold text-slate-500">Company</label><input value={newLead.company} onChange={(e) => setNewLead((f) => ({ ...f, company: e.target.value }))} placeholder="Company" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-orange-400" /></div>
                   <div><label className="mb-1 block text-xs font-semibold text-slate-500">Listing</label><input value={newLead.listing} onChange={(e) => setNewLead((f) => ({ ...f, listing: e.target.value }))} placeholder="#12345" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-orange-400" /></div>
                   <div><label className="mb-1 block text-xs font-semibold text-slate-500">Property <span className="font-normal text-slate-400">(shows in its Deal Room)</span></label><select value={newLead.property} onChange={(e) => setNewLead((f) => ({ ...f, property: e.target.value }))} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400"><option value="">— None —</option>{INITIAL_LISTINGS.map((l) => <option key={l.id} value={l.name}>{l.name}</option>)}</select></div>
+                  <div><label className="mb-1 block text-xs font-semibold text-slate-500">Profile</label><select value={newLead.profile} onChange={(e) => setNewLead((f) => ({ ...f, profile: e.target.value }))} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400">{LEAD_PROFILES.map((o) => <option key={o}>{o}</option>)}</select></div>
+                  <div><label className="mb-1 block text-xs font-semibold text-slate-500">Pipeline</label><select value={newLead.pipeline} onChange={(e) => setNewLead((f) => ({ ...f, pipeline: e.target.value }))} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400">{LEAD_PIPELINES.map((o) => <option key={o}>{o}</option>)}</select></div>
+                  <div><label className="mb-1 block text-xs font-semibold text-slate-500">Source</label><select value={newLead.source} onChange={(e) => setNewLead((f) => ({ ...f, source: e.target.value }))} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400">{LEAD_SOURCES.map((o) => <option key={o}>{o}</option>)}</select></div>
                 </div>
                 <div className="mt-4 flex justify-end gap-2">
                   <button onClick={() => setAddLeadOpen(false)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
@@ -11212,10 +11233,10 @@ function CRMPage({ user, onNavigate }) {
 
             {/* Table */}
             <div className="scrollbar-slim overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-              <table className="w-full min-w-[860px]">
+              <table className="w-full min-w-[1200px]">
                 <thead className="border-b border-slate-100 bg-slate-50"><tr>
                   <th className="w-10 px-4 py-3"><input type="checkbox" checked={allSelected} onChange={toggleAll} className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-orange-300" /></th>
-                  <th className={th}>Lead</th><th className={th}>Type</th><th className={th}>Company</th><th className={th}>Listing</th><th className={th}>Date</th><th className={th}>Status</th><th className={th + ' text-right'}>Actions</th>
+                  <th className={th}>Name</th><th className={th}>Type</th><th className={th}>Profile</th><th className={th}>Company</th><th className={th}>Listing</th><th className={th}>Date</th><th className={th}>Status</th><th className={th}>Pipeline</th><th className={th}>Source</th><th className={th + ' text-right'}>Actions</th>
                 </tr></thead>
                 <tbody className="divide-y divide-slate-100">
                   {rows.map((l) => (
@@ -11228,10 +11249,13 @@ function CRMPage({ user, onNavigate }) {
                         </div>
                       </td>
                       <td className={td}><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${crmLeadTypeBadge(l.type)}`}>{l.type}</span></td>
+                      <td className={td}>{l.profile || '—'}</td>
                       <td className={td}>{l.company}</td>
-                      <td className={td}>{l.listing}</td>
+                      <td className={td}>{l.property || l.listing}</td>
                       <td className={td}>{l.date}</td>
-                      <td className={td}>{l.status === 'Unread' ? <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">Unread</span> : <span className="text-xs text-slate-500">{l.status}</span>}</td>
+                      <td className={td}><span className={`text-xs font-semibold ${l.active === 'Inactive' ? 'text-slate-400' : 'text-emerald-600'}`}>{l.active || 'Active'}</span></td>
+                      <td className={td}><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${LEAD_PIPELINE_BADGE[l.pipeline] || 'bg-slate-100 text-slate-600'}`}>{l.pipeline || 'Active'}</span></td>
+                      <td className={td}>{l.source || '—'}</td>
                       <td className={td + ' text-right'}>
                         {l.type === 'NDA Signer' || l.type === 'Email Lead' ? (
                           l.status === 'Revoked' ? <span className="text-xs text-slate-400">Revoked</span> : <button onClick={() => revoke(l.id)} className="inline-flex items-center gap-1 text-sm font-semibold text-slate-600 transition hover:text-rose-600"><Ban className="h-4 w-4" /> Revoke</button>
@@ -11244,7 +11268,7 @@ function CRMPage({ user, onNavigate }) {
                       </td>
                     </tr>
                   ))}
-                  {!rows.length && <tr><td colSpan={8} className="py-10 text-center text-sm text-slate-400">No leads.</td></tr>}
+                  {!rows.length && <tr><td colSpan={11} className="py-10 text-center text-sm text-slate-400">No leads.</td></tr>}
                 </tbody>
               </table>
             </div>
