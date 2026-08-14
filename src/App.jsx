@@ -11109,6 +11109,14 @@ function CRMPage({ user, onNavigate }) {
     setAutoLog((log) => [{ id: uid(), name: a.name, event: a.on ? 'Turned off' : 'Turned on', at: now, by: me }, ...log].slice(0, 50))
     return { ...a, on: !a.on }
   }))
+  // 3.10 — when a lead is created, any ON automation with the "Lead created" trigger fires
+  // and is recorded in the activity log (the action itself would run server-side later).
+  const fireLeadAutomations = (label) => {
+    const fired = autos.filter((a) => a.on && a.trigger === 'Lead created')
+    if (!fired.length) return
+    const now = new Date().toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+    setAutoLog((log) => [...fired.map((a) => ({ id: uid(), name: a.name, event: `Fired for ${label}`, at: now, by: me, fired: true })), ...log].slice(0, 50))
+  }
 
   const th = 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500'
   const td = 'px-4 py-3 text-sm text-slate-700'
@@ -11256,6 +11264,7 @@ function CRMPage({ user, onNavigate }) {
             })
             if (!added.length) { notify(`Nothing imported — ${invalid} invalid, ${dupes} duplicate`, 'error'); return }
             setInbox((list) => [...added, ...list])
+            fireLeadAutomations(`${added.length} imported lead${added.length === 1 ? '' : 's'}`)
             notify(`Imported ${added.length} lead${added.length === 1 ? '' : 's'}${dupes ? ` · skipped ${dupes} duplicate${dupes === 1 ? '' : 's'}` : ''}${invalid ? ` · ${invalid} invalid row${invalid === 1 ? '' : 's'}` : ''}`)
             setLeadImport(null)
           }
@@ -11285,6 +11294,7 @@ function CRMPage({ user, onNavigate }) {
               property: newLead.property || '', profile: newLead.profile, pipeline: newLead.pipeline, source: newLead.source, active: 'Active',
               date: today, status: isInq ? 'Unread' : 'New', unread: isInq, owner: me,
             }, ...list])
+            fireLeadAutomations(`"${newLead.name.trim()}"`)
             notify(newLead.property ? `Lead added to ${newLead.property}` : 'Lead added')
             setAddLeadOpen(false)
             setNewLead({ name: '', email: '', type: 'Inquiry', company: '', listing: '', property: '', profile: 'Principal', pipeline: 'Active', source: 'Website' })
@@ -12534,7 +12544,7 @@ function CRMPage({ user, onNavigate }) {
                 <div className="mt-3 space-y-2">
                   {autoLog.map((e) => (
                     <div key={e.id} className="flex items-center justify-between text-sm">
-                      <span className="text-slate-700"><span className={`mr-1.5 inline-block h-2 w-2 rounded-full ${e.event === 'Turned on' ? 'bg-emerald-500' : 'bg-slate-400'}`} />{e.name} — <span className="font-semibold text-slate-500">{e.event}</span></span>
+                      <span className="text-slate-700"><span className={`mr-1.5 inline-block h-2 w-2 rounded-full ${e.fired ? 'bg-brand' : e.event === 'Turned on' ? 'bg-emerald-500' : 'bg-slate-400'}`} />{e.name} — <span className={`font-semibold ${e.fired ? 'text-brand' : 'text-slate-500'}`}>{e.event}</span></span>
                       <span className="text-xs text-slate-400">{e.by} · {e.at}</span>
                     </div>
                   ))}
