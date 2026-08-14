@@ -538,7 +538,7 @@ const downloadPdf = (item, notify) => {
 
 const NAV_ITEMS = [
   { key: 'dashboard', label: 'Dashboard', icon: Home },
-  { key: 'listings', label: 'My Listings', icon: Globe },
+  { key: 'listings', label: 'My Deals', icon: Globe },
   { key: 'deals', label: 'Deal Rooms', icon: FolderLock },
   { key: 'crm', label: 'My Leads', icon: Contact },
   { key: 'email', label: 'Distribution', icon: Send },
@@ -7592,7 +7592,7 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
       )
     }
 
-    notify(finished ? 'Document saved' : 'Draft saved — resume it anytime from My Listings')
+    notify(finished ? 'Document saved' : 'Draft saved — resume it anytime from My Deals')
     setBuilderOpen(false)
     setBuilderInitial(null)
     setBuilderDraftId(null)
@@ -8950,13 +8950,13 @@ function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onRes
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Globe className="h-5 w-5 text-brand" />
-          <h1 className="text-xl font-extrabold text-slate-900">My Listings</h1>
+          <h1 className="text-xl font-extrabold text-slate-900">My Deals</h1>
           <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-600 ring-1 ring-inset ring-emerald-600/20">
             Active
           </span>
         </div>
         <button
-          onClick={() => shareItem({ id: 'hub', title: 'My Listings', address: hubUrl }, notify)}
+          onClick={() => shareItem({ id: 'hub', title: 'My Deals', address: hubUrl }, notify)}
           className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
         >
           <Share2 className="h-4 w-4" />
@@ -9058,7 +9058,7 @@ function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onRes
 
           {/* My Listings */}
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">My Listings</p>
+            <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">My Deals</p>
             <p className="mt-0.5 text-xs text-slate-500">
               Toggle "Listed" to make a property visible on your public microsite. Only listed properties appear to visitors.
             </p>
@@ -9786,7 +9786,7 @@ function DocumentHubView({ room, onBack, notify, onEditDocument }) {
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-500"><Globe className="h-5 w-5" /></div>
               <div><p className="text-sm font-bold text-slate-900">Public Listing</p><p className="text-xs text-slate-500">Your listing page + who can access the materials</p></div>
             </div>
-            <button onClick={() => notify('Opening My Listings')} className="text-xs font-semibold text-brand hover:underline">My Listings →</button>
+            <button onClick={() => notify('Opening My Deals')} className="text-xs font-semibold text-brand hover:underline">My Deals →</button>
           </div>
           <div className="mt-4 flex items-center justify-between">
             <span className="text-sm font-semibold text-slate-700">Listed on your public page</span>

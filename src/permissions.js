@@ -7,7 +7,7 @@ export const PERMISSION_GROUPS = [
     group: 'Pages',
     perms: [
       { key: 'dashboard.view', label: 'View Dashboard' },
-      { key: 'listings.view', label: 'View My Listings' },
+      { key: 'listings.view', label: 'View My Deals' },
       { key: 'dealrooms.view', label: 'View Deal Rooms' },
     ],
   },
