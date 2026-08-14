@@ -10932,6 +10932,7 @@ function CRMPage({ user, onNavigate }) {
   const [search, setSearch] = useState('')
   const [tasks, setTasks] = usePersistentState('crm_tasks', CRM_TASKS_SEED)
   const [autos, setAutos] = usePersistentState('crm_autos', CRM_AUTOMATIONS_SEED)
+  const [autoLog, setAutoLog] = usePersistentState('crm_auto_log', []) // 3.10 — activity log
   const [inbox, setInbox] = usePersistentState('crm_inbox', CRM_INBOX_SEED)
   // One-time backfill: older saved inboxes predate the per-lead `property` tag, so the seed
   // demo leads had no property and wouldn't show in their Deal Room. Restore it from the seed.
@@ -11102,7 +11103,12 @@ function CRMPage({ user, onNavigate }) {
   }
   const deleteScript = (id) => { setScriptList((l) => l.filter((x) => x.id !== id)); setScriptDelId(null); notify('Script deleted') }
   const duplicateScript = (s) => { setScriptList((l) => [{ ...s, id: uid(), title: `${s.title} (copy)`, owner: me }, ...l]); notify('Script duplicated') }
-  const toggleAuto = (id) => setAutos((l) => l.map((a) => (a.id === id ? { ...a, on: !a.on } : a)))
+  const toggleAuto = (id) => setAutos((l) => l.map((a) => {
+    if (a.id !== id) return a
+    const now = new Date().toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+    setAutoLog((log) => [{ id: uid(), name: a.name, event: a.on ? 'Turned off' : 'Turned on', at: now, by: me }, ...log].slice(0, 50))
+    return { ...a, on: !a.on }
+  }))
 
   const th = 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500'
   const td = 'px-4 py-3 text-sm text-slate-700'
@@ -12510,13 +12516,31 @@ function CRMPage({ user, onNavigate }) {
               <div key={a.id} className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${a.on ? 'bg-brand/10 text-brand' : 'bg-slate-100 text-slate-400'}`}><Zap className="h-5 w-5" /></div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold text-slate-900">{a.name}</p>
+                  <p className="flex items-center gap-2 text-sm font-bold text-slate-900">{a.name} <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${a.on ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{a.on ? 'Active' : 'Inactive'}</span></p>
                   <p className="text-xs text-slate-400"><span className="font-semibold text-slate-500">When</span> {a.trigger} → <span className="font-semibold text-slate-500">do</span> {a.action}</p>
                 </div>
-                <button onClick={() => toggleAuto(a.id)} className={`relative h-6 w-11 shrink-0 rounded-full transition ${a.on ? 'bg-emerald-500' : 'bg-slate-300'}`}><span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${a.on ? 'left-[22px]' : 'left-0.5'}`} /></button>
+                <button onClick={() => toggleAuto(a.id)} title={a.on ? 'Turn off' : 'Turn on'} className={`relative h-6 w-11 shrink-0 rounded-full transition ${a.on ? 'bg-emerald-500' : 'bg-slate-300'}`}><span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${a.on ? 'left-[22px]' : 'left-0.5'}`} /></button>
               </div>
             ))}
             {!automations.length && <p className="py-8 text-center text-sm text-slate-400">No automations.</p>}
+
+            {/* Activity log (Milestone II 3.10 — no hidden/irreversible automation without a log) */}
+            <div className="mt-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <p className="flex items-center gap-2 text-sm font-bold text-slate-900"><ScrollText className="h-4 w-4 text-slate-400" /> Activity log</p>
+              <p className="text-xs text-slate-400">Every automation change is recorded here — nothing runs silently.</p>
+              {autoLog.length === 0 ? (
+                <p className="py-4 text-center text-xs text-slate-400">No changes yet — toggle an automation and it shows here.</p>
+              ) : (
+                <div className="mt-3 space-y-2">
+                  {autoLog.map((e) => (
+                    <div key={e.id} className="flex items-center justify-between text-sm">
+                      <span className="text-slate-700"><span className={`mr-1.5 inline-block h-2 w-2 rounded-full ${e.event === 'Turned on' ? 'bg-emerald-500' : 'bg-slate-400'}`} />{e.name} — <span className="font-semibold text-slate-500">{e.event}</span></span>
+                      <span className="text-xs text-slate-400">{e.by} · {e.at}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
