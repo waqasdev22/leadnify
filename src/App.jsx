@@ -10960,6 +10960,7 @@ function CRMPage({ user, onNavigate }) {
   const [selLeads, setSelLeads] = useState([])
   const leadFileRef = useRef(null)
   const [leadImport, setLeadImport] = useState(null) // { headers:[], data:[[]], map:{field:colIndex} }
+  const [leadPage, setLeadPage] = useState(1) // 4.3 — paginate large lead tables
   const [contactList, setContactList] = usePersistentState('crm_contacts', CRM_CONTACTS)
   const [contactView, setContactView] = useState('people')
   const [contactChip, setContactChip] = useState(null)
@@ -11210,6 +11211,11 @@ function CRMPage({ user, onNavigate }) {
           const ndaCount = scopedInbox.filter((l) => l.type === 'NDA Signer').length
           const typeFor = { All: () => true, Inquiries: (l) => l.type === 'Inquiry', 'NDA Signers': (l) => l.type === 'NDA Signer', 'Email Leads': (l) => l.type === 'Email Lead', Forwarded: (l) => l.type === 'Forwarded' }
           const rows = scopedInbox.filter(typeFor[leadFilter]).filter((l) => (l.name + l.email + l.company).toLowerCase().includes(search.toLowerCase()))
+          // 4.3 — paginate the lead table instead of rendering every row at once.
+          const LEADS_PER_PAGE = 10
+          const totalLeadPages = Math.max(1, Math.ceil(rows.length / LEADS_PER_PAGE))
+          const curLeadPage = Math.min(leadPage, totalLeadPages)
+          const pageRows = rows.slice((curLeadPage - 1) * LEADS_PER_PAGE, curLeadPage * LEADS_PER_PAGE)
           // 3.7 Export — respects Mine/Whole Team scope + the current filter/search (exports `rows`).
           const exportLeads = () => {
             if (!rows.length) { notify('No leads to export', 'error'); return }
@@ -11435,7 +11441,7 @@ function CRMPage({ user, onNavigate }) {
                   <th className={th}>Name</th><th className={th}>Type</th><th className={th}>Profile</th><th className={th}>Company</th><th className={th}>Listing</th><th className={th}>Date</th><th className={th}>Status</th><th className={th}>Pipeline</th><th className={th}>Source</th><th className={th + ' text-right'}>Actions</th>
                 </tr></thead>
                 <tbody className="divide-y divide-slate-100">
-                  {rows.map((l) => (
+                  {pageRows.map((l) => (
                     <tr key={l.id} className={`hover:bg-slate-50 ${selLeads.includes(l.id) ? 'bg-orange-50/40' : ''}`}>
                       <td className="w-10 px-4 py-3"><input type="checkbox" checked={selLeads.includes(l.id)} onChange={() => toggleSel(l.id)} className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-orange-300" /></td>
                       <td className={td}>
@@ -11468,6 +11474,16 @@ function CRMPage({ user, onNavigate }) {
                 </tbody>
               </table>
             </div>
+            {totalLeadPages > 1 && (
+              <div className="flex items-center justify-between px-1">
+                <p className="text-xs text-slate-400">Showing {(curLeadPage - 1) * LEADS_PER_PAGE + 1}–{Math.min(curLeadPage * LEADS_PER_PAGE, rows.length)} of {rows.length}</p>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => setLeadPage(Math.max(1, curLeadPage - 1))} disabled={curLeadPage === 1} className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40">Prev</button>
+                  <span className="px-2 text-sm font-semibold text-slate-600">{curLeadPage} / {totalLeadPages}</span>
+                  <button onClick={() => setLeadPage(Math.min(totalLeadPages, curLeadPage + 1))} disabled={curLeadPage === totalLeadPages} className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40">Next</button>
+                </div>
+              </div>
+            )}
           </div>
           )
         })()}
