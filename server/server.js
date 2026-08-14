@@ -108,7 +108,35 @@ app.use('/api', (req, res, next) => {
   }
   next();
 });
-// Every /api route now requires a valid signed-in user.
+// PUBLIC — website visitors (not logged in) submit a lead/inquiry form here. Defined BEFORE
+// requireAuth so it stays open; it creates a new lead automatically (Milestone II 3.7).
+app.post('/api/lead-capture', async (req, res) => {
+  try {
+    const { name, email, company, property, source, phone } = req.body || {};
+    if (!name && !email) return res.status(400).json({ error: 'Please add your name or email.' });
+    const Leads = collectionModels['leads'];
+    const lead = {
+      id: 'web-' + Date.now(),
+      name: name || (email ? email.split('@')[0] : 'Website visitor'),
+      email: email || '—',
+      phone: phone || '',
+      company: company || '—',
+      property: property || '',
+      listing: property || 'Website',
+      source: source || 'Website',
+      type: 'Inquiry', profile: 'Principal', pipeline: 'Active', active: 'Active',
+      status: 'Unread', unread: true,
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      owner: '', // unassigned — the team can claim it
+    };
+    await Leads.create(lead);
+    res.status(201).json({ ok: true, message: "Thanks — we'll be in touch shortly." });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Every /api route below now requires a valid signed-in user.
 app.use('/api', requireAuth);
 
 // 4️⃣ API ROUTES (SPECIFIC ROUTES PEHLE RAKHEIN)
