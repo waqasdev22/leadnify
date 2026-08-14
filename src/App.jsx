@@ -9871,6 +9871,29 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
   const omRef = useRef(null)
   const ndaRef = useRef(null)
 
+  // Deal contacts (up to 4 per deal) + Broker of Record (1 per listing) — persisted per room.
+  const [dealContacts, setDealContacts] = usePersistentState(`room_${room.id}_contacts`, [])
+  const [bor, setBor] = usePersistentState(`room_${room.id}_bor`, null)
+  const emptyContact = { name: '', company: '', email: '', phone: '', license: '' }
+  const [contactDraft, setContactDraft] = useState(emptyContact)
+  const [addingContact, setAddingContact] = useState(false)
+  const [borDraft, setBorDraft] = useState({ name: '', company: '', license: '' })
+  const [editingBor, setEditingBor] = useState(false)
+  const saveContact = () => {
+    if (!contactDraft.name.trim()) { notify('Add a contact name', 'error'); return }
+    if (dealContacts.length >= 4) { notify('A deal can have at most 4 contacts', 'error'); return }
+    setDealContacts((l) => [...l, { ...contactDraft, id: uid() }])
+    setContactDraft(emptyContact)
+    setAddingContact(false)
+    notify('Contact added')
+  }
+  const saveBor = () => {
+    if (!borDraft.name.trim()) { notify('Add the Broker of Record name', 'error'); return }
+    setBor({ ...borDraft })
+    setEditingBor(false)
+    notify('Broker of Record saved')
+  }
+
   const views = prospects.reduce((s, p) => s + p.views, 0)
   const downloads = prospects.reduce((s, p) => s + p.downloads, 0)
   const openOms = prospects.filter((p) => p.views > 0).length
@@ -10132,6 +10155,70 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
                 </tbody>
               </table>
             </div>
+          </div>
+
+          {/* Deal contacts (up to 4) */}
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="flex items-center gap-2 text-sm font-bold text-slate-900">
+              Deal contacts <span className="rounded-full bg-slate-100 px-1.5 text-xs font-semibold text-slate-500">{dealContacts.length} / 4</span>
+            </p>
+            <p className="text-xs text-slate-400">Up to 4 people on this deal — each can see the leads. The person labelled on the deal is a member, not the owner.</p>
+            <div className="mt-3 space-y-2">
+              {dealContacts.map((c) => (
+                <div key={c.id} className="flex items-start justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50 p-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-slate-800">{c.name}{c.company ? <span className="font-normal text-slate-500"> · {c.company}</span> : null}</p>
+                    <p className="mt-0.5 text-xs text-slate-500">{[c.email, c.phone, c.license && `Lic# ${c.license}`].filter(Boolean).join(' · ') || '—'}</p>
+                  </div>
+                  <button onClick={() => { setDealContacts((l) => l.filter((x) => x.id !== c.id)); notify('Contact removed', 'error') }} className="shrink-0 text-slate-400 hover:text-rose-500" title="Remove contact"><Trash2 className="h-4 w-4" /></button>
+                </div>
+              ))}
+              {!dealContacts.length && !addingContact && <p className="py-2 text-center text-xs text-slate-400">No contacts yet.</p>}
+            </div>
+            {addingContact ? (
+              <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <input value={contactDraft.name} onChange={(e) => setContactDraft((d) => ({ ...d, name: e.target.value }))} placeholder="Name" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" />
+                  <input value={contactDraft.company} onChange={(e) => setContactDraft((d) => ({ ...d, company: e.target.value }))} placeholder="Company name" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" />
+                  <input value={contactDraft.email} onChange={(e) => setContactDraft((d) => ({ ...d, email: e.target.value }))} placeholder="Email" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" />
+                  <input value={contactDraft.phone} onChange={(e) => setContactDraft((d) => ({ ...d, phone: e.target.value }))} placeholder="Phone" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" />
+                  <input value={contactDraft.license} onChange={(e) => setContactDraft((d) => ({ ...d, license: e.target.value }))} placeholder="License #" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400 sm:col-span-2" />
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={saveContact} className="rounded-lg bg-brand px-3 py-1.5 text-xs font-bold text-white transition hover:bg-orange-600">Save contact</button>
+                  <button onClick={() => { setAddingContact(false); setContactDraft(emptyContact) }} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50">Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <button onClick={() => setAddingContact(true)} disabled={dealContacts.length >= 4} className={`mt-3 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${dealContacts.length >= 4 ? 'cursor-not-allowed bg-slate-100 text-slate-400' : 'bg-orange-50 text-brand hover:bg-orange-100'}`} title={dealContacts.length >= 4 ? 'Maximum 4 contacts per deal' : 'Add a contact'}><Plus className="h-3.5 w-3.5" /> Add contact</button>
+            )}
+          </div>
+
+          {/* Broker of Record (1 per listing, low-key / grey) */}
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-sm font-bold text-slate-900">Broker of Record</p>
+            <p className="text-xs text-slate-400">Legally required on the listing page — kept low-key, not prominent.</p>
+            {bor && !editingBor ? (
+              <div className="mt-3 flex items-start justify-between gap-3">
+                <p className="text-xs leading-relaxed text-slate-400">{[bor.name, bor.company, bor.license && `License ${bor.license}`].filter(Boolean).join(' · ')}</p>
+                <div className="flex shrink-0 gap-3 text-xs font-semibold">
+                  <button onClick={() => { setBorDraft({ name: bor.name || '', company: bor.company || '', license: bor.license || '' }); setEditingBor(true) }} className="text-brand hover:underline">Edit</button>
+                  <button onClick={() => { setBor(null); notify('Broker of Record removed', 'error') }} className="text-slate-400 hover:text-rose-500">Remove</button>
+                </div>
+              </div>
+            ) : editingBor ? (
+              <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
+                <input value={borDraft.name} onChange={(e) => setBorDraft((d) => ({ ...d, name: e.target.value }))} placeholder="Name" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" />
+                <input value={borDraft.company} onChange={(e) => setBorDraft((d) => ({ ...d, company: e.target.value }))} placeholder="Company name" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" />
+                <input value={borDraft.license} onChange={(e) => setBorDraft((d) => ({ ...d, license: e.target.value }))} placeholder="License number" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" />
+                <div className="flex gap-2">
+                  <button onClick={saveBor} className="rounded-lg bg-brand px-3 py-1.5 text-xs font-bold text-white transition hover:bg-orange-600">Save</button>
+                  <button onClick={() => setEditingBor(false)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50">Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <button onClick={() => { setBorDraft({ name: '', company: '', license: '' }); setEditingBor(true) }} className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-orange-50 px-3 py-1.5 text-xs font-semibold text-brand transition hover:bg-orange-100"><Plus className="h-3.5 w-3.5" /> Add Broker of Record</button>
+            )}
           </div>
 
           {/* Activity */}
