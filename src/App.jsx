@@ -124,6 +124,8 @@ import {
   Link2,
   Download,
   Printer,
+  Linkedin,
+  LayoutTemplate,
   LayoutGrid,
   Rows3,
   Maximize2,
@@ -12914,6 +12916,12 @@ function beginOAuth(providerKey) {
 }
 
 const EMAIL_CAMPAIGNS_SEED = []
+// Milestone II 3.9 — manager-controlled master templates.
+const EMAIL_TEMPLATES_SEED = [
+  { id: 'jl', name: 'Just Listed', subject: 'Just Listed: {{property}} — {{city}}, {{state}}', body: "We're pleased to bring {{property}} to market.\n\n• Price: {{price}}\n• Type: {{type}}\n• Size: {{size}}\n\nView the offering and request access here: {{link}}\n\n{{broker_name}}\n{{broker_phone}}" },
+  { id: 'pr', name: 'Price Reduced', subject: 'Price Reduced: {{property}} — now {{price}}', body: "A repriced opportunity at {{property}} ({{city}}, {{state}}).\n\nThe pricing has been adjusted to {{price}}. Full financials and the OM are available on request.\n\nExplore it here: {{link}}\n\n{{broker_name}}" },
+  { id: 'sd', name: 'Sold', subject: 'Sold: {{property}} — {{city}}, {{state}}', body: "We're pleased to announce the successful sale of {{property}}.\n\nThank you to everyone who participated. If you have a similar {{type}} requirement, we'd welcome a conversation.\n\n{{broker_name}}\n{{broker_phone}}" },
+]
 
 const EMAIL_TOUR = [
   { icon: Send, tile: 'bg-violet-50 text-violet-500', title: 'Welcome to Distribution', body: "Turn any completed listing into a polished marketing email and get it in front of the right buyers — without leaving MyCREBlueprint or paying for another blast tool. Here's a quick 4-stop tour of how it works.", place: 'center' },
@@ -12933,13 +12941,32 @@ function BuildingsIcon(props) {
   )
 }
 
-function EmailBlastPage({ user, onNavigate }) {
+function EmailBlastPage({ user, onNavigate, role = 'Member' }) {
+  const canManageTemplates = ['Owner', 'Admin', 'Manager'].includes(role)
   const notify = useToast()
   const [conns, setConns] = usePersistentState('email_conns', {})
   const [campaigns, setCampaigns] = usePersistentState('email_campaigns', EMAIL_CAMPAIGNS_SEED)
   const [composeOpen, setComposeOpen] = useState(false)
   const [form, setForm] = useState({ audience: EMAIL_AUDIENCES[0], subject: '', body: '', type: 'individual' })
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [templates, setTemplates] = usePersistentState('email_templates', EMAIL_TEMPLATES_SEED)
+  const [tplEdit, setTplEdit] = useState(null) // template being edited (Manager+)
+  const [liConnected, setLiConnected] = usePersistentState('email_linkedin', false)
+  const [liPost, setLiPost] = useState(null) // { listing, when } scheduling draft
+  const [liScheduled, setLiScheduled] = usePersistentState('email_li_posts', [])
+  const saveTpl = () => {
+    if (!tplEdit.name.trim()) { notify('Template needs a name', 'error'); return }
+    setTemplates((l) => l.map((t) => (t.id === tplEdit.id ? { ...tplEdit } : t)))
+    setTplEdit(null)
+    notify('Template saved for the whole team')
+  }
+  const useTemplate = (t) => { setForm({ audience: EMAIL_AUDIENCES[0], subject: t.subject, body: t.body, type: 'individual' }); setComposeOpen(true) }
+  const scheduleLinkedIn = () => {
+    if (!liPost.listing) { notify('Pick a listing', 'error'); return }
+    setLiScheduled((l) => [{ id: uid(), listing: liPost.listing, when: liPost.when || 'ASAP', status: 'Scheduled' }, ...l])
+    setLiPost(null)
+    notify('LinkedIn post scheduled')
+  }
   const [connectTarget, setConnectTarget] = useState(null)
   const [connecting, setConnecting] = useState(false)
   const [openingKey, setOpeningKey] = useState(null)
@@ -13242,6 +13269,92 @@ function EmailBlastPage({ user, onNavigate }) {
         })}
       </div>
       </div>
+
+      {/* SEND WITH — Social (LinkedIn only, Milestone II 3.9) */}
+      <div className="mt-7">
+        <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-500"><Share2 className="h-3.5 w-3.5" /> Send with — Social</p>
+        <div className="mt-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#0A66C2] text-white"><Linkedin className="h-5 w-5" /></span>
+              <div>
+                <p className="text-sm font-bold text-slate-900">LinkedIn</p>
+                <p className="text-xs text-slate-400">Post a listing to your feed{liConnected ? ' — connected' : ''}. (Instagram, Facebook & X come later.)</p>
+              </div>
+            </div>
+            {liConnected ? (
+              <div className="flex items-center gap-2">
+                <button onClick={() => setLiPost({ listing: '', when: '' })} className="rounded-lg bg-brand px-3 py-1.5 text-sm font-bold text-white transition hover:bg-orange-600">Schedule post</button>
+                <button onClick={() => { setLiConnected(false); notify('Disconnected LinkedIn', 'error') }} className="text-xs font-medium text-slate-400 hover:text-rose-500">Disconnect</button>
+              </div>
+            ) : (
+              <button onClick={() => { setLiConnected(true); notify('Connected LinkedIn') }} className="rounded-full bg-orange-50 px-4 py-1.5 text-sm font-semibold text-brand transition hover:bg-orange-100">Connect</button>
+            )}
+          </div>
+          {liScheduled.length > 0 && (
+            <div className="mt-3 space-y-1.5 border-t border-slate-100 pt-3">
+              {liScheduled.map((s) => (
+                <div key={s.id} className="flex items-center justify-between text-sm">
+                  <span className="text-slate-700"><Linkedin className="mr-1.5 inline h-3.5 w-3.5 text-[#0A66C2]" />{s.listing}</span>
+                  <span className="flex items-center gap-2 text-xs text-slate-400">{s.when} · <span className="rounded-full bg-blue-50 px-2 py-0.5 font-semibold text-blue-700">{s.status}</span>
+                    <button onClick={() => { setLiScheduled((l) => l.filter((x) => x.id !== s.id)); notify('Post removed', 'error') }} className="text-slate-300 hover:text-rose-500"><Trash2 className="h-3.5 w-3.5" /></button>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* CAMPAIGN TEMPLATES — Just Listed / Price Reduced / Sold (Manager-controlled) */}
+      <div className="mt-8">
+        <div className="flex items-center justify-between">
+          <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-500"><LayoutTemplate className="h-3.5 w-3.5" /> Campaign templates</p>
+          <span className="text-xs text-slate-400">{canManageTemplates ? 'You can edit these' : 'Manager-controlled'}</span>
+        </div>
+        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          {templates.map((t) => (
+            <div key={t.id} className="flex flex-col rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <p className="text-sm font-bold text-slate-900">{t.name}</p>
+              <p className="mt-1 line-clamp-2 text-xs text-slate-500">{t.subject}</p>
+              <div className="mt-3 flex items-center gap-3 text-sm font-semibold">
+                <button onClick={() => useTemplate(t)} className="text-brand hover:underline">Use</button>
+                {canManageTemplates && <button onClick={() => setTplEdit({ ...t })} className="text-slate-500 hover:underline">Edit</button>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* LinkedIn schedule modal */}
+      {liPost && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <div className="flex items-center justify-between"><p className="text-lg font-bold text-slate-900">Schedule LinkedIn post</p><button onClick={() => setLiPost(null)} className="text-slate-400 hover:text-slate-700"><X className="h-5 w-5" /></button></div>
+            <div className="mt-4 space-y-3">
+              <div><label className="mb-1 block text-xs font-semibold text-slate-500">Listing</label><select value={liPost.listing} onChange={(e) => setLiPost((p) => ({ ...p, listing: e.target.value }))} className={inputCls}><option value="">— Pick a listing —</option>{INITIAL_LISTINGS.map((l) => <option key={l.id} value={l.name}>{l.name}</option>)}</select></div>
+              <div><label className="mb-1 block text-xs font-semibold text-slate-500">When</label><input type="datetime-local" value={liPost.when} onChange={(e) => setLiPost((p) => ({ ...p, when: e.target.value }))} className={inputCls} /></div>
+            </div>
+            <div className="mt-5 flex justify-end gap-2"><button onClick={() => setLiPost(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button><button onClick={scheduleLinkedIn} className="rounded-lg bg-brand px-4 py-2 text-sm font-bold text-white hover:bg-orange-600">Schedule</button></div>
+          </div>
+        </div>
+      )}
+
+      {/* Template edit modal (Manager+) */}
+      {tplEdit && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4">
+          <div className="my-8 w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+            <div className="flex items-center justify-between"><p className="text-lg font-bold text-slate-900">Edit template</p><button onClick={() => setTplEdit(null)} className="text-slate-400 hover:text-slate-700"><X className="h-5 w-5" /></button></div>
+            <div className="mt-4 space-y-3">
+              <div><label className="mb-1 block text-xs font-semibold text-slate-500">Name</label><input value={tplEdit.name} onChange={(e) => setTplEdit((t) => ({ ...t, name: e.target.value }))} className={inputCls} /></div>
+              <div><label className="mb-1 block text-xs font-semibold text-slate-500">Subject</label><input value={tplEdit.subject} onChange={(e) => setTplEdit((t) => ({ ...t, subject: e.target.value }))} className={inputCls} /></div>
+              <div><label className="mb-1 block text-xs font-semibold text-slate-500">Body</label><textarea rows={8} value={tplEdit.body} onChange={(e) => setTplEdit((t) => ({ ...t, body: e.target.value }))} className={`${inputCls} resize-y`} /></div>
+              <p className="text-xs text-slate-400">Merge fields like {'{{property}}, {{price}}, {{link}}'} are filled per listing.</p>
+            </div>
+            <div className="mt-5 flex justify-end gap-2"><button onClick={() => setTplEdit(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button><button onClick={saveTpl} className="rounded-lg bg-brand px-4 py-2 text-sm font-bold text-white hover:bg-orange-600">Save for the team</button></div>
+          </div>
+        </div>
+      )}
 
       {/* DRAFTS */}
       <div data-tour-target="3" className={`mt-8 ${tourHi(3)} ${tourStep === 3 ? 'bg-white p-4' : ''}`}>
@@ -14261,7 +14374,7 @@ export default function App() {
       case 'crm':
         return <CRMPage user={user} onNavigate={navigate} />
       case 'email':
-        return <EmailBlastPage user={user} onNavigate={navigate} />
+        return <EmailBlastPage user={user} onNavigate={navigate} role={role} />
       case 'templates':
         return <PlaceholderPage label="Custom Templates" icon={Wand2} />
       case 'knowledge':
