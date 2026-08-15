@@ -10958,7 +10958,10 @@ function CrmMetric({ label, value, sub }) {
   )
 }
 
-function CRMPage({ user, onNavigate }) {
+function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
+  // A Member only ever sees their OWN data — no "Whole Team" view, so they can't read or edit
+  // anyone else's leads/contacts. Managers/Admins/Owners get the team-wide view.
+  const teamWide = ['Owner', 'Admin', 'Manager'].includes(role) || can('team.view_all_leads')
   const notify = useToast()
   const me = user?.name || CURRENT_USER.name
   const [tab, setTab] = useState('today')
@@ -11184,12 +11187,16 @@ function CRMPage({ user, onNavigate }) {
           <Contact className="h-6 w-6 text-brand" />
           <h1 className="text-2xl font-extrabold text-slate-900">My Leads</h1>
         </div>
-        {/* Mine / Whole Team toggle */}
-        <div className="inline-flex rounded-lg bg-slate-100 p-1">
-          {[{ k: 'mine', l: 'Mine' }, { k: 'team', l: 'Whole Team' }].map((s) => (
-            <button key={s.k} onClick={() => setScope(s.k)} className={`rounded-md px-4 py-1.5 text-sm font-semibold transition ${scope === s.k ? 'bg-white text-brand shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>{s.l}</button>
-          ))}
-        </div>
+        {/* Mine / Whole Team toggle — Members only get "Mine" (can't see others' data) */}
+        {teamWide ? (
+          <div className="inline-flex rounded-lg bg-slate-100 p-1">
+            {[{ k: 'mine', l: 'Mine' }, { k: 'team', l: 'Whole Team' }].map((s) => (
+              <button key={s.k} onClick={() => setScope(s.k)} className={`rounded-md px-4 py-1.5 text-sm font-semibold transition ${scope === s.k ? 'bg-white text-brand shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>{s.l}</button>
+            ))}
+          </div>
+        ) : (
+          <span className="rounded-lg bg-slate-100 px-4 py-1.5 text-sm font-semibold text-slate-500">Mine</span>
+        )}
       </div>
 
       {/* Top bar tabs */}
@@ -14594,7 +14601,7 @@ export default function App() {
       case 'documents':
         return <PlaceholderPage label="Documents" icon={FileText} />
       case 'crm':
-        return <CRMPage user={user} onNavigate={navigate} />
+        return <CRMPage user={user} onNavigate={navigate} role={role} can={can} />
       case 'email':
         return <EmailBlastPage user={user} onNavigate={navigate} role={role} />
       case 'templates':
