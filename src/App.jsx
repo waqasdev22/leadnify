@@ -9998,6 +9998,9 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
   const onOmUpload = (e) => {
     const f = e.target.files && e.target.files[0]
     if (!f) return
+    // Only PDFs are allowed for the OM / Flyer.
+    const isPdf = f.type === 'application/pdf' || /\.pdf$/i.test(f.name)
+    if (!isPdf) { notify('Only PDF files can be uploaded here — please choose a PDF', 'error'); e.target.value = ''; return }
     readWithProgress(f, () => { setOmFlyer({ name: f.name, size: fileSize(f), date: new Date().toLocaleDateString('en-GB') }); notify('OM / Flyer uploaded') })
     e.target.value = ''
   }
@@ -10077,7 +10080,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
               {!omFlyer && (
                 <PrimaryButton icon={Upload} onClick={() => uploadPct === null && omRef.current && omRef.current.click()}>Upload</PrimaryButton>
               )}
-              <input ref={omRef} type="file" accept=".pdf,.doc,.docx,image/*" className="hidden" onChange={onOmUpload} />
+              <input ref={omRef} type="file" accept="application/pdf,.pdf" className="hidden" onChange={onOmUpload} />
             </div>
             {omFlyer ? (
               <div className="mt-3 flex items-center gap-3 rounded-lg border border-orange-100 bg-orange-50/40 p-3">
@@ -10094,7 +10097,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
               <button onClick={() => omRef.current && omRef.current.click()} className="mt-3 flex w-full flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-slate-200 py-6 text-center transition hover:border-orange-300 hover:bg-orange-50/30">
                 <Upload className="h-6 w-6 text-slate-400" />
                 <span className="text-sm font-semibold text-slate-600">Upload OM or Flyer</span>
-                <span className="text-xs text-slate-400">PDF, Word, or image · one file only</span>
+                <span className="text-xs text-slate-400">PDF only · one file</span>
               </button>
             )}
             {uploadPct !== null && (
