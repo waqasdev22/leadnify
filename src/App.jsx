@@ -9998,11 +9998,17 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
   const onOmUpload = (e) => {
     const f = e.target.files && e.target.files[0]
     if (!f) return
-    // Only PDFs are allowed for the OM / Flyer.
-    const isPdf = f.type === 'application/pdf' || /\.pdf$/i.test(f.name)
-    if (!isPdf) { notify('Only PDF files can be uploaded here — please choose a PDF', 'error'); e.target.value = ''; return }
-    readWithProgress(f, () => { setOmFlyer({ name: f.name, size: fileSize(f), date: new Date().toLocaleDateString('en-GB') }); notify('OM / Flyer uploaded') })
     e.target.value = ''
+    // Verify it's REALLY a PDF by its actual content (every PDF starts with "%PDF-"),
+    // not just the file name — so a renamed image/SVG can't slip through.
+    const sniff = new FileReader()
+    sniff.onload = () => {
+      const header = String.fromCharCode(...new Uint8Array(sniff.result))
+      if (header !== '%PDF-') { notify('That file is not a PDF — only PDF files can be uploaded here', 'error'); return }
+      readWithProgress(f, () => { setOmFlyer({ name: f.name, size: fileSize(f), date: new Date().toLocaleDateString('en-GB') }); notify('OM / Flyer uploaded') })
+    }
+    sniff.onerror = () => notify('Could not read the file — please try again', 'error')
+    sniff.readAsArrayBuffer(f.slice(0, 5))
   }
   const copy = async (text, msg) => {
     const ok = await copyToClipboard(text)
