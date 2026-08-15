@@ -21,8 +21,11 @@ async function authHeader() {
   return {}
 }
 
-// ---- localStorage cache -----------------------------------------------------
-const LS_KEY = (col) => `crebuilder_db_${col}`
+// ---- localStorage cache (per-user) ------------------------------------------
+// Namespaced by the logged-in user so one account's cached data never leaks to another.
+let API_NS = ''
+export const setApiNamespace = (ns) => { API_NS = ns || '' }
+const LS_KEY = (col) => `crebuilder_db_${API_NS}_${col}`
 const lsGet = (col) => {
   try {
     const v = localStorage.getItem(LS_KEY(col))

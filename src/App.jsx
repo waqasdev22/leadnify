@@ -9,7 +9,7 @@ import React, {
 import { jsPDF } from 'jspdf'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { getCol, putCol, saveUser, sendEmail } from './api'
+import { getCol, putCol, saveUser, sendEmail, setApiNamespace } from './api'
 import { auth, googleProvider, db, createMemberAccount, uploadToStorage } from './firebase'
 import { ref as dbRef, get as dbGet, set as dbSet, update as dbUpdate, remove as dbRemove, onValue } from 'firebase/database'
 import { PERMISSION_GROUPS, ROLE_PRESETS, ROLES, ROLE_INFO, resolvePerms, decodeOverrides, encodeOverrides } from './permissions'
@@ -229,17 +229,24 @@ const currency = (n) =>
 const uid = () => Date.now() + Math.floor(Math.random() * 1000)
 
 // State that survives a page refresh by mirroring to localStorage.
+// Per-user data namespace — every logged-in user gets their OWN saved data (keyed by email),
+// so one account never sees or edits another account's data. Set on login, cleared on logout.
+let DATA_NS = ''
+export function setDataNamespace(ns) { DATA_NS = ns || '' }
+const nsKey = (key) => (DATA_NS ? `${DATA_NS}::${key}` : key)
+
 function usePersistentState(key, initial) {
+  const k = nsKey(key)
   const [state, setState] = useState(() => {
     try {
-      const saved = localStorage.getItem(key)
+      const saved = localStorage.getItem(k)
       if (saved != null) return JSON.parse(saved)
     } catch { /* ignore */ }
     return initial
   })
   useEffect(() => {
-    try { localStorage.setItem(key, JSON.stringify(state)) } catch { /* ignore */ }
-  }, [key, state])
+    try { localStorage.setItem(k, JSON.stringify(state)) } catch { /* ignore */ }
+  }, [k, state])
   return [state, setState]
 }
 
@@ -14194,6 +14201,9 @@ export default function App() {
   useEffect(() => {
     return onAuthStateChanged(auth, async (u) => {
       if (u) {
+        // Point all saved data at THIS user's namespace before the app renders — each account
+        // has its own separate data (a new user starts empty and builds their own).
+        setDataNamespace(u.uid); setApiNamespace(u.uid)
         const name = u.displayName || (u.email ? u.email.split('@')[0] : CURRENT_USER.name)
         setUser({ ...CURRENT_USER, name, email: u.email || '', initials: name.slice(0, 1).toUpperCase() })
         setMyUid(u.uid)
@@ -14217,6 +14227,7 @@ export default function App() {
         // Store the user + role in the backend so the API can enforce permissions server-side.
         saveUser({ name, email: u.email, role: profile.role || 'Member' }).catch(() => {})
       } else {
+        setDataNamespace(''); setApiNamespace('')
         setIsLoggedIn(false)
         setRole('Member')
         setPerms(new Set())
