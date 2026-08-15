@@ -235,17 +235,31 @@ let DATA_NS = ''
 export function setDataNamespace(ns) { DATA_NS = ns || '' }
 const nsKey = (key) => (DATA_NS ? `${DATA_NS}::${key}` : key)
 
+const readLS = (k, initial) => {
+  try {
+    const saved = localStorage.getItem(k)
+    if (saved != null) return JSON.parse(saved)
+  } catch { /* ignore */ }
+  return initial
+}
+
 function usePersistentState(key, initial) {
   const k = nsKey(key)
-  const [state, setState] = useState(() => {
-    try {
-      const saved = localStorage.getItem(k)
-      if (saved != null) return JSON.parse(saved)
-    } catch { /* ignore */ }
-    return initial
-  })
+  const [state, setState] = useState(() => readLS(k, initial))
+  // Which namespaced key the current in-memory state belongs to.
+  const loadedKey = useRef(k)
+  // When the namespace changes (user logs in/out or switches accounts), the App
+  // root does NOT remount — so we must reload THIS key's data and make sure the
+  // previous account's in-memory state never gets written to the new account's key.
+  if (loadedKey.current !== k) {
+    loadedKey.current = k
+    setState(readLS(k, initial)) // re-init during render; React discards this render and re-runs
+  }
   useEffect(() => {
-    try { localStorage.setItem(k, JSON.stringify(state)) } catch { /* ignore */ }
+    // Only persist once the state actually belongs to the current key.
+    if (loadedKey.current === k) {
+      try { localStorage.setItem(k, JSON.stringify(state)) } catch { /* ignore */ }
+    }
   }, [k, state])
   return [state, setState]
 }
@@ -14252,6 +14266,15 @@ export default function App() {
   const [resume, setResume] = useState(null) // { draft, nonce } — resume a builder draft
   useEffect(() => {
     let alive = true
+    // A different user just signed in (or signed out): clear the previous account's
+    // in-memory data immediately, then load THIS user's own data. The App root never
+    // remounts, so without this the last account's data would linger and get re-saved
+    // under the new account's namespace.
+    setDbLoaded(false)
+    setPackages(INITIAL_PACKAGES)
+    setListings(INITIAL_LISTINGS)
+    setDeals(INITIAL_DEALS)
+    setDealRooms(INITIAL_DEAL_ROOMS)
     ;(async () => {
       try {
         const [p, l, d] = await Promise.all([getCol('packages'), getCol('listings'), getCol('dealrooms')])
@@ -14270,7 +14293,8 @@ export default function App() {
     return () => {
       alive = false
     }
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myUid])
   useEffect(() => {
     if (dbLoaded) putCol('packages', packages).catch(() => {})
   }, [packages, dbLoaded])
