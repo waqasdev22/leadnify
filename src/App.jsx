@@ -1039,7 +1039,8 @@ function Sidebar({ active, onNavigate, onSignOut, user, forceCollapsed, responsi
         ...NAV_ITEMS.filter((n) => !NAV_PERM[n.key] || can(NAV_PERM[n.key])),
         ...(can('team.manage_permissions') ? [{ key: 'team', label: 'Team & Permissions', icon: Users, dividerBefore: true }] : []),
         { key: 'profile', label: 'Profile Settings', icon: User, dividerBefore: true },
-        { key: 'teamsettings', label: 'Team Settings', icon: Users },
+        // Team Settings is team management — hidden from Members / new users, shown to Admins & Owners.
+        ...(can('team.manage_permissions') ? [{ key: 'teamsettings', label: 'Team Settings', icon: Users }] : []),
       ]
     : NAV_ITEMS
 
