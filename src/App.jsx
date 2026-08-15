@@ -13984,56 +13984,9 @@ function TeamSettingsPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-extrabold text-slate-900">Team Management</h1>
-          <button onClick={() => { setInviteOpen(true); setInviteStep(1); setInviteEmails([]); setInviteInput(''); setInviteRole('Member') }} className="inline-flex items-center gap-1.5 rounded-full bg-brand px-3 py-1.5 text-xs font-bold text-white transition hover:bg-orange-600"><Zap className="h-3.5 w-3.5" /> Invite Member</button>
         </div>
       </div>
-      <p className="mt-1 text-sm font-semibold text-brand">{seats} paid seat{seats === 1 ? '' : 's'}</p>
-
-      {/* Team Members */}
-      <div className="mt-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-bold text-slate-900">Team Members</p>
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{seats} {seats === 1 ? 'member' : 'members'}</span>
-        </div>
-        <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 border-b border-slate-100 pb-3 text-xs text-slate-400">
-          {TEAM_ROLE_LEGEND.map((r) => (<span key={r.role}><span className="font-bold text-slate-600">{r.role}</span> — {r.desc}</span>))}
-        </div>
-        <div className="scrollbar-slim mt-1 overflow-x-auto">
-          <table className="w-full min-w-[640px]">
-            <thead><tr><th className={th}>Member</th><th className={th}>Email</th><th className={th + ' text-right'}>Docs</th><th className={th + ' text-right'}>Active</th><th className={th + ' text-right'}>Role</th><th className={th + ' text-right'}>Actions</th></tr></thead>
-            <tbody className="divide-y divide-slate-100">
-              {members.map((m) => (
-                <tr key={m.id} className="hover:bg-slate-50">
-                  <td className={td}>
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50 text-xs font-bold text-emerald-600">{m.initials}</div>
-                      <span className="font-semibold text-slate-800">{m.name} {m.you && <span className="font-normal text-slate-400">(you)</span>}</span>
-                    </div>
-                  </td>
-                  <td className={td + ' text-slate-500'}>{m.email}</td>
-                  <td className={td + ' text-right'}>{m.docs}</td>
-                  <td className={td + ' text-right text-slate-500'}>{m.active}</td>
-                  <td className={td + ' text-right'}>
-                    <select value={m.role} onChange={(e) => setRole(m.id, e.target.value)} className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm font-semibold text-brand outline-none focus:border-orange-400">
-                      {TEAM_ROLES.map((r) => <option key={r} className="text-slate-700">{r}</option>)}
-                    </select>
-                  </td>
-                  <td className={td + ' text-right'}>
-                    <div className="flex items-center justify-end gap-1">
-                      <button onClick={() => setEditMember({ id: m.id, name: m.name, email: m.email })} title="Edit member" className={toolBtn}><Pencil className="h-4 w-4" /></button>
-                      {m.you ? (
-                        <span className="inline-flex h-7 w-7 items-center justify-center text-slate-300" title="You can't remove yourself"><Trash2 className="h-4 w-4" /></span>
-                      ) : (
-                        <button onClick={() => setConfirmDel(m)} title="Remove member" className="flex h-7 w-7 items-center justify-center rounded text-slate-500 transition hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-4 w-4" /></button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <p className="mt-1 text-sm text-slate-500">Manage team members and roles from the <span className="font-semibold text-brand">Team &amp; Permissions</span> page.</p>
 
       {/* What do you broker? */}
       <div className="mt-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
