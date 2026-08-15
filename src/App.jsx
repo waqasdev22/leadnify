@@ -192,146 +192,9 @@ const propertyImage = (seed) =>
 const FALLBACK_IMG =
   'https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=800&q=60'
 
-const INITIAL_PACKAGES = [
-  {
-    id: 1,
-    title: 'Riverside Business Park',
-    address: '1200 Riverside Dr, Austin, TX 78701',
-    status: 'Complete',
-    owner: 'my',
-    image: propertyImage('1486406146926-c627a92ad1ab'),
-    tags: ['Net Lease'],
-    docType: 'Offering Memorandum',
-    propertyType: 'Office / Medical',
-    updated: '2d ago',
-  },
-  {
-    id: 2,
-    title: 'Summit Retail Center',
-    address: '455 Market St, Dallas, TX 75201',
-    status: 'Draft',
-    owner: 'my',
-    image: '',
-    tags: ['Retail'],
-    docType: 'Offering Memorandum',
-    propertyType: 'Retail',
-    progress: 61,
-    updated: '5h ago',
-  },
-  {
-    id: 3,
-    title: 'Northgate Logistics Hub',
-    address: '8900 Industrial Pkwy, Houston, TX 77002',
-    status: 'In Progress',
-    owner: 'team',
-    image: propertyImage('1553413077-190dd305871c'),
-    tags: ['Industrial'],
-    docType: 'Brochure',
-    propertyType: 'Industrial',
-    progress: 40,
-    updated: '1d ago',
-  },
-  {
-    id: 4,
-    title: 'Lakeview Medical Plaza',
-    address: '77 Wellness Ave, San Antonio, TX 78205',
-    status: 'Complete',
-    owner: 'team',
-    image: propertyImage('1519494026892-80bbd2d6fd0d'),
-    tags: ['Medical'],
-    docType: 'Offering Memorandum',
-    propertyType: 'Office / Medical',
-    updated: '3d ago',
-  },
-  {
-    id: 5,
-    title: 'The Foundry Lofts',
-    address: '210 Warehouse Row, Austin, TX 78702',
-    status: 'Draft',
-    owner: 'my',
-    image: '',
-    tags: ['Multifamily'],
-    docType: 'Brochure',
-    propertyType: 'Multifamily',
-    progress: 28,
-    updated: '6h ago',
-  },
-  {
-    id: 6,
-    title: 'Cypress Corporate Tower',
-    address: '500 Congress Ave, Austin, TX 78701',
-    status: 'Complete',
-    owner: 'my',
-    image: propertyImage('1497366216548-37526070297c'),
-    tags: ['Net Lease'],
-    docType: 'Offering Memorandum',
-    propertyType: 'Office / Medical',
-    updated: '4d ago',
-  },
-]
+const INITIAL_PACKAGES = []
 
-export const INITIAL_LISTINGS = [
-  {
-    id: 1,
-    name: 'Riverside Business Park',
-    address: '1200 Riverside Dr, Austin, TX',
-    price: 8450000,
-    type: 'Office / Medical',
-    size: '42,000 SF',
-    status: 'Active',
-    image: propertyImage('1486406146926-c627a92ad1ab'),
-  },
-  {
-    id: 2,
-    name: 'Summit Retail Center',
-    address: '455 Market St, Dallas, TX',
-    price: 5200000,
-    type: 'Retail',
-    size: '18,500 SF',
-    status: 'Active',
-    image: propertyImage('1560518883-ce09059eeffa'),
-  },
-  {
-    id: 3,
-    name: 'Northgate Logistics Hub',
-    address: '8900 Industrial Pkwy, Houston, TX',
-    price: 12750000,
-    type: 'Industrial',
-    size: '110,000 SF',
-    status: 'Pending',
-    image: propertyImage('1553413077-190dd305871c'),
-  },
-  {
-    id: 4,
-    name: 'Lakeview Medical Plaza',
-    address: '77 Wellness Ave, San Antonio, TX',
-    price: 6900000,
-    type: 'Office / Medical',
-    size: '31,200 SF',
-    status: 'Sold',
-    image: propertyImage('1519494026892-80bbd2d6fd0d'),
-  },
-  {
-    id: 5,
-    name: 'Cypress Corporate Tower',
-    address: '500 Congress Ave, Austin, TX',
-    price: 21400000,
-    type: 'Office / Medical',
-    size: '96,000 SF',
-    status: 'Active',
-    image: propertyImage('1497366216548-37526070297c'),
-  },
-  {
-    id: 6,
-    name: 'The Foundry Lofts',
-    address: '210 Warehouse Row, Austin, TX',
-    price: 4300000,
-    type: 'Multifamily',
-    size: '24 Units',
-    status: 'Pending',
-    image: propertyImage('1522708323590-d24dbb6b0267'),
-  },
-]
+export const INITIAL_LISTINGS = []
 
 const DEAL_COLUMNS = [
   { key: 'Lead', accent: 'bg-slate-400', progress: 20 },
@@ -350,12 +213,7 @@ const INITIAL_DEALS = [
 ]
 
 // Deal Rooms = confidential data rooms behind a listing's access gate.
-const INITIAL_DEAL_ROOMS = [
-  { id: 1, name: 'Riverside Business Park', address: '1200 Riverside Dr, Austin, TX', image: propertyImage('1486406146926-c627a92ad1ab'), status: 'Active', access: 'Contact Required', files: 8, members: 5, updated: '2h ago' },
-  { id: 2, name: 'Summit Retail Center', address: '455 Market St, Dallas, TX', image: propertyImage('1560518883-ce09059eeffa'), status: 'Active', access: 'Free Access', files: 4, members: 2, updated: '1d ago' },
-  { id: 3, name: 'Northgate Logistics Hub', address: '8900 Industrial Pkwy, Houston, TX', image: propertyImage('1553413077-190dd305871c'), status: 'Archived', access: 'Free Access', files: 12, members: 9, updated: '3d ago' },
-  { id: 4, name: 'Cypress Corporate Tower', address: '', image: '', status: 'Active', access: 'NDA - Approval Required', files: 1, members: 0, updated: '3d ago' },
-]
+const INITIAL_DEAL_ROOMS = []
 
 /* -------------------------------------------------------------------------- */
 /*  Utilities                                                                 */
@@ -9667,25 +9525,9 @@ function DealRoomCard({ room, onOpen, onDelete }) {
 /*  Deal Room detail (files, prospects, activity, access, settings, NDA)      */
 /* -------------------------------------------------------------------------- */
 
-const DEFAULT_ROOM_FILES = [
-  { name: "FINAL V2 OM - Ziggi's Coffee - Huntington, IN.pdf", size: '8.7 MB', date: '29/07/2026' },
-]
-const DEFAULT_ROOM_PROSPECTS = [
-  { id: 'p1', initials: 'NN', name: 'Neil Naran', email: 'neil@valuenetlease.com', company: 'Value Net Lease Partners', ref: 'FEE1320B', access: 'NDA', views: 1, downloads: 0, status: 'Active', seen: 'seen 3d ago' },
-  { id: 'p2', initials: 'NN', name: 'Neil Naran', email: 'naran.neil@gmail.com', company: 'Value Net Lease Partners', ref: 'C377C776', access: 'Email gate', views: 3, downloads: 1, status: 'Active', seen: 'seen 3d ago' },
-]
-const DEFAULT_ROOM_ACTIVITY = [
-  { icon: Eye, color: 'text-blue-500', who: 'Neil Naran', text: 'viewed the deal room' },
-  { icon: FileText, color: 'text-purple-500', who: 'Neil Naran', text: 'viewed the OM' },
-  { icon: Eye, color: 'text-blue-500', who: 'Neil Naran', text: 'viewed the deal room' },
-  { icon: FileText, color: 'text-purple-500', who: 'Neil Naran', text: 'viewed the OM' },
-  { icon: Download, color: 'text-emerald-500', who: 'Neil Naran', text: 'downloaded "FINAL V2 OM - Ziggi\'s Coffee - Huntington, IN.pdf"' },
-  { icon: Eye, color: 'text-blue-500', who: 'Neil Naran', text: 'viewed the deal room' },
-  { icon: FileText, color: 'text-purple-500', who: 'Neil Naran', text: 'viewed the OM' },
-  { icon: Download, color: 'text-amber-500', who: 'Neil Naran', text: 'downloaded the OM PDF' },
-  { icon: Eye, color: 'text-blue-500', who: 'Neil Naran', text: 'viewed the deal room' },
-  { icon: FileText, color: 'text-purple-500', who: 'Neil Naran', text: 'viewed the OM' },
-]
+const DEFAULT_ROOM_FILES = []
+const DEFAULT_ROOM_PROSPECTS = []
+const DEFAULT_ROOM_ACTIVITY = []
 
 function RoomStat({ icon: Icon, value, label, color = 'text-slate-400' }) {
   return (
@@ -10652,14 +10494,7 @@ const CRM_LEADS = [
   { id: 'l6', name: 'Nina Patel', company: 'Summit Realty', email: 'nina@summit.com', phone: '(480) 555-0133', source: 'Website', status: 'Qualified', value: 5100000, owner: 'Waqas', last: '3d ago' },
 ]
 
-const CRM_CONTACTS = [
-  { id: 'c1', name: 'Neil Naran', email: 'neil@valuenetlease.com', phone: '9498429202', company: 'Value Net Lease Partners', source: 'NDA', score: 31, tag: 'Cold', type: 'Investor', activity: 5, lastSeen: '12/08/2026', owner: 'Waqas' },
-  { id: 'c2', name: 'Neil Naran', email: 'naran.neil@gmail.com', phone: '9498429202', company: 'Value Net Lease Partners', source: 'Inquiry', score: 57, tag: 'Warm', type: 'Buyer', activity: 12, lastSeen: '29/07/2026', owner: 'Waqas' },
-  { id: 'c3', name: 'Jordan Miller', email: 'jordan@millercap.com', phone: '6025550142', company: 'Miller Capital', source: 'Download', score: 82, tag: 'Hot', type: 'Buyer', activity: 24, lastSeen: '10/08/2026', owner: 'Maya Chen' },
-  { id: 'c4', name: 'Priya Shah', email: 'priya@everest.com', phone: '4805550199', company: 'Everest Holdings', source: 'Inquiry', score: 64, tag: 'Warm', type: 'Investor', activity: 9, lastSeen: '05/08/2026', owner: 'Devon Park' },
-  { id: 'c5', name: 'Aaron Cole', email: 'aaron@colenl.com', phone: '6025550164', company: 'Cole Net Lease', source: 'NDA', score: 78, tag: 'Hot', type: 'Seller', activity: 16, lastSeen: '02/08/2026', owner: 'Sam Rivera' },
-  { id: 'c6', name: 'Marcus Lee', email: 'marcus@leerg.com', phone: '6025550177', company: 'Lee Retail Group', source: 'Email', score: 22, tag: 'Cold', type: 'Landlord', activity: 3, lastSeen: '20/07/2026', owner: 'Maya Chen' },
-]
+const CRM_CONTACTS = []
 const CRM_CONTACT_CHIPS = ['Hot first', 'Hot', 'Warm', 'Cold', 'Buyer', 'Tenant Rep', 'Seller', 'Landlord', 'Investor', 'Other']
 const crmContactSrcBadge = (s) => ({ NDA: 'bg-violet-50 text-violet-700', Inquiry: 'bg-sky-50 text-sky-700', Download: 'bg-emerald-50 text-emerald-700', Email: 'bg-blue-50 text-blue-700' }[s] || 'bg-slate-100 text-slate-600')
 const crmScoreDot = (tag) => (tag === 'Hot' ? 'bg-rose-500' : tag === 'Warm' ? 'bg-amber-500' : 'bg-sky-400')
@@ -10700,22 +10535,9 @@ const LISTING_STAGE_META = {
   Expired: { pct: 0, bar: 'border-t-slate-400' },
 }
 const CRM_LISTINGS_SEED = []
-const CRM_DEALS = [
-  { id: 'd1', title: 'Neil Naran — Test', contact: 'Neil Naran', company: 'Value Net Lease Partners', value: 1500000, stage: 'NDA Signed', days: 14, owner: 'Waqas' },
-  { id: 'd2', title: 'Neil Naran — Test', contact: 'Neil Naran', company: 'Value Net Lease Partners', value: 1500000, stage: 'NDA Signed', days: 14, owner: 'Waqas' },
-  { id: 'd3', title: 'Neil Naran — Test', contact: 'Neil Naran', company: 'Value Net Lease Partners', value: 1500000, stage: 'NDA Signed', days: 14, owner: 'Waqas' },
-  { id: 'd4', title: 'Olive Grove Plaza', contact: 'Jordan Miller', company: 'Miller Capital', value: 10900000, stage: 'Tour', days: 6, owner: 'Maya Chen' },
-  { id: 'd5', title: 'Summit Retail Center', contact: 'Priya Shah', company: 'Everest Holdings', value: 8700000, stage: 'LOI', days: 9, owner: 'Devon Park' },
-  { id: 'd6', title: 'Northgate Logistics Hub', contact: 'Aaron Cole', company: 'Cole Net Lease', value: 12750000, stage: 'Under Contract', days: 21, owner: 'Sam Rivera' },
-]
+const CRM_DEALS = []
 
-const CRM_TASKS_SEED = [
-  { id: 't1', title: 'Call Jordan Miller re: Olive Grove OM', due: 'Today', related: 'Miller Capital', owner: 'Waqas', done: false },
-  { id: 't2', title: 'Send NDA to Priya Shah', due: 'Today', related: 'Everest Holdings', owner: 'Waqas', done: false },
-  { id: 't3', title: 'Follow up: Summit Retail tour', due: 'Tomorrow', related: 'Summit Retail Center', owner: 'Waqas', done: false },
-  { id: 't4', title: 'Prepare BOV for Lee Retail', due: 'Fri', related: 'Lee Retail Group', owner: 'Maya Chen', done: false },
-  { id: 't5', title: 'Update pipeline notes', due: 'Today', related: 'Ramirez Ventures', owner: 'Devon Park', done: true },
-]
+const CRM_TASKS_SEED = []
 
 // Lease expirations — a client's current space, driven by its lease-expiry date.
 // Empty by default: entries are created from a contact's record (lease-expiry is the driver).
@@ -10774,13 +10596,7 @@ const REPORT_SOURCE_LABEL = { Inquiry: 'Inquiries', NDA: 'NDA signers', Download
 
 // Milestone II 3.8 — per-property marketing metrics for the property-level report.
 const MARKETING_TYPES = ['Listing Services', 'Social', 'Email', 'Text', 'Website']
-const PROPERTY_MARKETING = [
-  { name: 'Riverside Business Park', owner: 'Waqas', impressions: 18420, pageViews: 2140, visitors: 1290, openOms: 312, executedCa: 47, weeklyViews: [40, 55, 62, 58, 71, 80, 76, 90, 102, 96, 110, 124], reach: { 'Listing Services': 9200, Social: 4100, Email: 2600, Text: 900, Website: 1620 } },
-  { name: 'Summit Retail Center', owner: 'Maya Chen', impressions: 12760, pageViews: 1580, visitors: 940, openOms: 208, executedCa: 29, weeklyViews: [22, 30, 41, 38, 44, 52, 49, 61, 58, 66, 72, 80], reach: { 'Listing Services': 6100, Social: 3200, Email: 1900, Text: 560, Website: 1000 } },
-  { name: 'The Foundry Lofts', owner: 'Waqas', impressions: 9840, pageViews: 1120, visitors: 690, openOms: 154, executedCa: 18, weeklyViews: [12, 18, 24, 30, 28, 35, 40, 44, 39, 48, 55, 61], reach: { 'Listing Services': 4300, Social: 2600, Email: 1400, Text: 420, Website: 1120 } },
-  { name: 'Northgate Logistics Hub', owner: 'Sam Rivera', impressions: 15230, pageViews: 1870, visitors: 1110, openOms: 266, executedCa: 34, weeklyViews: [33, 40, 48, 52, 60, 58, 66, 72, 80, 76, 88, 95], reach: { 'Listing Services': 7800, Social: 3100, Email: 2200, Text: 700, Website: 1430 } },
-  { name: 'Cypress Corporate Tower', owner: 'Devon Park', impressions: 7420, pageViews: 860, visitors: 520, openOms: 98, executedCa: 12, weeklyViews: [8, 14, 19, 22, 26, 24, 30, 33, 38, 41, 46, 52], reach: { 'Listing Services': 3200, Social: 1900, Email: 1100, Text: 320, Website: 900 } },
-]
+const PROPERTY_MARKETING = []
 // 3.8 — open a clean, owner-shareable report in a new tab (print or save as PDF from there).
 function openPropertyReportPrint(props, totals, weeks, reach, label) {
   const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))
@@ -10882,10 +10698,7 @@ function CrmKpi({ icon: Icon, label, value, tone = 'text-brand' }) {
 }
 
 const CRM_STAGE_WEIGHT = { Inquiry: 0.1, 'NDA Signed': 0.25, Tour: 0.4, LOI: 0.6, 'Under Contract': 0.8, 'Closed Won': 1, 'Closed Lost': 0 }
-const CRM_INQUIRIES = [
-  { id: 'iq1', name: 'Neil Naran', property: 'Olive Grove Plaza', owner: 'Waqas' },
-  { id: 'iq2', name: 'Sofia Ramirez', property: 'Summit Retail Center', owner: 'Devon Park' },
-]
+const CRM_INQUIRIES = []
 
 // Milestone III — listing platforms you can gather leads from (connect / import / forward).
 const LEAD_PLATFORMS = [
@@ -10921,14 +10734,7 @@ const LEAD_PIPELINE_BADGE = {
   'On Hold': 'bg-orange-50 text-orange-700',
   'No Longer for Sale': 'bg-rose-50 text-rose-700',
 }
-const CRM_INBOX_SEED = [
-  { id: 'in1', name: 'Neil Naran', email: 'neil@valuenetlease.com', type: 'NDA Signer', profile: 'Broker', company: 'Value Net Lease Partners', listing: '#41195', property: 'Riverside Business Park', date: 'Jul 29, 2026', status: 'expires 28/08/2026', active: 'Active', pipeline: 'Under Contract', source: 'Listing Website', owner: 'Waqas' },
-  { id: 'in2', name: 'Neil Naran', email: 'naran.neil@gmail.com', type: 'Email Lead', profile: 'Broker', company: 'Value Net Lease Partners', listing: '#41195', property: 'Riverside Business Park', date: 'Jul 29, 2026', status: 'expires 28/08/2026', active: 'Active', pipeline: 'Call for Offers', source: 'Email', owner: 'Waqas' },
-  { id: 'in3', name: 'Neil Naran', email: 'naran.neil@gmail.com', type: 'Inquiry', profile: 'Principal', company: '—', listing: 'Unknown', property: 'Riverside Business Park', date: 'Jul 28, 2026', status: 'Unread', unread: true, active: 'Active', pipeline: 'Active', source: 'Website', owner: 'Waqas' },
-  { id: 'in4', name: 'Jordan Miller', email: 'jordan@millercap.com', type: 'Forwarded', profile: 'Principal', company: 'Miller Capital', listing: '#38210', property: 'Summit Retail Center', date: 'Jul 27, 2026', status: 'LoopNet', active: 'Active', pipeline: 'Active', source: 'Social Media', owner: 'Maya Chen' },
-  { id: 'in5', name: 'Priya Shah', email: 'priya@everest.com', type: 'Inquiry', profile: 'Principal', company: '—', listing: 'Unknown', property: 'The Foundry Lofts', date: 'Jul 26, 2026', status: 'Unread', unread: true, active: 'Active', pipeline: 'Active', source: 'Website', owner: 'Devon Park' },
-  { id: 'in6', name: 'Aaron Cole', email: 'aaron@colenl.com', type: 'NDA Signer', profile: 'Broker', company: 'Cole Net Lease', listing: '#41822', property: 'Northgate Logistics Hub', date: 'Jul 25, 2026', status: 'expires 25/08/2026', active: 'Inactive', pipeline: 'Closed', source: 'Text', owner: 'Sam Rivera' },
-]
+const CRM_INBOX_SEED = []
 const crmLeadTypeBadge = (t) => ({
   'NDA Signer': 'bg-violet-50 text-violet-700',
   'Email Lead': 'bg-blue-50 text-blue-700',
