@@ -10800,7 +10800,7 @@ h2{font-size:14px;text-transform:uppercase;letter-spacing:.04em;color:#64748b;ma
 }
 const REPORT_STAGE_BAR = { Inquiry: 'bg-blue-500', 'NDA Signed': 'bg-violet-500', Tour: 'bg-amber-500', LOI: 'bg-orange-500', 'Under Contract': 'bg-emerald-500' }
 
-function Last12Weeks({ deals, contactList, scope, me }) {
+function Last12Weeks({ deals, contactList, leads = [], scope, me }) {
   const [showTable, setShowTable] = useState(false)
   const weekStart = (d) => { const x = new Date(d); const day = (x.getDay() + 6) % 7; x.setDate(x.getDate() - day); x.setHours(0, 0, 0, 0); return x }
   const now = new Date()
@@ -10808,8 +10808,9 @@ function Last12Weeks({ deals, contactList, scope, me }) {
   for (let i = 11; i >= 0; i--) { const ws = weekStart(now); ws.setDate(ws.getDate() - i * 7); weeks.push({ t: ws.getTime(), label: ws.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }), newLeads: 0, opened: 0, won: 0, lost: 0 }) }
   const bidx = (date) => { const t = weekStart(date).getTime(); return weeks.findIndex((w) => w.t === t) }
   deals.forEach((d) => { const o = new Date(now); o.setDate(o.getDate() - (Number(d.days) || 0)); const b = bidx(o); if (b >= 0) { weeks[b].opened++; if (d.stage === 'Closed Won') weeks[b].won++; if (d.stage === 'Closed Lost') weeks[b].lost++ } })
-  const repC = scope === 'mine' ? contactList.filter((c) => c.owner === me) : contactList
-  repC.forEach((c) => { const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(c.lastSeen || ''); if (!m) return; const dt = new Date(+m[3], +m[2] - 1, +m[1]); const b = bidx(dt); if (b >= 0) weeks[b].newLeads++ })
+  // Count the real leads you captured (from My Leads), bucketed by the date they came in.
+  const repLeads = scope === 'mine' ? leads.filter((l) => l.owner === me) : leads
+  repLeads.forEach((l) => { const dt = new Date(l.date); if (isNaN(dt.getTime())) return; const b = bidx(dt); if (b >= 0) weeks[b].newLeads++ })
   const tot = weeks.reduce((a, w) => ({ newLeads: a.newLeads + w.newLeads, opened: a.opened + w.opened, won: a.won + w.won, lost: a.lost + w.lost }), { newLeads: 0, opened: 0, won: 0, lost: 0 })
   const closed = tot.won + tot.lost
   const winRate = closed ? `${Math.round((tot.won / closed) * 100)}%` : '—'
@@ -11252,7 +11253,7 @@ function CRMPage({ user, onNavigate }) {
             </div>
 
             {/* Last 12 weeks */}
-            <Last12Weeks deals={deals} contactList={contactList} scope={scope} me={me} />
+            <Last12Weeks deals={deals} contactList={contactList} leads={inbox} scope={scope} me={me} />
           </div>
           )
         })()}
