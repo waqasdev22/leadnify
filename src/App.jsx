@@ -10474,6 +10474,13 @@ function DealRoomsPage({ dealRooms, setDealRooms, onEditDocument, openTarget, on
   const [confirm, setConfirm] = useState(null)
   const [openRoom, setOpenRoom] = useState(null)
 
+  // Tick every 30s so the relative "time ago" on the cards updates on its own — no page refresh.
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    const iv = setInterval(() => setTick((t) => t + 1), 30000)
+    return () => clearInterval(iv)
+  }, [])
+
   // Open a specific room when navigated here from the Dashboard.
   useEffect(() => {
     if (openTarget) {
