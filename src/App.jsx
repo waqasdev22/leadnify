@@ -11,7 +11,7 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { getCol, putCol, saveUser, sendEmail } from './api'
 import { auth, googleProvider, db, createMemberAccount, uploadToStorage } from './firebase'
-import { ref as dbRef, get as dbGet, set as dbSet, update as dbUpdate, onValue } from 'firebase/database'
+import { ref as dbRef, get as dbGet, set as dbSet, update as dbUpdate, remove as dbRemove, onValue } from 'firebase/database'
 import { PERMISSION_GROUPS, ROLE_PRESETS, ROLES, ROLE_INFO, resolvePerms, decodeOverrides, encodeOverrides } from './permissions'
 import {
   signInWithEmailAndPassword,
@@ -14247,6 +14247,12 @@ function TeamPermissionsPage({ myUid }) {
   const list = Object.entries(users).map(([uid, u]) => ({ uid, ...u })).sort((a, b) => (a.name || '').localeCompare(b.name || ''))
 
   const setUserRole = (uid, role) => { dbUpdate(dbRef(db, `users/${uid}`), { role }).then(() => notify('Role updated')).catch(() => notify('Save failed — check DB rules', 'error')) }
+  const [confirmDelUser, setConfirmDelUser] = useState(null) // user pending removal from the team
+  const removeUser = () => {
+    const u = confirmDelUser
+    dbRemove(dbRef(db, `users/${u.uid}`)).then(() => notify(`Removed ${u.name || u.email}`, 'error')).catch(() => notify('Remove failed — check DB rules', 'error'))
+    setConfirmDelUser(null)
+  }
   const togglePerm = (uid, key) => {
     const u = users[uid]; if (!u) return
     const overrides = decodeOverrides(u.overrides) // dotted keys
@@ -14342,6 +14348,11 @@ function TeamPermissionsPage({ myUid }) {
                   <button onClick={() => setOpenUid(open ? null : u.uid)} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
                     Permissions <ChevronDown className={`h-4 w-4 transition ${open ? 'rotate-180' : ''}`} />
                   </button>
+                  {isMe ? (
+                    <span className="inline-flex h-8 w-8 items-center justify-center text-slate-300" title="You can't remove yourself"><Trash2 className="h-4 w-4" /></span>
+                  ) : (
+                    <button onClick={() => setConfirmDelUser(u)} title="Remove from team" className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-4 w-4" /></button>
+                  )}
                 </div>
                 {open && (
                   <div className="border-t border-slate-100 bg-slate-50/50 p-4">
@@ -14371,6 +14382,16 @@ function TeamPermissionsPage({ myUid }) {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* Remove-from-team confirm */}
+      {confirmDelUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+            <div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-full bg-rose-50 text-rose-500"><Trash2 className="h-5 w-5" /></span><div><p className="text-base font-bold text-slate-900">Remove from team?</p><p className="text-sm text-slate-500">{confirmDelUser.name || confirmDelUser.email} will lose all access.</p></div></div>
+            <div className="mt-5 flex justify-end gap-2"><button onClick={() => setConfirmDelUser(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button><button onClick={removeUser} className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-bold text-white hover:bg-rose-700">Remove</button></div>
+          </div>
         </div>
       )}
     </div>
