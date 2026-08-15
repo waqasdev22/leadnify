@@ -13944,6 +13944,19 @@ function TeamSettingsPage() {
     setInviteOpen(false)
   }
   const setRole = (id, role) => { setMembers((l) => l.map((m) => (m.id === id ? { ...m, role } : m))); notify('Role updated') }
+  const [editMember, setEditMember] = useState(null)   // member being edited (name/email)
+  const [confirmDel, setConfirmDel] = useState(null)   // member pending delete confirmation
+  const saveMember = () => {
+    if (!editMember.name.trim()) { notify('Name is required', 'error'); return }
+    setMembers((l) => l.map((m) => (m.id === editMember.id ? { ...m, name: editMember.name.trim(), email: editMember.email.trim(), initials: (editMember.name.trim()[0] || '?').toUpperCase() } : m)))
+    setEditMember(null)
+    notify('Member updated')
+  }
+  const deleteMember = () => {
+    setMembers((l) => l.filter((m) => m.id !== confirmDel.id))
+    notify(`Removed ${confirmDel.name}`, 'error')
+    setConfirmDel(null)
+  }
   const seats = members.length
   const unsaved = caDraft !== savedCa
   const toolBtn = 'flex h-7 w-7 items-center justify-center rounded text-slate-500 transition hover:bg-slate-100 hover:text-slate-700'
@@ -13971,7 +13984,7 @@ function TeamSettingsPage() {
         </div>
         <div className="scrollbar-slim mt-1 overflow-x-auto">
           <table className="w-full min-w-[640px]">
-            <thead><tr><th className={th}>Member</th><th className={th}>Email</th><th className={th + ' text-right'}>Docs</th><th className={th + ' text-right'}>Active</th><th className={th + ' text-right'}>Role</th></tr></thead>
+            <thead><tr><th className={th}>Member</th><th className={th}>Email</th><th className={th + ' text-right'}>Docs</th><th className={th + ' text-right'}>Active</th><th className={th + ' text-right'}>Role</th><th className={th + ' text-right'}>Actions</th></tr></thead>
             <tbody className="divide-y divide-slate-100">
               {members.map((m) => (
                 <tr key={m.id} className="hover:bg-slate-50">
@@ -13988,6 +14001,16 @@ function TeamSettingsPage() {
                     <select value={m.role} onChange={(e) => setRole(m.id, e.target.value)} className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm font-semibold text-brand outline-none focus:border-orange-400">
                       {TEAM_ROLES.map((r) => <option key={r} className="text-slate-700">{r}</option>)}
                     </select>
+                  </td>
+                  <td className={td + ' text-right'}>
+                    <div className="flex items-center justify-end gap-1">
+                      <button onClick={() => setEditMember({ id: m.id, name: m.name, email: m.email })} title="Edit member" className={toolBtn}><Pencil className="h-4 w-4" /></button>
+                      {m.you ? (
+                        <span className="inline-flex h-7 w-7 items-center justify-center text-slate-300" title="You can't remove yourself"><Trash2 className="h-4 w-4" /></span>
+                      ) : (
+                        <button onClick={() => setConfirmDel(m)} title="Remove member" className="flex h-7 w-7 items-center justify-center rounded text-slate-500 transition hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-4 w-4" /></button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -14119,6 +14142,30 @@ function TeamSettingsPage() {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Edit member modal */}
+      {editMember && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <div className="flex items-center justify-between"><p className="text-lg font-bold text-slate-900">Edit member</p><button onClick={() => setEditMember(null)} className="text-slate-400 hover:text-slate-700"><X className="h-5 w-5" /></button></div>
+            <div className="mt-4 space-y-3">
+              <div><label className="mb-1 block text-xs font-semibold text-slate-500">Name</label><input value={editMember.name} onChange={(e) => setEditMember((m) => ({ ...m, name: e.target.value }))} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" /></div>
+              <div><label className="mb-1 block text-xs font-semibold text-slate-500">Email</label><input type="email" value={editMember.email} onChange={(e) => setEditMember((m) => ({ ...m, email: e.target.value }))} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" /></div>
+            </div>
+            <div className="mt-5 flex justify-end gap-2"><button onClick={() => setEditMember(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button><button onClick={saveMember} className="rounded-lg bg-brand px-4 py-2 text-sm font-bold text-white hover:bg-orange-600">Save</button></div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete member confirm */}
+      {confirmDel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+            <div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-full bg-rose-50 text-rose-500"><Trash2 className="h-5 w-5" /></span><div><p className="text-base font-bold text-slate-900">Remove member?</p><p className="text-sm text-slate-500">{confirmDel.name} ({confirmDel.email}) will lose access.</p></div></div>
+            <div className="mt-5 flex justify-end gap-2"><button onClick={() => setConfirmDel(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button><button onClick={deleteMember} className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-bold text-white hover:bg-rose-700">Remove</button></div>
           </div>
         </div>
       )}
