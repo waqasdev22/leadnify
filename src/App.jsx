@@ -9654,7 +9654,7 @@ function DealRoomCard({ room, onOpen, onDelete }) {
           </div>
           <span className="inline-flex items-center gap-1.5 text-slate-400">
             <Eye className="h-4 w-4" />
-            {room.updated}
+            {room.ts ? timeAgo(room.ts) : room.updated}
           </span>
         </div>
       </div>
@@ -10484,7 +10484,7 @@ function DealRoomsPage({ dealRooms, setDealRooms, onEditDocument, openTarget, on
 
   const create = (data) => {
     setDealRooms((list) => [
-      { id: uid(), files: 0, members: 0, updated: 'just now', image: '', ...data },
+      { id: uid(), files: 0, members: 0, updated: 'just now', ts: Date.now(), image: '', ...data },
       ...list,
     ])
     notify('Deal room created')
@@ -14519,6 +14519,7 @@ export default function App() {
         files: 0,
         members: 0,
         updated: 'just now',
+        ts: Date.now(),
       }
       setDealRooms((list) => [room, ...list])
     }
