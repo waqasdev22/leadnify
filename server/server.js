@@ -253,6 +253,28 @@ app.post('/api/send-email', async (req, res) => {
   }
 });
 
+// A tiny public page to CHECK the NDA file gate by clicking (open http://localhost:4000/nda-test).
+app.get('/nda-test', (req, res) => {
+  res.type('html').send(`<!doctype html><meta charset=utf8><title>NDA File Security Test</title>
+<style>body{font-family:Inter,Arial,sans-serif;max-width:640px;margin:40px auto;color:#0f172a}
+button{background:#F97316;color:#fff;border:0;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer;margin:6px 6px 6px 0}
+pre{background:#0f172a;color:#a7f3d0;padding:12px;border-radius:8px;white-space:pre-wrap;word-break:break-all}
+input{padding:8px;border:1px solid #cbd5e1;border-radius:8px;margin:4px} .ok{color:#16a34a}.bad{color:#dc2626}</style>
+<h2>🔒 NDA File Security — Test</h2>
+<p>Room: <input id=room value=testroom> Email: <input id=email value=you@example.com> File: <input id=file value=uploads/secret.pdf></p>
+<button onclick=tryFile()>1. Try file WITHOUT NDA (should be blocked)</button>
+<button onclick=sign()>2. Sign NDA</button>
+<button onclick=tryFile()>3. Try file WITH NDA (should give a link)</button>
+<pre id=out>Result yahan aayega…</pre>
+<script>
+var out=document.getElementById('out');
+function body(){return {roomId:room.value,email:email.value,path:file.value,name:'Test'}}
+async function call(p){var r=await fetch('/api/'+p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body())});var j=await r.json();return {code:r.status,j:j}}
+async function tryFile(){out.textContent='…';var x=await call('file-access');out.innerHTML=(x.code===403?'<span class=bad>🔒 BLOCKED ('+x.code+'): ':'<span class=ok>✅ ALLOWED ('+x.code+'): ')+JSON.stringify(x.j,null,2)+'</span>'}
+async function sign(){out.textContent='…';var x=await call('nda-sign');out.innerHTML='<span class=ok>✅ NDA signed ('+x.code+'): '+JSON.stringify(x.j)+'</span>'}
+</script>`);
+});
+
 // ⚠️ DYNAMIC ROUTES SABSE AAKHIR MEIN RAKHEIN
 
 // GET Dashboard Collections -> GET /api/packages, /api/listings, etc.
