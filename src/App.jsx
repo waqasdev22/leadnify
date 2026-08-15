@@ -9434,8 +9434,32 @@ const DEAL_ROOM_STATUSES = ['Active', 'Archived']
 const DEAL_ROOM_ACCESS = ['Free Access', 'Contact Required', 'NDA - Auto Access', 'NDA - Approval Required']
 
 function DealRoomForm({ onSubmit, onCancel }) {
-  const [form, setForm] = useState({ name: '', address: '', status: 'Active', access: 'Free Access' })
+  const [form, setForm] = useState({ name: '', address: '', status: 'Active', access: 'Free Access', image: '' })
+  const [uploading, setUploading] = useState(false)
+  const imgRef = useRef(null)
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+  const onImage = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    if (!file.type.startsWith('image/')) return
+    setUploading(true)
+    try {
+      let url
+      try {
+        url = await uploadToStorage(file)
+      } catch {
+        url = await new Promise((res) => {
+          const r = new FileReader()
+          r.onload = () => res(r.result)
+          r.readAsDataURL(file)
+        })
+      }
+      setForm((f) => ({ ...f, image: url }))
+    } finally {
+      setUploading(false)
+    }
+  }
   const submit = (e) => {
     e.preventDefault()
     if (!form.name.trim()) return
@@ -9448,6 +9472,47 @@ function DealRoomForm({ onSubmit, onCancel }) {
       </Field>
       <Field label="Property Address">
         <TextInput value={form.address} onChange={set('address')} placeholder="123 Main St, City, State" />
+      </Field>
+      <Field label="Cover Image">
+        <input ref={imgRef} type="file" accept="image/*" className="hidden" onChange={onImage} />
+        {form.image ? (
+          <div className="relative h-40 overflow-hidden rounded-lg border border-slate-200">
+            <img src={form.image} alt="Cover" className="h-full w-full object-cover" />
+            <div className="absolute right-2 top-2 flex gap-2">
+              <button
+                type="button"
+                onClick={() => imgRef.current?.click()}
+                className="rounded-lg bg-white/90 px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-sm backdrop-blur transition hover:bg-white"
+              >
+                Change
+              </button>
+              <button
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, image: '' }))}
+                className="rounded-lg bg-white/90 px-2.5 py-1 text-xs font-semibold text-rose-600 shadow-sm backdrop-blur transition hover:bg-white"
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => imgRef.current?.click()}
+            disabled={uploading}
+            className="flex h-40 w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 text-slate-400 transition hover:border-slate-300 hover:text-slate-500 disabled:opacity-60"
+          >
+            {uploading ? (
+              <span className="text-sm font-medium">Uploading…</span>
+            ) : (
+              <>
+                <ImageIcon className="h-8 w-8" />
+                <span className="text-sm font-medium">Click to upload an image</span>
+                <span className="text-xs text-slate-400">PNG or JPG</span>
+              </>
+            )}
+          </button>
+        )}
       </Field>
       <div className="grid grid-cols-2 gap-4">
         <Field label="Status">
