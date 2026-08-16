@@ -127,6 +127,21 @@ export const delFile = async (key) => {
   try { await dbSet(dbRef(db, `data/${uid}/files/${key}`), null) } catch { /* ignore */ }
 }
 
+// ---- Public marketing package (readable by the anonymous public microsite) --
+// Stored at /public/packages/<listingId> so the "Download Package" button works on
+// ANY device/visitor. The microsite reads it via the RTDB REST API (no SDK/auth).
+export const putPublicPackage = async (id, obj) => {
+  const uid = currentUid()
+  if (!uid) throw new Error('not signed in')
+  await dbSet(dbRef(db, `public/packages/${id}`), clean(obj))
+}
+export const getPublicPackage = async (id) => {
+  try { const snap = await dbGet(dbRef(db, `public/packages/${id}`)); return snap.val() || null } catch { return null }
+}
+export const delPublicPackage = async (id) => {
+  try { await dbSet(dbRef(db, `public/packages/${id}`), null) } catch { /* ignore */ }
+}
+
 // Send a real email through the backend (SMTP). Throws if the backend rejects it.
 export const sendEmail = (payload) =>
   request('/send-email', {

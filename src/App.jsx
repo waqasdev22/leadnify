@@ -9,7 +9,7 @@ import React, {
 import { jsPDF } from 'jspdf'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { getCol, putCol, saveUser, sendEmail, setApiNamespace, getFile, putFile, delFile, MAX_CLOUD_FILE } from './api'
+import { getCol, putCol, saveUser, sendEmail, setApiNamespace, getFile, putFile, delFile, MAX_CLOUD_FILE, putPublicPackage, getPublicPackage, delPublicPackage } from './api'
 import { auth, googleProvider, db, createMemberAccount, uploadToStorage } from './firebase'
 import { ref as dbRef, get as dbGet, set as dbSet, update as dbUpdate, remove as dbRemove, onValue } from 'firebase/database'
 import { PERMISSION_GROUPS, ROLE_PRESETS, ROLES, ROLE_INFO, resolvePerms, decodeOverrides, encodeOverrides } from './permissions'
@@ -244,46 +244,17 @@ const readLS = (k, initial) => {
   return initial
 }
 
-// ---- File store (IndexedDB) --------------------------------------------------
-// Uploaded PDFs / documents are stored as real Blobs in IndexedDB (large, offline,
-// no CORS) — localStorage only keeps the small metadata (name/size/date/key).
-const IDB_NAME = 'crebuilder-files'
-const IDB_STORE = 'files'
-const idbOpen = () =>
-  new Promise((resolve, reject) => {
-    const req = indexedDB.open(IDB_NAME, 1)
-    req.onupgradeneeded = () => { req.result.createObjectStore(IDB_STORE) }
-    req.onsuccess = () => resolve(req.result)
-    req.onerror = () => reject(req.error)
-  })
-const idbPut = async (key, blob) => {
-  const db = await idbOpen()
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(IDB_STORE, 'readwrite')
-    tx.objectStore(IDB_STORE).put(blob, key)
-    tx.oncomplete = () => resolve()
-    tx.onerror = () => reject(tx.error)
-  })
-}
-const idbGet = async (key) => {
-  const db = await idbOpen()
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(IDB_STORE, 'readonly')
-    const r = tx.objectStore(IDB_STORE).get(key)
-    r.onsuccess = () => resolve(r.result || null)
-    r.onerror = () => reject(r.error)
-  })
-}
-const idbDel = async (key) => {
-  try {
-    const db = await idbOpen()
-    await new Promise((resolve) => {
-      const tx = db.transaction(IDB_STORE, 'readwrite')
-      tx.objectStore(IDB_STORE).delete(key)
-      tx.oncomplete = () => resolve()
-      tx.onerror = () => resolve()
-    })
-  } catch { /* ignore */ }
+// Read a File as a data URL, and turn a stored data URL into a short-lived blob URL
+// (browsers open blob: PDFs in a tab but block navigation to a large data: URL).
+const readFileAsDataUrl = (f) =>
+  new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r.readAsDataURL(f) })
+const dataUrlToBlobUrl = (dataUrl) => {
+  const [meta, b64] = String(dataUrl).split(',')
+  const mime = (meta.match(/data:([^;]+)/) || [])[1] || 'application/octet-stream'
+  const bin = atob(b64 || '')
+  const arr = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i)
+  return URL.createObjectURL(new Blob([arr], { type: mime }))
 }
 
 function usePersistentState(key, initial) {
@@ -8589,8 +8560,8 @@ return '<div class="dhero"><img src="'+esc(l.image)+'"/><div class="ov"></div><d
 +'<footer><div class="line"></div><p>Powered by <b>MyCREBlueprint</b></p></footer>';}
 function goContact(){var el=document.getElementById('sec-Contact');if(el)el.scrollIntoView({behavior:'smooth'});}
 var CUR=null;
-function pkgDb(cb){try{var rq=indexedDB.open('crebuilder-files',1);rq.onupgradeneeded=function(){try{rq.result.createObjectStore('files');}catch(e){}};rq.onsuccess=function(){cb(rq.result);};rq.onerror=function(){cb(null);};}catch(e){cb(null);}}
-function dlPkg(){if(!CUR||!CUR.pkgKey){alert('The marketing package is not available for download yet.');return;}var w=window.open('','_blank');pkgDb(function(db){if(!db){if(w)w.close();return;}try{var tx=db.transaction('files','readonly');var g=tx.objectStore('files').get(CUR.pkgKey);g.onsuccess=function(){var blob=g.result;if(!blob){if(w)w.close();alert('The marketing package is not available for download yet.');return;}var url=URL.createObjectURL(blob);if(w)w.location.href=url;setTimeout(function(){URL.revokeObjectURL(url);},60000);};g.onerror=function(){if(w)w.close();};}catch(e){if(w)w.close();}});}
+var RTDB='https://cre-dashboard-ba596-default-rtdb.firebaseio.com';
+function dlPkg(){if(!CUR||!CUR.pkgId){alert('The marketing package is not available for download yet.');return;}var w=window.open('','_blank');fetch(RTDB+'/public/packages/'+CUR.pkgId+'.json').then(function(r){return r.json();}).then(function(pkg){if(!pkg||!pkg.url){if(w)w.close();alert('The marketing package is not available for download yet.');return;}var parts=String(pkg.url).split(',');var mime=(parts[0].match(/data:([^;]+)/)||[])[1]||'application/pdf';var bin=atob(parts[1]||'');var arr=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);var url=URL.createObjectURL(new Blob([arr],{type:mime}));if(w)w.location.href=url;setTimeout(function(){URL.revokeObjectURL(url);},60000);}).catch(function(){if(w)w.close();alert('Could not download the package.');});}
 function submitInquiry(e){e.preventDefault();var f=e.target;var v={name:'',email:'',phone:'',msg:''};f.querySelectorAll('input,textarea').forEach(function(i){var p=(i.placeholder||'').toLowerCase();if(i.type==='email'||p.indexOf('email')>=0)v.email=i.value;else if(p.indexOf('phone')>=0)v.phone=i.value;else if(i.tagName==='TEXTAREA')v.msg=i.value;else if(p.indexOf('name')>=0)v.name=i.value;});var t=document.querySelector('.dhtitle');fetch(CAPTURE_API+'/lead-capture',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:v.name,email:v.email,phone:v.phone,property:t?t.textContent:'',source:'Listing Website'})}).catch(function(){});e.target.innerHTML='<div style="padding:18px;text-align:center;color:#fff;font-weight:600">Thank you! We\\'ll respond within one business day.</div>';return false;}
 function initDetailMap(l){if(dmap){dmap.remove();dmap=null;}dmap=L.map('dmap').setView([l.lat,l.lng],14);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap contributors'}).addTo(dmap);L.marker([l.lat,l.lng],{icon:pinIcon()}).addTo(dmap);setTimeout(function(){dmap.invalidateSize();},100);}
 function creUrl(id){var p=new URLSearchParams(location.search);if(id!=null&&id!=='')p.set('p',id);else p.delete('p');return location.pathname+'?'+p.toString();}
@@ -8755,9 +8726,9 @@ export const toMicrositeItems = (listings) =>
         noi: m.noi,
         lat,
         lng,
-        // Marketing package (PDF) for the public "Download Package" button — the blob lives in
-        // IndexedDB under this key; empty when no package has been attached.
-        pkgKey: l.pkgName ? `pkg_${l.id}` : '',
+        // Marketing package (PDF) for the public "Download Package" button — fetched from
+        // /public/packages/<pkgId> via the RTDB REST API; empty when none is attached.
+        pkgId: l.pkgName ? l.id : '',
         pkgName: l.pkgName || '',
       }
     })
@@ -8868,7 +8839,8 @@ function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onRes
     setListings((list) => list.map((l) => (l.id === id ? { ...withDefaults(l), ...changes } : l)))
 
   // Marketing package (PDF) per listing — powers the public "Download Package" button.
-  // The real PDF is stored in IndexedDB (key pkg_<id>); only its name lives on the listing.
+  // Stored in the cloud at /public/packages/<id> (public read) so the button works on
+  // any device / for any visitor; the listing only keeps the file name.
   const pkgRef = useRef(null)
   const onPkgUpload = (l, e) => {
     const f = e.target.files && e.target.files[0]
@@ -8878,7 +8850,9 @@ function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onRes
     sniff.onload = () => {
       const header = String.fromCharCode(...new Uint8Array(sniff.result))
       if (header !== '%PDF-') { notify('Only a PDF can be used as the marketing package', 'error'); return }
-      idbPut(`pkg_${l.id}`, f)
+      if (f.size > MAX_CLOUD_FILE) { notify('This PDF is too large to sync (max 9 MB) — please use a smaller file', 'error'); return }
+      readFileAsDataUrl(f)
+        .then((url) => putPublicPackage(l.id, { name: f.name, url }))
         .then(() => { patch(l.id, { pkgName: f.name }); notify('Package attached — the “Download Package” button now works') })
         .catch(() => notify('Upload failed — please try again', 'error'))
     }
@@ -8887,14 +8861,14 @@ function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onRes
   }
   const openPkg = (l) => {
     const w = window.open('', '_blank')
-    idbGet(`pkg_${l.id}`).then((blob) => {
-      if (!blob) { if (w) w.close(); notify('No package found — upload one first', 'error'); return }
-      const url = URL.createObjectURL(blob)
-      if (w) w.location.href = url
-      setTimeout(() => URL.revokeObjectURL(url), 60000)
+    getPublicPackage(l.id).then((pkg) => {
+      if (!pkg || !pkg.url) { if (w) w.close(); notify('No package found — upload one first', 'error'); return }
+      const objUrl = dataUrlToBlobUrl(pkg.url)
+      if (w) w.location.href = objUrl
+      setTimeout(() => URL.revokeObjectURL(objUrl), 60000)
     }).catch(() => { if (w) w.close() })
   }
-  const removePkg = (l) => { idbDel(`pkg_${l.id}`); patch(l.id, { pkgName: '' }); notify('Package removed', 'error') }
+  const removePkg = (l) => { delPublicPackage(l.id); patch(l.id, { pkgName: '' }); notify('Package removed', 'error') }
 
   // Copy Link and Preview both use the same functional hub URL, so the copied link
   // opens exactly the microsite the Preview shows.
@@ -10073,17 +10047,6 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
   }
 
   const fileSize = (f) => { const mb = f.size / (1024 * 1024); return mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.max(1, Math.round(f.size / 1024))} KB` }
-  const readDataUrl = (f) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r.readAsDataURL(f) })
-  // Turn a stored data URL into a short-lived blob URL — browsers open blob: PDFs in a
-  // tab, but block top-level navigation to a big data: URL.
-  const dataUrlToBlobUrl = (dataUrl) => {
-    const [meta, b64] = String(dataUrl).split(',')
-    const mime = (meta.match(/data:([^;]+)/) || [])[1] || 'application/octet-stream'
-    const bin = atob(b64 || '')
-    const arr = new Uint8Array(bin.length)
-    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i)
-    return URL.createObjectURL(new Blob([arr], { type: mime }))
-  }
   const onUpload = (e) => {
     const f = e.target.files && e.target.files[0]
     if (!f) return
@@ -10091,7 +10054,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
     if (f.size > MAX_CLOUD_FILE) { notify('This file is too large to sync across devices (max 9 MB)', 'error'); return }
     setUploadPct(20)
     ;(async () => {
-      const url = await readDataUrl(f) // store in the cloud so it syncs to all devices
+      const url = await readFileAsDataUrl(f) // store in the cloud so it syncs to all devices
       const item = { name: f.name, size: fileSize(f), date: new Date().toLocaleDateString('en-GB'), url }
       const next = [item, ...files]
       await putFile(`roomfiles_${room.id}`, { list: next })
@@ -10114,7 +10077,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
       if (f.size > MAX_CLOUD_FILE) { notify('This PDF is too large to sync across devices (max 9 MB)', 'error'); return }
       setUploadPct(20)
       ;(async () => {
-        const url = await readDataUrl(f) // store the actual PDF in the cloud (syncs everywhere)
+        const url = await readFileAsDataUrl(f) // store the actual PDF in the cloud (syncs everywhere)
         const om = { name: f.name, size: fileSize(f), date: new Date().toLocaleDateString('en-GB'), url }
         await putFile(`om_${room.id}`, om)
         setUploadPct(100); setTimeout(() => setUploadPct(null), 400)

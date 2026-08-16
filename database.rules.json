@@ -11,6 +11,15 @@
         ".read": "auth != null && auth.uid === $uid",
         ".write": "auth != null && auth.uid === $uid"
       }
+    },
+    "public": {
+      ".read": true,
+      ".write": false,
+      "packages": {
+        "$id": {
+          ".write": "auth != null"
+        }
+      }
     }
   }
 }
