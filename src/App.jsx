@@ -9792,7 +9792,8 @@ function DocumentHubView({ room, onBack, notify, onEditDocument }) {
 
 function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
   const [hubOpen, setHubOpen] = useState(false)
-  const [files, setFiles] = useState(DEFAULT_ROOM_FILES)
+  // Persisted per room (and per user) so uploads survive a page reload.
+  const [files, setFiles] = usePersistentState(`room_${room.id}_files`, DEFAULT_ROOM_FILES)
   const [prospects, setProspects] = useState(DEFAULT_ROOM_PROSPECTS)
   const [access, setAccess] = useState(room.access || 'Free Access')
   const [status, setStatus] = useState(room.status === 'Archived' ? 'Archived (visitors blocked)' : 'Active')
@@ -9802,7 +9803,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
   const [watermark, setWatermark] = useState(true)
   const [wmStyle, setWmStyle] = useState('Standard')
   const [nda, setNda] = useState({ name: 'NDA Agreement.pdf' })
-  const [omFlyer, setOmFlyer] = useState(null) // single OM/Flyer shown above the gate
+  const [omFlyer, setOmFlyer] = usePersistentState(`room_${room.id}_om`, null) // single OM/Flyer shown above the gate (persisted)
   const [uploadPct, setUploadPct] = useState(null) // 4.3 — upload progress (null = idle)
   const fileRef = useRef(null)
   const omRef = useRef(null)
@@ -9853,14 +9854,25 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
     try {
       localStorage.setItem(
         `crebuilder_room_${room.id}`,
-        JSON.stringify({ id: room.id, name: room.name, address: room.address, image: room.image }),
+        JSON.stringify({ id: room.id, name: room.name, address: room.address, image: room.image, om: omFlyer }),
       )
     } catch {
       /* ignore */
     }
-  }, [room])
+  }, [room, omFlyer])
 
   const downloadFile = (f) => {
+    // If we have the real uploaded file, download/open that instead of the demo text.
+    if (f?.url) {
+      const a = document.createElement('a')
+      a.href = f.url
+      a.download = f.name || 'document'
+      a.target = '_blank'
+      a.rel = 'noopener'
+      a.click()
+      notify('File downloaded')
+      return
+    }
     const content = `OFFERING MEMORANDUM\n\n${room.name}\n${room.address || ''}\n\nFile: ${f.name}\nConfidential - MyCREBlueprint demo document.`
     const url = window.URL.createObjectURL(new Blob(['﻿' + content], { type: 'text/plain;charset=utf-8' }))
     const a = document.createElement('a')
@@ -9906,21 +9918,31 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
     notify('Prospect activity downloaded')
   }
 
-  // 4.3 — show real read progress while a file uploads, with a clear error state.
-  const readWithProgress = (f, done) => {
-    const reader = new FileReader()
-    setUploadPct(0)
-    reader.onprogress = (ev) => { if (ev.lengthComputable) setUploadPct(Math.round((ev.loaded / ev.total) * 100)) }
-    reader.onload = () => { setUploadPct(100); setTimeout(() => setUploadPct(null), 400); done() }
-    reader.onerror = () => { setUploadPct(null); notify('Upload failed — please try again', 'error') }
-    reader.readAsDataURL(f)
-  }
   const fileSize = (f) => { const mb = f.size / (1024 * 1024); return mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.max(1, Math.round(f.size / 1024))} KB` }
+  // Store the real file (to Firebase Storage, small URL) so it can be opened/previewed
+  // later; fall back to an inline data URL if Storage is unreachable.
+  const storeFile = async (f) => {
+    try {
+      return await uploadToStorage(f)
+    } catch {
+      return await new Promise((res) => {
+        const r = new FileReader()
+        r.onload = () => res(r.result)
+        r.readAsDataURL(f)
+      })
+    }
+  }
   const onUpload = (e) => {
     const f = e.target.files && e.target.files[0]
     if (!f) return
-    readWithProgress(f, () => { setFiles((list) => [{ name: f.name, size: fileSize(f), date: new Date().toLocaleDateString('en-GB') }, ...list]); notify('File uploaded') })
     e.target.value = ''
+    setUploadPct(5)
+    ;(async () => {
+      const url = await storeFile(f)
+      setUploadPct(100); setTimeout(() => setUploadPct(null), 400)
+      setFiles((list) => [{ name: f.name, size: fileSize(f), date: new Date().toLocaleDateString('en-GB'), url }, ...list])
+      notify('File uploaded')
+    })().catch(() => { setUploadPct(null); notify('Upload failed — please try again', 'error') })
   }
   // OM / Flyer — a single marketing document shown above the gate (only 1 file).
   const onOmUpload = (e) => {
@@ -9933,10 +9955,26 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
     sniff.onload = () => {
       const header = String.fromCharCode(...new Uint8Array(sniff.result))
       if (header !== '%PDF-') { notify('That file is not a PDF — only PDF files can be uploaded here', 'error'); return }
-      readWithProgress(f, () => { setOmFlyer({ name: f.name, size: fileSize(f), date: new Date().toLocaleDateString('en-GB') }); notify('OM / Flyer uploaded') })
+      setUploadPct(5)
+      ;(async () => {
+        const url = await storeFile(f) // keep the actual PDF so it can be opened/previewed
+        setUploadPct(100); setTimeout(() => setUploadPct(null), 400)
+        setOmFlyer({ name: f.name, size: fileSize(f), date: new Date().toLocaleDateString('en-GB'), url })
+        notify('OM / Flyer uploaded')
+      })().catch(() => { setUploadPct(null); notify('Upload failed — please try again', 'error') })
     }
     sniff.onerror = () => notify('Could not read the file — please try again', 'error')
     sniff.readAsArrayBuffer(f.slice(0, 5))
+  }
+  // Open the real uploaded PDF in a popup/new tab (falls back to the demo text if there's no file URL).
+  const openOm = (f) => {
+    if (f?.url) {
+      const w = window.open(f.url, '_blank')
+      if (!w) notify('Please allow pop-ups to preview', 'error')
+      else notify('Opening OM / Flyer')
+    } else {
+      downloadFile(f)
+    }
   }
   const copy = async (text, msg) => {
     const ok = await copyToClipboard(text)
@@ -10018,11 +10056,12 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
             </div>
             {omFlyer ? (
               <div className="mt-3 flex items-center gap-3 rounded-lg border border-orange-100 bg-orange-50/40 p-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand/10 text-brand"><FileText className="h-5 w-5" /></div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-slate-800">{omFlyer.name}</p>
+                <button type="button" onClick={() => openOm(omFlyer)} title="Open / preview" className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand/10 text-brand transition hover:bg-brand/20"><FileText className="h-5 w-5" /></button>
+                <button type="button" onClick={() => openOm(omFlyer)} className="min-w-0 flex-1 text-left">
+                  <p className="truncate text-sm font-semibold text-slate-800 hover:text-brand">{omFlyer.name}</p>
                   <p className="text-xs text-slate-400">{omFlyer.size} · uploaded {omFlyer.date}</p>
-                </div>
+                </button>
+                <IconButton icon={Eye} label="Open / preview" onClick={() => openOm(omFlyer)} />
                 <IconButton icon={Download} label="Download" onClick={() => downloadFile(omFlyer)} />
                 <IconButton icon={Upload} label="Replace" onClick={() => omRef.current && omRef.current.click()} />
                 <IconButton icon={Trash2} label="Remove" tone="danger" onClick={() => { setOmFlyer(null); notify('OM / Flyer removed', 'error') }} />
@@ -10064,10 +10103,11 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
               {files.map((f, i) => (
                 <div key={i} className="flex items-center gap-3 rounded-lg border border-slate-100 p-3">
                   <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-rose-50 text-rose-500"><FileText className="h-5 w-5" /></div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-slate-800">{f.name}</p>
+                  <button type="button" onClick={() => openOm(f)} className="min-w-0 flex-1 text-left">
+                    <p className="truncate text-sm font-semibold text-slate-800 hover:text-brand">{f.name}</p>
                     <p className="text-xs text-slate-400">{f.size} · uploaded {f.date}</p>
-                  </div>
+                  </button>
+                  {f.url && <IconButton icon={Eye} label="Open / preview" onClick={() => openOm(f)} />}
                   <IconButton icon={Download} label="Download" onClick={() => downloadFile(f)} />
                   <IconButton icon={Trash2} label="Delete" tone="danger" onClick={() => { setFiles((l) => l.filter((_, j) => j !== i)); notify('File deleted', 'error') }} />
                 </div>
