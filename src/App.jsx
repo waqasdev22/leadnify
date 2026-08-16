@@ -7780,28 +7780,53 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
         )}
       </Modal>
 
-      {/* Transfer a deal room to a team member */}
+      {/* Transfer a deal room to a team member (same layout as the package transfer) */}
       <Modal open={!!transferRoom} onClose={() => setTransferRoom(null)} title="Transfer Deal Room">
-        {transferRoom && (
-          <div className="space-y-2">
-            <p className="text-sm text-slate-500">Move <span className="font-semibold text-slate-700">&quot;{transferRoom.name}&quot;</span> to a team member.</p>
-            <div className="mt-2 max-h-72 space-y-1 overflow-y-auto">
-              {TEAM_MEMBERS.map((m) => (
-                <button
-                  key={m.name}
-                  onClick={() => { onTransferRoom && onTransferRoom(transferRoom.id, m.name); setTransferRoom(null); notify(`Deal room transferred to ${m.name}`) }}
-                  className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-left transition hover:bg-slate-50"
-                >
-                  <span className="flex items-center gap-2">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-600">{(m.name || '?').slice(0, 1)}</span>
-                    <span><span className="block text-sm font-semibold text-slate-800">{m.name}</span><span className="block text-xs text-slate-400">{m.email}</span></span>
-                  </span>
-                  {transferRoom.assignee === m.name && <Check className="h-4 w-4 text-emerald-500" />}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+        <p className="text-sm text-slate-500">
+          Move <span className="font-semibold text-slate-700">&quot;{transferRoom?.name || 'this deal room'}&quot;</span> to a team member.
+        </p>
+        <div className="mt-4 space-y-2">
+          {/* Transfer back to me */}
+          <button
+            onClick={() => { onTransferRoom && onTransferRoom(transferRoom.id, null); setTransferRoom(null); notify('Deal room kept in your account') }}
+            disabled={!transferRoom?.assignee}
+            className="flex w-full items-center gap-3 rounded-xl border border-slate-200 p-3 text-left transition hover:border-orange-300 hover:bg-orange-50/40 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-orange-600 text-sm font-bold text-white">
+              {user?.initials || 'ME'}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold text-slate-800">{user?.name || 'Me'} <span className="font-normal text-slate-400">(You)</span></span>
+              <span className="block truncate text-xs text-slate-400">{user?.email || 'Keep in your account'}</span>
+            </span>
+            {!transferRoom?.assignee && <Check className="h-4 w-4 text-emerald-500" />}
+          </button>
+
+          {TEAM_MEMBERS.map((m) => {
+            const isCurrent = transferRoom?.assignee === m.name
+            return (
+              <button
+                key={m.id}
+                onClick={() => { onTransferRoom && onTransferRoom(transferRoom.id, m.name); setTransferRoom(null); notify(`Deal room transferred to ${m.name}`) }}
+                disabled={isCurrent}
+                className="flex w-full items-center gap-3 rounded-xl border border-slate-200 p-3 text-left transition hover:border-orange-300 hover:bg-orange-50/40 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-500">
+                  {m.initials}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-semibold text-slate-800">{m.name}</span>
+                  <span className="block truncate text-xs text-slate-400">{m.email}</span>
+                </span>
+                {isCurrent ? (
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600"><Check className="h-4 w-4" /> Current</span>
+                ) : (
+                  <Send className="h-4 w-4 text-slate-300" />
+                )}
+              </button>
+            )
+          })}
+        </div>
       </Modal>
 
       {builderOpen && builderCfg && (
