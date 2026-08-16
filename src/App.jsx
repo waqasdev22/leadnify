@@ -7320,7 +7320,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
   )
 }
 
-function DashboardPage({ packages, setPackages, setListings, globalQuery, createNonce, resume, onResumeHandled, onNavigate, onSignOut, onOpenDealRoom, user, can = () => true }) {
+function DashboardPage({ packages, setPackages, setListings, globalQuery, createNonce, resume, onResumeHandled, onNavigate, onSignOut, onOpenDealRoom, dealRooms = [], onOpenRoom, user, can = () => true }) {
   const notify = useToast()
   // Re-render once a minute so the "time ago" labels on cards stay current.
   const [, setTick] = useState(0)
@@ -7736,6 +7736,42 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
 ) : (
   <EmptyState title="No packages found" subtitle="Try adjusting your filters or create a new marketing package." />
 )}
+
+      {/* Deal Rooms — every room created in Deal Rooms shows here too */}
+      {dealRooms && dealRooms.length > 0 && (
+        <div className="mt-10">
+          <div className="flex items-center justify-between">
+            <h2 className="flex items-center gap-2 text-xl font-extrabold text-slate-900">
+              <FolderLock className="h-5 w-5 text-brand" /> Deal Rooms
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500">{dealRooms.length}</span>
+            </h2>
+            <button onClick={() => onNavigate && onNavigate('deals')} className="text-sm font-semibold text-brand transition hover:underline">View all</button>
+          </div>
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {dealRooms.slice(0, 6).map((room) => (
+              <button
+                key={room.id}
+                onClick={() => onOpenRoom && onOpenRoom(room)}
+                className="group overflow-hidden rounded-xl border border-slate-200 bg-white text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+              >
+                <div className="relative h-28 overflow-hidden bg-slate-100">
+                  {room.image ? (
+                    <img src={room.image} alt={room.name} onError={(e) => (e.currentTarget.src = FALLBACK_IMG)} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-b from-slate-100 to-slate-200"><Building2 className="h-8 w-8 text-slate-300" /></div>
+                  )}
+                  <span className={`absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-semibold ${room.status === 'Active' ? 'bg-emerald-500 text-white' : 'bg-slate-900/70 text-white backdrop-blur'}`}>{room.status || 'Active'}</span>
+                </div>
+                <div className="p-3">
+                  <p className="truncate text-sm font-bold text-slate-900 group-hover:text-brand">{room.name}</p>
+                  <p className="mt-0.5 truncate text-xs text-slate-500">{room.address || '—'}</p>
+                  <p className="mt-1 text-[11px] text-slate-400">Updated {room.ts ? timeAgo(room.ts) : (room.updated || 'just now')}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <CreateForModal
         open={chooserOpen}
@@ -14584,7 +14620,7 @@ export default function App() {
   const renderScreen = () => {
     switch (active) {
       case 'dashboard':
-        return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} resume={resume} onResumeHandled={() => setResume(null)} onNavigate={navigate} onSignOut={handleSignOut} onOpenDealRoom={openDealRoomFor} user={user} can={can} />
+        return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} resume={resume} onResumeHandled={() => setResume(null)} onNavigate={navigate} onSignOut={handleSignOut} onOpenDealRoom={openDealRoomFor} dealRooms={dealRooms} onOpenRoom={(room) => { setDealRoomTarget(room); setActive('deals'); setMobileNav(false) }} user={user} can={can} />
       case 'listings':
         return <ListingHubPage listings={listings} setListings={setListings} globalQuery={query} onCreateNew={startCreate} onResumeDraft={resumeDraft} onOpenDealRoom={openDealRoomFor} can={can} />
       case 'deals':
@@ -14606,7 +14642,7 @@ export default function App() {
       case 'knowledge':
         return <PlaceholderPage label="Knowledge Base" icon={BookOpen} />
       default:
-        return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} resume={resume} onResumeHandled={() => setResume(null)} onNavigate={navigate} onSignOut={handleSignOut} onOpenDealRoom={openDealRoomFor} user={user} can={can} />
+        return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} resume={resume} onResumeHandled={() => setResume(null)} onNavigate={navigate} onSignOut={handleSignOut} onOpenDealRoom={openDealRoomFor} dealRooms={dealRooms} onOpenRoom={(room) => { setDealRoomTarget(room); setActive('deals'); setMobileNav(false) }} user={user} can={can} />
     }
   }
 
