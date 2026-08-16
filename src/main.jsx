@@ -50,7 +50,9 @@ if (params.get('code') !== null && params.get('state') !== null && window.opener
   // ?v= view wins (for embeds); else the owner's saved Default View, then the default.
   const defaultView = params.get('v') || (saved && saved.defaultView) || 'mapgrid'
 
-  const ownerUid = (saved && saved.ownerUid) || ''
+  let savedUid = ''
+  try { savedUid = localStorage.getItem('crebuilder_owner_uid') || '' } catch { savedUid = '' }
+  const ownerUid = (saved && saved.ownerUid) || savedUid || ''
   document.open()
   document.write(buildMicrositeHtml(items, primary, template, defaultView, ownerUid))
   document.close()

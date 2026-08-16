@@ -11196,12 +11196,13 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
   }, [])
   useEffect(() => { if (crmDbLoaded) putCol('leads', inbox).catch(() => {}) }, [inbox, crmDbLoaded])
   useEffect(() => { if (crmDbLoaded) putCol('contacts', contactList).catch(() => {}) }, [contactList, crmDbLoaded])
-  // Pull in any leads captured from the public listing form (Request Information) and add
-  // them to My Leads automatically. Runs after the initial load so nothing is overwritten.
+  // Pull in leads captured from the public listing form (Request Information) and add them
+  // to My Leads automatically. Runs after the initial load, then keeps polling every 15s so
+  // a lead that arrives while you're on the page shows up on its own.
   useEffect(() => {
     if (!crmDbLoaded) return
     let alive = true
-    ;(async () => {
+    const pull = async () => {
       const captured = await drainPublicLeads()
       if (!alive || !captured.length) return
       const mapped = captured
@@ -11214,8 +11215,10 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
         }))
       setInbox((list) => [...mapped, ...list])
       notify(`${mapped.length} new lead${mapped.length === 1 ? '' : 's'} captured from your listing`)
-    })()
-    return () => { alive = false }
+    }
+    pull()
+    const iv = setInterval(pull, 15000)
+    return () => { alive = false; clearInterval(iv) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [crmDbLoaded])
   const [contactView, setContactView] = useState('people')
@@ -14580,6 +14583,7 @@ export default function App() {
         // Point all saved data at THIS user's namespace before the app renders — each account
         // has its own separate data (a new user starts empty and builds their own).
         setDataNamespace(u.uid); setApiNamespace(u.uid)
+        try { localStorage.setItem('crebuilder_owner_uid', u.uid) } catch { /* ignore */ }
         const name = u.displayName || (u.email ? u.email.split('@')[0] : CURRENT_USER.name)
         setUser({ ...CURRENT_USER, name, email: u.email || '', initials: name.slice(0, 1).toUpperCase() })
         setMyUid(u.uid)
