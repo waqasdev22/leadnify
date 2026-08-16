@@ -243,6 +243,48 @@ const readLS = (k, initial) => {
   return initial
 }
 
+// ---- File store (IndexedDB) --------------------------------------------------
+// Uploaded PDFs / documents are stored as real Blobs in IndexedDB (large, offline,
+// no CORS) — localStorage only keeps the small metadata (name/size/date/key).
+const IDB_NAME = 'crebuilder-files'
+const IDB_STORE = 'files'
+const idbOpen = () =>
+  new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, 1)
+    req.onupgradeneeded = () => { req.result.createObjectStore(IDB_STORE) }
+    req.onsuccess = () => resolve(req.result)
+    req.onerror = () => reject(req.error)
+  })
+const idbPut = async (key, blob) => {
+  const db = await idbOpen()
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite')
+    tx.objectStore(IDB_STORE).put(blob, key)
+    tx.oncomplete = () => resolve()
+    tx.onerror = () => reject(tx.error)
+  })
+}
+const idbGet = async (key) => {
+  const db = await idbOpen()
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readonly')
+    const r = tx.objectStore(IDB_STORE).get(key)
+    r.onsuccess = () => resolve(r.result || null)
+    r.onerror = () => reject(r.error)
+  })
+}
+const idbDel = async (key) => {
+  try {
+    const db = await idbOpen()
+    await new Promise((resolve) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite')
+      tx.objectStore(IDB_STORE).delete(key)
+      tx.oncomplete = () => resolve()
+      tx.onerror = () => resolve()
+    })
+  } catch { /* ignore */ }
+}
+
 function usePersistentState(key, initial) {
   const k = nsKey(key)
   const [state, setState] = useState(() => readLS(k, initial))
@@ -9854,24 +9896,27 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
     try {
       localStorage.setItem(
         `crebuilder_room_${room.id}`,
-        JSON.stringify({ id: room.id, name: room.name, address: room.address, image: room.image, om: omFlyer }),
+        JSON.stringify({ id: room.id, name: room.name, address: room.address, image: room.image }),
       )
     } catch {
       /* ignore */
     }
-  }, [room, omFlyer])
+  }, [room])
 
-  const downloadFile = (f) => {
-    // If we have the real uploaded file, download/open that instead of the demo text.
-    if (f?.url) {
-      const a = document.createElement('a')
-      a.href = f.url
-      a.download = f.name || 'document'
-      a.target = '_blank'
-      a.rel = 'noopener'
-      a.click()
-      notify('File downloaded')
-      return
+  const downloadFile = async (f) => {
+    // If we have the real uploaded file (stored in IndexedDB), download that.
+    if (f?.key) {
+      const blob = await idbGet(f.key)
+      if (blob) {
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = f.name || 'document'
+        a.click()
+        setTimeout(() => URL.revokeObjectURL(url), 10000)
+        notify('File downloaded')
+        return
+      }
     }
     const content = `OFFERING MEMORANDUM\n\n${room.name}\n${room.address || ''}\n\nFile: ${f.name}\nConfidential - MyCREBlueprint demo document.`
     const url = window.URL.createObjectURL(new Blob(['﻿' + content], { type: 'text/plain;charset=utf-8' }))
@@ -9919,28 +9964,16 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
   }
 
   const fileSize = (f) => { const mb = f.size / (1024 * 1024); return mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.max(1, Math.round(f.size / 1024))} KB` }
-  // Store the real file (to Firebase Storage, small URL) so it can be opened/previewed
-  // later; fall back to an inline data URL if Storage is unreachable.
-  const storeFile = async (f) => {
-    try {
-      return await uploadToStorage(f)
-    } catch {
-      return await new Promise((res) => {
-        const r = new FileReader()
-        r.onload = () => res(r.result)
-        r.readAsDataURL(f)
-      })
-    }
-  }
   const onUpload = (e) => {
     const f = e.target.files && e.target.files[0]
     if (!f) return
     e.target.value = ''
-    setUploadPct(5)
+    setUploadPct(20)
     ;(async () => {
-      const url = await storeFile(f)
+      const key = `file_${room.id}_${uid()}`
+      await idbPut(key, f) // keep the actual file (IndexedDB — no network, no size cap)
       setUploadPct(100); setTimeout(() => setUploadPct(null), 400)
-      setFiles((list) => [{ name: f.name, size: fileSize(f), date: new Date().toLocaleDateString('en-GB'), url }, ...list])
+      setFiles((list) => [{ name: f.name, size: fileSize(f), date: new Date().toLocaleDateString('en-GB'), key }, ...list])
       notify('File uploaded')
     })().catch(() => { setUploadPct(null); notify('Upload failed — please try again', 'error') })
   }
@@ -9955,26 +9988,31 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
     sniff.onload = () => {
       const header = String.fromCharCode(...new Uint8Array(sniff.result))
       if (header !== '%PDF-') { notify('That file is not a PDF — only PDF files can be uploaded here', 'error'); return }
-      setUploadPct(5)
+      setUploadPct(20)
       ;(async () => {
-        const url = await storeFile(f) // keep the actual PDF so it can be opened/previewed
+        const key = `om_${room.id}`
+        await idbPut(key, f) // keep the actual PDF so it can be opened/previewed
         setUploadPct(100); setTimeout(() => setUploadPct(null), 400)
-        setOmFlyer({ name: f.name, size: fileSize(f), date: new Date().toLocaleDateString('en-GB'), url })
+        setOmFlyer({ name: f.name, size: fileSize(f), date: new Date().toLocaleDateString('en-GB'), key })
         notify('OM / Flyer uploaded')
       })().catch(() => { setUploadPct(null); notify('Upload failed — please try again', 'error') })
     }
     sniff.onerror = () => notify('Could not read the file — please try again', 'error')
     sniff.readAsArrayBuffer(f.slice(0, 5))
   }
-  // Open the real uploaded PDF in a popup/new tab (falls back to the demo text if there's no file URL).
+  // Open the real uploaded file in a popup/new tab. The window is opened synchronously
+  // (to keep the click gesture, so pop-up blockers allow it), then pointed at the blob.
   const openOm = (f) => {
-    if (f?.url) {
-      const w = window.open(f.url, '_blank')
-      if (!w) notify('Please allow pop-ups to preview', 'error')
-      else notify('Opening OM / Flyer')
-    } else {
-      downloadFile(f)
-    }
+    if (!f?.key) { downloadFile(f); return }
+    const w = window.open('', '_blank') // open now (within the click) so pop-up blockers allow it
+    ;(async () => {
+      const blob = await idbGet(f.key)
+      if (!blob) { if (w) w.close(); notify('File not found — please re-upload', 'error'); return }
+      const url = URL.createObjectURL(blob)
+      if (w) { w.location.href = url; notify('Opening OM / Flyer') }
+      else notify('Please allow pop-ups to preview', 'error')
+      setTimeout(() => URL.revokeObjectURL(url), 60000)
+    })().catch(() => { if (w) w.close(); notify('Could not open the file', 'error') })
   }
   const copy = async (text, msg) => {
     const ok = await copyToClipboard(text)
@@ -10064,7 +10102,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
                 <IconButton icon={Eye} label="Open / preview" onClick={() => openOm(omFlyer)} />
                 <IconButton icon={Download} label="Download" onClick={() => downloadFile(omFlyer)} />
                 <IconButton icon={Upload} label="Replace" onClick={() => omRef.current && omRef.current.click()} />
-                <IconButton icon={Trash2} label="Remove" tone="danger" onClick={() => { setOmFlyer(null); notify('OM / Flyer removed', 'error') }} />
+                <IconButton icon={Trash2} label="Remove" tone="danger" onClick={() => { if (omFlyer?.key) idbDel(omFlyer.key); setOmFlyer(null); notify('OM / Flyer removed', 'error') }} />
               </div>
             ) : (
               <button onClick={() => omRef.current && omRef.current.click()} className="mt-3 flex w-full flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-slate-200 py-6 text-center transition hover:border-orange-300 hover:bg-orange-50/30">
@@ -10109,7 +10147,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
                   </button>
                   {f.url && <IconButton icon={Eye} label="Open / preview" onClick={() => openOm(f)} />}
                   <IconButton icon={Download} label="Download" onClick={() => downloadFile(f)} />
-                  <IconButton icon={Trash2} label="Delete" tone="danger" onClick={() => { setFiles((l) => l.filter((_, j) => j !== i)); notify('File deleted', 'error') }} />
+                  <IconButton icon={Trash2} label="Delete" tone="danger" onClick={() => { if (f?.key) idbDel(f.key); setFiles((l) => l.filter((_, j) => j !== i)); notify('File deleted', 'error') }} />
                 </div>
               ))}
               {!files.length && <p className="py-6 text-center text-sm text-slate-400">No files yet — upload the OM and supporting docs.</p>}
