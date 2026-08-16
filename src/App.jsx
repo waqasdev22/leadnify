@@ -7570,9 +7570,13 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
     setTransferTarget(null)
   }
 
-  // Convert cycles the document type (OM → Flyer → Brochure → …).
+  // Convert cycles the document type (OM → Teaser → Leasing → …). Match the current
+  // type robustly (trim + case-insensitive) so a stray space/case never blocks the cycle.
   const convert = (pkg) => {
-    const next = DOC_TYPES[(DOC_TYPES.indexOf(pkg.docType) + 1) % DOC_TYPES.length]
+    const cur = String(pkg.docType || '').trim().toLowerCase()
+    let i = DOC_TYPES.findIndex((t) => t.trim().toLowerCase() === cur)
+    if (i === -1) i = 0
+    const next = DOC_TYPES[(i + 1) % DOC_TYPES.length]
     setPackages((list) =>
       list.map((p) => (p.id === pkg.id ? { ...p, docType: next } : p)),
     )
@@ -7738,7 +7742,7 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
             <CardAction icon={FileDown} label="PDF" onClick={() => downloadPdf(room, notify)} />
             <CardAction icon={Send} label="Transfer" onClick={() => setTransferRoom(room)} />
             <CardAction icon={Copy} label="Duplicate" onClick={() => onDuplicateRoom && onDuplicateRoom(room)} />
-            <CardAction icon={Repeat2} label="Convert" onClick={() => { const opts = DEAL_ROOM_ACCESS; const next = opts[(opts.indexOf(room.access) + 1) % opts.length]; onUpdateRoom && onUpdateRoom(room.id, { access: next }); notify(`Access changed to ${next}`) }} />
+            <CardAction icon={Repeat2} label="Convert" onClick={() => { const opts = DEAL_ROOM_ACCESS; const cur = String(room.access || '').trim().toLowerCase(); let i = opts.findIndex((o) => o.trim().toLowerCase() === cur); if (i === -1) i = 0; const next = opts[(i + 1) % opts.length]; onUpdateRoom && onUpdateRoom(room.id, { access: next }); notify(`Access changed to ${next}`) }} />
             <CardAction icon={Share2} label="Share" onClick={() => shareItem(room, notify)} />
             <CardAction icon={AtSign} label="Email" onClick={() => emailItem(room, notify)} />
             <CardAction icon={Share} label="Social" onClick={() => socialShare(room, notify)} />
