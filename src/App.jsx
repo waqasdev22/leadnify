@@ -10997,7 +10997,7 @@ function Last12Weeks({ deals, contactList, leads = [], scope, me }) {
   deals.forEach((d) => { const o = new Date(now); o.setDate(o.getDate() - (Number(d.days) || 0)); const b = bidx(o); if (b >= 0) { weeks[b].opened++; if (d.stage === 'Closed Won') weeks[b].won++; if (d.stage === 'Closed Lost') weeks[b].lost++ } })
   // Count the real leads you captured (from My Leads), bucketed by the date they came in.
   const repLeads = scope === 'mine' ? leads.filter((l) => l.owner === me) : leads
-  repLeads.forEach((l) => { const dt = new Date(l.date); if (isNaN(dt.getTime())) return; const b = bidx(dt); if (b >= 0) weeks[b].newLeads++ })
+  repLeads.forEach((l) => { const dt = new Date(l.date || l.ts); if (isNaN(dt.getTime())) return; const b = bidx(dt); if (b >= 0) weeks[b].newLeads++ })
   const tot = weeks.reduce((a, w) => ({ newLeads: a.newLeads + w.newLeads, opened: a.opened + w.opened, won: a.won + w.won, lost: a.lost + w.lost }), { newLeads: 0, opened: 0, won: 0, lost: 0 })
   const closed = tot.won + tot.lost
   const winRate = closed ? `${Math.round((tot.won / closed) * 100)}%` : '—'
@@ -11207,12 +11207,19 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
       if (!alive || !captured.length) return
       const mapped = captured
         .sort((a, b) => (a.ts || 0) - (b.ts || 0))
-        .map((c) => ({
-          id: uid(), name: c.name || 'New Inquiry', email: c.email || '', phone: c.phone || '',
-          company: '', property: c.property || '', source: c.source || 'Listing Website',
-          status: 'New', value: 0, owner: (user && user.name) || 'Me', last: 'just now',
-          ts: c.ts || Date.now(), message: c.message || '',
-        }))
+        .map((c) => {
+          const t = c.ts || Date.now()
+          return {
+            id: uid(), name: c.name || 'New Inquiry', email: c.email || '—', phone: c.phone || '',
+            company: '—', property: c.property || '', listing: c.property || 'Unknown',
+            type: 'Inquiry', profile: 'Principal', pipeline: 'Active', active: 'Active',
+            source: c.source || 'Listing Website', status: 'New', unread: true, value: 0,
+            owner: (user && user.name) || CURRENT_USER.name, last: 'just now',
+            // Same date format the manual "Add lead" uses, so it's counted in New leads / Last 12 weeks.
+            date: new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            ts: t, message: c.message || '',
+          }
+        })
       setInbox((list) => [...mapped, ...list])
       notify(`${mapped.length} new lead${mapped.length === 1 ? '' : 's'} captured from your listing`)
     }
