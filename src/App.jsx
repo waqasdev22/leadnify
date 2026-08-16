@@ -7294,7 +7294,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
   )
 }
 
-function DashboardPage({ packages, setPackages, setListings, globalQuery, createNonce, resume, onResumeHandled, onNavigate, onSignOut, onOpenDealRoom, dealRooms = [], onOpenRoom, onDeleteRoom, onUpdateRoom, onTransferRoom, onDuplicateRoom, user, can = () => true }) {
+function DashboardPage({ packages, setPackages, setListings, globalQuery, createNonce, resume, onResumeHandled, onNavigate, onSignOut, onOpenDealRoom, dealRooms = [], setDealRooms, onOpenRoom, onDeleteRoom, onUpdateRoom, onTransferRoom, onDuplicateRoom, user, can = () => true }) {
   const notify = useToast()
   // Re-render once a minute so the "time ago" labels on cards stay current.
   const [, setTick] = useState(0)
@@ -7431,8 +7431,26 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
     if (finished && pdfDataUrl) {
       if (pdfDataUrl.length < 12_000_000) {
         const pdf = { name: `${title}.pdf`, url: pdfDataUrl }
-        putPublicPackage(id, pdf).catch(() => {})               // by listing id (exact)
-        putPublicPackage(pkgNameKey(title), pdf).catch(() => {}) // by property name (so a same-name deal room finds it)
+        putPublicPackage(id, pdf).catch(() => {})               // by listing id (exact) — visitor download
+        putPublicPackage(pkgNameKey(title), pdf).catch(() => {}) // by property name (same-name deal room)
+        // Put the generated OM into the property's deal room Confidential files (create the
+        // room if it doesn't exist yet) so it shows in the deal room and downloads after the NDA.
+        const kb = Math.max(1, Math.round((pdfDataUrl.length * 0.75) / 1024))
+        const omFile = { id: uid(), name: `${title}.pdf`, size: kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb} KB`, date: new Date().toLocaleDateString('en-GB'), url: pdfDataUrl }
+        const lname = title.trim().toLowerCase()
+        const existing = (dealRooms || []).find((r) => r.listingId === id || (r.name || '').trim().toLowerCase() === lname)
+        const roomId = existing ? existing.id : uid()
+        if (setDealRooms) {
+          if (!existing) {
+            setDealRooms((list) => [{ id: roomId, listingId: id, name: title, address, image: '', status: 'Active', access: 'Free Access', files: 1, members: 0, updated: 'just now', ts: Date.now() }, ...list])
+          } else if (existing.listingId !== id) {
+            setDealRooms((list) => list.map((r) => (r.id === roomId ? { ...r, listingId: id } : r)))
+          }
+        }
+        getFile(`roomfiles_${roomId}`).then((v) => {
+          const cur = Array.isArray(v?.list) ? v.list : []
+          putFile(`roomfiles_${roomId}`, { list: [omFile, ...cur.filter((f) => f.name !== omFile.name)] }).catch(() => {})
+        }).catch(() => {})
       } else {
         notify('OM saved, but the PDF is too large (over ~9 MB) to attach for download', 'error')
       }
@@ -14869,7 +14887,7 @@ export default function App() {
   const renderScreen = () => {
     switch (active) {
       case 'dashboard':
-        return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} resume={resume} onResumeHandled={() => setResume(null)} onNavigate={navigate} onSignOut={handleSignOut} onOpenDealRoom={openDealRoomFor} dealRooms={dealRooms} onOpenRoom={(room) => { setDealRoomTarget(room); setActive('deals'); setMobileNav(false) }} onDeleteRoom={(room) => { if (window.confirm(`Delete deal room "${room.name}"?`)) setDealRooms((list) => list.filter((r) => r.id !== room.id)) }} onUpdateRoom={(id, data) => setDealRooms((list) => list.map((r) => (r.id === id ? { ...r, ...data, ts: Date.now(), updated: 'just now' } : r)))} onTransferRoom={(id, name) => setDealRooms((list) => list.map((r) => (r.id === id ? { ...r, assignee: name, owner_name: name } : r)))} onDuplicateRoom={(room) => setDealRooms((list) => [{ ...room, id: uid(), name: `${room.name} (Copy)`, ts: Date.now(), updated: 'just now' }, ...list])} user={user} can={can} />
+        return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} resume={resume} onResumeHandled={() => setResume(null)} onNavigate={navigate} onSignOut={handleSignOut} onOpenDealRoom={openDealRoomFor} dealRooms={dealRooms} setDealRooms={setDealRooms} onOpenRoom={(room) => { setDealRoomTarget(room); setActive('deals'); setMobileNav(false) }} onDeleteRoom={(room) => { if (window.confirm(`Delete deal room "${room.name}"?`)) setDealRooms((list) => list.filter((r) => r.id !== room.id)) }} onUpdateRoom={(id, data) => setDealRooms((list) => list.map((r) => (r.id === id ? { ...r, ...data, ts: Date.now(), updated: 'just now' } : r)))} onTransferRoom={(id, name) => setDealRooms((list) => list.map((r) => (r.id === id ? { ...r, assignee: name, owner_name: name } : r)))} onDuplicateRoom={(room) => setDealRooms((list) => [{ ...room, id: uid(), name: `${room.name} (Copy)`, ts: Date.now(), updated: 'just now' }, ...list])} user={user} can={can} />
       case 'listings':
         return <ListingHubPage listings={listings} setListings={setListings} setPackages={setPackages} globalQuery={query} onCreateNew={startCreate} onResumeDraft={resumeDraft} onOpenDealRoom={openDealRoomFor} dealRooms={dealRooms} setDealRooms={setDealRooms} onOpenRoom={(room) => { setDealRoomTarget(room); setActive('deals'); setMobileNav(false) }} user={user} can={can} />
       case 'deals':
@@ -14891,7 +14909,7 @@ export default function App() {
       case 'knowledge':
         return <PlaceholderPage label="Knowledge Base" icon={BookOpen} />
       default:
-        return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} resume={resume} onResumeHandled={() => setResume(null)} onNavigate={navigate} onSignOut={handleSignOut} onOpenDealRoom={openDealRoomFor} dealRooms={dealRooms} onOpenRoom={(room) => { setDealRoomTarget(room); setActive('deals'); setMobileNav(false) }} onDeleteRoom={(room) => { if (window.confirm(`Delete deal room "${room.name}"?`)) setDealRooms((list) => list.filter((r) => r.id !== room.id)) }} onUpdateRoom={(id, data) => setDealRooms((list) => list.map((r) => (r.id === id ? { ...r, ...data, ts: Date.now(), updated: 'just now' } : r)))} onTransferRoom={(id, name) => setDealRooms((list) => list.map((r) => (r.id === id ? { ...r, assignee: name, owner_name: name } : r)))} onDuplicateRoom={(room) => setDealRooms((list) => [{ ...room, id: uid(), name: `${room.name} (Copy)`, ts: Date.now(), updated: 'just now' }, ...list])} user={user} can={can} />
+        return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} resume={resume} onResumeHandled={() => setResume(null)} onNavigate={navigate} onSignOut={handleSignOut} onOpenDealRoom={openDealRoomFor} dealRooms={dealRooms} setDealRooms={setDealRooms} onOpenRoom={(room) => { setDealRoomTarget(room); setActive('deals'); setMobileNav(false) }} onDeleteRoom={(room) => { if (window.confirm(`Delete deal room "${room.name}"?`)) setDealRooms((list) => list.filter((r) => r.id !== room.id)) }} onUpdateRoom={(id, data) => setDealRooms((list) => list.map((r) => (r.id === id ? { ...r, ...data, ts: Date.now(), updated: 'just now' } : r)))} onTransferRoom={(id, name) => setDealRooms((list) => list.map((r) => (r.id === id ? { ...r, assignee: name, owner_name: name } : r)))} onDuplicateRoom={(room) => setDealRooms((list) => [{ ...room, id: uid(), name: `${room.name} (Copy)`, ts: Date.now(), updated: 'just now' }, ...list])} user={user} can={can} />
     }
   }
 
