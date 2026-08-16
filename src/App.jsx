@@ -8524,7 +8524,7 @@ var gallery='<div class="gal"><img src="'+esc(l.image)+'"/><img src="'+esc(l.ima
 var desc='<p style="font-size:14px;color:#475569;line-height:1.6">'+esc(l.name)+' is a premier '+esc(l.type)+' investment opportunity located at '+esc(l.address)+'. This asset offers a corporate-guaranteed net lease with scheduled rental increases in a dense, high-traffic trade area, ideal for investors seeking stable passive income.</p>';
 var highlights='<ul class="bullets"><li>Prime signalized hard-corner location</li><li>Long-term corporate guaranteed lease</li><li>Scheduled rent increases hedge inflation</li><li>Dense, affluent surrounding demographics</li></ul>';
 var area='<div class="areatbl">'+frow('Population','281,707')+frow('Area','66.8 sq mi')+frow('Elevation','184 ft')+frow('Time Zone','Pacific Time Zone')+frow('County','Orange County')+frow('Incorporated','1971')+frow('State','California')+'</div><p style="font-size:14px;color:#475569;line-height:1.6;margin-top:12px">The surrounding area is a thriving master-planned community known for its strong economy, top-rated schools, and affluent household base, anchoring durable demand for commercial real estate.</p>';
-var sidebar='<div class="side"><div class="card2"><div class="c2h">Listing Agent</div><div class="c2b"><div class="agent"><div class="av">'+AGENT.initials+'</div><div><div class="nm">'+AGENT.name+'</div><div class="rl">'+AGENT.role+'</div></div></div><a class="aemail" href="mailto:'+AGENT.email+'">'+AGENT.email+'</a><button class="btnp">Download Marketing Package</button><button class="btno">Share</button></div></div><div class="card2"><div class="c2h">Request Information</div><div class="c2b"><form onsubmit="return submitInquiry(event)"><input class="finput" placeholder="Your Name *" required/><input class="finput" type="email" placeholder="Email *" required/><input class="finput" placeholder="Phone (optional)"/><textarea class="finput" rows="3">I\\'m interested in '+esc(l.name)+'. Please send me more information.</textarea><button class="btnp" type="submit">Send Inquiry</button></form></div></div></div>';
+var sidebar='<div class="side"><div class="card2"><div class="c2h">Listing Agent</div><div class="c2b"><div class="agent"><div class="av">'+AGENT.initials+'</div><div><div class="nm">'+AGENT.name+'</div><div class="rl">'+AGENT.role+'</div></div></div><a class="aemail" href="mailto:'+AGENT.email+'">'+AGENT.email+'</a><button class="btnp" onclick="dlPkg()">Download Marketing Package</button><button class="btno">Share</button></div></div><div class="card2"><div class="c2h">Request Information</div><div class="c2b"><form onsubmit="return submitInquiry(event)"><input class="finput" placeholder="Your Name *" required/><input class="finput" type="email" placeholder="Email *" required/><input class="finput" placeholder="Phone (optional)"/><textarea class="finput" rows="3">I\\'m interested in '+esc(l.name)+'. Please send me more information.</textarea><button class="btnp" type="submit">Send Inquiry</button></form></div></div></div>';
 var cta='<div class="cta dsec" id="sec-Contact"><div class="k">Get in Touch</div><h2>Interested in '+esc(l.name)+'?</h2><div class="sub">Send a message and we\\'ll respond within one business day.</div><form onsubmit="return submitInquiry(event)"><input class="finput" placeholder="Full Name *" required/><input class="finput" type="email" placeholder="Email *" required/><input class="finput" placeholder="Phone (optional)"/><textarea class="finput" rows="3">I\\'m interested in '+esc(l.name)+'. Please send me more information.</textarea><button class="btnp" type="submit">Send Inquiry</button></form></div>';
 return '<div class="dhero"><img src="'+esc(l.image)+'"/><div class="ov"></div><div class="dtop"><button class="dbtn" onclick="backToList()">&larr; Back to Listings</button><button class="dbtn" onclick="backToList()">&times;</button></div><div class="dhin"><div class="deyebrow">Exclusive Offering &bull; '+esc(l.saleType)+'</div><div class="dhtitle">'+esc(l.name)+'</div><div class="dhsub">'+esc(l.leaseType)+'</div><div class="dhrule"></div><div class="dhaddr">'+esc(l.address)+'</div><div class="dhprice">'+fullPrice(l.price)+'</div><div class="dhpl">Asking Price</div><div class="dhbtns"><button class="dhbtn1" onclick="goContact()">Request Information</button><button class="dhbtn2" onclick="dlPkg()">Download Package</button></div></div></div>'
 +'<div class="dtabs"><div class="dtabsin">'+['Overview','Highlights','Location','Demographics','Area Info','Gallery','Contact'].map(function(t){return '<a href="#sec-'+t.replace(/ /g,'')+'">'+t+'</a>';}).join('')+'</div></div>'
@@ -8535,11 +8535,13 @@ return '<div class="dhero"><img src="'+esc(l.image)+'"/><div class="ov"></div><d
 +'<div class="sec contact" id="sec-Contact"><div class="secin"><div class="snum">#5 &mdash; Contact</div><div class="stitle">Contact Us</div><div class="cgrid"><div class="ccard"><div class="cl">Listing Agent</div><div class="agent"><div class="av">'+AGENT.initials+'</div><div><div class="nm">'+AGENT.name+'</div><div class="rl">'+AGENT.role+'</div></div></div><a class="aemail" href="mailto:'+AGENT.email+'">'+AGENT.email+'</a><button class="btnp" onclick="dlPkg()">Download Marketing Package</button><button class="btno">Share</button></div><div class="ccard"><div class="cl">Request Information</div><form onsubmit="return submitInquiry(event)"><input class="finput" placeholder="Your Name *" required/><input class="finput" type="email" placeholder="Email *" required/><input class="finput" placeholder="Phone (optional)"/><textarea class="finput" rows="3">I\\'m interested in '+esc(l.name)+'. Please send me more information.</textarea><button class="btnp" type="submit">Send Inquiry</button></form></div></div></div></div>'
 +'<footer><div class="line"></div><p>Powered by <b>MyCREBlueprint</b></p></footer>';}
 function goContact(){var el=document.getElementById('sec-Contact');if(el)el.scrollIntoView({behavior:'smooth'});}
-function dlPkg(){alert('The full marketing package will be sent to your email.');}
+var CUR=null;
+function pkgDb(cb){try{var rq=indexedDB.open('crebuilder-files',1);rq.onupgradeneeded=function(){try{rq.result.createObjectStore('files');}catch(e){}};rq.onsuccess=function(){cb(rq.result);};rq.onerror=function(){cb(null);};}catch(e){cb(null);}}
+function dlPkg(){if(!CUR||!CUR.pkgKey){alert('The marketing package is not available for download yet.');return;}var w=window.open('','_blank');pkgDb(function(db){if(!db){if(w)w.close();return;}try{var tx=db.transaction('files','readonly');var g=tx.objectStore('files').get(CUR.pkgKey);g.onsuccess=function(){var blob=g.result;if(!blob){if(w)w.close();alert('The marketing package is not available for download yet.');return;}var url=URL.createObjectURL(blob);if(w)w.location.href=url;setTimeout(function(){URL.revokeObjectURL(url);},60000);};g.onerror=function(){if(w)w.close();};}catch(e){if(w)w.close();}});}
 function submitInquiry(e){e.preventDefault();var f=e.target;var v={name:'',email:'',phone:'',msg:''};f.querySelectorAll('input,textarea').forEach(function(i){var p=(i.placeholder||'').toLowerCase();if(i.type==='email'||p.indexOf('email')>=0)v.email=i.value;else if(p.indexOf('phone')>=0)v.phone=i.value;else if(i.tagName==='TEXTAREA')v.msg=i.value;else if(p.indexOf('name')>=0)v.name=i.value;});var t=document.querySelector('.dhtitle');fetch(CAPTURE_API+'/lead-capture',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:v.name,email:v.email,phone:v.phone,property:t?t.textContent:'',source:'Listing Website'})}).catch(function(){});e.target.innerHTML='<div style="padding:18px;text-align:center;color:#fff;font-weight:600">Thank you! We\\'ll respond within one business day.</div>';return false;}
 function initDetailMap(l){if(dmap){dmap.remove();dmap=null;}dmap=L.map('dmap').setView([l.lat,l.lng],14);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap contributors'}).addTo(dmap);L.marker([l.lat,l.lng],{icon:pinIcon()}).addTo(dmap);setTimeout(function(){dmap.invalidateSize();},100);}
 function creUrl(id){var p=new URLSearchParams(location.search);if(id!=null&&id!=='')p.set('p',id);else p.delete('p');return location.pathname+'?'+p.toString();}
-function openDetail(id,skipUrl){var l=null,i;for(i=0;i<DATA.length;i++){if(DATA[i].id==id){l=DATA[i];break;}}if(!l)return;document.getElementById('detailView').innerHTML=detailHtml(l);document.body.classList.add('detail-open');window.scrollTo(0,0);renderDemo(1);initDetailMap(l);creNav(l.id);creHeight();if(!skipUrl){try{history.pushState({p:l.id},'',creUrl(l.id));}catch(e){}}}
+function openDetail(id,skipUrl){var l=null,i;for(i=0;i<DATA.length;i++){if(DATA[i].id==id){l=DATA[i];break;}}if(!l)return;CUR=l;document.getElementById('detailView').innerHTML=detailHtml(l);document.body.classList.add('detail-open');window.scrollTo(0,0);renderDemo(1);initDetailMap(l);creNav(l.id);creHeight();if(!skipUrl){try{history.pushState({p:l.id},'',creUrl(l.id));}catch(e){}}}
 function backToList(skipUrl){document.body.classList.remove('detail-open');if(dmap){dmap.remove();dmap=null;}window.scrollTo(0,0);creNav(null);creHeight();if(!skipUrl){try{history.pushState({},'',creUrl(null));}catch(e){}}}
 document.addEventListener('click',function(e){var a=e.target.closest?e.target.closest('.dtabs a'):null;if(a){var tb=a.parentElement.querySelectorAll('a'),i;for(i=0;i<tb.length;i++)tb[i].classList.remove('active');a.classList.add('active');}});
 /* --- Embed messaging: talk to the parent page when used as an <iframe> --- */
@@ -8700,6 +8702,10 @@ export const toMicrositeItems = (listings) =>
         noi: m.noi,
         lat,
         lng,
+        // Marketing package (PDF) for the public "Download Package" button — the blob lives in
+        // IndexedDB under this key; empty when no package has been attached.
+        pkgKey: l.pkgName ? `pkg_${l.id}` : '',
+        pkgName: l.pkgName || '',
       }
     })
 
@@ -8807,6 +8813,35 @@ function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onRes
 
   const patch = (id, changes) =>
     setListings((list) => list.map((l) => (l.id === id ? { ...withDefaults(l), ...changes } : l)))
+
+  // Marketing package (PDF) per listing — powers the public "Download Package" button.
+  // The real PDF is stored in IndexedDB (key pkg_<id>); only its name lives on the listing.
+  const pkgRef = useRef(null)
+  const onPkgUpload = (l, e) => {
+    const f = e.target.files && e.target.files[0]
+    e.target.value = ''
+    if (!f) return
+    const sniff = new FileReader()
+    sniff.onload = () => {
+      const header = String.fromCharCode(...new Uint8Array(sniff.result))
+      if (header !== '%PDF-') { notify('Only a PDF can be used as the marketing package', 'error'); return }
+      idbPut(`pkg_${l.id}`, f)
+        .then(() => { patch(l.id, { pkgName: f.name }); notify('Package attached — the “Download Package” button now works') })
+        .catch(() => notify('Upload failed — please try again', 'error'))
+    }
+    sniff.onerror = () => notify('Could not read the file — please try again', 'error')
+    sniff.readAsArrayBuffer(f.slice(0, 5))
+  }
+  const openPkg = (l) => {
+    const w = window.open('', '_blank')
+    idbGet(`pkg_${l.id}`).then((blob) => {
+      if (!blob) { if (w) w.close(); notify('No package found — upload one first', 'error'); return }
+      const url = URL.createObjectURL(blob)
+      if (w) w.location.href = url
+      setTimeout(() => URL.revokeObjectURL(url), 60000)
+    }).catch(() => { if (w) w.close() })
+  }
+  const removePkg = (l) => { idbDel(`pkg_${l.id}`); patch(l.id, { pkgName: '' }); notify('Package removed', 'error') }
 
   // Copy Link and Preview both use the same functional hub URL, so the copied link
   // opens exactly the microsite the Preview shows.
@@ -9157,7 +9192,22 @@ function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onRes
                             <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Status</p><p className="mt-0.5"><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_BADGE[l.status] || 'bg-slate-100 text-slate-600'}`}>{l.status}</span></p></div>
                             <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Access gate</p><p className="mt-0.5 text-sm font-semibold text-slate-800">{l.access}</p></div>
                             <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Public visibility</p><p className="mt-0.5 text-sm font-semibold text-slate-800">{l.listed && PUBLIC_STATUSES.includes(l.status) ? 'Visible on microsite' : 'Hidden'}</p></div>
-                            <div className="col-span-2 flex items-end gap-2 sm:col-span-2">
+                            <div className="col-span-2 sm:col-span-4">
+                              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Marketing package (PDF)</p>
+                              <input ref={pkgRef} type="file" accept="application/pdf,.pdf" className="hidden" onChange={(e) => onPkgUpload(l, e)} />
+                              {l.pkgName ? (
+                                <div className="mt-1 flex flex-wrap items-center gap-2">
+                                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-orange-100 bg-orange-50/50 px-2.5 py-1 text-xs font-semibold text-slate-700"><FileText className="h-3.5 w-3.5 text-brand" /> {l.pkgName}</span>
+                                  <button onClick={() => openPkg(l)} className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">Preview</button>
+                                  <button onClick={() => pkgRef.current && pkgRef.current.click()} className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">Replace</button>
+                                  <button onClick={() => removePkg(l)} className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-rose-600 transition hover:bg-rose-50">Remove</button>
+                                </div>
+                              ) : (
+                                <button onClick={() => pkgRef.current && pkgRef.current.click()} className="mt-1 inline-flex items-center gap-1.5 rounded-lg border border-dashed border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-brand hover:text-brand"><Upload className="h-3.5 w-3.5" /> Upload package PDF</button>
+                              )}
+                              <p className="mt-1 text-[11px] text-slate-400">Shown on the public listing’s “Download Package” button.</p>
+                            </div>
+                            <div className="col-span-2 flex items-end gap-2 sm:col-span-4">
                               <button onClick={() => (setEditing(l), setModalOpen(true))} className="rounded-lg bg-brand px-3 py-1.5 text-xs font-bold text-white transition hover:bg-orange-600">Edit listing</button>
                               <button onClick={() => { const w = window.open(`${hubUrl}&p=${l.id}`, '_blank'); if (!w) notify('Please allow pop-ups to open the preview', 'error') }} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">Preview</button>
                             </div>
