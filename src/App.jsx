@@ -8719,8 +8719,16 @@ export const toMicrositeItems = (listings) =>
       }
     })
 
-function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onResumeDraft, onOpenDealRoom, can = () => true }) {
+function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onResumeDraft, onOpenDealRoom, dealRooms = [], setDealRooms, onOpenRoom, user, can = () => true }) {
   const notify = useToast()
+  // Deal rooms also live here (My Deals) so a property created in Deal Rooms shows in all
+  // three places — Deal Rooms, Dashboard and My Deals — and stays in sync.
+  const [editRoom, setEditRoom] = useState(null)
+  const [transferRoom, setTransferRoom] = useState(null)
+  const updateRoom = (id, data) => setDealRooms && setDealRooms((list) => list.map((r) => (r.id === id ? { ...r, ...data, ts: Date.now(), updated: 'just now' } : r)))
+  const transferRoomTo = (id, name) => setDealRooms && setDealRooms((list) => list.map((r) => (r.id === id ? { ...r, assignee: name, owner_name: name } : r)))
+  const duplicateRoom = (room) => setDealRooms && setDealRooms((list) => [{ ...room, id: uid(), name: `${room.name} (Copy)`, ts: Date.now(), updated: 'just now' }, ...list])
+  const deleteRoom = (room) => { if (window.confirm(`Delete deal room "${room.name}"?`)) setDealRooms && setDealRooms((list) => list.filter((r) => r.id !== room.id)) }
 
   const [slug, setSlug] = useState('vaziamts')
   // Functional link that actually opens the microsite (works when pasted in a new tab).
@@ -9339,6 +9347,48 @@ function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onRes
           </div>
         </div>
       </div>
+
+      {/* Deal Rooms — the properties you created in Deal Rooms show here too, in sync */}
+      {dealRooms && dealRooms.length > 0 && (
+        <div className="mt-8">
+          <h2 className="flex items-center gap-2 text-lg font-extrabold text-slate-900">
+            <FolderLock className="h-5 w-5 text-brand" /> Deal Rooms
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500">{dealRooms.length}</span>
+          </h2>
+          <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            {dealRooms.map((room) => (
+              <DealRoomActionCard
+                key={`room-${room.id}`}
+                room={room}
+                onOpen={onOpenRoom}
+                onEdit={setEditRoom}
+                onTransfer={setTransferRoom}
+                onDuplicate={duplicateRoom}
+                onDelete={deleteRoom}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      <Modal open={!!editRoom} onClose={() => setEditRoom(null)} title="Edit Deal Room">
+        {editRoom && (
+          <DealRoomForm
+            initial={{ name: editRoom.name || '', address: editRoom.address || '', status: DEAL_ROOM_STATUSES.includes(editRoom.status) ? editRoom.status : 'Active', access: editRoom.access || 'Free Access', image: editRoom.image || '' }}
+            submitLabel="Save changes"
+            onCancel={() => setEditRoom(null)}
+            onSubmit={(data) => { updateRoom(editRoom.id, data); setEditRoom(null); notify('Deal room updated') }}
+          />
+        )}
+      </Modal>
+      <Modal open={!!transferRoom} onClose={() => setTransferRoom(null)} title="Transfer Deal Room">
+        <DealRoomTransferModal
+          room={transferRoom}
+          user={user}
+          onClose={() => setTransferRoom(null)}
+          onTransfer={(id, name) => { transferRoomTo(id, name); notify(name ? `Deal room transferred to ${name}` : 'Deal room kept in your account') }}
+        />
+      </Modal>
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Edit Listing' : 'Add New Property'}>
         <ListingForm initial={editing} onSubmit={handleSubmit} onCancel={() => setModalOpen(false)} />
@@ -14766,7 +14816,7 @@ export default function App() {
       case 'dashboard':
         return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} resume={resume} onResumeHandled={() => setResume(null)} onNavigate={navigate} onSignOut={handleSignOut} onOpenDealRoom={openDealRoomFor} dealRooms={dealRooms} onOpenRoom={(room) => { setDealRoomTarget(room); setActive('deals'); setMobileNav(false) }} onDeleteRoom={(room) => { if (window.confirm(`Delete deal room "${room.name}"?`)) setDealRooms((list) => list.filter((r) => r.id !== room.id)) }} onUpdateRoom={(id, data) => setDealRooms((list) => list.map((r) => (r.id === id ? { ...r, ...data, ts: Date.now(), updated: 'just now' } : r)))} onTransferRoom={(id, name) => setDealRooms((list) => list.map((r) => (r.id === id ? { ...r, assignee: name, owner_name: name } : r)))} onDuplicateRoom={(room) => setDealRooms((list) => [{ ...room, id: uid(), name: `${room.name} (Copy)`, ts: Date.now(), updated: 'just now' }, ...list])} user={user} can={can} />
       case 'listings':
-        return <ListingHubPage listings={listings} setListings={setListings} globalQuery={query} onCreateNew={startCreate} onResumeDraft={resumeDraft} onOpenDealRoom={openDealRoomFor} can={can} />
+        return <ListingHubPage listings={listings} setListings={setListings} globalQuery={query} onCreateNew={startCreate} onResumeDraft={resumeDraft} onOpenDealRoom={openDealRoomFor} dealRooms={dealRooms} setDealRooms={setDealRooms} onOpenRoom={(room) => { setDealRoomTarget(room); setActive('deals'); setMobileNav(false) }} user={user} can={can} />
       case 'deals':
         return <DealRoomsPage dealRooms={dealRooms} setDealRooms={setDealRooms} onEditDocument={resumeDraft} openTarget={dealRoomTarget} onOpenHandled={() => setDealRoomTarget(null)} user={user} />
       case 'team':
