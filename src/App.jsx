@@ -7292,7 +7292,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
   )
 }
 
-function DashboardPage({ packages, setPackages, setListings, globalQuery, createNonce, resume, onResumeHandled, onNavigate, onSignOut, onOpenDealRoom, dealRooms = [], onOpenRoom, onDeleteRoom, user, can = () => true }) {
+function DashboardPage({ packages, setPackages, setListings, globalQuery, createNonce, resume, onResumeHandled, onNavigate, onSignOut, onOpenDealRoom, dealRooms = [], onOpenRoom, onDeleteRoom, onUpdateRoom, onTransferRoom, user, can = () => true }) {
   const notify = useToast()
   // Re-render once a minute so the "time ago" labels on cards stay current.
   const [, setTick] = useState(0)
@@ -7311,6 +7311,8 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
   const [editing, setEditing] = useState(null)
   const [confirm, setConfirm] = useState(null)
   const [transferTarget, setTransferTarget] = useState(null)
+  const [editRoom, setEditRoom] = useState(null)       // deal room being edited (dashboard)
+  const [transferRoom, setTransferRoom] = useState(null) // deal room being transferred
 
   // "Create Document For" chooser + who the next new doc belongs to.
   const [chooserOpen, setChooserOpen] = useState(false)
@@ -7734,6 +7736,8 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
           </div>
           <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-100 pt-3">
             <CardAction icon={FolderOpen} label="Open" onClick={() => onOpenRoom && onOpenRoom(room)} />
+            <CardAction icon={Pencil} label="Edit" onClick={() => setEditRoom(room)} />
+            <CardAction icon={Send} label="Transfer" onClick={() => setTransferRoom(room)} />
             <span className="ml-auto">
               <CardAction icon={Trash2} onClick={() => onDeleteRoom && onDeleteRoom(room)} danger />
             </span>
@@ -7759,6 +7763,42 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
         onComplete={finishWizard}
         assignee={newDoc.assignee}
       />
+
+      {/* Edit a deal room (name / address / status / access / cover image) */}
+      <Modal open={!!editRoom} onClose={() => setEditRoom(null)} title="Edit Deal Room">
+        {editRoom && (
+          <DealRoomForm
+            initial={{ name: editRoom.name || '', address: editRoom.address || '', status: DEAL_ROOM_STATUSES.includes(editRoom.status) ? editRoom.status : 'Active', access: editRoom.access || 'Free Access', image: editRoom.image || '' }}
+            submitLabel="Save changes"
+            onCancel={() => setEditRoom(null)}
+            onSubmit={(data) => { onUpdateRoom && onUpdateRoom(editRoom.id, data); setEditRoom(null); notify('Deal room updated') }}
+          />
+        )}
+      </Modal>
+
+      {/* Transfer a deal room to a team member */}
+      <Modal open={!!transferRoom} onClose={() => setTransferRoom(null)} title="Transfer Deal Room">
+        {transferRoom && (
+          <div className="space-y-2">
+            <p className="text-sm text-slate-500">Move <span className="font-semibold text-slate-700">&quot;{transferRoom.name}&quot;</span> to a team member.</p>
+            <div className="mt-2 max-h-72 space-y-1 overflow-y-auto">
+              {TEAM_MEMBERS.map((m) => (
+                <button
+                  key={m.name}
+                  onClick={() => { onTransferRoom && onTransferRoom(transferRoom.id, m.name); setTransferRoom(null); notify(`Deal room transferred to ${m.name}`) }}
+                  className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-left transition hover:bg-slate-50"
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-600">{(m.name || '?').slice(0, 1)}</span>
+                    <span><span className="block text-sm font-semibold text-slate-800">{m.name}</span><span className="block text-xs text-slate-400">{m.email}</span></span>
+                  </span>
+                  {transferRoom.assignee === m.name && <Check className="h-4 w-4 text-emerald-500" />}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {builderOpen && builderCfg && (
         <DocumentBuilder
@@ -9537,9 +9577,9 @@ function DealForm({ initialStage, onSubmit, onCancel }) {
 const DEAL_ROOM_STATUSES = ['Active', 'Archived']
 const DEAL_ROOM_ACCESS = ['Free Access', 'Contact Required', 'NDA - Auto Access', 'NDA - Approval Required']
 
-function DealRoomForm({ onSubmit, onCancel }) {
+function DealRoomForm({ onSubmit, onCancel, initial, submitLabel = 'Create Deal Room' }) {
   const notify = useToast()
-  const [form, setForm] = useState({ name: '', address: '', status: 'Active', access: 'Free Access', image: '' })
+  const [form, setForm] = useState({ name: '', address: '', status: 'Active', access: 'Free Access', image: '', ...(initial || {}) })
   const [uploading, setUploading] = useState(false)
   const imgRef = useRef(null)
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
@@ -9635,7 +9675,7 @@ function DealRoomForm({ onSubmit, onCancel }) {
         >
           Cancel
         </button>
-        <PrimaryButton type="submit">Create Deal Room</PrimaryButton>
+        <PrimaryButton type="submit">{submitLabel}</PrimaryButton>
       </div>
     </form>
   )
@@ -14605,7 +14645,7 @@ export default function App() {
   const renderScreen = () => {
     switch (active) {
       case 'dashboard':
-        return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} resume={resume} onResumeHandled={() => setResume(null)} onNavigate={navigate} onSignOut={handleSignOut} onOpenDealRoom={openDealRoomFor} dealRooms={dealRooms} onOpenRoom={(room) => { setDealRoomTarget(room); setActive('deals'); setMobileNav(false) }} onDeleteRoom={(room) => { if (window.confirm(`Delete deal room "${room.name}"?`)) setDealRooms((list) => list.filter((r) => r.id !== room.id)) }} user={user} can={can} />
+        return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} resume={resume} onResumeHandled={() => setResume(null)} onNavigate={navigate} onSignOut={handleSignOut} onOpenDealRoom={openDealRoomFor} dealRooms={dealRooms} onOpenRoom={(room) => { setDealRoomTarget(room); setActive('deals'); setMobileNav(false) }} onDeleteRoom={(room) => { if (window.confirm(`Delete deal room "${room.name}"?`)) setDealRooms((list) => list.filter((r) => r.id !== room.id)) }} onUpdateRoom={(id, data) => setDealRooms((list) => list.map((r) => (r.id === id ? { ...r, ...data, ts: Date.now(), updated: 'just now' } : r)))} onTransferRoom={(id, name) => setDealRooms((list) => list.map((r) => (r.id === id ? { ...r, assignee: name, owner_name: name } : r)))} user={user} can={can} />
       case 'listings':
         return <ListingHubPage listings={listings} setListings={setListings} globalQuery={query} onCreateNew={startCreate} onResumeDraft={resumeDraft} onOpenDealRoom={openDealRoomFor} can={can} />
       case 'deals':
@@ -14627,7 +14667,7 @@ export default function App() {
       case 'knowledge':
         return <PlaceholderPage label="Knowledge Base" icon={BookOpen} />
       default:
-        return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} resume={resume} onResumeHandled={() => setResume(null)} onNavigate={navigate} onSignOut={handleSignOut} onOpenDealRoom={openDealRoomFor} dealRooms={dealRooms} onOpenRoom={(room) => { setDealRoomTarget(room); setActive('deals'); setMobileNav(false) }} onDeleteRoom={(room) => { if (window.confirm(`Delete deal room "${room.name}"?`)) setDealRooms((list) => list.filter((r) => r.id !== room.id)) }} user={user} can={can} />
+        return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} resume={resume} onResumeHandled={() => setResume(null)} onNavigate={navigate} onSignOut={handleSignOut} onOpenDealRoom={openDealRoomFor} dealRooms={dealRooms} onOpenRoom={(room) => { setDealRoomTarget(room); setActive('deals'); setMobileNav(false) }} onDeleteRoom={(room) => { if (window.confirm(`Delete deal room "${room.name}"?`)) setDealRooms((list) => list.filter((r) => r.id !== room.id)) }} onUpdateRoom={(id, data) => setDealRooms((list) => list.map((r) => (r.id === id ? { ...r, ...data, ts: Date.now(), updated: 'just now' } : r)))} onTransferRoom={(id, name) => setDealRooms((list) => list.map((r) => (r.id === id ? { ...r, assignee: name, owner_name: name } : r)))} user={user} can={can} />
     }
   }
 
