@@ -8733,10 +8733,11 @@ export const toMicrositeItems = (listings) =>
         noi: m.noi,
         lat,
         lng,
-        // Marketing package (PDF) for the public "Download Package" button — fetched from
-        // /public/packages/<pkgId> via REST; falls back to a deal room OM with the same
-        // property name (pkgNameKey) so the OM you upload in the deal room shows here too.
-        pkgId: l.pkgName ? l.id : '',
+        // Marketing package (PDF) for the public "Download Package" button — fetched by
+        // the listing's id from /public/packages/<id>. A linked deal room's OM is published
+        // under this same id, so uploading the OM in the deal room is enough. pkgNameKey is
+        // a name-based fallback for older/standalone rooms.
+        pkgId: l.id,
         pkgName: l.pkgName || '',
         pkgNameKey: pkgNameKey(l.name),
       }
@@ -10142,8 +10143,10 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
         const url = await readFileAsDataUrl(f) // store the actual PDF in the cloud (syncs everywhere)
         const om = { name: f.name, size: fileSize(f), date: new Date().toLocaleDateString('en-GB'), url }
         await putFile(`om_${room.id}`, om)
-        // Also expose it publicly by property name so the microsite "Download Package"
-        // button for the listing with the same name serves this OM automatically.
+        // Expose it publicly so the microsite "Download Package" serves this OM:
+        //  • by the linked listing's id (exact, id-based) and
+        //  • by property name (fallback for standalone rooms).
+        if (room.listingId) putPublicPackage(room.listingId, { name: f.name, url }).catch(() => {})
         putPublicPackage(pkgNameKey(room.name), { name: f.name, url }).catch(() => {})
         setUploadPct(100); setTimeout(() => setUploadPct(null), 400)
         setOmFlyer(om)
@@ -10253,7 +10256,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
                 <IconButton icon={Eye} label="Open / preview" onClick={() => openOm(omFlyer)} />
                 <IconButton icon={Download} label="Download" onClick={() => downloadFile(omFlyer)} />
                 <IconButton icon={Upload} label="Replace" onClick={() => omRef.current && omRef.current.click()} />
-                <IconButton icon={Trash2} label="Remove" tone="danger" onClick={() => { delFile(`om_${room.id}`); delPublicPackage(pkgNameKey(room.name)); setOmFlyer(null); notify('OM / Flyer removed', 'error') }} />
+                <IconButton icon={Trash2} label="Remove" tone="danger" onClick={() => { delFile(`om_${room.id}`); if (room.listingId) delPublicPackage(room.listingId); delPublicPackage(pkgNameKey(room.name)); setOmFlyer(null); notify('OM / Flyer removed', 'error') }} />
               </div>
             ) : (
               <button onClick={() => omRef.current && omRef.current.click()} className="mt-3 flex w-full flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-slate-200 py-6 text-center transition hover:border-orange-300 hover:bg-orange-50/30">
@@ -14803,6 +14806,7 @@ export default function App() {
     if (!room) {
       room = {
         id: uid(),
+        listingId: pkg.id, // link this deal room to the listing so its OM feeds Download Package
         name: pkg.title || pkg.name || 'Untitled Property',
         address: pkg.address || '',
         image: pkg.image || '',
@@ -14814,6 +14818,9 @@ export default function App() {
         ts: Date.now(),
       }
       setDealRooms((list) => [room, ...list])
+    } else if (room.listingId !== pkg.id) {
+      room = { ...room, listingId: pkg.id }
+      setDealRooms((list) => list.map((r) => (r.id === room.id ? { ...r, listingId: pkg.id } : r)))
     }
     setDealRoomTarget(room)
     setActive('deals')
