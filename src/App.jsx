@@ -7582,7 +7582,10 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
   }
 
   const doDelete = () => {
-    setPackages((list) => list.filter((p) => p.id !== confirm.id))
+    const id = confirm.id
+    setPackages((list) => list.filter((p) => p.id !== id))
+    // Also remove the matching listing from My Deals (they share an id).
+    if (setListings) setListings((list) => list.filter((l) => l.id !== id))
     notify('Package deleted', 'error')
     setConfirm(null)
   }
@@ -8719,7 +8722,7 @@ export const toMicrositeItems = (listings) =>
       }
     })
 
-function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onResumeDraft, onOpenDealRoom, dealRooms = [], setDealRooms, onOpenRoom, user, can = () => true }) {
+function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCreateNew, onResumeDraft, onOpenDealRoom, dealRooms = [], setDealRooms, onOpenRoom, user, can = () => true }) {
   const notify = useToast()
   // Deal rooms also live here (My Deals) so a property created in Deal Rooms shows in all
   // three places — Deal Rooms, Dashboard and My Deals — and stays in sync.
@@ -8916,7 +8919,10 @@ function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onRes
     setEditing(null)
   }
   const doDelete = () => {
-    setListings((list) => list.filter((l) => l.id !== confirm.id))
+    const id = confirm.id
+    setListings((list) => list.filter((l) => l.id !== id))
+    // Remove the matching document from the Dashboard too (a listing and its package share an id).
+    if (setPackages) setPackages((list) => list.filter((p) => p.id !== id))
     notify('Listing deleted', 'error')
     setConfirm(null)
   }
@@ -14816,7 +14822,7 @@ export default function App() {
       case 'dashboard':
         return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} resume={resume} onResumeHandled={() => setResume(null)} onNavigate={navigate} onSignOut={handleSignOut} onOpenDealRoom={openDealRoomFor} dealRooms={dealRooms} onOpenRoom={(room) => { setDealRoomTarget(room); setActive('deals'); setMobileNav(false) }} onDeleteRoom={(room) => { if (window.confirm(`Delete deal room "${room.name}"?`)) setDealRooms((list) => list.filter((r) => r.id !== room.id)) }} onUpdateRoom={(id, data) => setDealRooms((list) => list.map((r) => (r.id === id ? { ...r, ...data, ts: Date.now(), updated: 'just now' } : r)))} onTransferRoom={(id, name) => setDealRooms((list) => list.map((r) => (r.id === id ? { ...r, assignee: name, owner_name: name } : r)))} onDuplicateRoom={(room) => setDealRooms((list) => [{ ...room, id: uid(), name: `${room.name} (Copy)`, ts: Date.now(), updated: 'just now' }, ...list])} user={user} can={can} />
       case 'listings':
-        return <ListingHubPage listings={listings} setListings={setListings} globalQuery={query} onCreateNew={startCreate} onResumeDraft={resumeDraft} onOpenDealRoom={openDealRoomFor} dealRooms={dealRooms} setDealRooms={setDealRooms} onOpenRoom={(room) => { setDealRoomTarget(room); setActive('deals'); setMobileNav(false) }} user={user} can={can} />
+        return <ListingHubPage listings={listings} setListings={setListings} setPackages={setPackages} globalQuery={query} onCreateNew={startCreate} onResumeDraft={resumeDraft} onOpenDealRoom={openDealRoomFor} dealRooms={dealRooms} setDealRooms={setDealRooms} onOpenRoom={(room) => { setDealRoomTarget(room); setActive('deals'); setMobileNav(false) }} user={user} can={can} />
       case 'deals':
         return <DealRoomsPage dealRooms={dealRooms} setDealRooms={setDealRooms} onEditDocument={resumeDraft} openTarget={dealRoomTarget} onOpenHandled={() => setDealRoomTarget(null)} user={user} />
       case 'team':
