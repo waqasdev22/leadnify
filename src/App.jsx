@@ -28,7 +28,6 @@ import {
   Box,
   Globe,
   FolderLock,
-  FolderOpen,
   Contact,
   Wand2,
   Building2,
@@ -7292,7 +7291,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
   )
 }
 
-function DashboardPage({ packages, setPackages, setListings, globalQuery, createNonce, resume, onResumeHandled, onNavigate, onSignOut, onOpenDealRoom, dealRooms = [], onOpenRoom, onDeleteRoom, onUpdateRoom, onTransferRoom, user, can = () => true }) {
+function DashboardPage({ packages, setPackages, setListings, globalQuery, createNonce, resume, onResumeHandled, onNavigate, onSignOut, onOpenDealRoom, dealRooms = [], onOpenRoom, onDeleteRoom, onUpdateRoom, onTransferRoom, onDuplicateRoom, user, can = () => true }) {
   const notify = useToast()
   // Re-render once a minute so the "time ago" labels on cards stay current.
   const [, setTick] = useState(0)
@@ -7735,9 +7734,14 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
             <span className="ml-auto flex items-center gap-1 text-xs text-slate-400"><Clock className="h-3.5 w-3.5" />{room.ts ? timeAgo(room.ts) : (room.updated || 'just now')}</span>
           </div>
           <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-100 pt-3">
-            <CardAction icon={FolderOpen} label="Open" onClick={() => onOpenRoom && onOpenRoom(room)} />
             <CardAction icon={Pencil} label="Edit" onClick={() => setEditRoom(room)} />
+            <CardAction icon={FileDown} label="PDF" onClick={() => downloadPdf(room, notify)} />
             <CardAction icon={Send} label="Transfer" onClick={() => setTransferRoom(room)} />
+            <CardAction icon={Copy} label="Duplicate" onClick={() => onDuplicateRoom && onDuplicateRoom(room)} />
+            <CardAction icon={Repeat2} label="Convert" onClick={() => { const opts = DEAL_ROOM_ACCESS; const next = opts[(opts.indexOf(room.access) + 1) % opts.length]; onUpdateRoom && onUpdateRoom(room.id, { access: next }); notify(`Access changed to ${next}`) }} />
+            <CardAction icon={Share2} label="Share" onClick={() => shareItem(room, notify)} />
+            <CardAction icon={AtSign} label="Email" onClick={() => emailItem(room, notify)} />
+            <CardAction icon={Share} label="Social" onClick={() => socialShare(room, notify)} />
             <span className="ml-auto">
               <CardAction icon={Trash2} onClick={() => onDeleteRoom && onDeleteRoom(room)} danger />
             </span>
@@ -14645,7 +14649,7 @@ export default function App() {
   const renderScreen = () => {
     switch (active) {
       case 'dashboard':
-        return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} resume={resume} onResumeHandled={() => setResume(null)} onNavigate={navigate} onSignOut={handleSignOut} onOpenDealRoom={openDealRoomFor} dealRooms={dealRooms} onOpenRoom={(room) => { setDealRoomTarget(room); setActive('deals'); setMobileNav(false) }} onDeleteRoom={(room) => { if (window.confirm(`Delete deal room "${room.name}"?`)) setDealRooms((list) => list.filter((r) => r.id !== room.id)) }} onUpdateRoom={(id, data) => setDealRooms((list) => list.map((r) => (r.id === id ? { ...r, ...data, ts: Date.now(), updated: 'just now' } : r)))} onTransferRoom={(id, name) => setDealRooms((list) => list.map((r) => (r.id === id ? { ...r, assignee: name, owner_name: name } : r)))} user={user} can={can} />
+        return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} resume={resume} onResumeHandled={() => setResume(null)} onNavigate={navigate} onSignOut={handleSignOut} onOpenDealRoom={openDealRoomFor} dealRooms={dealRooms} onOpenRoom={(room) => { setDealRoomTarget(room); setActive('deals'); setMobileNav(false) }} onDeleteRoom={(room) => { if (window.confirm(`Delete deal room "${room.name}"?`)) setDealRooms((list) => list.filter((r) => r.id !== room.id)) }} onUpdateRoom={(id, data) => setDealRooms((list) => list.map((r) => (r.id === id ? { ...r, ...data, ts: Date.now(), updated: 'just now' } : r)))} onTransferRoom={(id, name) => setDealRooms((list) => list.map((r) => (r.id === id ? { ...r, assignee: name, owner_name: name } : r)))} onDuplicateRoom={(room) => setDealRooms((list) => [{ ...room, id: uid(), name: `${room.name} (Copy)`, ts: Date.now(), updated: 'just now' }, ...list])} user={user} can={can} />
       case 'listings':
         return <ListingHubPage listings={listings} setListings={setListings} globalQuery={query} onCreateNew={startCreate} onResumeDraft={resumeDraft} onOpenDealRoom={openDealRoomFor} can={can} />
       case 'deals':
@@ -14667,7 +14671,7 @@ export default function App() {
       case 'knowledge':
         return <PlaceholderPage label="Knowledge Base" icon={BookOpen} />
       default:
-        return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} resume={resume} onResumeHandled={() => setResume(null)} onNavigate={navigate} onSignOut={handleSignOut} onOpenDealRoom={openDealRoomFor} dealRooms={dealRooms} onOpenRoom={(room) => { setDealRoomTarget(room); setActive('deals'); setMobileNav(false) }} onDeleteRoom={(room) => { if (window.confirm(`Delete deal room "${room.name}"?`)) setDealRooms((list) => list.filter((r) => r.id !== room.id)) }} onUpdateRoom={(id, data) => setDealRooms((list) => list.map((r) => (r.id === id ? { ...r, ...data, ts: Date.now(), updated: 'just now' } : r)))} onTransferRoom={(id, name) => setDealRooms((list) => list.map((r) => (r.id === id ? { ...r, assignee: name, owner_name: name } : r)))} user={user} can={can} />
+        return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} resume={resume} onResumeHandled={() => setResume(null)} onNavigate={navigate} onSignOut={handleSignOut} onOpenDealRoom={openDealRoomFor} dealRooms={dealRooms} onOpenRoom={(room) => { setDealRoomTarget(room); setActive('deals'); setMobileNav(false) }} onDeleteRoom={(room) => { if (window.confirm(`Delete deal room "${room.name}"?`)) setDealRooms((list) => list.filter((r) => r.id !== room.id)) }} onUpdateRoom={(id, data) => setDealRooms((list) => list.map((r) => (r.id === id ? { ...r, ...data, ts: Date.now(), updated: 'just now' } : r)))} onTransferRoom={(id, name) => setDealRooms((list) => list.map((r) => (r.id === id ? { ...r, assignee: name, owner_name: name } : r)))} onDuplicateRoom={(room) => setDealRooms((list) => [{ ...room, id: uid(), name: `${room.name} (Copy)`, ts: Date.now(), updated: 'just now' }, ...list])} user={user} can={can} />
     }
   }
 
