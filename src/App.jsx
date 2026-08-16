@@ -8365,19 +8365,19 @@ export function buildMicrositeHtml(items, brandColor, template = 'Modern', defau
 body{font-family:${bodyFont};background:#f8fafc;color:#0f172a}
 .hero{position:relative;height:200px;overflow:hidden;color:#fff;background:${hero}}
 .hero .cut{position:absolute;inset:0;background:linear-gradient(115deg,transparent 55%,rgba(0,0,0,.28) 55%)}
-.hero .inner{position:relative;height:100%;display:flex;align-items:center;justify-content:space-between;padding:0 40px;max-width:1600px;margin:0 auto}
+.hero .inner{position:relative;height:100%;display:flex;align-items:center;justify-content:space-between;padding:0 40px;max-width:1200px;margin:0 auto}
 .logo{height:96px;width:160px;border-radius:12px;background:rgba(255,255,255,.15)}
 .count b{font-size:48px;font-weight:800;line-height:1;display:block;text-align:right}
 .count span{font-size:12px;font-weight:600;letter-spacing:2px;text-transform:uppercase;opacity:.85}
 .toolbar{background:#fff;border-bottom:1px solid #e2e8f0;position:sticky;top:0;z-index:1000}
-.tbin{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:12px 24px;max-width:1600px;margin:0 auto}
+.tbin{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:12px 24px;max-width:1200px;margin:0 auto}
 .seg{display:inline-flex;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden}
 .seg button{border:0;background:#fff;padding:8px 16px;font-size:14px;font-weight:600;color:#475569;cursor:pointer}
 .seg button.active{color:#fff;background:${primary}}
 input,select{border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;font-size:14px;outline:none;color:#334155}
 .spacer{margin-left:auto;display:flex;align-items:center;gap:12px}
 .result{font-size:14px;color:#94a3b8}.result b{color:#334155}
-.content{padding:24px;display:grid;gap:24px;max-width:1600px;margin:0 auto;width:100%}
+.content{padding:24px;display:grid;gap:24px;max-width:1200px;margin:0 auto;width:100%}
 .content.mapgrid{grid-template-columns:1fr 1fr}
 .content.map{grid-template-columns:1fr}
 .content.grid #map,.content.list #map,.content.card #map{display:none}
