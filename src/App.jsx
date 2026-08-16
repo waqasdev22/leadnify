@@ -9,7 +9,7 @@ import React, {
 import { jsPDF } from 'jspdf'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { getCol, putCol, saveUser, sendEmail, setApiNamespace, getFile, putFile, delFile, MAX_CLOUD_FILE, putPublicPackage, getPublicPackage, delPublicPackage, drainPublicLeads, putPublicHub } from './api'
+import { getCol, putCol, saveUser, sendEmail, setApiNamespace, getFile, putFile, delFile, MAX_CLOUD_FILE, putPublicPackage, getPublicPackage, delPublicPackage, drainPublicLeads, putPublicHub, kvGet, kvSet } from './api'
 import { EMAILJS } from './emailConfig'
 import { auth, googleProvider, db, createMemberAccount } from './firebase'
 import { ref as dbRef, get as dbGet, set as dbSet, update as dbUpdate, remove as dbRemove, onValue } from 'firebase/database'
@@ -265,18 +265,42 @@ function usePersistentState(key, initial) {
   const [state, setState] = useState(() => readLS(k, initial))
   // Which namespaced key the current in-memory state belongs to.
   const loadedKey = useRef(k)
+  const cloudLoaded = useRef(false)
   // When the namespace changes (user logs in/out or switches accounts), the App
   // root does NOT remount — so we must reload THIS key's data and make sure the
   // previous account's in-memory state never gets written to the new account's key.
   if (loadedKey.current !== k) {
     loadedKey.current = k
+    cloudLoaded.current = false
     setState(readLS(k, initial)) // re-init during render; React discards this render and re-runs
   }
+  // Load this key's value from the cloud (so the WHOLE dashboard syncs across devices);
+  // if the cloud has nothing yet, push up the local value (one-time migration).
+  useEffect(() => {
+    let alive = true
+    cloudLoaded.current = false
+    kvGet(key)
+      .then((v) => {
+        if (!alive) return
+        if (v !== undefined) {
+          setState(v)
+          try { localStorage.setItem(k, JSON.stringify(v)) } catch { /* ignore */ }
+        } else {
+          kvSet(key, readLS(k, initial))
+        }
+        cloudLoaded.current = true
+      })
+      .catch(() => { cloudLoaded.current = true })
+    return () => { alive = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [k])
   useEffect(() => {
     // Only persist once the state actually belongs to the current key.
     if (loadedKey.current === k) {
       try { localStorage.setItem(k, JSON.stringify(state)) } catch { /* ignore */ }
+      if (cloudLoaded.current) kvSet(key, state) // mirror to the cloud once the initial load is done
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [k, state])
   return [state, setState]
 }

@@ -102,6 +102,34 @@ export const putCol = async (col, arr) => {
   return arr
 }
 
+// ---- Key/value cloud store (per user) ---------------------------------------
+// Everything the app keeps in "persistent state" (settings, per-room data, etc.) is
+// mirrored to /data/<uid>/kv/<key> so the WHOLE dashboard syncs across devices.
+const KV_MAX = 700 * 1024 // skip very large values (keep them local only)
+const kvKey = (k) => String(k).replace(/[.#$/[\]]/g, '_')
+export const kvGet = async (key) => {
+  const uid = currentUid()
+  if (!uid) return undefined
+  try {
+    const snap = await dbGet(dbRef(db, `data/${uid}/kv/${kvKey(key)}`))
+    const v = snap.val()
+    return v === null ? undefined : v
+  } catch {
+    return undefined
+  }
+}
+export const kvSet = async (key, value) => {
+  const uid = currentUid()
+  if (!uid) return
+  try {
+    const json = JSON.stringify(value)
+    if (json && json.length > KV_MAX) return // too big for the cloud — stays in localStorage
+    await dbSet(dbRef(db, `data/${uid}/kv/${kvKey(key)}`), value === undefined ? null : JSON.parse(json))
+  } catch {
+    /* ignore */
+  }
+}
+
 // ---- Cloud file store (per user, cross-device) ------------------------------
 // Small/medium files (OM/Flyer, confidential docs) are stored as a data URL under
 // /data/<uid>/files/<key> so the SAME account can open them on any device. Large
