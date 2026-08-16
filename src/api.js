@@ -6,6 +6,7 @@
 //   across reloads in that browser.
 import { auth, db } from './firebase'
 import { ref as dbRef, get as dbGet, set as dbSet } from 'firebase/database'
+import { EMAILJS, emailReady } from './emailConfig'
 
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 
@@ -159,13 +160,33 @@ export const drainPublicLeads = async () => {
   }
 }
 
-// Send a real email through the backend (SMTP). Throws if the backend rejects it.
-export const sendEmail = (payload) =>
-  request('/send-email', {
+// Send a real email. Uses EmailJS (no server needed) once the 3 IDs are set in
+// emailConfig.js; otherwise falls back to the local backend (only works when it runs).
+// payload: { to, subject, message, name }
+export const sendEmail = async (payload = {}) => {
+  const to = payload.to || payload.email || ''
+  const subject = payload.subject || 'MyCREBlueprint'
+  const message = payload.message || payload.body || payload.text || ''
+  if (emailReady()) {
+    const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        service_id: EMAILJS.SERVICE_ID,
+        template_id: EMAILJS.TEMPLATE_ID,
+        user_id: EMAILJS.PUBLIC_KEY,
+        template_params: { to_email: to, subject, message, name: payload.name || 'MyCREBlueprint', email: to },
+      }),
+    })
+    if (!res.ok) throw new Error(`EmailJS ${res.status}`)
+    return true
+  }
+  return request('/send-email', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   })
+}
 
 // Save the logged-in user (best-effort; ignored when the backend is offline).
 export const saveUser = async (user) => {
