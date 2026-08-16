@@ -7711,46 +7711,15 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
     ))}
     {/* Deal rooms show as cards in the same grid, right alongside the packages */}
     {dealRooms.map((room) => (
-      <div key={`room-${room.id}`} className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md">
-        <div className="relative h-44 cursor-pointer overflow-hidden" onClick={() => onOpenRoom && onOpenRoom(room)} title="Open deal room">
-          {room.image ? (
-            <img src={room.image} alt={room.name} onError={(e) => (e.currentTarget.src = FALLBACK_IMG)} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" loading="lazy" />
-          ) : (
-            <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-b from-slate-100 to-slate-200">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-brand shadow-sm"><FolderLock className="h-6 w-6" /></div>
-            </div>
-          )}
-          <div className="absolute right-3 top-3">
-            <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${room.status === 'Active' || !room.status ? 'bg-emerald-500 text-white' : 'bg-slate-900/70 text-white backdrop-blur'}`}>{room.status || 'Active'}</span>
-          </div>
-        </div>
-        <div className="p-4">
-          <h3 className="cursor-pointer text-base font-bold text-slate-900 hover:text-brand" onClick={() => onOpenRoom && onOpenRoom(room)}>{room.name}</h3>
-          <p className="mt-1 flex items-start gap-1 text-sm text-slate-500">
-            <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            <span>{room.address || '—'}</span>
-          </p>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1 rounded-md bg-orange-50 px-2 py-0.5 text-xs font-medium text-orange-700 ring-1 ring-inset ring-orange-600/10"><FolderLock className="h-3 w-3" /> Deal Room</span>
-            {room.access && (
-              <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">{room.access}</span>
-            )}
-            <span className="ml-auto flex items-center gap-1 text-xs text-slate-400"><Clock className="h-3.5 w-3.5" />{room.ts ? timeAgo(room.ts) : (room.updated || 'just now')}</span>
-          </div>
-          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-100 pt-3">
-            <CardAction icon={Pencil} label="Edit" onClick={() => setEditRoom(room)} />
-            <CardAction icon={FileDown} label="PDF" onClick={() => downloadPdf(room, notify)} />
-            <CardAction icon={Send} label="Transfer" onClick={() => setTransferRoom(room)} />
-            <CardAction icon={Copy} label="Duplicate" onClick={() => onDuplicateRoom && onDuplicateRoom(room)} />
-            <CardAction icon={Share2} label="Share" onClick={() => shareItem(room, notify)} />
-            <CardAction icon={AtSign} label="Email" onClick={() => emailItem(room, notify)} />
-            <CardAction icon={Share} label="Social" onClick={() => socialShare(room, notify)} />
-            <span className="ml-auto">
-              <CardAction icon={Trash2} onClick={() => onDeleteRoom && onDeleteRoom(room)} danger />
-            </span>
-          </div>
-        </div>
-      </div>
+      <DealRoomActionCard
+        key={`room-${room.id}`}
+        room={room}
+        onOpen={onOpenRoom}
+        onEdit={setEditRoom}
+        onTransfer={setTransferRoom}
+        onDuplicate={onDuplicateRoom}
+        onDelete={onDeleteRoom}
+      />
     ))}
   </div>
 ) : (
@@ -7783,53 +7752,14 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
         )}
       </Modal>
 
-      {/* Transfer a deal room to a team member (same layout as the package transfer) */}
+      {/* Transfer a deal room to a team member (shared modal body) */}
       <Modal open={!!transferRoom} onClose={() => setTransferRoom(null)} title="Transfer Deal Room">
-        <p className="text-sm text-slate-500">
-          Move <span className="font-semibold text-slate-700">&quot;{transferRoom?.name || 'this deal room'}&quot;</span> to a team member.
-        </p>
-        <div className="mt-4 space-y-2">
-          {/* Transfer back to me */}
-          <button
-            onClick={() => { onTransferRoom && onTransferRoom(transferRoom.id, null); setTransferRoom(null); notify('Deal room kept in your account') }}
-            disabled={!transferRoom?.assignee}
-            className="flex w-full items-center gap-3 rounded-xl border border-slate-200 p-3 text-left transition hover:border-orange-300 hover:bg-orange-50/40 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-orange-600 text-sm font-bold text-white">
-              {user?.initials || 'ME'}
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm font-semibold text-slate-800">{user?.name || 'Me'} <span className="font-normal text-slate-400">(You)</span></span>
-              <span className="block truncate text-xs text-slate-400">{user?.email || 'Keep in your account'}</span>
-            </span>
-            {!transferRoom?.assignee && <Check className="h-4 w-4 text-emerald-500" />}
-          </button>
-
-          {TEAM_MEMBERS.map((m) => {
-            const isCurrent = transferRoom?.assignee === m.name
-            return (
-              <button
-                key={m.id}
-                onClick={() => { onTransferRoom && onTransferRoom(transferRoom.id, m.name); setTransferRoom(null); notify(`Deal room transferred to ${m.name}`) }}
-                disabled={isCurrent}
-                className="flex w-full items-center gap-3 rounded-xl border border-slate-200 p-3 text-left transition hover:border-orange-300 hover:bg-orange-50/40 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-500">
-                  {m.initials}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-semibold text-slate-800">{m.name}</span>
-                  <span className="block truncate text-xs text-slate-400">{m.email}</span>
-                </span>
-                {isCurrent ? (
-                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600"><Check className="h-4 w-4" /> Current</span>
-                ) : (
-                  <Send className="h-4 w-4 text-slate-300" />
-                )}
-              </button>
-            )
-          })}
-        </div>
+        <DealRoomTransferModal
+          room={transferRoom}
+          user={user}
+          onClose={() => setTransferRoom(null)}
+          onTransfer={(id, name) => { onTransferRoom && onTransferRoom(id, name); notify(name ? `Deal room transferred to ${name}` : 'Deal room kept in your account') }}
+        />
       </Modal>
 
       {builderOpen && builderCfg && (
@@ -10627,11 +10557,111 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
   )
 }
 
-function DealRoomsPage({ dealRooms, setDealRooms, onEditDocument, openTarget, onOpenHandled }) {
+// Shared deal-room card (used on both the Dashboard and the Deal Rooms page so they match).
+function DealRoomActionCard({ room, onOpen, onEdit, onTransfer, onDuplicate, onDelete }) {
+  const notify = useToast()
+  return (
+    <div className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md">
+      <div className="relative h-44 cursor-pointer overflow-hidden" onClick={() => onOpen && onOpen(room)} title="Open deal room">
+        {room.image ? (
+          <img src={room.image} alt={room.name} onError={(e) => (e.currentTarget.src = FALLBACK_IMG)} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" loading="lazy" />
+        ) : (
+          <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-b from-slate-100 to-slate-200">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-brand shadow-sm"><FolderLock className="h-6 w-6" /></div>
+          </div>
+        )}
+        <div className="absolute right-3 top-3">
+          <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${room.status === 'Active' || !room.status ? 'bg-emerald-500 text-white' : 'bg-slate-900/70 text-white backdrop-blur'}`}>{room.status || 'Active'}</span>
+        </div>
+      </div>
+      <div className="p-4">
+        <h3 className="cursor-pointer text-base font-bold text-slate-900 hover:text-brand" onClick={() => onOpen && onOpen(room)}>{room.name}</h3>
+        <p className="mt-1 flex items-start gap-1 text-sm text-slate-500">
+          <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <span>{room.address || '—'}</span>
+        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-1 rounded-md bg-orange-50 px-2 py-0.5 text-xs font-medium text-orange-700 ring-1 ring-inset ring-orange-600/10"><FolderLock className="h-3 w-3" /> Deal Room</span>
+          {room.access && (
+            <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">{room.access}</span>
+          )}
+          <span className="ml-auto flex items-center gap-1 text-xs text-slate-400"><Clock className="h-3.5 w-3.5" />{room.ts ? timeAgo(room.ts) : (room.updated || 'just now')}</span>
+        </div>
+        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-100 pt-3">
+          <CardAction icon={Pencil} label="Edit" onClick={() => onEdit && onEdit(room)} />
+          <CardAction icon={FileDown} label="PDF" onClick={() => downloadPdf(room, notify)} />
+          <CardAction icon={Send} label="Transfer" onClick={() => onTransfer && onTransfer(room)} />
+          <CardAction icon={Copy} label="Duplicate" onClick={() => onDuplicate && onDuplicate(room)} />
+          <CardAction icon={Share2} label="Share" onClick={() => shareItem(room, notify)} />
+          <CardAction icon={AtSign} label="Email" onClick={() => emailItem(room, notify)} />
+          <CardAction icon={Share} label="Social" onClick={() => socialShare(room, notify)} />
+          <span className="ml-auto">
+            <CardAction icon={Trash2} onClick={() => onDelete && onDelete(room)} danger />
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Transfer-to-team-member modal body, shared by the Dashboard and Deal Rooms page.
+function DealRoomTransferModal({ room, user, onClose, onTransfer }) {
+  if (!room) return null
+  return (
+    <>
+      <p className="text-sm text-slate-500">
+        Move <span className="font-semibold text-slate-700">&quot;{room.name || 'this deal room'}&quot;</span> to a team member.
+      </p>
+      <div className="mt-4 space-y-2">
+        <button
+          onClick={() => { onTransfer(room.id, null); onClose(); }}
+          disabled={!room.assignee}
+          className="flex w-full items-center gap-3 rounded-xl border border-slate-200 p-3 text-left transition hover:border-orange-300 hover:bg-orange-50/40 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-orange-600 text-sm font-bold text-white">{user?.initials || 'ME'}</span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold text-slate-800">{user?.name || 'Me'} <span className="font-normal text-slate-400">(You)</span></span>
+            <span className="block truncate text-xs text-slate-400">{user?.email || 'Keep in your account'}</span>
+          </span>
+          {!room.assignee && <Check className="h-4 w-4 text-emerald-500" />}
+        </button>
+        {TEAM_MEMBERS.map((m) => {
+          const isCurrent = room.assignee === m.name
+          return (
+            <button
+              key={m.id}
+              onClick={() => { onTransfer(room.id, m.name); onClose(); }}
+              disabled={isCurrent}
+              className="flex w-full items-center gap-3 rounded-xl border border-slate-200 p-3 text-left transition hover:border-orange-300 hover:bg-orange-50/40 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-500">{m.initials}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold text-slate-800">{m.name}</span>
+                <span className="block truncate text-xs text-slate-400">{m.email}</span>
+              </span>
+              {isCurrent ? (
+                <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600"><Check className="h-4 w-4" /> Current</span>
+              ) : (
+                <Send className="h-4 w-4 text-slate-300" />
+              )}
+            </button>
+          )
+        })}
+      </div>
+    </>
+  )
+}
+
+function DealRoomsPage({ dealRooms, setDealRooms, onEditDocument, openTarget, onOpenHandled, user }) {
   const notify = useToast()
   const [modalOpen, setModalOpen] = useState(false)
   const [confirm, setConfirm] = useState(null)
   const [openRoom, setOpenRoom] = useState(null)
+  const [editRoom, setEditRoom] = useState(null)
+  const [transferRoom, setTransferRoom] = useState(null)
+  const updateRoom = (id, data) => setDealRooms((list) => list.map((r) => (r.id === id ? { ...r, ...data, ts: Date.now(), updated: 'just now' } : r)))
+  const transferRoomTo = (id, name) => setDealRooms((list) => list.map((r) => (r.id === id ? { ...r, assignee: name, owner_name: name } : r)))
+  const duplicateRoom = (room) => setDealRooms((list) => [{ ...room, id: uid(), name: `${room.name} (Copy)`, ts: Date.now(), updated: 'just now' }, ...list])
 
   // Tick every 30s so the relative "time ago" on the cards updates on its own — no page refresh.
   const [, setTick] = useState(0)
@@ -10699,10 +10729,13 @@ function DealRoomsPage({ dealRooms, setDealRooms, onEditDocument, openTarget, on
       {dealRooms.length ? (
         <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {dealRooms.map((room, i) => (
-            <DealRoomCard
+            <DealRoomActionCard
               key={(room.id ?? 'room') + '-' + i}
               room={room}
               onOpen={() => setOpenRoom(room)}
+              onEdit={setEditRoom}
+              onTransfer={setTransferRoom}
+              onDuplicate={duplicateRoom}
               onDelete={() => setConfirm(room)}
             />
           ))}
@@ -10713,6 +10746,28 @@ function DealRoomsPage({ dealRooms, setDealRooms, onEditDocument, openTarget, on
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="New Deal Room">
         <DealRoomForm onSubmit={create} onCancel={() => setModalOpen(false)} />
+      </Modal>
+
+      {/* Edit a deal room */}
+      <Modal open={!!editRoom} onClose={() => setEditRoom(null)} title="Edit Deal Room">
+        {editRoom && (
+          <DealRoomForm
+            initial={{ name: editRoom.name || '', address: editRoom.address || '', status: DEAL_ROOM_STATUSES.includes(editRoom.status) ? editRoom.status : 'Active', access: editRoom.access || 'Free Access', image: editRoom.image || '' }}
+            submitLabel="Save changes"
+            onCancel={() => setEditRoom(null)}
+            onSubmit={(data) => { updateRoom(editRoom.id, data); setEditRoom(null); notify('Deal room updated') }}
+          />
+        )}
+      </Modal>
+
+      {/* Transfer a deal room */}
+      <Modal open={!!transferRoom} onClose={() => setTransferRoom(null)} title="Transfer Deal Room">
+        <DealRoomTransferModal
+          room={transferRoom}
+          user={user}
+          onClose={() => setTransferRoom(null)}
+          onTransfer={(id, name) => { transferRoomTo(id, name); notify(name ? `Deal room transferred to ${name}` : 'Deal room kept in your account') }}
+        />
       </Modal>
 
       <ConfirmDialog
@@ -14681,7 +14736,7 @@ export default function App() {
       case 'listings':
         return <ListingHubPage listings={listings} setListings={setListings} globalQuery={query} onCreateNew={startCreate} onResumeDraft={resumeDraft} onOpenDealRoom={openDealRoomFor} can={can} />
       case 'deals':
-        return <DealRoomsPage dealRooms={dealRooms} setDealRooms={setDealRooms} onEditDocument={resumeDraft} openTarget={dealRoomTarget} onOpenHandled={() => setDealRoomTarget(null)} />
+        return <DealRoomsPage dealRooms={dealRooms} setDealRooms={setDealRooms} onEditDocument={resumeDraft} openTarget={dealRoomTarget} onOpenHandled={() => setDealRoomTarget(null)} user={user} />
       case 'team':
         return <TeamPermissionsPage myUid={myUid} />
       case 'profile':
