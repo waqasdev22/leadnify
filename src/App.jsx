@@ -4428,8 +4428,8 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
   // ---- Review & Customize (final step) -------------------------------------
   // Build a real multi-page PDF (Cover, Executive Summary, Investment Highlights,
   // Map, Market Overview, Closing) — all pages in one file.
-  const genPdf = async () => {
-    notify('Generating PDF…')
+  const genPdf = async (returnDataUrl = false) => {
+    if (!returnDataUrl) notify('Generating PDF…')
     const doc = new jsPDF({ unit: 'pt', format: 'a4' })
     const W = 595.28, H = 841.89, M = 44
     const primary = rc.primary || brand || '#1e293b'
@@ -4505,6 +4505,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
     const disc = CONFIDENTIALITY_TEXT.join(' ').replace(/\[COMPANY_NAME\]/g, 'MyCREBlueprint')
     doc.text(doc.splitTextToSize(disc, W - 2 * M), M, 576)
 
+    if (returnDataUrl) return doc.output('datauristring')
     doc.save(`${docName} - ${config.docType || 'Document'}.pdf`)
     notify('PDF downloaded')
   }
@@ -4544,7 +4545,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
           <div className="flex items-center gap-2">
             <button onClick={() => notify('Template gallery coming soon')} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"><Repeat2 className="h-4 w-4" /> Swap Template</button>
             <button onClick={genPdf} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"><Download className="h-4 w-4" /> Download PDF</button>
-            <button onClick={() => { notify('Saved'); onSave(form, step, true) }} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"><LogOut className="h-4 w-4" /> Save &amp; Exit</button>
+            <button onClick={async () => { notify('Saving & generating the OM PDF…'); let pdf = ''; try { pdf = await genPdf(true) } catch { /* keep going without the PDF */ } onSave(form, step, true, pdf) }} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"><LogOut className="h-4 w-4" /> Save &amp; Exit</button>
           </div>
         </header>
 
@@ -7422,9 +7423,18 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
   // Create/update the package + listing from the Document Builder and close it.
   // `finished` = true when the last step was completed; otherwise it's saved as a Draft
   // that can be resumed from the Listing Hub at `step`.
-  const saveFromBuilder = (bf, step = 0, finished = false) => {
+  const saveFromBuilder = (bf, step = 0, finished = false, pdfDataUrl = '') => {
     const id = builderDraftId || uid()
     const title = (bf.name || '').trim() || 'Untitled Document'
+    // Save the finished OM PDF in the cloud under the listing id, so the public
+    // "Download Package" and the deal room's "Download Full OM" both serve it.
+    if (finished && pdfDataUrl) {
+      if (pdfDataUrl.length < 12_000_000) {
+        putPublicPackage(id, { name: `${title}.pdf`, url: pdfDataUrl }).catch(() => {})
+      } else {
+        notify('OM saved, but the PDF is too large (over ~9 MB) to attach for download', 'error')
+      }
+    }
     const address = [bf.street, bf.city, bf.state, bf.zip].filter(Boolean).join(', ') || '—'
     const total = BUILDER_SECTIONS.length
     const progress = finished ? 100 : Math.max(10, Math.round((step / total) * 100))
@@ -8583,6 +8593,7 @@ export function buildDealRoomHtml(room, agent) {
   const name = (room && room.name) || 'Listing'
   const addr = (room && room.address) || ''
   const img = (room && room.image) || FALLBACK_IMG
+  const listingId = (room && room.listingId) || ''
   const agentName = (agent && agent.name) || 'Listing Broker'
   const agentEmail = (agent && agent.email) || 'broker@crebuilder.com'
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"/>
@@ -8660,6 +8671,8 @@ footer b{color:#F97316}
 <footer>Powered by <b>MyCREBlueprint</b></footer>
 <script>
 var NAME=${JSON.stringify(name)},ADDR=${JSON.stringify(addr)};
+var LISTING_ID=${JSON.stringify(String(listingId || ''))};
+var RTDB='https://cre-dashboard-ba596-default-rtdb.firebaseio.com';
 var EJS=${JSON.stringify({ s: EMAILJS.SERVICE_ID, t: EMAILJS.TEMPLATE_ID, u: EMAILJS.PUBLIC_KEY })};
 var EJS_ON=EJS.s&&EJS.s!=='YOUR_SERVICE_ID'&&EJS.t&&EJS.t!=='YOUR_TEMPLATE_ID'&&EJS.u&&EJS.u!=='YOUR_PUBLIC_KEY';
 function sendCodeEmail(to,code){if(!EJS_ON)return Promise.resolve(false);return fetch('https://api.emailjs.com/api/v1.0/email/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({service_id:EJS.s,template_id:EJS.t,user_id:EJS.u,template_params:{to_email:to,email:to,name:'MyCREBlueprint',subject:'Your verification code — '+NAME,message:'Your 6-digit verification code is: '+code+'\\n\\nEnter this code to access the confidential documents for '+NAME+'.\\n\\nIf you did not request this, you can ignore this email.'}})}).then(function(r){return r.ok;}).catch(function(){return false;});}
@@ -8706,7 +8719,8 @@ function finishSign(){
    +'<h2>Access Granted</h2><div class="sub">Your NDA has been recorded with IP &amp; timestamp. The full Offering Memorandum is now unlocked.</div>'
    +'<button class="bigbtn" onclick="dl()" style="max-width:340px;margin:22px auto 0">&#8681; Download Full OM</button></div>');
 }
-function dl(){var t="OFFERING MEMORANDUM\\n\\n"+NAME+"\\n"+ADDR+"\\n\\nConfidential - provided under signed NDA.\\nGenerated by MyCREBlueprint (demo document).";var b=new Blob([t],{type:"text/plain;charset=utf-8"});var u=URL.createObjectURL(b);var a=document.createElement("a");a.href=u;a.download="OM - "+NAME+".txt";a.click();URL.revokeObjectURL(u);}
+function dlDemo(){var t="OFFERING MEMORANDUM\\n\\n"+NAME+"\\n"+ADDR+"\\n\\nConfidential - provided under signed NDA.\\nGenerated by MyCREBlueprint (demo document).";var b=new Blob([t],{type:"text/plain;charset=utf-8"});var u=URL.createObjectURL(b);var a=document.createElement("a");a.href=u;a.download="OM - "+NAME+".txt";a.click();URL.revokeObjectURL(u);}
+function dl(){if(!LISTING_ID){dlDemo();return;}fetch(RTDB+'/public/packages/'+LISTING_ID+'.json').then(function(r){return r.json();}).then(function(p){if(!p||!p.url){dlDemo();return;}var parts=String(p.url).split(',');var mime=(parts[0].match(/data:([^;]+)/)||[])[1]||'application/pdf';var bin=atob(parts[1]||'');var arr=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);var u=URL.createObjectURL(new Blob([arr],{type:mime}));var a=document.createElement('a');a.href=u;a.download=(p.name||('OM - '+NAME+'.pdf'));a.click();setTimeout(function(){URL.revokeObjectURL(u);},10000);}).catch(function(){dlDemo();});}
 </script></body></html>`
 }
 
@@ -10045,7 +10059,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
     try {
       localStorage.setItem(
         `crebuilder_room_${room.id}`,
-        JSON.stringify({ id: room.id, name: room.name, address: room.address, image: room.image }),
+        JSON.stringify({ id: room.id, name: room.name, address: room.address, image: room.image, listingId: room.listingId || '' }),
       )
     } catch {
       /* ignore */
