@@ -248,6 +248,9 @@ const readLS = (k, initial) => {
 // (browsers open blob: PDFs in a tab but block navigation to a large data: URL).
 const readFileAsDataUrl = (f) =>
   new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r.readAsDataURL(f) })
+// Public-package key derived from a property NAME, so a deal room's OM can feed the
+// microsite "Download Package" for the listing with the same name.
+const pkgNameKey = (name) => 'byname_' + String(name || '').toLowerCase().replace(/[^a-z0-9]/g, '')
 const dataUrlToBlobUrl = (dataUrl) => {
   const [meta, b64] = String(dataUrl).split(',')
   const mime = (meta.match(/data:([^;]+)/) || [])[1] || 'application/octet-stream'
@@ -8551,7 +8554,11 @@ return '<div class="dhero"><img src="'+esc(l.image)+'"/><div class="ov"></div><d
 function goContact(){var el=document.getElementById('sec-Contact');if(el)el.scrollIntoView({behavior:'smooth'});}
 var CUR=null;
 var RTDB='https://cre-dashboard-ba596-default-rtdb.firebaseio.com';
-function dlPkg(){if(!CUR||!CUR.pkgId){alert('The marketing package is not available for download yet.');return;}var w=window.open('','_blank');fetch(RTDB+'/public/packages/'+CUR.pkgId+'.json').then(function(r){return r.json();}).then(function(pkg){if(!pkg||!pkg.url){if(w)w.close();alert('The marketing package is not available for download yet.');return;}var parts=String(pkg.url).split(',');var mime=(parts[0].match(/data:([^;]+)/)||[])[1]||'application/pdf';var bin=atob(parts[1]||'');var arr=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);var url=URL.createObjectURL(new Blob([arr],{type:mime}));if(w)w.location.href=url;setTimeout(function(){URL.revokeObjectURL(url);},60000);}).catch(function(){if(w)w.close();alert('Could not download the package.');});}
+function openPkgBlob(w,pkg){var parts=String(pkg.url).split(',');var mime=(parts[0].match(/data:([^;]+)/)||[])[1]||'application/pdf';var bin=atob(parts[1]||'');var arr=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);var url=URL.createObjectURL(new Blob([arr],{type:mime}));if(w)w.location.href=url;setTimeout(function(){URL.revokeObjectURL(url);},60000);}
+function fetchPkg(key,cb){if(!key){cb(null);return;}fetch(RTDB+'/public/packages/'+key+'.json').then(function(r){return r.json();}).then(function(p){cb(p&&p.url?p:null);}).catch(function(){cb(null);});}
+function dlPkg(){if(!CUR){return;}var w=window.open('','_blank');
+  // 1) the listing's own uploaded package, then 2) a deal room OM with the same property name
+  fetchPkg(CUR.pkgId,function(p1){if(p1){openPkgBlob(w,p1);return;}fetchPkg(CUR.pkgNameKey,function(p2){if(p2){openPkgBlob(w,p2);return;}if(w)w.close();alert('The marketing package is not available for download yet.');});});}
 function submitInquiry(e){e.preventDefault();var f=e.target;var v={name:'',email:'',phone:'',msg:''};f.querySelectorAll('input,textarea').forEach(function(i){var p=(i.placeholder||'').toLowerCase();if(i.type==='email'||p.indexOf('email')>=0)v.email=i.value;else if(p.indexOf('phone')>=0)v.phone=i.value;else if(i.tagName==='TEXTAREA')v.msg=i.value;else if(p.indexOf('name')>=0)v.name=i.value;});var t=document.querySelector('.dhtitle');var lead={name:v.name,email:v.email,phone:v.phone,message:v.msg,property:t?t.textContent:'',source:'Listing Website',ts:Date.now()};if(OWNER_UID){fetch(RTDB+'/public/leads/'+OWNER_UID+'.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(lead)}).catch(function(){});}else{fetch(CAPTURE_API+'/lead-capture',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(lead)}).catch(function(){});}e.target.innerHTML='<div style="padding:18px;text-align:center;color:#fff;font-weight:600">Thank you! We\\'ll respond within one business day.</div>';return false;}
 function initDetailMap(l){if(dmap){dmap.remove();dmap=null;}dmap=L.map('dmap').setView([l.lat,l.lng],14);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap contributors'}).addTo(dmap);L.marker([l.lat,l.lng],{icon:pinIcon()}).addTo(dmap);setTimeout(function(){dmap.invalidateSize();},100);}
 function creUrl(id){var p=new URLSearchParams(location.search);if(id!=null&&id!=='')p.set('p',id);else p.delete('p');return location.pathname+'?'+p.toString();}
@@ -8727,9 +8734,11 @@ export const toMicrositeItems = (listings) =>
         lat,
         lng,
         // Marketing package (PDF) for the public "Download Package" button — fetched from
-        // /public/packages/<pkgId> via the RTDB REST API; empty when none is attached.
+        // /public/packages/<pkgId> via REST; falls back to a deal room OM with the same
+        // property name (pkgNameKey) so the OM you upload in the deal room shows here too.
         pkgId: l.pkgName ? l.id : '',
         pkgName: l.pkgName || '',
+        pkgNameKey: pkgNameKey(l.name),
       }
     })
 
@@ -10133,9 +10142,12 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
         const url = await readFileAsDataUrl(f) // store the actual PDF in the cloud (syncs everywhere)
         const om = { name: f.name, size: fileSize(f), date: new Date().toLocaleDateString('en-GB'), url }
         await putFile(`om_${room.id}`, om)
+        // Also expose it publicly by property name so the microsite "Download Package"
+        // button for the listing with the same name serves this OM automatically.
+        putPublicPackage(pkgNameKey(room.name), { name: f.name, url }).catch(() => {})
         setUploadPct(100); setTimeout(() => setUploadPct(null), 400)
         setOmFlyer(om)
-        notify('OM / Flyer uploaded')
+        notify('OM / Flyer uploaded — it will show on the listing’s Download Package too')
       })().catch(() => { setUploadPct(null); notify('Upload failed — please try again', 'error') })
     }
     sniff.onerror = () => notify('Could not read the file — please try again', 'error')
@@ -10241,7 +10253,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
                 <IconButton icon={Eye} label="Open / preview" onClick={() => openOm(omFlyer)} />
                 <IconButton icon={Download} label="Download" onClick={() => downloadFile(omFlyer)} />
                 <IconButton icon={Upload} label="Replace" onClick={() => omRef.current && omRef.current.click()} />
-                <IconButton icon={Trash2} label="Remove" tone="danger" onClick={() => { delFile(`om_${room.id}`); setOmFlyer(null); notify('OM / Flyer removed', 'error') }} />
+                <IconButton icon={Trash2} label="Remove" tone="danger" onClick={() => { delFile(`om_${room.id}`); delPublicPackage(pkgNameKey(room.name)); setOmFlyer(null); notify('OM / Flyer removed', 'error') }} />
               </div>
             ) : (
               <button onClick={() => omRef.current && omRef.current.click()} className="mt-3 flex w-full flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-slate-200 py-6 text-center transition hover:border-orange-300 hover:bg-orange-50/30">
