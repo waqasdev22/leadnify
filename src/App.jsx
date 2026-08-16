@@ -9,7 +9,7 @@ import React, {
 import { jsPDF } from 'jspdf'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { getCol, putCol, saveUser, sendEmail, setApiNamespace } from './api'
+import { getCol, putCol, saveUser, sendEmail, setApiNamespace, getFile, putFile, delFile, MAX_CLOUD_FILE } from './api'
 import { auth, googleProvider, db, createMemberAccount, uploadToStorage } from './firebase'
 import { ref as dbRef, get as dbGet, set as dbSet, update as dbUpdate, remove as dbRemove, onValue } from 'firebase/database'
 import { PERMISSION_GROUPS, ROLE_PRESETS, ROLES, ROLE_INFO, resolvePerms, decodeOverrides, encodeOverrides } from './permissions'
@@ -9938,8 +9938,9 @@ function DocumentHubView({ room, onBack, notify, onEditDocument }) {
 
 function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
   const [hubOpen, setHubOpen] = useState(false)
-  // Persisted per room (and per user) so uploads survive a page reload.
-  const [files, setFiles] = usePersistentState(`room_${room.id}_files`, DEFAULT_ROOM_FILES)
+  // OM/Flyer + confidential files are stored in the cloud (per account) so they sync
+  // across devices — loaded on open, saved on every change.
+  const [files, setFiles] = useState([])
   const [prospects, setProspects] = useState(DEFAULT_ROOM_PROSPECTS)
   const [access, setAccess] = useState(room.access || 'Free Access')
   const [status, setStatus] = useState(room.status === 'Archived' ? 'Archived (visitors blocked)' : 'Active')
@@ -9949,7 +9950,14 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
   const [watermark, setWatermark] = useState(true)
   const [wmStyle, setWmStyle] = useState('Standard')
   const [nda, setNda] = useState({ name: 'NDA Agreement.pdf' })
-  const [omFlyer, setOmFlyer] = usePersistentState(`room_${room.id}_om`, null) // single OM/Flyer shown above the gate (persisted)
+  const [omFlyer, setOmFlyer] = useState(null) // single OM/Flyer shown above the gate (cloud-synced)
+  // Load this room's OM + confidential files from the cloud whenever the room opens.
+  useEffect(() => {
+    let alive = true
+    getFile(`om_${room.id}`).then((o) => { if (alive) setOmFlyer(o || null) }).catch(() => {})
+    getFile(`roomfiles_${room.id}`).then((v) => { if (alive) setFiles(Array.isArray(v?.list) ? v.list : []) }).catch(() => {})
+    return () => { alive = false }
+  }, [room.id])
   const [uploadPct, setUploadPct] = useState(null) // 4.3 — upload progress (null = idle)
   const fileRef = useRef(null)
   const omRef = useRef(null)
@@ -10007,20 +10015,17 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
     }
   }, [room])
 
-  const downloadFile = async (f) => {
-    // If we have the real uploaded file (stored in IndexedDB), download that.
-    if (f?.key) {
-      const blob = await idbGet(f.key)
-      if (blob) {
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = f.name || 'document'
-        a.click()
-        setTimeout(() => URL.revokeObjectURL(url), 10000)
-        notify('File downloaded')
-        return
-      }
+  const downloadFile = (f) => {
+    // If we have the real uploaded file (cloud data URL), download that.
+    if (f?.url) {
+      const objUrl = dataUrlToBlobUrl(f.url)
+      const a = document.createElement('a')
+      a.href = objUrl
+      a.download = f.name || 'document'
+      a.click()
+      setTimeout(() => URL.revokeObjectURL(objUrl), 10000)
+      notify('File downloaded')
+      return
     }
     const content = `OFFERING MEMORANDUM\n\n${room.name}\n${room.address || ''}\n\nFile: ${f.name}\nConfidential - MyCREBlueprint demo document.`
     const url = window.URL.createObjectURL(new Blob(['﻿' + content], { type: 'text/plain;charset=utf-8' }))
@@ -10068,16 +10073,30 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
   }
 
   const fileSize = (f) => { const mb = f.size / (1024 * 1024); return mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.max(1, Math.round(f.size / 1024))} KB` }
+  const readDataUrl = (f) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r.readAsDataURL(f) })
+  // Turn a stored data URL into a short-lived blob URL — browsers open blob: PDFs in a
+  // tab, but block top-level navigation to a big data: URL.
+  const dataUrlToBlobUrl = (dataUrl) => {
+    const [meta, b64] = String(dataUrl).split(',')
+    const mime = (meta.match(/data:([^;]+)/) || [])[1] || 'application/octet-stream'
+    const bin = atob(b64 || '')
+    const arr = new Uint8Array(bin.length)
+    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i)
+    return URL.createObjectURL(new Blob([arr], { type: mime }))
+  }
   const onUpload = (e) => {
     const f = e.target.files && e.target.files[0]
     if (!f) return
     e.target.value = ''
+    if (f.size > MAX_CLOUD_FILE) { notify('This file is too large to sync across devices (max 9 MB)', 'error'); return }
     setUploadPct(20)
     ;(async () => {
-      const key = `file_${room.id}_${uid()}`
-      await idbPut(key, f) // keep the actual file (IndexedDB — no network, no size cap)
+      const url = await readDataUrl(f) // store in the cloud so it syncs to all devices
+      const item = { name: f.name, size: fileSize(f), date: new Date().toLocaleDateString('en-GB'), url }
+      const next = [item, ...files]
+      await putFile(`roomfiles_${room.id}`, { list: next })
       setUploadPct(100); setTimeout(() => setUploadPct(null), 400)
-      setFiles((list) => [{ name: f.name, size: fileSize(f), date: new Date().toLocaleDateString('en-GB'), key }, ...list])
+      setFiles(next)
       notify('File uploaded')
     })().catch(() => { setUploadPct(null); notify('Upload failed — please try again', 'error') })
   }
@@ -10092,12 +10111,14 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
     sniff.onload = () => {
       const header = String.fromCharCode(...new Uint8Array(sniff.result))
       if (header !== '%PDF-') { notify('That file is not a PDF — only PDF files can be uploaded here', 'error'); return }
+      if (f.size > MAX_CLOUD_FILE) { notify('This PDF is too large to sync across devices (max 9 MB)', 'error'); return }
       setUploadPct(20)
       ;(async () => {
-        const key = `om_${room.id}`
-        await idbPut(key, f) // keep the actual PDF so it can be opened/previewed
+        const url = await readDataUrl(f) // store the actual PDF in the cloud (syncs everywhere)
+        const om = { name: f.name, size: fileSize(f), date: new Date().toLocaleDateString('en-GB'), url }
+        await putFile(`om_${room.id}`, om)
         setUploadPct(100); setTimeout(() => setUploadPct(null), 400)
-        setOmFlyer({ name: f.name, size: fileSize(f), date: new Date().toLocaleDateString('en-GB'), key })
+        setOmFlyer(om)
         notify('OM / Flyer uploaded')
       })().catch(() => { setUploadPct(null); notify('Upload failed — please try again', 'error') })
     }
@@ -10105,18 +10126,16 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
     sniff.readAsArrayBuffer(f.slice(0, 5))
   }
   // Open the real uploaded file in a popup/new tab. The window is opened synchronously
-  // (to keep the click gesture, so pop-up blockers allow it), then pointed at the blob.
+  // (to keep the click gesture, so pop-up blockers allow it), then pointed at a blob URL.
   const openOm = (f) => {
-    if (!f?.key) { downloadFile(f); return }
+    if (!f?.url) { downloadFile(f); return }
     const w = window.open('', '_blank') // open now (within the click) so pop-up blockers allow it
-    ;(async () => {
-      const blob = await idbGet(f.key)
-      if (!blob) { if (w) w.close(); notify('File not found — please re-upload', 'error'); return }
-      const url = URL.createObjectURL(blob)
-      if (w) { w.location.href = url; notify('Opening OM / Flyer') }
+    try {
+      const objUrl = dataUrlToBlobUrl(f.url)
+      if (w) { w.location.href = objUrl; notify('Opening OM / Flyer') }
       else notify('Please allow pop-ups to preview', 'error')
-      setTimeout(() => URL.revokeObjectURL(url), 60000)
-    })().catch(() => { if (w) w.close(); notify('Could not open the file', 'error') })
+      setTimeout(() => URL.revokeObjectURL(objUrl), 60000)
+    } catch { if (w) w.close(); notify('Could not open the file', 'error') }
   }
   const copy = async (text, msg) => {
     const ok = await copyToClipboard(text)
@@ -10206,7 +10225,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
                 <IconButton icon={Eye} label="Open / preview" onClick={() => openOm(omFlyer)} />
                 <IconButton icon={Download} label="Download" onClick={() => downloadFile(omFlyer)} />
                 <IconButton icon={Upload} label="Replace" onClick={() => omRef.current && omRef.current.click()} />
-                <IconButton icon={Trash2} label="Remove" tone="danger" onClick={() => { if (omFlyer?.key) idbDel(omFlyer.key); setOmFlyer(null); notify('OM / Flyer removed', 'error') }} />
+                <IconButton icon={Trash2} label="Remove" tone="danger" onClick={() => { delFile(`om_${room.id}`); setOmFlyer(null); notify('OM / Flyer removed', 'error') }} />
               </div>
             ) : (
               <button onClick={() => omRef.current && omRef.current.click()} className="mt-3 flex w-full flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-slate-200 py-6 text-center transition hover:border-orange-300 hover:bg-orange-50/30">
@@ -10251,7 +10270,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
                   </button>
                   {f.url && <IconButton icon={Eye} label="Open / preview" onClick={() => openOm(f)} />}
                   <IconButton icon={Download} label="Download" onClick={() => downloadFile(f)} />
-                  <IconButton icon={Trash2} label="Delete" tone="danger" onClick={() => { if (f?.key) idbDel(f.key); setFiles((l) => l.filter((_, j) => j !== i)); notify('File deleted', 'error') }} />
+                  <IconButton icon={Trash2} label="Delete" tone="danger" onClick={() => { const next = files.filter((_, j) => j !== i); putFile(`roomfiles_${room.id}`, { list: next }); setFiles(next); notify('File deleted', 'error') }} />
                 </div>
               ))}
               {!files.length && <p className="py-6 text-center text-sm text-slate-400">No files yet — upload the OM and supporting docs.</p>}

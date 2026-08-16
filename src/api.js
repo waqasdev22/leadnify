@@ -101,6 +101,32 @@ export const putCol = async (col, arr) => {
   return arr
 }
 
+// ---- Cloud file store (per user, cross-device) ------------------------------
+// Small/medium files (OM/Flyer, confidential docs) are stored as a data URL under
+// /data/<uid>/files/<key> so the SAME account can open them on any device. Large
+// files stay device-local (IndexedDB) — see MAX_CLOUD_FILE.
+export const MAX_CLOUD_FILE = 9 * 1024 * 1024 // 9 MB original file (~12 MB base64)
+export const getFile = async (key) => {
+  const uid = currentUid()
+  if (!uid) return null
+  try {
+    const snap = await dbGet(dbRef(db, `data/${uid}/files/${key}`))
+    return snap.val() || null
+  } catch {
+    return null
+  }
+}
+export const putFile = async (key, obj) => {
+  const uid = currentUid()
+  if (!uid) throw new Error('not signed in')
+  await dbSet(dbRef(db, `data/${uid}/files/${key}`), clean(obj))
+}
+export const delFile = async (key) => {
+  const uid = currentUid()
+  if (!uid) return
+  try { await dbSet(dbRef(db, `data/${uid}/files/${key}`), null) } catch { /* ignore */ }
+}
+
 // Send a real email through the backend (SMTP). Throws if the backend rejects it.
 export const sendEmail = (payload) =>
   request('/send-email', {
