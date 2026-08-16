@@ -29,33 +29,40 @@ if (params.get('code') !== null && params.get('state') !== null && window.opener
   document.body.textContent = 'Connected — you can close this window.'
   window.close()
 } else if (params.get('hub') !== null) {
-  let saved = null
-  try {
-    saved = JSON.parse(localStorage.getItem('crebuilder_hub') || 'null')
-  } catch {
-    saved = null
+  const slug = params.get('hub') || 'vaziamts'
+  const RTDB = 'https://cre-dashboard-ba596-default-rtdb.firebaseio.com'
+  const renderHub = (saved) => {
+    const items =
+      saved && Array.isArray(saved.items) && saved.items.length
+        ? saved.items
+        : toMicrositeItems(INITIAL_LISTINGS)
+    // Explicit URL params (?t= theme, ?c= colour) win; else the owner's saved choice, then default.
+    const template = params.get('t') || (saved && saved.template) || 'Modern'
+    const primary =
+      (params.get('c') ? '#' + params.get('c') : null) ||
+      (saved && saved.primary) ||
+      '#F97316'
+    const defaultView = params.get('v') || (saved && saved.defaultView) || 'mapgrid'
+    let savedUid = ''
+    try { savedUid = localStorage.getItem('crebuilder_owner_uid') || '' } catch { savedUid = '' }
+    const ownerUid = (saved && saved.ownerUid) || savedUid || ''
+    document.open()
+    document.write(buildMicrositeHtml(items, primary, template, defaultView, ownerUid))
+    document.close()
   }
-  const items =
-    saved && Array.isArray(saved.items) && saved.items.length
-      ? saved.items
-      : toMicrositeItems(INITIAL_LISTINGS)
-  // Explicit URL params (?t= theme, ?c= colour) win — they carry the theme into
-  // embeds/shared links where localStorage isn't available; otherwise fall back
-  // to the owner's saved selection, then the default.
-  const template = params.get('t') || (saved && saved.template) || 'Modern'
-  const primary =
-    (params.get('c') ? '#' + params.get('c') : null) ||
-    (saved && saved.primary) ||
-    '#F97316'
-  // ?v= view wins (for embeds); else the owner's saved Default View, then the default.
-  const defaultView = params.get('v') || (saved && saved.defaultView) || 'mapgrid'
-
-  let savedUid = ''
-  try { savedUid = localStorage.getItem('crebuilder_owner_uid') || '' } catch { savedUid = '' }
-  const ownerUid = (saved && saved.ownerUid) || savedUid || ''
-  document.open()
-  document.write(buildMicrositeHtml(items, primary, template, defaultView, ownerUid))
-  document.close()
+  const fromLocal = () => {
+    let saved = null
+    try { saved = JSON.parse(localStorage.getItem('crebuilder_hub') || 'null') } catch { saved = null }
+    renderHub(saved)
+  }
+  // Prefer the cloud copy so the link works on ANY device/browser; fall back to local.
+  fetch(RTDB + '/public/hub/' + encodeURIComponent(slug) + '.json')
+    .then((r) => r.json())
+    .then((cloud) => {
+      if (cloud && Array.isArray(cloud.items) && cloud.items.length) renderHub(cloud)
+      else fromLocal()
+    })
+    .catch(fromLocal)
 } else if (params.get('room') !== null) {
   const id = params.get('room')
   let room = null

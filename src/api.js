@@ -143,6 +143,13 @@ export const delPublicPackage = async (id) => {
   try { await dbSet(dbRef(db, `public/packages/${id}`), null) } catch { /* ignore */ }
 }
 
+// Publish the public microsite data (listings + brand) so the ?hub=<slug> link works on
+// ANY device/browser, not just the one that saved it. The microsite fetches it via REST.
+export const putPublicHub = async (slug, data) => {
+  if (!slug) return
+  try { await dbSet(dbRef(db, `public/hub/${slug}`), clean(data)) } catch { /* ignore */ }
+}
+
 // ---- Auto-captured leads (from the public microsite "Request Information" form) ----
 // Visitors POST leads to /public/leads/<ownerUid>; the owner drains them into My Leads.
 export const drainPublicLeads = async () => {

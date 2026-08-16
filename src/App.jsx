@@ -9,7 +9,7 @@ import React, {
 import { jsPDF } from 'jspdf'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { getCol, putCol, saveUser, sendEmail, setApiNamespace, getFile, putFile, delFile, MAX_CLOUD_FILE, putPublicPackage, getPublicPackage, delPublicPackage, drainPublicLeads } from './api'
+import { getCol, putCol, saveUser, sendEmail, setApiNamespace, getFile, putFile, delFile, MAX_CLOUD_FILE, putPublicPackage, getPublicPackage, delPublicPackage, drainPublicLeads, putPublicHub } from './api'
 import { EMAILJS } from './emailConfig'
 import { auth, googleProvider, db, createMemberAccount } from './firebase'
 import { ref as dbRef, get as dbGet, set as dbSet, update as dbUpdate, remove as dbRemove, onValue } from 'firebase/database'
@@ -8870,14 +8870,15 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
   // new tab) shows exactly what Preview shows.
   useEffect(() => {
     try {
-      localStorage.setItem(
-        'crebuilder_hub',
-        JSON.stringify({ items: toMicrositeItems(rows), primary, template: micrositeTpl, defaultView, ownerUid: (auth.currentUser && auth.currentUser.uid) || '' }),
-      )
+      const hubData = { items: toMicrositeItems(rows), primary, template: micrositeTpl, defaultView, ownerUid: (auth.currentUser && auth.currentUser.uid) || '' }
+      localStorage.setItem('crebuilder_hub', JSON.stringify(hubData))
+      // Publish to the cloud so the public ?hub=<slug> link works on any device/browser.
+      putPublicHub(slug, hubData).catch(() => {})
     } catch {
       /* ignore storage errors */
     }
-  }, [listings, primary, micrositeTpl, defaultView])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listings, primary, micrositeTpl, defaultView, slug])
 
   const listedCount = rows.filter((l) => l.listed).length
   const unlistedCount = rows.length - listedCount

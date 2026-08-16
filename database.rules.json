@@ -24,6 +24,12 @@
           ".read": "auth != null && auth.uid === $uid",
           ".write": true
         }
+      },
+      "hub": {
+        "$slug": {
+          ".read": true,
+          ".write": "auth != null"
+        }
       }
     }
   }
