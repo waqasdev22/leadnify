@@ -4,9 +4,23 @@
 // - If no backend is reachable (e.g. the static Firebase site with no hosted API),
 //   everything falls back to localStorage so create/edit/delete still persist
 //   across reloads in that browser.
-import { auth } from './firebase'
+import { auth, db } from './firebase'
+import { ref as dbRef, get as dbGet, set as dbSet } from 'firebase/database'
 
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
+
+// ---- Firebase Realtime Database (cloud sync, per user) ----------------------
+// Primary store: each signed-in user's data lives under /data/<uid>/<col> in the
+// cloud, so the SAME account sees the SAME data on every device (PC, phone, ...).
+// localStorage stays as an offline cache. Firebase is already wired (Auth + Hosting).
+const currentUid = () => {
+  try { return auth.currentUser ? auth.currentUser.uid : '' } catch { return '' }
+}
+const dataPath = (uid, col) => `data/${uid}/${col}`
+// RTDB rejects `undefined` values — strip them (and normalise) via a JSON round-trip.
+const clean = (arr) => JSON.parse(JSON.stringify(arr ?? []))
+// RTDB returns a contiguous array as an array, but a sparse/keyed one as an object.
+const toArray = (val) => (val == null ? null : Array.isArray(val) ? val.filter((x) => x != null) : Object.values(val))
 
 // Attach the signed-in user's Firebase ID token so the backend can verify each request.
 // Waits for Firebase to restore the session first (so the very first load is authenticated).
@@ -49,36 +63,42 @@ async function request(path, options = {}) {
   return res.json()
 }
 
-// GET all documents in a collection ('packages' | 'listings' | 'dealrooms').
-// Prefers the backend; falls back to the local cache when the backend is offline.
+// GET all documents in a collection ('packages' | 'listings' | 'dealrooms' | ...).
+// Reads the signed-in user's cloud data (Firebase RTDB) so it's the same on every
+// device; falls back to the local cache when signed out or offline.
 export const getCol = async (col) => {
-  try {
-    const data = await request(`/${col}`)
-    if (Array.isArray(data) && data.length) {
-      lsSet(col, data)
-      return data
+  const uid = currentUid()
+  if (uid) {
+    try {
+      const snap = await dbGet(dbRef(db, dataPath(uid, col)))
+      const arr = toArray(snap.val())
+      if (arr != null) {
+        lsSet(col, arr) // refresh the offline cache
+        return arr
+      }
+      // No cloud data yet for this account — use the local cache if any (first sync).
+      return lsGet(col)
+    } catch {
+      return lsGet(col) // cloud unreachable — serve the local cache
     }
-    // Backend reachable but empty — use local cache if we have richer data.
-    return lsGet(col) || data
-  } catch {
-    // Backend unreachable — serve whatever is cached locally.
-    return lsGet(col)
   }
+  return lsGet(col)
 }
 
 // Replace the whole collection with `arr` (persists create/edit/delete/toggle).
-// Always writes to localStorage first so data survives even with no backend.
+// Writes to the local cache first (instant, offline-safe), then to the cloud so the
+// same account sees it on other devices.
 export const putCol = async (col, arr) => {
   lsSet(col, arr)
-  try {
-    return await request(`/${col}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(arr),
-    })
-  } catch {
-    return arr // offline — the local save above already succeeded
+  const uid = currentUid()
+  if (uid) {
+    try {
+      await dbSet(dbRef(db, dataPath(uid, col)), clean(arr))
+    } catch {
+      /* offline / rules — the local save above already succeeded */
+    }
   }
+  return arr
 }
 
 // Send a real email through the backend (SMTP). Throws if the backend rejects it.
