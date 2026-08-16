@@ -7726,9 +7726,8 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
                   {room.image ? (
                     <img src={room.image} alt={room.name} onError={(e) => (e.currentTarget.src = FALLBACK_IMG)} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" loading="lazy" />
                   ) : (
-                    <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-b from-slate-100 to-slate-200 px-4 text-center">
+                    <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-b from-slate-100 to-slate-200">
                       <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-brand shadow-sm"><FolderLock className="h-6 w-6" /></div>
-                      <span className="line-clamp-2 text-sm font-bold text-slate-700">{room.name || 'Untitled Deal Room'}</span>
                     </div>
                   )}
                   <div className="absolute right-3 top-3">
