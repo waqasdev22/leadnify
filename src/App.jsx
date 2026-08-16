@@ -8377,7 +8377,7 @@ body{font-family:${bodyFont};background:#f8fafc;color:#0f172a}
 input,select{border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;font-size:14px;outline:none;color:#334155}
 .spacer{margin-left:auto;display:flex;align-items:center;gap:12px}
 .result{font-size:14px;color:#94a3b8}.result b{color:#334155}
-.content{padding:24px;display:grid;gap:24px;max-width:1200px;margin:0 auto;width:100%}
+.content{padding:24px;display:grid;gap:24px;max-width:1600px;margin:0 auto;width:100%}
 .content.mapgrid{grid-template-columns:1fr 1fr}
 .content.map{grid-template-columns:1fr}
 .content.grid #map,.content.list #map,.content.card #map{display:none}
