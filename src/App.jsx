@@ -7742,7 +7742,6 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
             <CardAction icon={FileDown} label="PDF" onClick={() => downloadPdf(room, notify)} />
             <CardAction icon={Send} label="Transfer" onClick={() => setTransferRoom(room)} />
             <CardAction icon={Copy} label="Duplicate" onClick={() => onDuplicateRoom && onDuplicateRoom(room)} />
-            <CardAction icon={Repeat2} label="Convert" onClick={() => { const opts = DEAL_ROOM_ACCESS; const cur = String(room.access || '').trim().toLowerCase(); let i = opts.findIndex((o) => o.trim().toLowerCase() === cur); if (i === -1) i = 0; const next = opts[(i + 1) % opts.length]; onUpdateRoom && onUpdateRoom(room.id, { access: next }); notify(`Access changed to ${next}`) }} />
             <CardAction icon={Share2} label="Share" onClick={() => shareItem(room, notify)} />
             <CardAction icon={AtSign} label="Email" onClick={() => emailItem(room, notify)} />
             <CardAction icon={Share} label="Social" onClick={() => socialShare(room, notify)} />
