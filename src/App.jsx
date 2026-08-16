@@ -9199,7 +9199,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                           >
                             {l.name}
                           </button>
-                          {l._draft && (
+                          {l.status === 'Draft' && (
                             <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">
                               Draft
                             </span>
