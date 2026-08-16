@@ -13,11 +13,16 @@
       }
     },
     "public": {
-      ".read": true,
-      ".write": false,
       "packages": {
+        ".read": true,
         "$id": {
           ".write": "auth != null"
+        }
+      },
+      "leads": {
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid",
+          ".write": true
         }
       }
     }

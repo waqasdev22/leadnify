@@ -9,7 +9,7 @@ import React, {
 import { jsPDF } from 'jspdf'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { getCol, putCol, saveUser, sendEmail, setApiNamespace, getFile, putFile, delFile, MAX_CLOUD_FILE, putPublicPackage, getPublicPackage, delPublicPackage } from './api'
+import { getCol, putCol, saveUser, sendEmail, setApiNamespace, getFile, putFile, delFile, MAX_CLOUD_FILE, putPublicPackage, getPublicPackage, delPublicPackage, drainPublicLeads } from './api'
 import { auth, googleProvider, db, createMemberAccount } from './firebase'
 import { ref as dbRef, get as dbGet, set as dbSet, update as dbUpdate, remove as dbRemove, onValue } from 'firebase/database'
 import { PERMISSION_GROUPS, ROLE_PRESETS, ROLES, ROLE_INFO, resolvePerms, decodeOverrides, encodeOverrides } from './permissions'
@@ -8335,7 +8335,7 @@ function MicrositePreview({ open, onClose, listings, primary }) {
 
 // Builds a fully self-contained microsite HTML page (Leaflet via CDN, data baked
 // in) so "Preview" can open the live listings site in a brand-new browser tab.
-export function buildMicrositeHtml(items, brandColor, template = 'Modern', defaultView = 'mapgrid') {
+export function buildMicrositeHtml(items, brandColor, template = 'Modern', defaultView = 'mapgrid', ownerUid = '') {
   // Which view the microsite opens in (from the owner's "Default View" setting).
   const VIEW = ['map', 'mapgrid', 'grid', 'card', 'list'].includes(defaultView) ? defaultView : 'mapgrid'
   // Each microsite theme drives the accent colour + heading font. Because every
@@ -8503,6 +8503,7 @@ body.detail-open .detail{display:block}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 var CAPTURE_API=${JSON.stringify(import.meta.env.VITE_API_URL || 'http://localhost:4000/api')};
+var OWNER_UID=${JSON.stringify(ownerUid || '')};
 var DATA=${JSON.stringify(items)};
 var PRIMARY=${JSON.stringify(primary)};
 var state={view:'${VIEW}',filter:'All',search:'',sort:'Newest'};
@@ -8547,7 +8548,7 @@ function goContact(){var el=document.getElementById('sec-Contact');if(el)el.scro
 var CUR=null;
 var RTDB='https://cre-dashboard-ba596-default-rtdb.firebaseio.com';
 function dlPkg(){if(!CUR||!CUR.pkgId){alert('The marketing package is not available for download yet.');return;}var w=window.open('','_blank');fetch(RTDB+'/public/packages/'+CUR.pkgId+'.json').then(function(r){return r.json();}).then(function(pkg){if(!pkg||!pkg.url){if(w)w.close();alert('The marketing package is not available for download yet.');return;}var parts=String(pkg.url).split(',');var mime=(parts[0].match(/data:([^;]+)/)||[])[1]||'application/pdf';var bin=atob(parts[1]||'');var arr=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);var url=URL.createObjectURL(new Blob([arr],{type:mime}));if(w)w.location.href=url;setTimeout(function(){URL.revokeObjectURL(url);},60000);}).catch(function(){if(w)w.close();alert('Could not download the package.');});}
-function submitInquiry(e){e.preventDefault();var f=e.target;var v={name:'',email:'',phone:'',msg:''};f.querySelectorAll('input,textarea').forEach(function(i){var p=(i.placeholder||'').toLowerCase();if(i.type==='email'||p.indexOf('email')>=0)v.email=i.value;else if(p.indexOf('phone')>=0)v.phone=i.value;else if(i.tagName==='TEXTAREA')v.msg=i.value;else if(p.indexOf('name')>=0)v.name=i.value;});var t=document.querySelector('.dhtitle');fetch(CAPTURE_API+'/lead-capture',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:v.name,email:v.email,phone:v.phone,property:t?t.textContent:'',source:'Listing Website'})}).catch(function(){});e.target.innerHTML='<div style="padding:18px;text-align:center;color:#fff;font-weight:600">Thank you! We\\'ll respond within one business day.</div>';return false;}
+function submitInquiry(e){e.preventDefault();var f=e.target;var v={name:'',email:'',phone:'',msg:''};f.querySelectorAll('input,textarea').forEach(function(i){var p=(i.placeholder||'').toLowerCase();if(i.type==='email'||p.indexOf('email')>=0)v.email=i.value;else if(p.indexOf('phone')>=0)v.phone=i.value;else if(i.tagName==='TEXTAREA')v.msg=i.value;else if(p.indexOf('name')>=0)v.name=i.value;});var t=document.querySelector('.dhtitle');var lead={name:v.name,email:v.email,phone:v.phone,message:v.msg,property:t?t.textContent:'',source:'Listing Website',ts:Date.now()};if(OWNER_UID){fetch(RTDB+'/public/leads/'+OWNER_UID+'.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(lead)}).catch(function(){});}else{fetch(CAPTURE_API+'/lead-capture',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(lead)}).catch(function(){});}e.target.innerHTML='<div style="padding:18px;text-align:center;color:#fff;font-weight:600">Thank you! We\\'ll respond within one business day.</div>';return false;}
 function initDetailMap(l){if(dmap){dmap.remove();dmap=null;}dmap=L.map('dmap').setView([l.lat,l.lng],14);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap contributors'}).addTo(dmap);L.marker([l.lat,l.lng],{icon:pinIcon()}).addTo(dmap);setTimeout(function(){dmap.invalidateSize();},100);}
 function creUrl(id){var p=new URLSearchParams(location.search);if(id!=null&&id!=='')p.set('p',id);else p.delete('p');return location.pathname+'?'+p.toString();}
 function openDetail(id,skipUrl){var l=null,i;for(i=0;i<DATA.length;i++){if(DATA[i].id==id){l=DATA[i];break;}}if(!l)return;CUR=l;document.getElementById('detailView').innerHTML=detailHtml(l);document.body.classList.add('detail-open');window.scrollTo(0,0);renderDemo(1);initDetailMap(l);creNav(l.id);creHeight();if(!skipUrl){try{history.pushState({p:l.id},'',creUrl(l.id));}catch(e){}}}
@@ -8802,7 +8803,7 @@ function ListingHubPage({ listings, setListings, globalQuery, onCreateNew, onRes
     try {
       localStorage.setItem(
         'crebuilder_hub',
-        JSON.stringify({ items: toMicrositeItems(rows), primary, template: micrositeTpl, defaultView }),
+        JSON.stringify({ items: toMicrositeItems(rows), primary, template: micrositeTpl, defaultView, ownerUid: (auth.currentUser && auth.currentUser.uid) || '' }),
       )
     } catch {
       /* ignore storage errors */
@@ -11195,6 +11196,28 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
   }, [])
   useEffect(() => { if (crmDbLoaded) putCol('leads', inbox).catch(() => {}) }, [inbox, crmDbLoaded])
   useEffect(() => { if (crmDbLoaded) putCol('contacts', contactList).catch(() => {}) }, [contactList, crmDbLoaded])
+  // Pull in any leads captured from the public listing form (Request Information) and add
+  // them to My Leads automatically. Runs after the initial load so nothing is overwritten.
+  useEffect(() => {
+    if (!crmDbLoaded) return
+    let alive = true
+    ;(async () => {
+      const captured = await drainPublicLeads()
+      if (!alive || !captured.length) return
+      const mapped = captured
+        .sort((a, b) => (a.ts || 0) - (b.ts || 0))
+        .map((c) => ({
+          id: uid(), name: c.name || 'New Inquiry', email: c.email || '', phone: c.phone || '',
+          company: '', property: c.property || '', source: c.source || 'Listing Website',
+          status: 'New', value: 0, owner: (user && user.name) || 'Me', last: 'just now',
+          ts: c.ts || Date.now(), message: c.message || '',
+        }))
+      setInbox((list) => [...mapped, ...list])
+      notify(`${mapped.length} new lead${mapped.length === 1 ? '' : 's'} captured from your listing`)
+    })()
+    return () => { alive = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [crmDbLoaded])
   const [contactView, setContactView] = useState('people')
   const [contactChip, setContactChip] = useState(null)
   const [addContactOpen, setAddContactOpen] = useState(false)

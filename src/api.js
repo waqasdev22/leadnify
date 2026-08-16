@@ -142,6 +142,23 @@ export const delPublicPackage = async (id) => {
   try { await dbSet(dbRef(db, `public/packages/${id}`), null) } catch { /* ignore */ }
 }
 
+// ---- Auto-captured leads (from the public microsite "Request Information" form) ----
+// Visitors POST leads to /public/leads/<ownerUid>; the owner drains them into My Leads.
+export const drainPublicLeads = async () => {
+  const uid = currentUid()
+  if (!uid) return []
+  try {
+    const snap = await dbGet(dbRef(db, `public/leads/${uid}`))
+    const val = snap.val()
+    if (!val || typeof val !== 'object') return []
+    const leads = Object.keys(val).map((k) => ({ _key: k, ...val[k] }))
+    await dbSet(dbRef(db, `public/leads/${uid}`), null) // consume them so they aren't re-added
+    return leads
+  } catch {
+    return []
+  }
+}
+
 // Send a real email through the backend (SMTP). Throws if the backend rejects it.
 export const sendEmail = (payload) =>
   request('/send-email', {
