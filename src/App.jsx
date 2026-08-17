@@ -9454,28 +9454,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
         </div>
       </div>
 
-      {/* Deal Rooms — the properties you created in Deal Rooms show here too, in sync */}
-      {dealRooms && dealRooms.length > 0 && (
-        <div className="mt-8">
-          <h2 className="flex items-center gap-2 text-lg font-extrabold text-slate-900">
-            <FolderLock className="h-5 w-5 text-brand" /> Deal Rooms
-            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500">{dealRooms.length}</span>
-          </h2>
-          <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-            {dealRooms.map((room) => (
-              <DealRoomActionCard
-                key={`room-${room.id}`}
-                room={room}
-                onOpen={onOpenRoom}
-                onEdit={setEditRoom}
-                onTransfer={setTransferRoom}
-                onDuplicate={duplicateRoom}
-                onDelete={deleteRoom}
-              />
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Deal Rooms section removed from My Deals (still shown on the Dashboard & Deal Rooms page). */}
 
       <Modal open={!!editRoom} onClose={() => setEditRoom(null)} title="Edit Deal Room">
         {editRoom && (
