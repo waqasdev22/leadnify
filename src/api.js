@@ -4,9 +4,23 @@
 // - If no backend is reachable (e.g. the static Firebase site with no hosted API),
 //   everything falls back to localStorage so create/edit/delete still persist
 //   across reloads in that browser.
-import { auth, db } from './firebase'
+import { auth, db, fdb } from './firebase'
 import { ref as dbRef, get as dbGet, set as dbSet } from 'firebase/database'
+import { doc as fsDoc, setDoc as fsSetDoc } from 'firebase/firestore'
 import { EMAILJS, emailReady } from './emailConfig'
+
+// Mirror a collection into Cloud Firestore (in addition to Realtime Database) so the data
+// is visible there too. One document per collection; skipped if it's over ~900 KB (Firestore's
+// 1 MB doc limit) — heavy image/file data stays in RTDB.
+const mirrorToFirestore = async (uid, col, arr) => {
+  try {
+    const json = JSON.stringify(arr ?? [])
+    if (json.length > 900 * 1024) return
+    await fsSetDoc(fsDoc(fdb, 'appdata', uid, 'collections', col), { items: JSON.parse(json) })
+  } catch {
+    /* ignore — RTDB remains the source of truth */
+  }
+}
 
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 
@@ -98,6 +112,7 @@ export const putCol = async (col, arr) => {
     } catch {
       /* offline / rules — the local save above already succeeded */
     }
+    mirrorToFirestore(uid, col, arr) // also mirror into Cloud Firestore (best-effort)
   }
   return arr
 }
