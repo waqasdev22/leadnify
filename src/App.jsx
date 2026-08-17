@@ -7466,7 +7466,7 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
         const roomId = existing ? existing.id : uid()
         if (setDealRooms) {
           if (!existing) {
-            setDealRooms((list) => [{ id: roomId, listingId: id, name: title, address, image: '', status: 'Active', access: 'Free Access', files: 1, members: 0, updated: 'just now', ts: Date.now() }, ...list])
+            setDealRooms((list) => [{ id: roomId, listingId: id, name: title, address, image: coverUrl, status: 'Active', access: 'Free Access', files: 1, members: 0, updated: 'just now', ts: Date.now() }, ...list])
           } else if (existing.listingId !== id) {
             setDealRooms((list) => list.map((r) => (r.id === roomId ? { ...r, listingId: id } : r)))
           }
@@ -7480,6 +7480,8 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
       }
     }
     const address = [bf.street, bf.city, bf.state, bf.zip].filter(Boolean).join(', ') || '—'
+    // Use the cover image the user uploaded in the builder (Images & Media) everywhere.
+    const coverUrl = (bf.media && bf.media.cover && bf.media.cover.url) || ''
     const total = BUILDER_SECTIONS.length
     const progress = finished ? 100 : Math.max(10, Math.round((step / total) * 100))
     const sizePoint = (bf.dataPoints || []).find(
@@ -7506,7 +7508,7 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
       propertyType: builderCfg?.propertyType,
       status: finished ? 'In Progress' : 'Draft',
       tags: builderCfg?.propertyType ? [builderCfg.propertyType] : [],
-      image: '',
+      image: coverUrl,
       updated: 'just now',
       ts: Date.now(),
       progress,
@@ -7533,7 +7535,7 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
         type: builderCfg?.propertyType || 'Retail',
         size: sizePoint ? sizePoint.value : '—',
         status: finished ? 'Active' : 'Draft',
-        image: propertyImage('1497366216548-37526070297c'),
+        image: coverUrl || propertyImage('1497366216548-37526070297c'),
         featured: false,
         listed: true,
         access: 'Public',
