@@ -7506,7 +7506,7 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
       address,
       docType: builderCfg?.docType,
       propertyType: builderCfg?.propertyType,
-      status: finished ? 'In Progress' : 'Draft',
+      status: finished ? 'Complete' : 'Draft',
       tags: builderCfg?.propertyType ? [builderCfg.propertyType] : [],
       image: coverUrl,
       updated: 'just now',
