@@ -7565,8 +7565,12 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
       )
     }
 
-    // Save the Single-Page Images to the public gallery (separate path, keeps the hub small).
-    const galleryUrls = (bf.media && Array.isArray(bf.media.singles) ? bf.media.singles : []).map((s) => s && s.url).filter(Boolean).slice(0, 12)
+    // Save the builder's photos (Single-Page Images + Multi-Image Pages/galleries) to the
+    // public gallery path (separate from the hub, keeps it small).
+    const bm = bf.media || {}
+    const singleUrls = (Array.isArray(bm.singles) ? bm.singles : []).map((s) => s && s.url)
+    const galleryImgUrls = (Array.isArray(bm.galleries) ? bm.galleries : []).flatMap((g) => (g && Array.isArray(g.images) ? g.images.map((im) => im && im.url) : []))
+    const galleryUrls = [...singleUrls, ...galleryImgUrls].filter(Boolean).slice(0, 12)
     putGallery(id, galleryUrls)
 
     notify(finished ? 'Document saved' : 'Draft saved — resume it anytime from My Deals')
