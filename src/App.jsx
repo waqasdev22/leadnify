@@ -4059,8 +4059,25 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
   const updLc = (key, val) => setForm((f) => ({ ...f, locCard: { ...(f.locCard || {}), [key]: val } }))
 
   // Images & Media helpers
-  const media = form.media || { cover: null, singles: [], galleries: [], video: '' }
-  const setMedia = (fn) => setForm((f) => ({ ...f, media: fn(f.media || { cover: null, singles: [], galleries: [], video: '' }) }))
+  // Always guarantee arrays so the Images & Media step can't crash (blank page) on a
+  // partial/legacy media object that's missing singles/galleries.
+  const rawMedia = form.media || {}
+  const media = {
+    cover: rawMedia.cover ?? null,
+    singles: Array.isArray(rawMedia.singles) ? rawMedia.singles : [],
+    galleries: Array.isArray(rawMedia.galleries) ? rawMedia.galleries : [],
+    video: rawMedia.video || '',
+  }
+  const setMedia = (fn) => setForm((f) => {
+    const r = f.media || {}
+    const cur = {
+      cover: r.cover ?? null,
+      singles: Array.isArray(r.singles) ? r.singles : [],
+      galleries: Array.isArray(r.galleries) ? r.galleries : [],
+      video: r.video || '',
+    }
+    return { ...f, media: fn(cur) }
+  })
   // Upload each file to Firebase Storage (small URL persists cleanly). If Storage
   // is unavailable, fall back to an inline base64 data URL so uploads still work.
   // Read each picked file straight to a data URL — instant, offline, and no CORS/network
