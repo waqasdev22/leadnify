@@ -193,6 +193,14 @@ export const putPublicHub = async (slug, data) => {
   try { await dbSet(dbRef(db, `public/hub/${slug}`), clean(data)) } catch { /* ignore */ }
 }
 
+// A listing's gallery images live separately at /public/gallery/<id> (not in the hub) so
+// the hub stays small; the microsite fetches them on demand when the Gallery is shown.
+export const putGallery = async (id, images) => {
+  const uid = currentUid()
+  if (!uid || !id) return
+  try { await dbSet(dbRef(db, `public/gallery/${id}`), { images: clean(images || []) }) } catch { /* ignore */ }
+}
+
 // ---- Auto-captured leads (from the public microsite "Request Information" form) ----
 // Visitors POST leads to /public/leads/<ownerUid>; the owner drains them into My Leads.
 export const drainPublicLeads = async () => {

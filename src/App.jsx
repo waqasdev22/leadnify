@@ -9,7 +9,7 @@ import React, {
 import { jsPDF } from 'jspdf'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { getCol, putCol, saveUser, sendEmail, setApiNamespace, getFile, putFile, delFile, MAX_CLOUD_FILE, putPublicPackage, getPublicPackage, delPublicPackage, drainPublicLeads, putPublicHub, kvGet, kvSet } from './api'
+import { getCol, putCol, saveUser, sendEmail, setApiNamespace, getFile, putFile, delFile, MAX_CLOUD_FILE, putPublicPackage, getPublicPackage, delPublicPackage, drainPublicLeads, putPublicHub, putGallery, kvGet, kvSet } from './api'
 import { EMAILJS } from './emailConfig'
 import { auth, googleProvider, db, createMemberAccount } from './firebase'
 import { ref as dbRef, get as dbGet, set as dbSet, update as dbUpdate, remove as dbRemove, onValue } from 'firebase/database'
@@ -7553,8 +7553,6 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
         size: sizePoint ? sizePoint.value : '—',
         status: finished ? 'Active' : 'Draft',
         image: coverUrl || propertyImage('1497366216548-37526070297c'),
-        // Single-Page Images from the builder → shown in the microsite Gallery (max 6).
-        gallery: (bf.media && Array.isArray(bf.media.singles) ? bf.media.singles : []).map((s) => s && s.url).filter(Boolean).slice(0, 6),
         featured: false,
         listed: true,
         access: 'Public',
@@ -7566,6 +7564,10 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
           : [row, ...list],
       )
     }
+
+    // Save the Single-Page Images to the public gallery (separate path, keeps the hub small).
+    const galleryUrls = (bf.media && Array.isArray(bf.media.singles) ? bf.media.singles : []).map((s) => s && s.url).filter(Boolean).slice(0, 12)
+    putGallery(id, galleryUrls)
 
     notify(finished ? 'Document saved' : 'Draft saved — resume it anytime from My Deals')
     setBuilderOpen(false)
@@ -8654,7 +8656,8 @@ function dlPkg(){if(!CUR){return;}if(isEnrolled()){doDownloadPkg();}else{showEnr
 function submitInquiry(e){e.preventDefault();var f=e.target;var v={name:'',email:'',phone:'',msg:''};f.querySelectorAll('input,textarea').forEach(function(i){var p=(i.placeholder||'').toLowerCase();if(i.type==='email'||p.indexOf('email')>=0)v.email=i.value;else if(p.indexOf('phone')>=0)v.phone=i.value;else if(i.tagName==='TEXTAREA')v.msg=i.value;else if(p.indexOf('name')>=0)v.name=i.value;});var t=document.querySelector('.dhtitle');var lead={name:v.name,email:v.email,phone:v.phone,message:v.msg,property:t?t.textContent:'',source:'Listing Website',ts:Date.now()};if(OWNER_UID){fetch(RTDB+'/public/leads/'+OWNER_UID+'.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(lead)}).catch(function(){});}else{fetch(CAPTURE_API+'/lead-capture',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(lead)}).catch(function(){});}e.target.innerHTML='<div style="padding:18px;text-align:center;color:#fff;font-weight:600">Thank you! We\\'ll respond within one business day.</div>';return false;}
 function initDetailMap(l){if(dmap){dmap.remove();dmap=null;}dmap=L.map('dmap').setView([l.lat,l.lng],14);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap contributors'}).addTo(dmap);L.marker([l.lat,l.lng],{icon:pinIcon()}).addTo(dmap);setTimeout(function(){dmap.invalidateSize();},100);}
 function creUrl(id){var p=new URLSearchParams(location.search);if(id!=null&&id!=='')p.set('p',id);else p.delete('p');return location.pathname+'?'+p.toString();}
-function openDetail(id,skipUrl){var l=null,i;for(i=0;i<DATA.length;i++){if(DATA[i].id==id){l=DATA[i];break;}}if(!l)return;CUR=l;document.getElementById('detailView').innerHTML=detailHtml(l);document.body.classList.add('detail-open');window.scrollTo(0,0);renderDemo(1);initDetailMap(l);creNav(l.id);creHeight();if(!skipUrl){try{history.pushState({p:l.id},'',creUrl(l.id));}catch(e){}}}
+function loadGallery(l){fetch(RTDB+'/public/gallery/'+l.id+'.json').then(function(r){return r.json();}).then(function(g){if(!g||!Array.isArray(g.images)||!g.images.length)return;var gal=document.querySelector('#sec-Gallery .gal');if(!gal)return;var imgs=[l.image].concat(g.images).filter(function(x){return x;});gal.innerHTML=imgs.map(function(im){return '<img src="'+im+'" style="width:100%;height:260px;object-fit:cover;border-radius:0;display:block"/>';}).join('');creHeight();}).catch(function(){});}
+function openDetail(id,skipUrl){var l=null,i;for(i=0;i<DATA.length;i++){if(DATA[i].id==id){l=DATA[i];break;}}if(!l)return;CUR=l;document.getElementById('detailView').innerHTML=detailHtml(l);document.body.classList.add('detail-open');window.scrollTo(0,0);renderDemo(1);initDetailMap(l);loadGallery(l);creNav(l.id);creHeight();if(!skipUrl){try{history.pushState({p:l.id},'',creUrl(l.id));}catch(e){}}}
 function backToList(skipUrl){document.body.classList.remove('detail-open');if(dmap){dmap.remove();dmap=null;}window.scrollTo(0,0);creNav(null);creHeight();if(!skipUrl){try{history.pushState({},'',creUrl(null));}catch(e){}}}
 document.addEventListener('click',function(e){var a=e.target.closest?e.target.closest('.dtabs a'):null;if(a){var tb=a.parentElement.querySelectorAll('a'),i;for(i=0;i<tb.length;i++)tb[i].classList.remove('active');a.classList.add('active');}});
 /* --- Embed messaging: talk to the parent page when used as an <iframe> --- */
@@ -8839,7 +8842,6 @@ export const toMicrositeItems = (listings) =>
         pkgId: l.id,
         pkgName: l.pkgName || '',
         pkgNameKey: pkgNameKey(l.name),
-        gallery: Array.isArray(l.gallery) ? l.gallery.filter(Boolean) : [],
       }
     })
 
