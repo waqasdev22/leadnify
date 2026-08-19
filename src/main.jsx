@@ -46,8 +46,9 @@ if (params.get('code') !== null && params.get('state') !== null && window.opener
     let savedUid = ''
     try { savedUid = localStorage.getItem('crebuilder_owner_uid') || '' } catch { savedUid = '' }
     const ownerUid = (saved && saved.ownerUid) || savedUid || ''
+    const ownerEmail = (saved && saved.ownerEmail) || ''
     document.open()
-    document.write(buildMicrositeHtml(items, primary, template, defaultView, ownerUid))
+    document.write(buildMicrositeHtml(items, primary, template, defaultView, ownerUid, ownerEmail))
     document.close()
   }
   const fromLocal = () => {
