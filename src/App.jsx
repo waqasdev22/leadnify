@@ -8645,7 +8645,7 @@ function openPkgBlob(w,pkg){var parts=String(pkg.url).split(',');var mime=(parts
 function fetchPkg(key,cb){if(!key){cb(null);return;}fetch(RTDB+'/public/packages/'+key+'.json').then(function(r){return r.json();}).then(function(p){cb(p&&p.url?p:null);}).catch(function(){cb(null);});}
 function sendDownloadNotice(prop){if(!EJS_ON||!OWNER_EMAIL)return;var info={};try{info=JSON.parse(localStorage.getItem('cre_enrolled_info')||'{}');}catch(e){}var who=(info.name||'A visitor')+(info.email?' ('+info.email+')':'');fetch('https://api.emailjs.com/api/v1.0/email/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({service_id:EJS.s,template_id:EJS.t,user_id:EJS.u,template_params:{to_email:OWNER_EMAIL,email:OWNER_EMAIL,name:'MyCREBlueprint',subject:'Marketing package downloaded'+(prop?' \\u2014 '+prop:''),message:who+' just downloaded the marketing package'+(prop?' for '+prop:'')+'.'}})}).catch(function(){});}
 function sendVisitorReceipt(prop){if(!EJS_ON)return;var info={};try{info=JSON.parse(localStorage.getItem('cre_enrolled_info')||'{}');}catch(e){}if(!info.email)return;fetch('https://api.emailjs.com/api/v1.0/email/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({service_id:EJS.s,template_id:EJS.t,user_id:EJS.u,template_params:{to_email:info.email,email:info.email,name:'MyCREBlueprint',subject:'Your marketing package'+(prop?' \\u2014 '+prop:''),message:'Hi '+(info.name||'there')+',\\n\\nThank you for your interest'+(prop?' in '+prop:'')+'. Your download of the marketing package has started. If you have any questions, just reply to this email.\\n\\n\\u2014 MyCREBlueprint'}})}).catch(function(){});}
-function doDownloadPkg(){if(!CUR){return;}sendDownloadNotice(CUR.name);var w=window.open('','_blank');
+function doDownloadPkg(){if(!CUR){return;}var w=window.open('','_blank');
   // 1) the listing's own uploaded package, then 2) a deal room OM with the same property name
   fetchPkg(CUR.pkgId,function(p1){if(p1){openPkgBlob(w,p1);return;}fetchPkg(CUR.pkgNameKey,function(p2){if(p2){openPkgBlob(w,p2);return;}if(w)w.close();alert('The marketing package is not available for download yet.');});});}
 function isEnrolled(){try{return !!localStorage.getItem('cre_enrolled');}catch(e){return false;}}
@@ -11393,6 +11393,17 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
         })
       setInbox((list) => [...mapped, ...list])
       notify(`${mapped.length} new lead${mapped.length === 1 ? '' : 's'} captured from your listing`)
+      // Email the owner (the CURRENT logged-in email) about the new activity — reliable even
+      // if the microsite's stored owner email is stale.
+      const ownerEmail = user && user.email
+      if (ownerEmail) {
+        const lines = mapped.map((m) => `• ${m.name} (${m.email})${m.property ? ' — ' + m.property : ''} [${m.source}]`).join('\n')
+        sendEmail({
+          to: ownerEmail,
+          subject: `${mapped.length} new lead${mapped.length === 1 ? '' : 's'} from your listings — MyCREBlueprint`,
+          message: `You have ${mapped.length} new lead${mapped.length === 1 ? '' : 's'} (someone requested info or downloaded your package):\n\n${lines}\n\nOpen My Leads in your dashboard to follow up.`,
+        }).catch(() => {})
+      }
     }
     pull()
     const iv = setInterval(pull, 15000)
