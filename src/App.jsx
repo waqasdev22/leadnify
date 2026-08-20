@@ -8886,7 +8886,10 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
   const [notifyEmail, setNotifyEmail] = usePersistentState('cre_notify_email', '')
   const [notifyDraft, setNotifyDraft] = useState('')
   useEffect(() => { setNotifyDraft(notifyEmail || '') }, [notifyEmail])
-  const ownerNotifyEmail = (notifyEmail && notifyEmail.trim()) || (user && user.email) || (auth.currentUser && auth.currentUser.email) || ''
+  // The OWNER's explicitly-configured notification address (empty if never set). Only this
+  // decides the recipient — the logged-in email (admin/member) is a last resort used only
+  // when nobody has ever configured one, and it never overwrites an already-set owner email.
+  const explicitNotifyEmail = (notifyEmail && notifyEmail.trim()) || ''
 
   // Embed URL carries the theme in the URL (?t=&c=) so it renders correctly on
   // any external site / visitor browser, where localStorage isn't available.
@@ -8943,16 +8946,35 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
   // Persist current listings + brand color so the public "?hub=" link (opened in a
   // new tab) shows exactly what Preview shows.
   useEffect(() => {
-    try {
-      const hubData = { items: toMicrositeItems(rows), primary, template: micrositeTpl, defaultView, ownerUid: (auth.currentUser && auth.currentUser.uid) || '', ownerEmail: ownerNotifyEmail }
-      localStorage.setItem('crebuilder_hub', JSON.stringify(hubData))
-      // Publish to the cloud so the public ?hub=<slug> link works on any device/browser.
-      putPublicHub(slug, hubData).catch(() => {})
-    } catch {
-      /* ignore storage errors */
-    }
+    let cancelled = false
+    ;(async () => {
+      // Resolve the download-notification recipient. Priority:
+      //  1) the owner's explicitly-set notification email (this dashboard field), else
+      //  2) the email already saved on the published hub (so an admin/member opening My
+      //     Deals never clobbers the owner's configured address), else
+      //  3) the currently signed-in email (first-time setup only, last resort).
+      let ownerEmail = explicitNotifyEmail
+      if (!ownerEmail) {
+        try {
+          const r = await fetch('https://cre-dashboard-ba596-default-rtdb.firebaseio.com/public/hub/' + encodeURIComponent(slug) + '.json')
+          const cloud = await r.json()
+          ownerEmail = (cloud && cloud.ownerEmail) || ''
+        } catch { /* hub not reachable — fall through */ }
+        if (!ownerEmail) ownerEmail = (auth.currentUser && auth.currentUser.email) || (user && user.email) || ''
+      }
+      if (cancelled) return
+      try {
+        const hubData = { items: toMicrositeItems(rows), primary, template: micrositeTpl, defaultView, ownerUid: (auth.currentUser && auth.currentUser.uid) || '', ownerEmail }
+        localStorage.setItem('crebuilder_hub', JSON.stringify(hubData))
+        // Publish to the cloud so the public ?hub=<slug> link works on any device/browser.
+        putPublicHub(slug, hubData).catch(() => {})
+      } catch {
+        /* ignore storage errors */
+      }
+    })()
+    return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [listings, primary, micrositeTpl, defaultView, slug, ownerNotifyEmail])
+  }, [listings, primary, micrositeTpl, defaultView, slug, explicitNotifyEmail])
 
   const listedCount = rows.filter((l) => l.listed).length
   const unlistedCount = rows.length - listedCount
@@ -11428,9 +11450,11 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
         })
       setInbox((list) => [...mapped, ...list])
       notify(`${mapped.length} new lead${mapped.length === 1 ? '' : 's'} captured from your listing`)
-      // Email the owner (the CURRENT logged-in email) about the new activity — reliable even
-      // if the microsite's stored owner email is stale.
-      const ownerEmail = user && user.email
+      // Email the OWNER about the new activity. Use the dashboard-configured notification
+      // address (My Deals → "Download notification email") so it goes only to the owner —
+      // never to whichever admin/member happens to be signed in. Falls back to the login
+      // email only when no owner address has been configured yet.
+      const ownerEmail = (readLS(nsKey('cre_notify_email'), '') || '').trim() || (user && user.email) || ''
       if (ownerEmail) {
         const lines = mapped.map((m) => `• ${m.name} (${m.email})${m.property ? ' — ' + m.property : ''} [${m.source}]`).join('\n')
         sendEmail({
