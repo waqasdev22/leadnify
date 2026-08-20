@@ -8949,11 +8949,20 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
     let cancelled = false
     ;(async () => {
       // Resolve the download-notification recipient. Priority:
-      //  1) the owner's explicitly-set notification email (this dashboard field), else
-      //  2) the email already saved on the published hub (so an admin/member opening My
-      //     Deals never clobbers the owner's configured address), else
-      //  3) the currently signed-in email (first-time setup only, last resort).
+      //  1) the owner's explicitly-set notification email (My Deals field), else
+      //  2) the email of the team member whose role is "Owner" (so downloads always notify
+      //     the Owner account, never whichever admin/member is signed in), else
+      //  3) the email already saved on the published hub (don't clobber it), else
+      //  4) the currently signed-in email (first-time setup only, last resort).
       let ownerEmail = explicitNotifyEmail
+      if (!ownerEmail) {
+        try {
+          const usersSnap = await dbGet(dbRef(db, 'users'))
+          const users = usersSnap.val() || {}
+          const ownerEntry = Object.values(users).find((u) => u && u.role === 'Owner' && u.email)
+          if (ownerEntry) ownerEmail = ownerEntry.email
+        } catch { /* users not readable — fall through */ }
+      }
       if (!ownerEmail) {
         try {
           const r = await fetch('https://cre-dashboard-ba596-default-rtdb.firebaseio.com/public/hub/' + encodeURIComponent(slug) + '.json')
@@ -9188,7 +9197,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
               <Mail className="h-4 w-4 text-brand" /> Download notification email
             </p>
             <p className="mt-1 text-xs text-slate-500">
-              When someone downloads a property's marketing package, only this email is notified (who downloaded + which property). Leave empty to use your login email <span className="font-medium text-slate-600">({(user && user.email) || (auth.currentUser && auth.currentUser.email) || '—'})</span>.
+              When someone downloads a property's marketing package, only this email is notified (who downloaded + which property) — never the signed-in admin/member. Leave empty to automatically use the <span className="font-medium text-slate-600">Owner</span> account's email.
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <input
@@ -11450,11 +11459,19 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
         })
       setInbox((list) => [...mapped, ...list])
       notify(`${mapped.length} new lead${mapped.length === 1 ? '' : 's'} captured from your listing`)
-      // Email the OWNER about the new activity. Use the dashboard-configured notification
-      // address (My Deals → "Download notification email") so it goes only to the owner —
-      // never to whichever admin/member happens to be signed in. Falls back to the login
-      // email only when no owner address has been configured yet.
-      const ownerEmail = (readLS(nsKey('cre_notify_email'), '') || '').trim() || (user && user.email) || ''
+      // Email the OWNER about the new activity — goes only to the Owner account, never to
+      // whichever admin/member is signed in. Priority: the configured notification address
+      // (My Deals field), then the team member whose role is "Owner", then the login email.
+      let ownerEmail = (readLS(nsKey('cre_notify_email'), '') || '').trim()
+      if (!ownerEmail) {
+        try {
+          const usersSnap = await dbGet(dbRef(db, 'users'))
+          const users = usersSnap.val() || {}
+          const ownerEntry = Object.values(users).find((u) => u && u.role === 'Owner' && u.email)
+          if (ownerEntry) ownerEmail = ownerEntry.email
+        } catch { /* users not readable — fall through */ }
+      }
+      if (!ownerEmail) ownerEmail = (user && user.email) || ''
       if (ownerEmail) {
         const lines = mapped.map((m) => `• ${m.name} (${m.email})${m.property ? ' — ' + m.property : ''} [${m.source}]`).join('\n')
         sendEmail({
