@@ -10787,6 +10787,43 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
               <IconButton icon={Copy} label="Copy" onClick={() => copy(visitorUrl, 'Share link copied')} />
             </div>
           </div>
+
+          {/* Property details — shows this deal room's property info right below Share, so a
+              newly-created property's details appear here as soon as the room is opened. */}
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-sm font-bold text-slate-900">Property details</p>
+            <p className="text-xs text-slate-400">The property in this deal room</p>
+            {room.image ? (
+              <img
+                src={room.image}
+                alt={room.name || 'Property'}
+                onError={(e) => { e.currentTarget.style.display = 'none' }}
+                className="mt-3 h-36 w-full rounded-lg border border-slate-100 object-cover"
+              />
+            ) : null}
+            <dl className="mt-3 space-y-2 text-sm">
+              <div className="flex justify-between gap-3">
+                <dt className="shrink-0 text-slate-400">Name</dt>
+                <dd className="text-right font-medium text-slate-800">{room.name || '—'}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="shrink-0 text-slate-400">Address</dt>
+                <dd className="text-right font-medium text-slate-800">{room.address || '—'}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="shrink-0 text-slate-400">Status</dt>
+                <dd className="text-right font-medium text-slate-800">{room.status || 'Active'}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="shrink-0 text-slate-400">Access</dt>
+                <dd className="text-right font-medium text-slate-800">{room.access || 'Free Access'}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="shrink-0 text-slate-400">Created</dt>
+                <dd className="text-right font-medium text-slate-800">{room.ts ? timeAgo(room.ts) : (room.updated || 'just now')}</dd>
+              </div>
+            </dl>
+          </div>
         </div>
       </div>
     </div>
