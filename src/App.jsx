@@ -229,6 +229,14 @@ const currency = (n) =>
 
 const uid = () => Date.now() + Math.floor(Math.random() * 1000)
 
+// A human-friendly Deal ID in the format ##-###### (e.g. 21-123456). The first two digits
+// are the current year (YY), the last six are random — used to match deals on import/export.
+const newDealId = () => {
+  const yy = String(new Date().getFullYear()).slice(-2)
+  const n = Math.floor(100000 + Math.random() * 900000)
+  return `${yy}-${n}`
+}
+
 // State that survives a page refresh by mirroring to localStorage.
 // Per-user data namespace — every logged-in user gets their OWN saved data (keyed by email),
 // so one account never sees or edits another account's data. Set on login, cleared on logout.
@@ -7479,6 +7487,7 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
   // that can be resumed from the Listing Hub at `step`.
   const saveFromBuilder = (bf, step = 0, finished = false, pdfDataUrl = '') => {
     const id = builderDraftId || uid()
+    const dealId = newDealId() // fallback; preserved on re-save via the updaters below
     const title = (bf.name || '').trim() || 'Untitled Document'
     // Save the finished OM PDF in the cloud under the listing id, so the public
     // "Download Package" and the deal room's "Download Full OM" both serve it.
@@ -7496,7 +7505,7 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
         const roomId = existing ? existing.id : uid()
         if (setDealRooms) {
           if (!existing) {
-            setDealRooms((list) => [{ id: roomId, listingId: id, name: title, address, image: coverUrl, status: 'Active', access: 'Free Access', files: 1, members: 0, updated: 'just now', ts: Date.now() }, ...list])
+            setDealRooms((list) => [{ id: roomId, listingId: id, dealId, name: title, address, image: coverUrl, status: 'Active', access: 'Free Access', files: 1, members: 0, updated: 'just now', ts: Date.now() }, ...list])
           } else if (existing.listingId !== id) {
             setDealRooms((list) => list.map((r) => (r.id === roomId ? { ...r, listingId: id } : r)))
           }
@@ -7532,6 +7541,7 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
 
     const pkg = {
       id,
+      dealId,
       title,
       address,
       docType: builderCfg?.docType,
@@ -7551,7 +7561,7 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
     }
     setPackages((list) =>
       builderDraftId && list.some((p) => p.id === id)
-        ? list.map((p) => (p.id === id ? { ...p, ...pkg, ts: p.ts || pkg.ts } : p))
+        ? list.map((p) => (p.id === id ? { ...p, ...pkg, dealId: p.dealId || pkg.dealId, ts: p.ts || pkg.ts } : p))
         : [pkg, ...list],
     )
 
@@ -7559,6 +7569,7 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
     if (setListings) {
       const row = {
         id,
+        dealId,
         name: title,
         address,
         price: Number(bf.price) || 0,
@@ -7573,7 +7584,7 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
       }
       setListings((list) =>
         builderDraftId && list.some((l) => l.id === id)
-          ? list.map((l) => (l.id === id ? { ...l, ...row } : l))
+          ? list.map((l) => (l.id === id ? { ...l, ...row, dealId: l.dealId || row.dealId } : l))
           : [row, ...list],
       )
     }
@@ -9089,7 +9100,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
       notify('Listing updated')
     } else {
       setListings((list) => [
-        { id: uid(), image: propertyImage('1497366216548-37526070297c'), featured: false, listed: true, access: 'Public', status: 'Active', ...data },
+        { id: uid(), dealId: newDealId(), image: propertyImage('1497366216548-37526070297c'), featured: false, listed: true, access: 'Public', status: 'Active', ...data },
         ...list,
       ])
       notify('Property added')
@@ -9313,7 +9324,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                     onClick={onCreateNew}
                     className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-hover"
                   >
-                    <Plus className="h-3.5 w-3.5" /> Create New
+                    <Plus className="h-3.5 w-3.5" /> New Deal
                   </button>
                 )}
               </div>
@@ -9648,6 +9659,7 @@ function ListingCard({ listing, onEdit, onDelete, onShare }) {
       <div className="p-4">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
+            {listing.dealId && <p className="font-mono text-xs font-semibold text-brand">{listing.dealId}</p>}
             <h3 className="truncate text-base font-bold text-slate-900">{listing.name}</h3>
             <p className="mt-0.5 flex items-center gap-1 text-sm text-slate-500">
               <MapPin className="h-3.5 w-3.5 shrink-0" />
@@ -9684,6 +9696,7 @@ function ListingTable({ listings, onEdit, onDelete, onShare }) {
         <table className="w-full min-w-[720px] text-left text-sm">
           <thead>
             <tr className="border-b border-slate-100 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+              <th className="px-5 py-3 font-semibold">Deal ID</th>
               <th className="px-5 py-3 font-semibold">Property</th>
               <th className="px-5 py-3 font-semibold">Type</th>
               <th className="px-5 py-3 font-semibold">Size</th>
@@ -9695,6 +9708,7 @@ function ListingTable({ listings, onEdit, onDelete, onShare }) {
           <tbody className="divide-y divide-slate-100">
             {listings.map((l) => (
               <tr key={l.id} className="transition hover:bg-slate-50">
+                <td className="px-5 py-3 font-mono text-xs font-semibold text-brand">{l.dealId || '—'}</td>
                 <td className="px-5 py-3">
                   <div className="flex items-center gap-3">
                     <img
@@ -10822,6 +10836,10 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
             ) : null}
             <dl className="mt-3 space-y-2 text-sm">
               <div className="flex justify-between gap-3">
+                <dt className="shrink-0 text-slate-400">Deal ID</dt>
+                <dd className="text-right font-mono font-semibold text-brand">{room.dealId || '—'}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
                 <dt className="shrink-0 text-slate-400">Name</dt>
                 <dd className="text-right font-medium text-slate-800">{room.name || '—'}</dd>
               </div>
@@ -10972,7 +10990,7 @@ function DealRoomsPage({ dealRooms, setDealRooms, onEditDocument, openTarget, on
 
   const create = (data) => {
     setDealRooms((list) => [
-      { id: uid(), files: 0, members: 0, updated: 'just now', ts: Date.now(), image: '', ...data },
+      { id: uid(), dealId: newDealId(), files: 0, members: 0, updated: 'just now', ts: Date.now(), image: '', ...data },
       ...list,
     ])
     notify('Deal room created')
@@ -14991,6 +15009,16 @@ export default function App() {
   useEffect(() => {
     if (dbLoaded) putCol('dealrooms', dealRooms).catch(() => {})
   }, [dealRooms, dbLoaded])
+
+  // Backfill a Deal ID (##-######) onto any older deal/listing/package that predates the
+  // Deal ID system, so every deal has one. A listing and its matching room share the same ID.
+  useEffect(() => {
+    if (!dbLoaded) return
+    setListings((list) => (list.some((l) => !l.dealId) ? list.map((l) => (l.dealId ? l : { ...l, dealId: newDealId() })) : list))
+    setDealRooms((list) => (list.some((r) => !r.dealId) ? list.map((r) => (r.dealId ? r : { ...r, dealId: newDealId() })) : list))
+    setPackages((list) => (list.some((p) => !p.dealId) ? list.map((p) => (p.dealId ? p : { ...p, dealId: newDealId() })) : list))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dbLoaded])
 
   // onAuthStateChanged already sets the user + logged-in flag; just reset the view.
   const handleLogin = () => { setActive('crm') }
