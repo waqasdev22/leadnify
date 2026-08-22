@@ -7572,6 +7572,9 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
         dealId,
         name: title,
         address,
+        city: bf.city || '',
+        state: bf.state || '',
+        ts: Date.now(),
         price: Number(bf.price) || 0,
         type: builderCfg?.propertyType || 'Retail',
         size: sizePoint ? sizePoint.value : '—',
@@ -9331,12 +9334,14 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
             </div>
 
             <div className="scrollbar-slim mt-3 overflow-x-auto">
-              <table className="w-full min-w-[1000px] text-left text-sm">
+              <table className="w-full min-w-[1200px] text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-100 text-[11px] uppercase tracking-wide text-slate-400">
                     <th className="py-2 pr-3 font-semibold">Deal ID</th>
                     <th className="py-2 pr-3 font-semibold">Property</th>
-                    <th className="py-2 pr-3 font-semibold">Address</th>
+                    <th className="py-2 pr-3 font-semibold">City, State</th>
+                    <th className="py-2 pr-3 font-semibold">Price</th>
+                    <th className="py-2 pr-3 font-semibold">Last Updated</th>
                     <th className="py-2 pr-3 font-semibold">Type</th>
                     <th className="py-2 pr-3 font-semibold">Status</th>
                     <th className="py-2 pr-3 text-center font-semibold">Featured</th>
@@ -9377,7 +9382,9 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                           )}
                         </div>
                       </td>
-                      <td className="py-2.5 pr-3 text-slate-500">{l.address}</td>
+                      <td className="py-2.5 pr-3 text-slate-500">{[l.city, l.state].filter(Boolean).join(', ') || l.address || '—'}</td>
+                      <td className="py-2.5 pr-3 font-semibold text-slate-800">{l.price ? currency(l.price) : '—'}</td>
+                      <td className="py-2.5 pr-3 whitespace-nowrap text-slate-500">{l.ts ? new Date(l.ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : (l.updated || '—')}</td>
                       <td className="py-2.5 pr-3">
                         <div className="flex flex-wrap gap-1">
                           <span className="rounded bg-orange-50 px-1.5 py-0.5 text-[10px] font-semibold text-orange-700">OM</span>
@@ -9440,7 +9447,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                     </tr>
                     {isOpen && (
                       <tr className="bg-slate-50/70">
-                        <td colSpan={9} className="px-3 pb-4 pt-1">
+                        <td colSpan={11} className="px-3 pb-4 pt-1">
                           <div className="grid grid-cols-2 gap-x-6 gap-y-3 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-4">
                             <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Price</p><p className="mt-0.5 text-sm font-semibold text-slate-800">{typeof l.price === 'number' ? '$' + l.price.toLocaleString() : (l.price || '—')}</p></div>
                             <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Size</p><p className="mt-0.5 text-sm font-semibold text-slate-800">{l.size || '—'}</p></div>
@@ -9476,7 +9483,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                   })}
                   {filtered.length === 0 && (
                     <tr>
-                      <td colSpan={9} className="py-10 text-center text-sm text-slate-400">
+                      <td colSpan={11} className="py-10 text-center text-sm text-slate-400">
                         No listings match this filter.
                       </td>
                     </tr>
