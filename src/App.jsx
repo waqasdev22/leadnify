@@ -9996,13 +9996,20 @@ const DEFAULT_ROOM_FILES = []
 const DEFAULT_ROOM_PROSPECTS = []
 const DEFAULT_ROOM_ACTIVITY = []
 
-function RoomStat({ icon: Icon, value, label, color = 'text-slate-400' }) {
+function RoomStat({ icon: Icon, value, label, color = 'text-slate-400', info }) {
   return (
     <div className="flex items-center gap-2 px-4 py-3">
-      <Icon className={`h-5 w-5 ${color}`} />
-      <div>
+      <Icon className={`h-5 w-5 shrink-0 ${color}`} />
+      <div className="min-w-0">
         <p className="text-lg font-extrabold leading-none text-slate-900">{value}</p>
-        <p className="text-[11px] text-slate-400">{label}</p>
+        <p className="flex items-center gap-1 text-[11px] text-slate-400">
+          {label}
+          {info && (
+            <span title={info} className="inline-flex cursor-help" aria-label={info}>
+              <Info className="h-3 w-3 text-slate-400" />
+            </span>
+          )}
+        </p>
       </div>
     </div>
   )
@@ -10211,6 +10218,9 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
   const ME = 'Waqas' // current user (demo)
   const [leadScope, setLeadScope] = useState('team') // 'mine' | 'team'
   const [openLeadId, setOpenLeadId] = useState(null)
+  // Per-lead access gate for this room: Authorize (grant) or Revoke (block) — persisted per room.
+  const [gateStatus, setGateStatus] = usePersistentState(`room_${room.id}_gate`, {})
+  const setGate = (e, leadId, val) => { e.stopPropagation(); setGateStatus((g) => ({ ...g, [leadId]: val })); notify(val === 'Authorized' ? 'Access authorized' : 'Access revoked') }
   // Read the SAME live leads list the central My Leads writes to, so a lead created there
   // (with this property selected) shows up here automatically.
   const [allLeads] = usePersistentState('crm_inbox', CRM_INBOX_SEED)
@@ -10236,6 +10246,10 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
   const downloads = prospects.reduce((s, p) => s + p.downloads, 0)
   const openOms = prospects.filter((p) => p.views > 0).length
   const executedCa = prospects.filter((p) => /NDA/i.test(p.access)).length
+  // Marketing metrics (sourced from analytics once connected): Impressions ≥ Page Views ≥ Visitors.
+  const impressions = prospects.reduce((s, p) => s + (p.impressions || p.views || 0), 0)
+  const totalVisitors = prospects.length
+  const downloadedOm = downloads
   const visitorUrl = `${window.location.origin}${window.location.pathname}?room=${room.id}`
 
   // Save this room so the public "?room=" gate page (opened in a new tab) can render it.
@@ -10406,6 +10420,16 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
                 )}
               </div>
               <button onClick={() => setHubOpen(true)} className="text-left text-sm text-slate-500 transition hover:text-brand hover:underline" title="Open property overview">{room.address || '—'}</button>
+              {/* Key deal facts under the title (non-hyperlink) — pulled from the deal's fields. */}
+              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-600">
+                <span>{room.address || '—'}</span>
+                <span className="text-slate-300">|</span>
+                <span><span className="text-slate-400">Price</span> {room.price ? currency(room.price) : '—'}</span>
+                <span className="text-slate-300">|</span>
+                <span><span className="text-slate-400">CAP Rate</span> {room.capRate ? room.capRate + '%' : '—'}</span>
+                <span className="text-slate-300">|</span>
+                <span><span className="text-slate-400">NOI</span> {room.noi ? currency(room.noi) : '—'}</span>
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -10419,11 +10443,12 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="mt-4 grid grid-cols-3 divide-slate-100 rounded-lg border border-slate-100 lg:divide-x">
-          <RoomStat icon={Eye} value={views} label="Page Views" color="text-emerald-500" />
-          <RoomStat icon={FileText} value={openOms} label="Open OM's" color="text-blue-500" />
-          <RoomStat icon={CheckCircle2} value={executedCa} label="Executed CA" color="text-purple-500" />
+        {/* Stats — marketing metrics with an info tooltip on each (source: analytics). */}
+        <div className="mt-4 grid grid-cols-2 divide-slate-100 rounded-lg border border-slate-100 sm:grid-cols-4 lg:divide-x">
+          <RoomStat icon={BarChart3} value={impressions} label="Impressions" color="text-blue-500" info="Total times your property was shown across all channels (search results, email blasts, social feeds). Measures reach. Counts every appearance, including repeats." />
+          <RoomStat icon={Eye} value={views} label="Page Views" color="text-emerald-500" info="Total times your property page was viewed. Measures interest. Includes repeat and anonymous interested parties." />
+          <RoomStat icon={Users} value={totalVisitors} label="Total Visitors" color="text-violet-500" info="Number of identified people who viewed the property. Their contact details flow into your CRM as leads." />
+          <RoomStat icon={FileDown} value={downloadedOm} label="Total Downloaded OM" color="text-purple-500" info="Number of registered prospects who downloaded the full Offering Memorandum. The most qualified, highest-intent buyers." />
         </div>
       </div>
 
@@ -10521,7 +10546,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
               </div>
             </div>
             <div className="scrollbar-slim mt-3 overflow-x-auto">
-              <table className="w-full min-w-[620px] text-left text-sm">
+              <table className="w-full min-w-[760px] text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-100 text-[11px] uppercase tracking-wide text-slate-400">
                     <th className="py-2 pr-3 font-semibold">Lead</th>
@@ -10530,6 +10555,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
                     <th className="py-2 pr-3 font-semibold">Listing</th>
                     <th className="py-2 pr-3 font-semibold">Date</th>
                     <th className="py-2 pr-3 font-semibold">Status</th>
+                    <th className="py-2 pr-3 text-right font-semibold">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -10550,10 +10576,19 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
                       <td className="py-2.5 pr-3 text-slate-600">{l.property}</td>
                       <td className="py-2.5 pr-3 text-slate-500">{l.date}</td>
                       <td className="py-2.5 pr-3">{l.status === 'Unread' ? <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">Unread</span> : <span className="text-xs text-slate-500">{l.status}</span>}</td>
+                      <td className="py-2.5 pr-3">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {gateStatus[l.id] && (
+                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${gateStatus[l.id] === 'Authorized' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>{gateStatus[l.id]}</span>
+                          )}
+                          <button onClick={(e) => setGate(e, l.id, 'Authorized')} className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100">Authorize</button>
+                          <button onClick={(e) => setGate(e, l.id, 'Revoked')} className="rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700 transition hover:bg-rose-100">Revoke</button>
+                        </div>
+                      </td>
                     </tr>
                     {open && (
                       <tr className="bg-slate-50/70">
-                        <td colSpan={6} className="px-3 pb-4 pt-1">
+                        <td colSpan={7} className="px-3 pb-4 pt-1">
                           <div className="rounded-lg border border-slate-200 bg-white p-4">
                             <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
                               <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Name</p><p className="mt-0.5 text-sm font-semibold text-slate-800">{l.name}</p></div>
@@ -10577,7 +10612,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
                     </React.Fragment>
                     )
                   })}
-                  {!roomLeads.length && <tr><td colSpan={6} className="py-8 text-center text-sm text-slate-400">No leads for this property{leadScope === 'mine' ? ' assigned to you' : ''} yet.</td></tr>}
+                  {!roomLeads.length && <tr><td colSpan={7} className="py-8 text-center text-sm text-slate-400">No leads for this property{leadScope === 'mine' ? ' assigned to you' : ''} yet.</td></tr>}
                 </tbody>
               </table>
             </div>
