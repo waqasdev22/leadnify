@@ -463,7 +463,7 @@ const NAV_ITEMS = [
   { key: 'crm', label: 'My Leads', icon: Contact },
   { key: 'listings', label: 'My Deals', icon: Globe },
   { key: 'deals', label: 'Deal Rooms', icon: FolderLock },
-  { key: 'email', label: 'Distribution', icon: Send },
+  { key: 'email', label: 'Distribution', icon: Send, soon: true, adminOnly: true },
 ]
 
 /* -------------------------------------------------------------------------- */
@@ -935,7 +935,8 @@ function UpgradeCard({ onDismiss }) {
 
 const NAV_PERM = { dashboard: 'dashboard.view', listings: 'listings.view', deals: 'dealrooms.view' }
 
-function Sidebar({ active, onNavigate, onSignOut, user, forceCollapsed, responsiveCollapse, onClose, can }) {
+function Sidebar({ active, onNavigate, onSignOut, user, forceCollapsed, responsiveCollapse, onClose, can, role = 'Member' }) {
+  const isAdminUp = ['Owner', 'Admin'].includes(role)
   const [collapsed, setCollapsed] = useState(
     () => !!forceCollapsed || (!!responsiveCollapse && typeof window !== 'undefined' && window.innerWidth < 1024),
   )
@@ -997,29 +998,43 @@ function Sidebar({ active, onNavigate, onSignOut, user, forceCollapsed, responsi
 
       {/* Nav */}
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-        {navItems.map(({ key, label, icon: Icon, dot, dividerBefore }) => {
+        {navItems.map(({ key, label, icon: Icon, dot, dividerBefore, soon, adminOnly }) => {
           const isActive = active === key
+          // "Coming Soon" items (Distribution) are clickable only by Owner/Admin; everyone else
+          // sees them greyed out and cannot open them.
+          const locked = adminOnly && !isAdminUp
           return (
             <React.Fragment key={key}>
               {dividerBefore && <div className="my-2 border-t border-slate-100" />}
               <button
-                onClick={() => onNavigate(key)}
-                title={collapsed ? label : undefined}
+                onClick={() => { if (!locked) onNavigate(key) }}
+                disabled={locked}
+                title={locked ? 'Coming soon — available to Owners & Admins' : (collapsed ? label : undefined)}
+                aria-disabled={locked}
                 className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
                   collapsed ? 'justify-center' : ''
                 } ${
                   isActive
-                    ? 'bg-orange-50 text-brand'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                    ? 'bg-brand/10 text-brand'
+                    : locked
+                      ? 'cursor-not-allowed text-slate-400'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                 }`}
               >
                 <span className="relative">
-                  <Icon className={`h-5 w-5 ${isActive ? 'text-brand' : 'text-slate-400'}`} />
+                  <Icon className={`h-5 w-5 ${isActive ? 'text-brand' : locked ? 'text-slate-300' : 'text-slate-400'}`} />
                   {dot && (
                     <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-brand ring-2 ring-white" />
                   )}
                 </span>
-                {!collapsed && label}
+                {!collapsed && (
+                  <span className="flex flex-1 items-center gap-2">
+                    {label}
+                    {soon && (
+                      <span className="ml-auto rounded bg-slate-800 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Coming soon</span>
+                    )}
+                  </span>
+                )}
               </button>
             </React.Fragment>
           )
@@ -15099,7 +15114,7 @@ export default function App() {
       <div className="flex h-screen overflow-hidden bg-slate-50 text-slate-900">
         {/* Desktop sidebar */}
         <div className="hidden md:block">
-          <Sidebar active={active} onNavigate={navigate} onSignOut={handleSignOut} user={user} can={can} responsiveCollapse />
+          <Sidebar active={active} onNavigate={navigate} onSignOut={handleSignOut} user={user} can={can} role={role} responsiveCollapse />
         </div>
 
         {/* Mobile slide-in drawer */}
@@ -15121,6 +15136,7 @@ export default function App() {
                 }}
                 user={user}
                 can={can}
+                role={role}
               />
             </div>
           </div>
