@@ -9854,6 +9854,17 @@ function DealRoomForm({ onSubmit, onCancel, initial, submitLabel = 'Create Deal 
       <Field label="Property Address">
         <TextInput value={form.address} onChange={set('address')} placeholder="123 Main St, City, State" />
       </Field>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <Field label="Price">
+          <TextInput value={form.price ?? ''} onChange={set('price')} placeholder="e.g. 4200000" />
+        </Field>
+        <Field label="CAP Rate (%)">
+          <TextInput value={form.capRate ?? ''} onChange={set('capRate')} placeholder="e.g. 6.5" />
+        </Field>
+        <Field label="NOI">
+          <TextInput value={form.noi ?? ''} onChange={set('noi')} placeholder="e.g. 273000" />
+        </Field>
+      </div>
       <Field label="Cover Image">
         <input ref={imgRef} type="file" accept="image/*" className="hidden" onChange={onImage} />
         {form.image ? (
@@ -15145,6 +15156,9 @@ export default function App() {
         dealId: pkg.dealId || newDealId(), // the room shares the listing's Deal ID
         name: pkg.title || pkg.name || 'Untitled Property',
         address: pkg.address || '',
+        price: pkg.price || 0, // carry the listing's price so it shows under the title
+        capRate: pkg.capRate || '',
+        noi: pkg.noi || '',
         image: pkg.image || '',
         status: 'Active',
         access: 'Free Access',
