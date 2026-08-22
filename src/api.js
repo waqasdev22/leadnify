@@ -223,7 +223,7 @@ export const drainPublicLeads = async () => {
 // payload: { to, subject, message, name }
 export const sendEmail = async (payload = {}) => {
   const to = payload.to || payload.email || ''
-  const subject = payload.subject || 'MyCREBlueprint'
+  const subject = payload.subject || 'Leadflow.io'
   const message = payload.message || payload.body || payload.text || ''
   if (emailReady()) {
     const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
@@ -233,7 +233,7 @@ export const sendEmail = async (payload = {}) => {
         service_id: EMAILJS.SERVICE_ID,
         template_id: EMAILJS.TEMPLATE_ID,
         user_id: EMAILJS.PUBLIC_KEY,
-        template_params: { to_email: to, subject, message, name: payload.name || 'MyCREBlueprint', email: to },
+        template_params: { to_email: to, subject, message, name: payload.name || 'Leadflow.io', email: to },
       }),
     })
     if (!res.ok) throw new Error(`EmailJS ${res.status}`)
