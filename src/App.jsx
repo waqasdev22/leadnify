@@ -765,7 +765,7 @@ function LoginPage({ onLogin }) {
             backgroundPosition: 'center',
           }}
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900/90 via-slate-900/70 to-orange-900/40" />
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900/90 via-slate-900/70 to-blue-900/50" />
         <div className="relative flex items-center gap-2">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand text-white">
             <Building2 className="h-6 w-6" />
@@ -774,11 +774,10 @@ function LoginPage({ onLogin }) {
         </div>
         <div className="relative max-w-md">
           <h1 className="text-4xl font-extrabold leading-tight">
-            Build winning commercial real estate marketing.
+            Growing your Audience. Every Lead. Every Marketing Channel. One Platform.
           </h1>
           <p className="mt-4 text-slate-300">
-            Offering memorandums, listing hubs, and deal rooms — all in one
-            beautifully organized workspace.
+            Publish and manage your real estate listings, centralize your marketing sources, and capture every lead in one beautifully organized platform.
           </p>
         </div>
         <div className="relative text-sm text-slate-400">
