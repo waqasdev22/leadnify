@@ -7857,7 +7857,7 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
       <Modal open={!!editRoom} onClose={() => setEditRoom(null)} title="Edit Deal Room">
         {editRoom && (
           <DealRoomForm
-            initial={{ name: editRoom.name || '', address: editRoom.address || '', status: DEAL_ROOM_STATUSES.includes(editRoom.status) ? editRoom.status : 'Active', access: editRoom.access || 'Free Access', image: editRoom.image || '' }}
+            initial={{ name: editRoom.name || '', address: editRoom.address || '', price: editRoom.price ?? '', capRate: editRoom.capRate ?? '', noi: editRoom.noi ?? '', status: DEAL_ROOM_STATUSES.includes(editRoom.status) ? editRoom.status : 'Active', access: editRoom.access || 'Free Access', image: editRoom.image || '' }}
             submitLabel="Save changes"
             onCancel={() => setEditRoom(null)}
             onSubmit={(data) => { onUpdateRoom && onUpdateRoom(editRoom.id, data); setEditRoom(null); notify('Deal room updated') }}
@@ -9596,7 +9596,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
       <Modal open={!!editRoom} onClose={() => setEditRoom(null)} title="Edit Deal Room">
         {editRoom && (
           <DealRoomForm
-            initial={{ name: editRoom.name || '', address: editRoom.address || '', status: DEAL_ROOM_STATUSES.includes(editRoom.status) ? editRoom.status : 'Active', access: editRoom.access || 'Free Access', image: editRoom.image || '' }}
+            initial={{ name: editRoom.name || '', address: editRoom.address || '', price: editRoom.price ?? '', capRate: editRoom.capRate ?? '', noi: editRoom.noi ?? '', status: DEAL_ROOM_STATUSES.includes(editRoom.status) ? editRoom.status : 'Active', access: editRoom.access || 'Free Access', image: editRoom.image || '' }}
             submitLabel="Save changes"
             onCancel={() => setEditRoom(null)}
             onSubmit={(data) => { updateRoom(editRoom.id, data); setEditRoom(null); notify('Deal room updated') }}
@@ -11118,7 +11118,7 @@ function DealRoomsPage({ dealRooms, setDealRooms, onEditDocument, openTarget, on
       <Modal open={!!editRoom} onClose={() => setEditRoom(null)} title="Edit Deal Room">
         {editRoom && (
           <DealRoomForm
-            initial={{ name: editRoom.name || '', address: editRoom.address || '', status: DEAL_ROOM_STATUSES.includes(editRoom.status) ? editRoom.status : 'Active', access: editRoom.access || 'Free Access', image: editRoom.image || '' }}
+            initial={{ name: editRoom.name || '', address: editRoom.address || '', price: editRoom.price ?? '', capRate: editRoom.capRate ?? '', noi: editRoom.noi ?? '', status: DEAL_ROOM_STATUSES.includes(editRoom.status) ? editRoom.status : 'Active', access: editRoom.access || 'Free Access', image: editRoom.image || '' }}
             submitLabel="Save changes"
             onCancel={() => setEditRoom(null)}
             onSubmit={(data) => { updateRoom(editRoom.id, data); setEditRoom(null); notify('Deal room updated') }}
