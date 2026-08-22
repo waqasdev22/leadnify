@@ -10016,8 +10016,11 @@ function RoomStat({ icon: Icon, value, label, color = 'text-slate-400', info }) 
         <p className="flex items-center gap-1 text-[11px] text-slate-400">
           {label}
           {info && (
-            <span title={info} className="inline-flex cursor-help" aria-label={info}>
+            <span className="group relative inline-flex cursor-help" tabIndex={0} aria-label={info}>
               <Info className="h-3 w-3 text-slate-400" />
+              <span className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-1.5 w-56 -translate-x-1/2 rounded-lg bg-slate-900 px-3 py-2 text-left text-[11px] font-normal normal-case leading-snug text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus:opacity-100">
+                {info}
+              </span>
             </span>
           )}
         </p>
