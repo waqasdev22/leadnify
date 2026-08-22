@@ -598,7 +598,7 @@ function PrimaryButton({ children, onClick, icon: Icon, type = 'button' }) {
     <button
       type={type}
       onClick={onClick}
-      className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-orange-300 active:scale-[0.98]"
+      className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-blue-300 active:scale-[0.98]"
     >
       {Icon && <Icon className="h-4 w-4" />}
       {children}
@@ -847,7 +847,7 @@ function LoginPage({ onLogin }) {
                 <input
                   type="checkbox"
                   defaultChecked
-                  className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-orange-300"
+                  className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-blue-300"
                 />
                 Remember me
               </label>
@@ -861,7 +861,7 @@ function LoginPage({ onLogin }) {
             <button
               type="submit"
               disabled={busy}
-              className="w-full rounded-lg bg-brand py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-orange-300 active:scale-[0.99] disabled:opacity-60"
+              className="w-full rounded-lg bg-brand py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-blue-300 active:scale-[0.99] disabled:opacity-60"
             >
               {busy ? 'Please wait…' : mode === 'signup' ? 'Create account' : 'Sign in'}
             </button>
@@ -1291,7 +1291,7 @@ function PackageCard({
               type="checkbox"
               checked={selected}
               onChange={onToggleSelect}
-              className="h-5 w-5 rounded border-slate-300 text-brand focus:ring-orange-300"
+              className="h-5 w-5 rounded border-slate-300 text-brand focus:ring-blue-300"
             />
           </label>
         )}
@@ -3579,7 +3579,7 @@ function GoogleMapEditor({ open, map, onSave, onClose, notify }) {
                 {t.key === 'logo' && panel === 'logo' && (
                   <div className="mt-1 rounded-md bg-neutral-800 p-2">
                     <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') addLogo() }} placeholder="e.g. apple.com" className="w-full rounded bg-neutral-900 px-2 py-1.5 text-sm text-white outline-none ring-1 ring-neutral-700 placeholder:text-neutral-500" />
-                    <button onClick={addLogo} className="mt-2 w-full rounded bg-brand px-2 py-1.5 text-sm font-semibold text-white transition hover:bg-orange-600">Add logo</button>
+                    <button onClick={addLogo} className="mt-2 w-full rounded bg-brand px-2 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-hover">Add logo</button>
                   </div>
                 )}
               </div>
@@ -3630,7 +3630,7 @@ function GoogleMapEditor({ open, map, onSave, onClose, notify }) {
       {/* Footer */}
       <div className="flex items-center justify-between border-t border-neutral-200 bg-white px-6 py-3">
         <button onClick={onClose} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-neutral-600 transition hover:bg-neutral-100"><ArrowLeft className="h-4 w-4" /> Back</button>
-        <button onClick={save} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"><Save className="h-4 w-4" /> Save Map</button>
+        <button onClick={save} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover"><Save className="h-4 w-4" /> Save Map</button>
       </div>
     </div>
   )
@@ -3675,7 +3675,7 @@ function MapEditorModal({ open, map, onSave, onClose }) {
         </div>
         <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-3">
           <button onClick={onClose} className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 transition hover:text-slate-900">Cancel</button>
-          <button onClick={() => onSave({ ...map, ...stateRef.current, title })} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600">Save Map</button>
+          <button onClick={() => onSave({ ...map, ...stateRef.current, title })} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover">Save Map</button>
         </div>
       </div>
     </div>
@@ -3770,7 +3770,7 @@ function LocationPickerModal({ open, initial, address, sub, query, onConfirm, on
           <p className="text-xs text-slate-500">Drag the pin or click on the map to set the location.</p>
           <div className="flex items-center gap-2">
             <button onClick={onClose} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
-            <button onClick={() => onConfirm(posRef.current)} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600">
+            <button onClick={() => onConfirm(posRef.current)} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover">
               <Check className="h-4 w-4" /> Save Location
             </button>
           </div>
@@ -4585,7 +4585,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
           <div className="flex items-center gap-2">
             <button onClick={() => notify('Template gallery coming soon')} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"><Repeat2 className="h-4 w-4" /> Swap Template</button>
             <button onClick={genPdf} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"><Download className="h-4 w-4" /> Download PDF</button>
-            <button onClick={async () => { notify('Saving & generating the OM PDF…'); let pdf = ''; try { pdf = await genPdf(true) } catch { /* keep going without the PDF */ } onSave(form, step, true, pdf) }} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"><LogOut className="h-4 w-4" /> Save &amp; Exit</button>
+            <button onClick={async () => { notify('Saving & generating the OM PDF…'); let pdf = ''; try { pdf = await genPdf(true) } catch { /* keep going without the PDF */ } onSave(form, step, true, pdf) }} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover"><LogOut className="h-4 w-4" /> Save &amp; Exit</button>
           </div>
         </header>
 
@@ -4878,7 +4878,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                     </div>
                     <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-3">
                       <button onClick={() => setAddPageOpen(false)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
-                      <button onClick={savePage} disabled={!pageDraft.title.trim()} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600 disabled:opacity-50">Add Page</button>
+                      <button onClick={savePage} disabled={!pageDraft.title.trim()} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover disabled:opacity-50">Add Page</button>
                     </div>
                   </>
                 )
@@ -5064,7 +5064,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
 
                   <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
                     <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
-                      <input type="checkbox" checked={form.customDisplay} onChange={(e) => setForm((f) => ({ ...f, customDisplay: e.target.checked }))} className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-orange-300" />
+                      <input type="checkbox" checked={form.customDisplay} onChange={(e) => setForm((f) => ({ ...f, customDisplay: e.target.checked }))} className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-blue-300" />
                       <MapPin className="h-4 w-4 text-slate-400" /> Use Custom Display Address
                     </label>
                     {form.customDisplay && (
@@ -5456,7 +5456,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                       <h2 className="text-2xl font-extrabold text-slate-900">Tenant Profiles</h2>
                       <p className="mt-1 text-sm text-slate-500">Add profiles for each major tenant. Include their logo, credit rating, and key business details.</p>
                     </div>
-                    <button onClick={() => openProfileModal()} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"><Plus className="h-4 w-4" /> Add Tenant</button>
+                    <button onClick={() => openProfileModal()} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover"><Plus className="h-4 w-4" /> Add Tenant</button>
                   </div>
                   {tenantProfiles.length === 0 ? (
                     <div className="mt-4 flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-slate-200 py-16 text-center">
@@ -5499,7 +5499,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                         <p className="mt-1 text-sm text-slate-500">Add comparable sales transactions to support your property valuation.</p>
                       </div>
                     </div>
-                    <button onClick={() => openCompModal()} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"><Plus className="h-4 w-4" /> Add Comparable</button>
+                    <button onClick={() => openCompModal()} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover"><Plus className="h-4 w-4" /> Add Comparable</button>
                   </div>
                   {salesComps.length === 0 ? (
                     <div className="mt-4 flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-slate-200 py-16 text-center">
@@ -5553,7 +5553,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                         <p className="mt-1 text-sm text-slate-500">Add comparable rental properties to support your market rent analysis.</p>
                       </div>
                     </div>
-                    <button onClick={() => openRentModal()} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"><Plus className="h-4 w-4" /> Add Comparable</button>
+                    <button onClick={() => openRentModal()} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover"><Plus className="h-4 w-4" /> Add Comparable</button>
                   </div>
                   {rentComps.length === 0 ? (
                     <div className="mt-4 flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-slate-200 py-16 text-center">
@@ -5864,7 +5864,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                         <p className="text-sm font-bold text-slate-900">Maps</p>
                         <p className="text-xs text-slate-400">Each map becomes a full-page slide in your document</p>
                       </div>
-                      <button onClick={addMap} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"><Plus className="h-4 w-4" /> Create Map</button>
+                      <button onClick={addMap} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover"><Plus className="h-4 w-4" /> Create Map</button>
                     </div>
                     {maps.length === 0 ? (
                       <div className="mt-4 flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 py-12 text-center">
@@ -5912,7 +5912,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                       <Star className="h-7 w-7 text-amber-400" />
                       <p className="mt-1 font-bold text-slate-800">Cover Image</p>
                       <p className="text-xs text-slate-400">1 required — exterior</p>
-                      <label className="mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600">
+                      <label className="mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover">
                         <Upload className="h-4 w-4" /> Upload
                         <input type="file" accept="image/*,.pdf,.svg" className="hidden" onChange={(e) => uploadCover(e.target.files)} />
                       </label>
@@ -5922,7 +5922,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                       <Frame className="h-7 w-7 text-blue-500" />
                       <p className="mt-1 font-bold text-slate-800">Single-Page Images</p>
                       <p className="text-xs text-slate-400">One per page</p>
-                      <label className="mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600">
+                      <label className="mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover">
                         <Upload className="h-4 w-4" /> Upload
                         <input type="file" accept="image/*,.pdf,.svg" multiple className="hidden" onChange={(e) => uploadSingles(e.target.files)} />
                       </label>
@@ -5932,7 +5932,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                       <Grid2X2 className="h-7 w-7 text-emerald-500" />
                       <p className="mt-1 font-bold text-slate-800">Multi-Image Page</p>
                       <p className="text-xs text-slate-400">Up to 8 per page</p>
-                      <button onClick={() => setGalleryModal({ open: true, title: '', layout: 'Grid', images: [] })} className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600">
+                      <button onClick={() => setGalleryModal({ open: true, title: '', layout: 'Grid', images: [] })} className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover">
                         <Plus className="h-4 w-4" /> Add Gallery
                       </button>
                     </div>
@@ -5941,7 +5941,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                       <Video className="h-7 w-7 text-rose-500" />
                       <p className="mt-1 font-bold text-slate-800">Property Video</p>
                       <p className="text-xs text-slate-400">YouTube, Vimeo, or .mp4</p>
-                      <button onClick={() => { setVideoDraft(media.video || ''); setVideoModal(true) }} className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600">
+                      <button onClick={() => { setVideoDraft(media.video || ''); setVideoModal(true) }} className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover">
                         <Plus className="h-4 w-4" /> Link
                       </button>
                     </div>
@@ -6266,7 +6266,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                           <button onClick={() => { setMetricForm({ open: false, icon: 'DollarSign', name: '', value: '' }); setIconPickerOpen(false) }} className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:text-slate-800">
                             Cancel
                           </button>
-                          <button onClick={submitMetricForm} disabled={!metricForm.name.trim()} className="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-orange-600 disabled:opacity-40">
+                          <button onClick={submitMetricForm} disabled={!metricForm.name.trim()} className="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-hover disabled:opacity-40">
                             Add Metric
                           </button>
                         </div>
@@ -6354,7 +6354,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                                         placeholder="Value (e.g. $500,000)"
                                         className={`${inputCls} h-10 flex-1`}
                                       />
-                                      <button onClick={() => updMetric(m.id, 'editing', false)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand text-white shadow-sm transition hover:bg-orange-600"><Check className="h-4 w-4" /></button>
+                                      <button onClick={() => updMetric(m.id, 'editing', false)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand text-white shadow-sm transition hover:bg-brand-hover"><Check className="h-4 w-4" /></button>
                                     </div>
                                   </div>
                                 ) : (
@@ -6632,7 +6632,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
                 </button>
                 <button
                   onClick={() => { setAddrPopupOpen(false); setMapOpen(true) }}
-                  className="whitespace-nowrap rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
+                  className="whitespace-nowrap rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover"
                 >
                   Continue with this address
                 </button>
@@ -6719,7 +6719,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
               <span className="text-xs text-slate-400">{galleryModal.images.length < 2 ? 'Select at least 2 images' : `${galleryModal.images.length} images ready`}</span>
               <div className="flex items-center gap-2">
                 <button onClick={() => setGalleryModal((g) => ({ ...g, open: false }))} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
-                <button onClick={createGallery} disabled={galleryModal.images.length < 2} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600 disabled:opacity-40">Create Page</button>
+                <button onClick={createGallery} disabled={galleryModal.images.length < 2} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover disabled:opacity-40">Create Page</button>
               </div>
             </div>
           </div>
@@ -6865,7 +6865,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
               </div>
               <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-3">
                 <button onClick={() => setTenantModal(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
-                <button onClick={submitTenant} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600">{t.editId ? 'Save Changes' : t.mode === 'vacancy' ? 'Add Vacancy' : 'Add Tenant'}</button>
+                <button onClick={submitTenant} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover">{t.editId ? 'Save Changes' : t.mode === 'vacancy' ? 'Add Vacancy' : 'Add Tenant'}</button>
               </div>
             </div>
           </div>
@@ -6883,7 +6883,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
             <p className="px-5 py-4 text-sm text-slate-500">This will save your current document progress and redirect you to your profile settings page. You can return to this document afterwards.</p>
             <div className="flex items-center justify-end gap-2 px-5 pb-5">
               <button onClick={() => setEditProfileOpen(false)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Keep Editing Here</button>
-              <button onClick={() => { setEditProfileOpen(false); notify('Progress saved — opening profile settings'); onSave(form, step, false) }} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600">Go to Profile</button>
+              <button onClick={() => { setEditProfileOpen(false); notify('Progress saved — opening profile settings'); onSave(form, step, false) }} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover">Go to Profile</button>
             </div>
           </div>
         </div>
@@ -6973,7 +6973,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
             </div>
             <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-3">
               <button onClick={() => setRrConfirm(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
-              <button onClick={() => { setForm((f) => ({ ...f, rrSel: rrConfirm, rrChosen: true })); setRrConfirm(null) }} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600">Change Type</button>
+              <button onClick={() => { setForm((f) => ({ ...f, rrSel: rrConfirm, rrChosen: true })); setRrConfirm(null) }} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover">Change Type</button>
             </div>
           </div>
         </div>
@@ -6998,7 +6998,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
               <button onClick={() => setScopeConfirm(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
               <button
                 onClick={() => { setForm((f) => ({ ...f, finType: scopeConfirm })); notify(`Financial scope changed to ${scopeConfirm}`); const target = scopeConfirm === 'Cap Rate & NOI' ? 8 : scopeConfirm === 'Skip Financials' ? 9 : step + 1; setScopeConfirm(null); setDone((d) => ({ ...d, [step]: true })); setStep(target) }}
-                className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
+                className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover"
               >
                 Change Scope
               </button>
@@ -7089,13 +7089,13 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
 
                 <p className="mb-2 mt-5 text-[11px] font-bold uppercase tracking-wide text-slate-400">Options</p>
                 <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
-                  <input type="checkbox" checked={rentModal.active} onChange={(e) => setRM('active', e.target.checked)} className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-orange-300" /> Property is currently active
+                  <input type="checkbox" checked={rentModal.active} onChange={(e) => setRM('active', e.target.checked)} className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-blue-300" /> Property is currently active
                 </label>
               </div>
             </div>
             <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-3">
               <button onClick={() => setRentModal(null)} className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 transition hover:text-slate-900">Cancel</button>
-              <button onClick={submitRent} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600">{rentModal.id ? 'Save Changes' : 'Add Comparable'}</button>
+              <button onClick={submitRent} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover">{rentModal.id ? 'Save Changes' : 'Add Comparable'}</button>
             </div>
           </div>
         </div>
@@ -7202,16 +7202,16 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
 
                 <p className="mb-2 mt-5 text-[11px] font-bold uppercase tracking-wide text-slate-400">Options</p>
                 <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
-                  <input type="checkbox" checked={compModal.hideSaleDate} onChange={(e) => setCM('hideSaleDate', e.target.checked)} className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-orange-300" /> Hide sale date
+                  <input type="checkbox" checked={compModal.hideSaleDate} onChange={(e) => setCM('hideSaleDate', e.target.checked)} className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-blue-300" /> Hide sale date
                 </label>
                 <label className="mt-2 flex cursor-pointer items-center gap-2 text-sm text-slate-700">
-                  <input type="checkbox" checked={compModal.active} onChange={(e) => setCM('active', e.target.checked)} className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-orange-300" /> Property is currently active
+                  <input type="checkbox" checked={compModal.active} onChange={(e) => setCM('active', e.target.checked)} className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-blue-300" /> Property is currently active
                 </label>
               </div>
             </div>
             <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-3">
               <button onClick={() => setCompModal(null)} className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 transition hover:text-slate-900">Cancel</button>
-              <button onClick={submitComp} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600">{compModal.id ? 'Save Changes' : 'Add Comparable'}</button>
+              <button onClick={submitComp} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover">{compModal.id ? 'Save Changes' : 'Add Comparable'}</button>
             </div>
           </div>
         </div>
@@ -7289,7 +7289,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
             </div>
             <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-3">
               <button onClick={() => setProfileModal(null)} className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 transition hover:text-slate-900">Cancel</button>
-              <button onClick={submitProfile} disabled={!(profileModal.tradeName || '').trim()} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600 disabled:opacity-40">{profileModal.id ? 'Save Changes' : 'Add Tenant'}</button>
+              <button onClick={submitProfile} disabled={!(profileModal.tradeName || '').trim()} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover disabled:opacity-40">{profileModal.id ? 'Save Changes' : 'Add Tenant'}</button>
             </div>
           </div>
         </div>
@@ -7322,7 +7322,7 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
             <div className="flex items-center justify-end border-t border-slate-200 px-5 py-3">
               <button
                 onClick={() => { setMedia((m) => ({ ...m, video: videoDraft.trim() })); setVideoModal(false); notify(videoDraft.trim() ? 'Video linked' : 'Video removed') }}
-                className="rounded-lg bg-brand px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
+                className="rounded-lg bg-brand px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover"
               >
                 Done
               </button>
@@ -9437,7 +9437,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                               <p className="mt-1 text-[11px] text-slate-400">Shown on the public listing’s “Download Package” button.</p>
                             </div>
                             <div className="col-span-2 flex items-end gap-2 sm:col-span-4">
-                              <button onClick={() => (setEditing(l), setModalOpen(true))} className="rounded-lg bg-brand px-3 py-1.5 text-xs font-bold text-white transition hover:bg-orange-600">Edit listing</button>
+                              <button onClick={() => (setEditing(l), setModalOpen(true))} className="rounded-lg bg-brand px-3 py-1.5 text-xs font-bold text-white transition hover:bg-brand-hover">Edit listing</button>
                               <button onClick={() => { const w = window.open(`${hubUrl}&p=${l.id}`, '_blank'); if (!w) notify('Please allow pop-ups to open the preview', 'error') }} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">Preview</button>
                             </div>
                           </div>
@@ -10126,7 +10126,7 @@ function DocumentHubView({ room, onBack, notify, onEditDocument }) {
             </div>
             <button onClick={() => notify('Opening Distribution')} className="text-xs font-semibold text-brand hover:underline">Distribution →</button>
           </div>
-          <button onClick={() => notify('Creating an email blast…')} className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"><Send className="h-4 w-4" /> Create an email blast</button>
+          <button onClick={() => notify('Creating an email blast…')} className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover"><Send className="h-4 w-4" /> Create an email blast</button>
         </div>
       </div>
     </div>
@@ -10627,7 +10627,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
                   <input value={contactDraft.license} onChange={(e) => setContactDraft((d) => ({ ...d, license: e.target.value }))} placeholder="License #" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400 sm:col-span-2" />
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={saveContact} className="rounded-lg bg-brand px-3 py-1.5 text-xs font-bold text-white transition hover:bg-orange-600">Save contact</button>
+                  <button onClick={saveContact} className="rounded-lg bg-brand px-3 py-1.5 text-xs font-bold text-white transition hover:bg-brand-hover">Save contact</button>
                   <button onClick={() => { setAddingContact(false); setContactDraft(emptyContact) }} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50">Cancel</button>
                 </div>
               </div>
@@ -10654,7 +10654,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
                 <input value={borDraft.company} onChange={(e) => setBorDraft((d) => ({ ...d, company: e.target.value }))} placeholder="Company name" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" />
                 <input value={borDraft.license} onChange={(e) => setBorDraft((d) => ({ ...d, license: e.target.value }))} placeholder="License number" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" />
                 <div className="flex gap-2">
-                  <button onClick={saveBor} className="rounded-lg bg-brand px-3 py-1.5 text-xs font-bold text-white transition hover:bg-orange-600">Save</button>
+                  <button onClick={saveBor} className="rounded-lg bg-brand px-3 py-1.5 text-xs font-bold text-white transition hover:bg-brand-hover">Save</button>
                   <button onClick={() => setEditingBor(false)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50">Cancel</button>
                 </div>
               </div>
@@ -11962,7 +11962,7 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
 
                   <div className="mt-5 flex justify-end gap-2">
                     <button onClick={() => setLeadImport(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
-                    <button onClick={runLeadImport} disabled={importPreview.valid === 0 || leadImport.map.name < 0} className={`rounded-lg px-4 py-2 text-sm font-bold text-white transition ${importPreview.valid === 0 || leadImport.map.name < 0 ? 'cursor-not-allowed bg-orange-300' : 'bg-brand hover:bg-orange-600'}`}>Import {importPreview.valid} lead{importPreview.valid === 1 ? '' : 's'}</button>
+                    <button onClick={runLeadImport} disabled={importPreview.valid === 0 || leadImport.map.name < 0} className={`rounded-lg px-4 py-2 text-sm font-bold text-white transition ${importPreview.valid === 0 || leadImport.map.name < 0 ? 'cursor-not-allowed bg-orange-300' : 'bg-brand hover:bg-brand-hover'}`}>Import {importPreview.valid} lead{importPreview.valid === 1 ? '' : 's'}</button>
                   </div>
                 </div>
               </div>
@@ -11975,7 +11975,7 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
                   <p className="flex items-center gap-2 text-sm font-bold text-slate-900"><Globe className="h-4 w-4 text-slate-400" /> Gather leads from anywhere</p>
                   <p className="mt-0.5 text-xs text-slate-500">Connect a listing platform, import a spreadsheet, or forward a lead email — everything lands in this one list.</p>
                 </div>
-                <button onClick={() => leadFileRef.current && leadFileRef.current.click()} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-sm font-bold text-white transition hover:bg-orange-600"><Upload className="h-4 w-4" /> Import CSV</button>
+                <button onClick={() => leadFileRef.current && leadFileRef.current.click()} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-sm font-bold text-white transition hover:bg-brand-hover"><Upload className="h-4 w-4" /> Import CSV</button>
               </div>
               <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
                 {LEAD_PLATFORMS.map((p) => {
@@ -12035,13 +12035,13 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
             <div className="scrollbar-slim overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
               <table className="w-full min-w-[1200px]">
                 <thead className="border-b border-slate-100 bg-slate-50"><tr>
-                  <th className="w-10 px-4 py-3"><input type="checkbox" checked={allSelected} onChange={toggleAll} className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-orange-300" /></th>
+                  <th className="w-10 px-4 py-3"><input type="checkbox" checked={allSelected} onChange={toggleAll} className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-blue-300" /></th>
                   <th className={th}>Name</th><th className={th}>Type</th><th className={th}>Profile</th><th className={th}>Company</th><th className={th}>Listing</th><th className={th}>Date</th><th className={th}>Status</th><th className={th}>Pipeline</th><th className={th}>Source</th><th className={th + ' text-right'}>Actions</th>
                 </tr></thead>
                 <tbody className="divide-y divide-slate-100">
                   {pageRows.map((l) => (
                     <tr key={l.id} className={`hover:bg-slate-50 ${selLeads.includes(l.id) ? 'bg-orange-50/40' : ''}`}>
-                      <td className="w-10 px-4 py-3"><input type="checkbox" checked={selLeads.includes(l.id)} onChange={() => toggleSel(l.id)} className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-orange-300" /></td>
+                      <td className="w-10 px-4 py-3"><input type="checkbox" checked={selLeads.includes(l.id)} onChange={() => toggleSel(l.id)} className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-blue-300" /></td>
                       <td className={td}>
                         <div className="flex items-center gap-2">
                           {l.unread && <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
@@ -12204,7 +12204,7 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
                 <div className="inline-flex items-center gap-2 rounded-lg border border-orange-300 bg-white px-2 py-1.5 shadow-sm">
                   <input autoFocus value={viewName} onChange={(e) => setViewName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { if (!viewName.trim()) { notify('Name this view', 'error'); return } setSavedViews((l) => [...l, { id: uid(), name: viewName.trim(), shared: viewShare, chip: contactChip, search }]); notify('View saved'); setSaveViewOpen(false); setViewName(''); setViewShare(false) } }} placeholder="Name this view" className="w-36 rounded-md border border-slate-200 px-2 py-1 text-sm outline-none focus:border-orange-400" />
                   <label className="inline-flex items-center gap-1.5 text-sm text-slate-600"><input type="checkbox" checked={viewShare} onChange={(e) => setViewShare(e.target.checked)} className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-orange-400" /> Share with team</label>
-                  <button onClick={() => { if (!viewName.trim()) { notify('Name this view', 'error'); return } setSavedViews((l) => [...l, { id: uid(), name: viewName.trim(), shared: viewShare, chip: contactChip, search }]); notify('View saved'); setSaveViewOpen(false); setViewName(''); setViewShare(false) }} className="inline-flex items-center gap-1 rounded-md bg-brand px-3 py-1 text-sm font-semibold text-white transition hover:bg-orange-600"><Check className="h-3.5 w-3.5" /> Save</button>
+                  <button onClick={() => { if (!viewName.trim()) { notify('Name this view', 'error'); return } setSavedViews((l) => [...l, { id: uid(), name: viewName.trim(), shared: viewShare, chip: contactChip, search }]); notify('View saved'); setSaveViewOpen(false); setViewName(''); setViewShare(false) }} className="inline-flex items-center gap-1 rounded-md bg-brand px-3 py-1 text-sm font-semibold text-white transition hover:bg-brand-hover"><Check className="h-3.5 w-3.5" /> Save</button>
                   <button onClick={() => { setSaveViewOpen(false); setViewName(''); setViewShare(false) }} className="text-sm font-semibold text-slate-500 hover:text-slate-800">Cancel</button>
                 </div>
               ) : (
@@ -12956,7 +12956,7 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
                       <label className="mb-1 block text-sm font-medium text-slate-500">Due</label>
                       <input type="datetime-local" value={newTask.due} onChange={(e) => setNewTask((f) => ({ ...f, due: e.target.value }))} className="rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-orange-400" />
                     </div>
-                    <button onClick={addTask} disabled={!newTask.title.trim()} className={`rounded-lg px-5 py-2.5 text-sm font-bold text-white transition ${newTask.title.trim() ? 'bg-brand hover:bg-orange-600' : 'cursor-not-allowed bg-orange-300'}`}>Add</button>
+                    <button onClick={addTask} disabled={!newTask.title.trim()} className={`rounded-lg px-5 py-2.5 text-sm font-bold text-white transition ${newTask.title.trim() ? 'bg-brand hover:bg-brand-hover' : 'cursor-not-allowed bg-orange-300'}`}>Add</button>
                   </div>
                 </div>
               )}
@@ -13087,7 +13087,7 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
                     </div>
                   </div>
                   <div className="border-t border-slate-100 px-6 py-4">
-                    <button onClick={saveScript} className="w-full rounded-lg bg-brand px-4 py-3 text-sm font-bold text-white transition hover:bg-orange-600">Save for the whole team</button>
+                    <button onClick={saveScript} className="w-full rounded-lg bg-brand px-4 py-3 text-sm font-bold text-white transition hover:bg-brand-hover">Save for the whole team</button>
                   </div>
                 </div>
               </div>
@@ -13811,7 +13811,7 @@ function EmailBlastPage({ user, onNavigate, role = 'Member' }) {
                             <div><label className="mb-1 block text-xs font-semibold text-slate-500">From email</label><input type="email" value={sesForm.fromEmail} onChange={(e) => setSesForm((f) => ({ ...f, fromEmail: e.target.value }))} placeholder="broker@example.com" className={inputCls} /></div>
                             <div><label className="mb-1 block text-xs font-semibold text-slate-500">From name</label><input value={sesForm.fromName} onChange={(e) => setSesForm((f) => ({ ...f, fromName: e.target.value }))} placeholder="Broker Name" className={inputCls} /></div>
                             <p className="text-xs text-slate-400">Make sure the From email is a verified identity in your SES account, or your SES is out of sandbox. Your keys are saved in this browser so they stay after a refresh — only use this on your own device, and don't deploy or share this build with real keys entered.</p>
-                            <button onClick={saveSes} className="rounded-lg bg-brand px-4 py-2 text-sm font-bold text-white transition hover:bg-orange-600">Save keys</button>
+                            <button onClick={saveSes} className="rounded-lg bg-brand px-4 py-2 text-sm font-bold text-white transition hover:bg-brand-hover">Save keys</button>
                           </div>
                         </>
                       ) : on ? (
@@ -13872,7 +13872,7 @@ function EmailBlastPage({ user, onNavigate, role = 'Member' }) {
           <input value={sigLogoDraft} onChange={(e) => setSigLogoDraft(e.target.value)} placeholder="https://.../logo.png" className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" />
           <p className="mt-1 text-xs text-slate-400">Must be a public http(s) image link — mail clients can't read an uploaded file.</p>
           <div className="mt-3 flex items-center gap-2">
-            <button onClick={() => { setSignature(sigDraft); setSignatureLogo(sigLogoDraft); notify(sigDraft || sigLogoDraft ? 'Signature saved' : 'Signature cleared') }} className="rounded-lg bg-brand px-4 py-2 text-sm font-bold text-white transition hover:bg-orange-600">Save signature</button>
+            <button onClick={() => { setSignature(sigDraft); setSignatureLogo(sigLogoDraft); notify(sigDraft || sigLogoDraft ? 'Signature saved' : 'Signature cleared') }} className="rounded-lg bg-brand px-4 py-2 text-sm font-bold text-white transition hover:bg-brand-hover">Save signature</button>
             {(sigDraft || sigLogoDraft || signature || signatureLogo) && (
               <button onClick={() => { setSigDraft(''); setSigLogoDraft(''); setSignature(''); setSignatureLogo(''); setUseSignature(false); notify('Signature deleted', 'error') }} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-4 w-4" /> Delete</button>
             )}
@@ -13951,7 +13951,7 @@ function EmailBlastPage({ user, onNavigate, role = 'Member' }) {
             </div>
             {liConnected ? (
               <div className="flex items-center gap-2">
-                <button onClick={() => setLiPost({ listing: '', when: '' })} className="rounded-lg bg-brand px-3 py-1.5 text-sm font-bold text-white transition hover:bg-orange-600">Schedule post</button>
+                <button onClick={() => setLiPost({ listing: '', when: '' })} className="rounded-lg bg-brand px-3 py-1.5 text-sm font-bold text-white transition hover:bg-brand-hover">Schedule post</button>
                 <button onClick={() => { setLiConnected(false); notify('Disconnected LinkedIn', 'error') }} className="text-xs font-medium text-slate-400 hover:text-rose-500">Disconnect</button>
               </div>
             ) : (
@@ -14002,7 +14002,7 @@ function EmailBlastPage({ user, onNavigate, role = 'Member' }) {
               <div><label className="mb-1 block text-xs font-semibold text-slate-500">Listing</label><select value={liPost.listing} onChange={(e) => setLiPost((p) => ({ ...p, listing: e.target.value }))} className={inputCls}><option value="">— Pick a listing —</option>{INITIAL_LISTINGS.map((l) => <option key={l.id} value={l.name}>{l.name}</option>)}</select></div>
               <div><label className="mb-1 block text-xs font-semibold text-slate-500">When</label><input type="datetime-local" value={liPost.when} onChange={(e) => setLiPost((p) => ({ ...p, when: e.target.value }))} className={inputCls} /></div>
             </div>
-            <div className="mt-5 flex justify-end gap-2"><button onClick={() => setLiPost(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button><button onClick={scheduleLinkedIn} className="rounded-lg bg-brand px-4 py-2 text-sm font-bold text-white hover:bg-orange-600">Schedule</button></div>
+            <div className="mt-5 flex justify-end gap-2"><button onClick={() => setLiPost(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button><button onClick={scheduleLinkedIn} className="rounded-lg bg-brand px-4 py-2 text-sm font-bold text-white hover:bg-brand-hover">Schedule</button></div>
           </div>
         </div>
       )}
@@ -14018,7 +14018,7 @@ function EmailBlastPage({ user, onNavigate, role = 'Member' }) {
               <div><label className="mb-1 block text-xs font-semibold text-slate-500">Body</label><textarea rows={8} value={tplEdit.body} onChange={(e) => setTplEdit((t) => ({ ...t, body: e.target.value }))} className={`${inputCls} resize-y`} /></div>
               <p className="text-xs text-slate-400">Merge fields like {'{{property}}, {{price}}, {{link}}'} are filled per listing.</p>
             </div>
-            <div className="mt-5 flex justify-end gap-2"><button onClick={() => setTplEdit(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button><button onClick={saveTpl} className="rounded-lg bg-brand px-4 py-2 text-sm font-bold text-white hover:bg-orange-600">Save for the team</button></div>
+            <div className="mt-5 flex justify-end gap-2"><button onClick={() => setTplEdit(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button><button onClick={saveTpl} className="rounded-lg bg-brand px-4 py-2 text-sm font-bold text-white hover:bg-brand-hover">Save for the team</button></div>
           </div>
         </div>
       )}
@@ -14031,7 +14031,7 @@ function EmailBlastPage({ user, onNavigate, role = 'Member' }) {
           <span className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 text-slate-400"><Plus className="h-5 w-5" /></span>
           <p className="mt-3 text-sm font-bold text-slate-700">No drafts yet</p>
           <p className="mt-1 text-sm text-slate-500">Start one and it saves automatically — leave and come back any time.</p>
-          <button onClick={startBlast} className="mt-4 rounded-lg bg-brand px-4 py-2 text-sm font-bold text-white transition hover:bg-orange-600">Create your first email blast</button>
+          <button onClick={startBlast} className="mt-4 rounded-lg bg-brand px-4 py-2 text-sm font-bold text-white transition hover:bg-brand-hover">Create your first email blast</button>
         </div>
       ) : (
         <div className="mt-3 space-y-2">
@@ -14040,7 +14040,7 @@ function EmailBlastPage({ user, onNavigate, role = 'Member' }) {
               <div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-400"><FileText className="h-4 w-4" /></span><div><p className="text-sm font-bold text-slate-800">{c.name}</p><p className="text-xs text-slate-400">{c.audience} · {c.recipients.toLocaleString()} recipients · saved {c.date}</p></div></div>
               <div className="flex items-center gap-2">
                 <button onClick={() => { setForm({ audience: c.audience, subject: c.name, body: '' }); setComposeOpen(true) }} className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Edit</button>
-                <button onClick={() => { setCampaigns((l) => l.map((x) => x.id === c.id ? { ...x, status: 'Sent', date: 'just now' } : x)); notify(`Blast sent to ${c.audience}`) }} className="rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-orange-600">Send</button>
+                <button onClick={() => { setCampaigns((l) => l.map((x) => x.id === c.id ? { ...x, status: 'Sent', date: 'just now' } : x)); notify(`Blast sent to ${c.audience}`) }} className="rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-hover">Send</button>
                 <button onClick={() => setCampaigns((l) => l.filter((x) => x.id !== c.id))} className="rounded p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-500"><Trash2 className="h-4 w-4" /></button>
               </div>
             </div>
@@ -14110,7 +14110,7 @@ function EmailBlastPage({ user, onNavigate, role = 'Member' }) {
                   ) : (
                     <button onClick={() => setTourStep((n) => n - 1)} className="inline-flex items-center gap-1 text-sm font-semibold text-slate-500 hover:text-slate-800"><ArrowLeft className="h-4 w-4" /> Back</button>
                   )}
-                  <button onClick={() => (last ? setTourStep(-1) : setTourStep((n) => n + 1))} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-bold text-white transition hover:bg-orange-600">
+                  <button onClick={() => (last ? setTourStep(-1) : setTourStep((n) => n + 1))} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-bold text-white transition hover:bg-brand-hover">
                     {tourStep === 0 ? 'Show me' : last ? 'Done' : 'Next'} {!last && <ArrowRight className="h-4 w-4" />}
                   </button>
                 </div>
@@ -14134,7 +14134,7 @@ function EmailBlastPage({ user, onNavigate, role = 'Member' }) {
               <p className="mt-2 text-sm text-slate-500">You'll be securely redirected to {p.name} to sign in and authorize Leadflow.io to send on your behalf. We never see your password.</p>
               <div className="mt-5 flex justify-center gap-2">
                 <button disabled={connecting} onClick={() => setConnectTarget(null)} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50">Cancel</button>
-                <button disabled={connecting} onClick={confirmConnect} className="inline-flex items-center gap-2 rounded-lg bg-brand px-5 py-2 text-sm font-bold text-white transition hover:bg-orange-600 disabled:opacity-70">
+                <button disabled={connecting} onClick={confirmConnect} className="inline-flex items-center gap-2 rounded-lg bg-brand px-5 py-2 text-sm font-bold text-white transition hover:bg-brand-hover disabled:opacity-70">
                   {connecting ? <><Loader2 className="h-4 w-4 animate-spin" /> Connecting…</> : <>Continue to {p.name}</>}
                 </button>
               </div>
@@ -14163,7 +14163,7 @@ function EmailBlastPage({ user, onNavigate, role = 'Member' }) {
                     <span className="flex h-14 w-14 items-center justify-center rounded-full bg-orange-50 text-brand"><o.icon className="h-7 w-7" /></span>
                     <p className="mt-3 text-base font-bold text-slate-900">{o.title}</p>
                     <p className="mt-1 text-sm text-slate-500">{o.desc}</p>
-                    <button onClick={() => chooseType(o.type)} className="mt-4 rounded-lg bg-brand px-5 py-2 text-sm font-bold text-white transition hover:bg-orange-600">Create</button>
+                    <button onClick={() => chooseType(o.type)} className="mt-4 rounded-lg bg-brand px-5 py-2 text-sm font-bold text-white transition hover:bg-brand-hover">Create</button>
                   </div>
                 ))}
               </div>
@@ -14185,7 +14185,7 @@ function EmailBlastPage({ user, onNavigate, role = 'Member' }) {
               <p className="text-xs text-slate-400">{form.type === 'multi' ? 'Multi-property sending is coming soon — save it as a draft for now.' : ''}</p>
               <div className="flex gap-2">
                 <button onClick={() => saveOrSend(true)} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Save draft</button>
-                <button disabled={form.type === 'multi' || sending} onClick={() => saveOrSend(false)} title={form.type === 'multi' ? 'Coming soon for multi-property' : ''} className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-bold text-white transition ${form.type === 'multi' || sending ? 'cursor-not-allowed bg-orange-300' : 'bg-brand hover:bg-orange-600'}`}><Send className="h-4 w-4" /> {sending ? 'Sending…' : form.to.trim() ? 'Send email' : 'Send blast'}</button>
+                <button disabled={form.type === 'multi' || sending} onClick={() => saveOrSend(false)} title={form.type === 'multi' ? 'Coming soon for multi-property' : ''} className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-bold text-white transition ${form.type === 'multi' || sending ? 'cursor-not-allowed bg-orange-300' : 'bg-brand hover:bg-brand-hover'}`}><Send className="h-4 w-4" /> {sending ? 'Sending…' : form.to.trim() ? 'Send email' : 'Send blast'}</button>
               </div>
             </div>
           </div>
@@ -14596,7 +14596,7 @@ function TeamSettingsPage() {
                 </div>
                 <div className="mt-7 flex items-center justify-end gap-3">
                   <button onClick={() => setInviteOpen(false)} className="text-sm font-semibold text-slate-500 hover:text-slate-800">Cancel</button>
-                  <button onClick={() => { commitEmail(); if (inviteEmails.length || /\S+@\S+\.\S+/.test(inviteInput)) setInviteStep(2); else notify('Add at least one email', 'error') }} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-5 py-2.5 text-sm font-bold text-white transition hover:bg-orange-600">Continue <ArrowRight className="h-4 w-4" /></button>
+                  <button onClick={() => { commitEmail(); if (inviteEmails.length || /\S+@\S+\.\S+/.test(inviteInput)) setInviteStep(2); else notify('Add at least one email', 'error') }} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-5 py-2.5 text-sm font-bold text-white transition hover:bg-brand-hover">Continue <ArrowRight className="h-4 w-4" /></button>
                 </div>
               </>
             ) : (
@@ -14615,7 +14615,7 @@ function TeamSettingsPage() {
                 </div>
                 <div className="mt-7 flex items-center justify-between gap-3">
                   <button onClick={() => setInviteStep(1)} className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-slate-800"><ArrowLeft className="h-4 w-4" /> Back</button>
-                  <button onClick={sendInvites} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-5 py-2.5 text-sm font-bold text-white transition hover:bg-orange-600">Send {inviteEmails.length} invite{inviteEmails.length === 1 ? '' : 's'}</button>
+                  <button onClick={sendInvites} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-5 py-2.5 text-sm font-bold text-white transition hover:bg-brand-hover">Send {inviteEmails.length} invite{inviteEmails.length === 1 ? '' : 's'}</button>
                 </div>
               </>
             )}
@@ -14632,7 +14632,7 @@ function TeamSettingsPage() {
               <div><label className="mb-1 block text-xs font-semibold text-slate-500">Name</label><input value={editMember.name} onChange={(e) => setEditMember((m) => ({ ...m, name: e.target.value }))} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" /></div>
               <div><label className="mb-1 block text-xs font-semibold text-slate-500">Email</label><input type="email" value={editMember.email} onChange={(e) => setEditMember((m) => ({ ...m, email: e.target.value }))} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" /></div>
             </div>
-            <div className="mt-5 flex justify-end gap-2"><button onClick={() => setEditMember(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button><button onClick={saveMember} className="rounded-lg bg-brand px-4 py-2 text-sm font-bold text-white hover:bg-orange-600">Save</button></div>
+            <div className="mt-5 flex justify-end gap-2"><button onClick={() => setEditMember(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button><button onClick={saveMember} className="rounded-lg bg-brand px-4 py-2 text-sm font-bold text-white hover:bg-brand-hover">Save</button></div>
           </div>
         </div>
       )}
@@ -14745,7 +14745,7 @@ function TeamPermissionsPage({ myUid }) {
             <p className="mt-1 text-sm text-slate-500">Set each member's role, then fine-tune exactly which functions they can use.</p>
           </div>
         </div>
-        <button onClick={() => setAddOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"><Plus className="h-4 w-4" /> Add Member</button>
+        <button onClick={() => setAddOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover"><Plus className="h-4 w-4" /> Add Member</button>
       </div>
 
       {addOpen && (
@@ -14776,13 +14776,13 @@ function TeamPermissionsPage({ myUid }) {
                 </select>
               </div>
               <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
-                <input type="checkbox" checked={form.allPerms} onChange={(e) => setForm((f) => ({ ...f, allPerms: e.target.checked }))} className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-orange-300" />
+                <input type="checkbox" checked={form.allPerms} onChange={(e) => setForm((f) => ({ ...f, allPerms: e.target.checked }))} className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-blue-300" />
                 Grant <b>all permissions</b> to this member
               </label>
             </div>
             <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-3">
               <button onClick={() => setAddOpen(false)} disabled={busy} className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 transition hover:text-slate-900">Cancel</button>
-              <button onClick={submitMember} disabled={busy} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600 disabled:opacity-60">{busy ? 'Adding…' : 'Add Member'}</button>
+              <button onClick={submitMember} disabled={busy} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover disabled:opacity-60">{busy ? 'Adding…' : 'Add Member'}</button>
             </div>
           </div>
         </div>

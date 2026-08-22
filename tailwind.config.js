@@ -5,8 +5,8 @@ export default {
     extend: {
       colors: {
         brand: {
-          DEFAULT: '#F97316', // orange-500
-          hover: '#EA580C',   // orange-600
+          DEFAULT: '#0A63CB', // Leadflow blue (R:10 G:99 B:203)
+          hover: '#084FA3',   // darker blue for hover/active
         },
       },
       fontFamily: {
