@@ -460,10 +460,9 @@ const downloadPdf = (item, notify) => {
 }
 
 const NAV_ITEMS = [
-  { key: 'dashboard', label: 'Dashboard', icon: Home },
+  { key: 'crm', label: 'My Leads', icon: Contact },
   { key: 'listings', label: 'My Deals', icon: Globe },
   { key: 'deals', label: 'Deal Rooms', icon: FolderLock },
-  { key: 'crm', label: 'My Leads', icon: Contact },
   { key: 'email', label: 'Distribution', icon: Send },
 ]
 
@@ -14869,7 +14868,7 @@ function TeamPermissionsPage({ myUid }) {
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [authReady, setAuthReady] = useState(false)
-  const [active, setActive] = usePersistentState('active_view', 'dashboard') // survives page refresh
+  const [active, setActive] = usePersistentState('active_view', 'crm') // survives page refresh; land on My Leads
   const [user, setUser] = useState(CURRENT_USER)
   const [myUid, setMyUid] = useState(null)
   const [role, setRole] = useState('Member')
@@ -14974,7 +14973,7 @@ export default function App() {
   }, [dealRooms, dbLoaded])
 
   // onAuthStateChanged already sets the user + logged-in flag; just reset the view.
-  const handleLogin = () => { setActive('dashboard') }
+  const handleLogin = () => { setActive('crm') }
 
   const handleSignOut = () => {
     setQuery('')
@@ -15058,7 +15057,7 @@ export default function App() {
     )
   }
 
-  const activeLabel = NAV_ITEMS.find((n) => n.key === active)?.label || 'Dashboard'
+  const activeLabel = NAV_ITEMS.find((n) => n.key === active)?.label || 'My Leads'
 
   const renderScreen = () => {
     switch (active) {
