@@ -15069,6 +15069,7 @@ export default function App() {
       room = {
         id: uid(),
         listingId: pkg.id, // link this deal room to the listing so its OM feeds Download Package
+        dealId: pkg.dealId || newDealId(), // the room shares the listing's Deal ID
         name: pkg.title || pkg.name || 'Untitled Property',
         address: pkg.address || '',
         image: pkg.image || '',
@@ -15080,9 +15081,11 @@ export default function App() {
         ts: Date.now(),
       }
       setDealRooms((list) => [room, ...list])
-    } else if (room.listingId !== pkg.id) {
-      room = { ...room, listingId: pkg.id }
-      setDealRooms((list) => list.map((r) => (r.id === room.id ? { ...r, listingId: pkg.id } : r)))
+    } else if (room.listingId !== pkg.id || (pkg.dealId && room.dealId !== pkg.dealId)) {
+      // Keep the room linked to the listing AND sharing its Deal ID (fixes older rooms whose
+      // ID was backfilled separately from the listing).
+      room = { ...room, listingId: pkg.id, dealId: pkg.dealId || room.dealId }
+      setDealRooms((list) => list.map((r) => (r.id === room.id ? { ...r, listingId: pkg.id, dealId: pkg.dealId || r.dealId } : r)))
     }
     setDealRoomTarget(room)
     setActive('deals')
