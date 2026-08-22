@@ -905,7 +905,7 @@ function Logo({ collapsed }) {
       </div>
       {!collapsed && (
         <span className="text-lg font-extrabold tracking-tight text-slate-900">
-          My<span className="text-brand">CRE</span>Blueprint
+          Lead<span className="text-brand">flow</span>.io
         </span>
       )}
     </div>
@@ -2146,7 +2146,7 @@ function StepHeader({ step, onExit }) {
           <Box className="h-4 w-4" />
         </div>
         <span className="text-base font-extrabold tracking-tight text-slate-900">
-          My<span className="text-brand">CRE</span>Blueprint
+          Lead<span className="text-brand">flow</span>.io
         </span>
       </div>
 
