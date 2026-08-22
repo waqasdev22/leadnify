@@ -8845,7 +8845,9 @@ export const toMicrositeItems = (listings) =>
       }
     })
 
-function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCreateNew, onResumeDraft, onOpenDealRoom, dealRooms = [], setDealRooms, onOpenRoom, user, can = () => true }) {
+function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCreateNew, onResumeDraft, onOpenDealRoom, dealRooms = [], setDealRooms, onOpenRoom, user, role = 'Member', can = () => true }) {
+  // Custom URL + website embed are account-level distribution settings — only Admin/Owner may change them.
+  const canManageUrl = ['Owner', 'Admin'].includes(role)
   const notify = useToast()
   // Deal rooms also live here (My Deals) so a property created in Deal Rooms shows in all
   // three places — Deal Rooms, Dashboard and My Deals — and stays in sync.
@@ -9144,18 +9146,22 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
               </button>
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-slate-500">
-              <button
-                onClick={() => { setSlugDraft(slug); setCustomUrlOpen((v) => !v) }}
-                className={`inline-flex items-center gap-1.5 font-medium transition hover:text-brand ${customUrlOpen ? 'text-brand' : ''}`}
-              >
-                <Pencil className="h-3.5 w-3.5" /> Custom URL
-              </button>
-              <button
-                onClick={() => setEmbedOpen(true)}
-                className="inline-flex items-center gap-1.5 font-medium transition hover:text-brand"
-              >
-                <Code2 className="h-3.5 w-3.5" /> Embed on Your Website
-              </button>
+              {canManageUrl && (
+                <button
+                  onClick={() => { setSlugDraft(slug); setCustomUrlOpen((v) => !v) }}
+                  className={`inline-flex items-center gap-1.5 font-medium transition hover:text-brand ${customUrlOpen ? 'text-brand' : ''}`}
+                >
+                  <Pencil className="h-3.5 w-3.5" /> Custom URL
+                </button>
+              )}
+              {canManageUrl && (
+                <button
+                  onClick={() => setEmbedOpen(true)}
+                  className="inline-flex items-center gap-1.5 font-medium transition hover:text-brand"
+                >
+                  <Code2 className="h-3.5 w-3.5" /> Embed on Your Website
+                </button>
+              )}
               <span className="inline-flex items-center gap-2">
                 <Toggle on={inquiryForm} onChange={setInquiryForm} /> Inquiry Form
               </span>
@@ -15064,7 +15070,7 @@ export default function App() {
       case 'dashboard':
         return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} resume={resume} onResumeHandled={() => setResume(null)} onNavigate={navigate} onSignOut={handleSignOut} onOpenDealRoom={openDealRoomFor} dealRooms={dealRooms} setDealRooms={setDealRooms} onOpenRoom={(room) => { setDealRoomTarget(room); setActive('deals'); setMobileNav(false) }} onDeleteRoom={(room) => { if (window.confirm(`Delete deal room "${room.name}"?`)) setDealRooms((list) => list.filter((r) => r.id !== room.id)) }} onUpdateRoom={(id, data) => setDealRooms((list) => list.map((r) => (r.id === id ? { ...r, ...data, ts: Date.now(), updated: 'just now' } : r)))} onTransferRoom={(id, name) => setDealRooms((list) => list.map((r) => (r.id === id ? { ...r, assignee: name, owner_name: name } : r)))} onDuplicateRoom={(room) => setDealRooms((list) => [{ ...room, id: uid(), name: `${room.name} (Copy)`, ts: Date.now(), updated: 'just now' }, ...list])} user={user} can={can} />
       case 'listings':
-        return <ListingHubPage listings={listings} setListings={setListings} setPackages={setPackages} globalQuery={query} onCreateNew={startCreate} onResumeDraft={resumeDraft} onOpenDealRoom={openDealRoomFor} dealRooms={dealRooms} setDealRooms={setDealRooms} onOpenRoom={(room) => { setDealRoomTarget(room); setActive('deals'); setMobileNav(false) }} user={user} can={can} />
+        return <ListingHubPage listings={listings} setListings={setListings} setPackages={setPackages} globalQuery={query} onCreateNew={startCreate} onResumeDraft={resumeDraft} onOpenDealRoom={openDealRoomFor} dealRooms={dealRooms} setDealRooms={setDealRooms} onOpenRoom={(room) => { setDealRoomTarget(room); setActive('deals'); setMobileNav(false) }} user={user} role={role} can={can} />
       case 'deals':
         return <DealRoomsPage dealRooms={dealRooms} setDealRooms={setDealRooms} onEditDocument={resumeDraft} openTarget={dealRoomTarget} onOpenHandled={() => setDealRoomTarget(null)} user={user} />
       case 'team':
