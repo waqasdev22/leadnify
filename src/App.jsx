@@ -15012,15 +15012,44 @@ export default function App() {
     if (dbLoaded) putCol('dealrooms', dealRooms).catch(() => {})
   }, [dealRooms, dbLoaded])
 
-  // Backfill a Deal ID (##-######) onto any older deal/listing/package that predates the
-  // Deal ID system, so every deal has one. A listing and its matching room share the same ID.
+  // Backfill a Deal ID (##-######) onto any older deal that predates the Deal ID system.
+  // Step 1: every LISTING gets an ID (the listing is the source of truth for a deal's ID).
   useEffect(() => {
     if (!dbLoaded) return
     setListings((list) => (list.some((l) => !l.dealId) ? list.map((l) => (l.dealId ? l : { ...l, dealId: newDealId() })) : list))
-    setDealRooms((list) => (list.some((r) => !r.dealId) ? list.map((r) => (r.dealId ? r : { ...r, dealId: newDealId() })) : list))
-    setPackages((list) => (list.some((p) => !p.dealId) ? list.map((p) => (p.dealId ? p : { ...p, dealId: newDealId() })) : list))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dbLoaded])
+  // Step 2: once listings have IDs, sync each package + deal room to its matching listing's ID
+  // (match by shared id, or by name/address) so My Deals and the deal room show the SAME ID.
+  useEffect(() => {
+    if (!dbLoaded) return
+    const norm = (s) => (s || '').trim().toLowerCase()
+    const findListing = (o) =>
+      listings.find((l) => (o.id && l.id === o.id)) ||
+      listings.find((l) => (o.listingId && l.id === o.listingId)) ||
+      listings.find((l) => (o.name && norm(l.name) === norm(o.name)) || (o.address && norm(l.address) === norm(o.address)))
+    setPackages((list) => {
+      let changed = false
+      const next = list.map((p) => {
+        const m = findListing(p)
+        const want = (m && m.dealId) || p.dealId || newDealId()
+        if (p.dealId !== want) { changed = true; return { ...p, dealId: want } }
+        return p
+      })
+      return changed ? next : list
+    })
+    setDealRooms((list) => {
+      let changed = false
+      const next = list.map((r) => {
+        const m = findListing(r)
+        const want = (m && m.dealId) || r.dealId || newDealId()
+        if (r.dealId !== want) { changed = true; return { ...r, dealId: want } }
+        return r
+      })
+      return changed ? next : list
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dbLoaded, listings])
 
   // onAuthStateChanged already sets the user + logged-in flag; just reset the view.
   const handleLogin = () => { setActive('crm') }
