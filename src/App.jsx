@@ -9331,9 +9331,10 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
             </div>
 
             <div className="scrollbar-slim mt-3 overflow-x-auto">
-              <table className="w-full min-w-[920px] text-left text-sm">
+              <table className="w-full min-w-[1000px] text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-100 text-[11px] uppercase tracking-wide text-slate-400">
+                    <th className="py-2 pr-3 font-semibold">Deal ID</th>
                     <th className="py-2 pr-3 font-semibold">Property</th>
                     <th className="py-2 pr-3 font-semibold">Address</th>
                     <th className="py-2 pr-3 font-semibold">Type</th>
@@ -9350,6 +9351,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                     return (
                     <React.Fragment key={(l.id ?? 'row') + '-' + i}>
                     <tr className="hover:bg-slate-50">
+                      <td className="py-2.5 pr-3 font-mono text-xs font-semibold text-brand whitespace-nowrap">{l.dealId || '—'}</td>
                       <td className="py-2.5 pr-3">
                         <div className="flex items-center gap-2">
                           <button
@@ -9438,7 +9440,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                     </tr>
                     {isOpen && (
                       <tr className="bg-slate-50/70">
-                        <td colSpan={8} className="px-3 pb-4 pt-1">
+                        <td colSpan={9} className="px-3 pb-4 pt-1">
                           <div className="grid grid-cols-2 gap-x-6 gap-y-3 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-4">
                             <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Price</p><p className="mt-0.5 text-sm font-semibold text-slate-800">{typeof l.price === 'number' ? '$' + l.price.toLocaleString() : (l.price || '—')}</p></div>
                             <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Size</p><p className="mt-0.5 text-sm font-semibold text-slate-800">{l.size || '—'}</p></div>
@@ -9474,7 +9476,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                   })}
                   {filtered.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="py-10 text-center text-sm text-slate-400">
+                      <td colSpan={9} className="py-10 text-center text-sm text-slate-400">
                         No listings match this filter.
                       </td>
                     </tr>
