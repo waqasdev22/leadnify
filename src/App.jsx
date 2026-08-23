@@ -8451,7 +8451,7 @@ function MicrositePreview({ open, onClose, listings, primary }) {
 
 // Builds a fully self-contained microsite HTML page (Leaflet via CDN, data baked
 // in) so "Preview" can open the live listings site in a brand-new browser tab.
-export function buildMicrositeHtml(items, brandColor, template = 'Modern', defaultView = 'mapgrid', ownerUid = '', ownerEmail = '') {
+export function buildMicrositeHtml(items, brandColor, template = 'Modern', defaultView = 'mapgrid', ownerUid = '', ownerEmail = '', logoUrl = '') {
   // Which view the microsite opens in (from the owner's "Default View" setting).
   const VIEW = ['map', 'mapgrid', 'grid', 'card', 'list'].includes(defaultView) ? defaultView : 'mapgrid'
   // Each microsite theme drives the accent colour + heading font. Because every
@@ -8623,6 +8623,7 @@ body.detail-open .detail{display:block}
 var CAPTURE_API=${JSON.stringify(import.meta.env.VITE_API_URL || 'http://localhost:4000/api')};
 var OWNER_UID=${JSON.stringify(ownerUid || '')};
 var OWNER_EMAIL=${JSON.stringify(ownerEmail || '')};
+var OWNER_LOGO=${JSON.stringify(logoUrl || '')};
 var DATA=${JSON.stringify(items)};
 var PRIMARY=${JSON.stringify(primary)};
 var state={view:'${VIEW}',filter:'All',search:'',sort:'Newest'};
@@ -8633,7 +8634,7 @@ function filtered(){var a=DATA.slice();if(state.filter!=='All')a=a.filter(functi
 function cardHtml(l){var bc=l.saleType==='For Lease'?'#0d9488':'#e11d48';return '<div class="card" onclick="openDetail('+l.id+')"><div class="imgwrap"><img src="'+esc(l.image)+'"/><span class="badge" style="background:'+bc+'">'+esc(l.saleType)+'</span><span class="price">'+esc(l.priceLabel)+'</span></div><div class="inner2"><div class="body"><div class="lease">'+esc(l.leaseType)+'</div><div class="name">'+esc(l.name)+'</div><div class="addr">'+esc(l.address)+'</div><div class="metrics"><div><div class="lab">CAP</div><div class="val">5.50%</div></div><div style="text-align:right"><div class="lab">NOI</div><div class="val">$'+l.noi+'</div></div></div></div><div class="accent"></div></div></div>';}
 function ensureMap(){if(!map){map=L.map('map').setView([33.68,-117.79],11);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap contributors'}).addTo(map);}}
 function drawMap(items){ensureMap();markers.forEach(function(m){map.removeLayer(m);});markers=[];items.forEach(function(l){var m=L.marker([l.lat,l.lng],{icon:pinIcon()}).addTo(map).bindPopup('<b>'+esc(l.name)+'</b><br>'+esc(l.address)+'<br><b>'+esc(l.priceLabel)+'</b>');markers.push(m);});if(markers.length){var g=L.featureGroup(markers);map.fitBounds(g.getBounds().pad(0.4),{maxZoom:14});}setTimeout(function(){map.invalidateSize();},80);}
-function render(){var items=filtered();var c=document.getElementById('count');c.innerHTML='<b>'+items.length+'</b><span>'+(items.length===1?'Property':'Properties')+'</span>';document.getElementById('result').innerHTML='<b>'+items.length+'</b> result'+(items.length===1?'':'s');document.getElementById('cards').innerHTML=items.map(cardHtml).join('');document.getElementById('content').className='content '+state.view;if(state.view==='map'||state.view==='mapgrid'){drawMap(items);}creHeight();}
+function render(){var items=filtered();var c=document.getElementById('count');if(OWNER_LOGO){c.innerHTML='<img src="'+OWNER_LOGO+'" alt="Company logo" style="max-height:48px;max-width:180px;object-fit:contain"/>';}else{c.innerHTML='<b>'+items.length+'</b><span>'+(items.length===1?'Property':'Properties')+'</span>';}document.getElementById('result').innerHTML='<b>'+items.length+'</b> result'+(items.length===1?'':'s');document.getElementById('cards').innerHTML=items.map(cardHtml).join('');document.getElementById('content').className='content '+state.view;if(state.view==='map'||state.view==='mapgrid'){drawMap(items);}creHeight();}
 document.getElementById('filterSeg').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;state.filter=b.getAttribute('data-f');var ch=this.children;for(var i=0;i<ch.length;i++)ch[i].classList.toggle('active',ch[i]===b);render();});
 document.getElementById('viewSeg').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;state.view=b.getAttribute('data-v');var ch=this.children;for(var i=0;i<ch.length;i++)ch[i].classList.toggle('active',ch[i]===b);render();});
 document.getElementById('search').addEventListener('input',function(e){state.search=e.target.value;render();});
@@ -8885,13 +8886,41 @@ function AppearanceSettings() {
   const [defaultView, setDefaultView] = usePersistentState('appr_view', 'mapgrid')
   const [sameAsMicrosite, setSameAsMicrosite] = usePersistentState('appr_same', true)
   const [primary, setPrimary] = usePersistentState('appr_primary', '#0f172a')
+  const [logo, setLogo] = usePersistentState('appr_logo', '')
   const secondary = lighten(primary, 0.3)
   const sectionLabel = 'mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400'
+  const logoRef = useRef(null)
+  const notify = useToast()
+  const onLogo = async (e) => {
+    const file = e.target.files?.[0]; e.target.value = ''
+    if (!file) return
+    if (!file.type.startsWith('image/')) { notify('Please choose an image (PNG or JPG)', 'error'); return }
+    if (file.size > MAX_CLOUD_FILE) { notify('Logo too large (max 9 MB)', 'error'); return }
+    setLogo(await readFileAsDataUrl(file)); notify('Company logo saved — it replaces the property count on your microsite')
+  }
   return (
     <div className="mt-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex items-start gap-2">
         <Palette className="mt-0.5 h-5 w-5 text-slate-400" />
         <div><p className="text-sm font-bold text-slate-900">Appearance</p><p className="text-xs text-slate-400">Theme, layout and brand colour for your public microsite &amp; property pages. Admins &amp; Owners only.</p></div>
+      </div>
+
+      {/* Company logo — shown on the microsite header in place of the property count */}
+      <div className="mt-4 rounded-lg border border-slate-100 bg-slate-50 p-3">
+        <p className={sectionLabel}>Company Logo</p>
+        <p className="-mt-1 mb-2 text-xs text-slate-400">Shown on your microsite header instead of the property count.</p>
+        <input ref={logoRef} type="file" accept="image/*" className="hidden" onChange={onLogo} />
+        <div className="flex items-center gap-3">
+          {logo ? (
+            <div className="flex h-14 items-center justify-center rounded-lg border border-slate-200 bg-white px-3"><img src={logo} alt="Company logo" className="max-h-10 max-w-[140px] object-contain" /></div>
+          ) : (
+            <div className="flex h-14 w-24 items-center justify-center rounded-lg border border-dashed border-slate-300 text-slate-300"><ImageIcon className="h-5 w-5" /></div>
+          )}
+          <div className="flex gap-2">
+            <button onClick={() => logoRef.current?.click()} className="rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-hover">{logo ? 'Change logo' : 'Upload logo'}</button>
+            {logo && <button onClick={() => { setLogo(''); notify('Logo removed — property count will show again') }} className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-rose-600 transition hover:bg-white">Remove</button>}
+          </div>
+        </div>
       </div>
       <div className="mt-4 grid gap-6 lg:grid-cols-2">
         <div>
@@ -9137,6 +9166,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
   const [micrositeTpl] = usePersistentState('appr_microsite', 'Modern')
   const [defaultView] = usePersistentState('appr_view', 'mapgrid')
   const [primary] = usePersistentState('appr_primary', '#0f172a')
+  const [micrositeLogo] = usePersistentState('appr_logo', '')
 
   // The email that receives the "someone downloaded the package" notification. Set here on
   // the dashboard (synced across devices); falls back to the signed-in account email. Only
@@ -9257,7 +9287,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
       }
       if (cancelled) return
       try {
-        const hubData = { items: toMicrositeItems(rows), primary, template: micrositeTpl, defaultView, ownerUid: (auth.currentUser && auth.currentUser.uid) || '', ownerEmail }
+        const hubData = { items: toMicrositeItems(rows), primary, template: micrositeTpl, defaultView, ownerUid: (auth.currentUser && auth.currentUser.uid) || '', ownerEmail, logoUrl: micrositeLogo || '' }
         localStorage.setItem('crebuilder_hub', JSON.stringify(hubData))
         // Publish to the cloud so the public ?hub=<slug> link works on any device/browser.
         putPublicHub(slug, hubData).catch(() => {})
@@ -9267,7 +9297,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
     })()
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [listings, primary, micrositeTpl, defaultView, slug, explicitNotifyEmail])
+  }, [listings, primary, micrositeTpl, defaultView, slug, explicitNotifyEmail, micrositeLogo])
 
   const listedCount = rows.filter((l) => l.listed).length
   const unlistedCount = rows.length - listedCount
