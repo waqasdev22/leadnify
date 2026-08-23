@@ -12325,33 +12325,45 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
               </div>
             )}
 
-            {/* Gather leads from listing platforms (Milestone III) */}
-            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="flex items-center gap-2 text-sm font-bold text-slate-900"><Globe className="h-4 w-4 text-slate-400" /> Gather leads from anywhere</p>
-                  <p className="mt-0.5 text-xs text-slate-500">Connect a listing platform, import a spreadsheet, or forward a lead email — everything lands in this one list.</p>
+            {/* Property marketing chart (replaces the old "Gather leads from anywhere" bar) */}
+            {(() => {
+              const scoped = PROPERTY_MARKETING.filter((p) => (scope === 'mine' ? p.owner === me : true))
+              const psum = (k) => scoped.reduce((a, p) => a + (p[k] || 0), 0)
+              const leadsCaptured = inbox.filter((l) => (scope === 'mine' ? l.owner === me : true)).length
+              const weeks = Array.from({ length: 12 }, (_, i) => scoped.reduce((a, p) => a + ((p.weeklyViews && p.weeklyViews[i]) || 0), 0))
+              const maxWeek = Math.max(1, ...weeks)
+              const mtiles = [
+                { label: 'Leads Captured', v: leadsCaptured, icon: UserPlus, tone: 'bg-orange-50 text-brand' },
+                { label: 'Total Impressions', v: psum('impressions'), icon: Eye, tone: 'bg-blue-50 text-blue-500' },
+                { label: 'Page Views', v: psum('pageViews'), icon: BarChart3, tone: 'bg-violet-50 text-violet-500' },
+                { label: 'Visitors', v: psum('visitors'), icon: Users, tone: 'bg-emerald-50 text-emerald-500' },
+                { label: 'Open OMs', v: psum('openOms'), icon: FileText, tone: 'bg-amber-50 text-amber-500' },
+                { label: 'Executed CAs', v: psum('executedCa'), icon: CheckSquare, tone: 'bg-rose-50 text-rose-500' },
+              ]
+              return (
+                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="flex items-center gap-2 text-sm font-bold text-slate-900"><BarChart3 className="h-4 w-4 text-brand" /> Property marketing</p>
+                    <button onClick={() => leadFileRef.current && leadFileRef.current.click()} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"><Upload className="h-4 w-4" /> Import CSV</button>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+                    {mtiles.map((t) => (
+                      <div key={t.label} className="rounded-lg border border-slate-100 bg-slate-50 p-3">
+                        <span className={`inline-flex h-8 w-8 items-center justify-center rounded-lg ${t.tone}`}><t.icon className="h-4 w-4" /></span>
+                        <p className="mt-2 text-xl font-extrabold text-slate-900">{t.v.toLocaleString()}</p>
+                        <p className="text-[11px] font-semibold text-slate-500">{t.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3 flex h-16 items-end gap-1">
+                    {weeks.map((w, i) => (
+                      <div key={i} className="flex-1 rounded-t bg-brand/70 transition-all" style={{ height: `${Math.max(4, (w / maxWeek) * 100)}%` }} title={`Week ${i + 1}: ${w.toLocaleString()} views`} />
+                    ))}
+                  </div>
+                  <p className="mt-1 text-[11px] text-slate-400">Weekly page views — last 12 weeks</p>
                 </div>
-                <button onClick={() => leadFileRef.current && leadFileRef.current.click()} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-sm font-bold text-white transition hover:bg-brand-hover"><Upload className="h-4 w-4" /> Import CSV</button>
-              </div>
-              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
-                {LEAD_PLATFORMS.map((p) => {
-                  const on = !!leadSources[p.key]
-                  return (
-                    <div key={p.key} className="flex flex-col items-center rounded-lg border border-slate-100 bg-slate-50 p-3 text-center">
-                      <span className={`flex h-9 w-9 items-center justify-center rounded-lg text-xs font-extrabold text-white ${p.color}`}>{p.name.slice(0, 2)}</span>
-                      <p className="mt-1.5 text-xs font-bold text-slate-800">{p.name}</p>
-                      {on ? (
-                        <button onClick={() => { setLeadSources((s) => ({ ...s, [p.key]: false })); notify(`Disconnected ${p.name}`, 'error') }} className="mt-1 text-[11px] font-semibold text-emerald-600 hover:text-rose-500">Connected ✓</button>
-                      ) : (
-                        <button onClick={() => { setLeadSources((s) => ({ ...s, [p.key]: true })); notify(`Connected ${p.name}`) }} className="mt-1 text-[11px] font-semibold text-brand hover:underline">Connect</button>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-              <p className="mt-3 text-[11px] text-slate-400">Connected platforms sync new leads automatically; you can also import a CSV export or forward lead emails below.</p>
-            </div>
+              )
+            })()}
 
             {/* Forward-in address */}
             <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
