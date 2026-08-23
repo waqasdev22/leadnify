@@ -11797,6 +11797,12 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   const [leadFilter, setLeadFilter] = useState('All')
+  // Filter bar (Exhibit F): Lead Type (Broker/Principal), a single Property, and a date range.
+  const [leadTypeFilter, setLeadTypeFilter] = useState('All')
+  const [propertyFilter, setPropertyFilter] = useState('all')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const clearLeadFilters = () => { setSearch(''); setLeadTypeFilter('All'); setPropertyFilter('all'); setDateFrom(''); setDateTo(''); setLeadFilter('All') }
   const [addLeadOpen, setAddLeadOpen] = useState(false)
   const [newLead, setNewLead] = useState({ name: '', email: '', type: 'Inquiry', company: '', listing: '', property: '', profile: 'Principal', pipeline: 'Active', source: 'Website' })
   const [selLeads, setSelLeads] = useState([])
@@ -12129,7 +12135,20 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
           const unreadCount = scopedInbox.filter((l) => l.unread).length
           const ndaCount = scopedInbox.filter((l) => l.type === 'NDA Signer').length
           const typeFor = { All: () => true, Inquiries: (l) => l.type === 'Inquiry', 'NDA Signers': (l) => l.type === 'NDA Signer', 'Email Leads': (l) => l.type === 'Email Lead', Forwarded: (l) => l.type === 'Forwarded' }
-          const rows = scopedInbox.filter(typeFor[leadFilter]).filter((l) => (l.name + l.email + l.company).toLowerCase().includes(search.toLowerCase()))
+          const inDateRange = (l) => {
+            if (!dateFrom && !dateTo) return true
+            const t = l.ts || Date.parse(l.date) || 0
+            if (dateFrom && t < Date.parse(dateFrom)) return false
+            if (dateTo && t > Date.parse(dateTo) + 86400000) return false
+            return true
+          }
+          const rows = scopedInbox
+            .filter(typeFor[leadFilter])
+            .filter((l) => leadTypeFilter === 'All' || l.profile === leadTypeFilter)
+            .filter((l) => propertyFilter === 'all' || (l.property || l.listing) === propertyFilter)
+            .filter(inDateRange)
+            .filter((l) => (l.name + l.email + l.company).toLowerCase().includes(search.toLowerCase()))
+          const leadProperties = Array.from(new Set(inbox.map((l) => l.property || l.listing).filter(Boolean)))
           // 4.3 — paginate the lead table instead of rendering every row at once.
           const LEADS_PER_PAGE = 10
           const totalLeadPages = Math.max(1, Math.ceil(rows.length / LEADS_PER_PAGE))
@@ -12368,20 +12387,39 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
               <p className="mt-2 text-xs text-slate-400">This address is private to you.</p>
             </div>
 
-            {/* Filters + search */}
+            {/* Filter bar (Exhibit F): Search, Lead Type, Property, Date range, Clear */}
+            <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
+                <div className="relative lg:col-span-2">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name…" className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm outline-none transition focus:border-brand focus:ring-2 focus:ring-blue-100" />
+                </div>
+                <select value={leadTypeFilter} onChange={(e) => setLeadTypeFilter(e.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-brand">
+                  <option value="All">Lead Type: All</option>
+                  <option value="Principal">Principal</option>
+                  <option value="Broker">Broker</option>
+                </select>
+                <select value={propertyFilter} onChange={(e) => setPropertyFilter(e.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-brand">
+                  <option value="all">All Properties</option>
+                  {leadProperties.map((p) => <option key={p} value={p}>{p}</option>)}
+                </select>
+                <div className="flex items-center gap-1">
+                  <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} title="From date" className="w-full rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700 outline-none focus:border-brand" />
+                  <span className="text-slate-400">–</span>
+                  <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} title="To date" className="w-full rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700 outline-none focus:border-brand" />
+                </div>
+                <button onClick={clearLeadFilters} className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"><X className="h-4 w-4" /> Clear</button>
+              </div>
+            </div>
+
+            {/* Category chips + count */}
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap gap-2">
                 {['All', 'Inquiries', 'NDA Signers', 'Email Leads', 'Forwarded'].map((f) => (
                   <button key={f} onClick={() => setLeadFilter(f)} className={`rounded-full px-3 py-1.5 text-sm font-semibold transition ${leadFilter === f ? 'bg-brand text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{f}</button>
                 ))}
               </div>
-              <div className="flex items-center gap-3">
-                <div className="relative w-72 max-w-full">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search leads..." className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100" />
-                </div>
-                <span className="hidden shrink-0 text-sm font-semibold text-slate-400 sm:inline">{rows.length} leads</span>
-              </div>
+              <span className="hidden shrink-0 text-sm font-semibold text-slate-400 sm:inline">{rows.length} leads</span>
             </div>
 
             {/* Bulk action bar — deleting is Admin/Owner only */}
