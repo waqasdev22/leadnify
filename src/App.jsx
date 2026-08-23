@@ -964,10 +964,11 @@ function Sidebar({ active, onNavigate, onSignOut, user, forceCollapsed, responsi
   const navItems = can
     ? [
         ...NAV_ITEMS.filter((n) => !NAV_PERM[n.key] || can(NAV_PERM[n.key])),
-        ...(can('team.manage_permissions') ? [{ key: 'team', label: 'Team & Permissions', icon: Users, dividerBefore: true }] : []),
+        // Team & Permissions and Team Settings are strictly Owner/Admin (role-based, so a stray
+        // permission override can never surface them for a Manager/Member).
+        ...(isAdminUp ? [{ key: 'team', label: 'Team & Permissions', icon: Users, dividerBefore: true }] : []),
         { key: 'profile', label: 'Profile Settings', icon: User, dividerBefore: true },
-        // Team Settings is team management — hidden from Members / new users, shown to Admins & Owners.
-        ...(can('team.manage_permissions') ? [{ key: 'teamsettings', label: 'Team Settings', icon: Users }] : []),
+        ...(isAdminUp ? [{ key: 'teamsettings', label: 'Team Settings', icon: Users }] : []),
       ]
     : NAV_ITEMS
 
@@ -15061,6 +15062,18 @@ function TeamSettingsPage({ role = 'Member' }) {
   )
 }
 
+function NoAccessPage() {
+  return (
+    <div className="flex h-full flex-col items-center justify-center p-6 text-center">
+      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+        <Ban className="h-8 w-8" />
+      </div>
+      <h1 className="mt-5 text-2xl font-extrabold text-slate-900">Restricted</h1>
+      <p className="mt-2 max-w-md text-sm text-slate-500">This page is available to Owners and Admins only. Contact your account owner if you need access.</p>
+    </div>
+  )
+}
+
 function PlaceholderPage({ label, icon: Icon }) {
   const notify = useToast()
   return (
@@ -15530,11 +15543,12 @@ export default function App() {
       case 'deals':
         return <DealRoomsPage dealRooms={dealRooms} setDealRooms={setDealRooms} onEditDocument={resumeDraft} openTarget={dealRoomTarget} onOpenHandled={() => setDealRoomTarget(null)} user={user} />
       case 'team':
-        return <TeamPermissionsPage myUid={myUid} />
+        // Hard guard: Team & Permissions is Admin/Owner only (belt-and-suspenders with the nav).
+        return ['Owner', 'Admin'].includes(role) ? <TeamPermissionsPage myUid={myUid} /> : <NoAccessPage />
       case 'profile':
         return <ProfileSettingsPage user={user} />
       case 'teamsettings':
-        return <TeamSettingsPage role={role} />
+        return ['Owner', 'Admin'].includes(role) ? <TeamSettingsPage role={role} /> : <NoAccessPage />
       case 'documents':
         return <PlaceholderPage label="Documents" icon={FileText} />
       case 'crm':
