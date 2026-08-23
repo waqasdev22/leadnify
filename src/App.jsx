@@ -11821,8 +11821,8 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
   const leadFileRef = useRef(null)
   const [leadImport, setLeadImport] = useState(null) // { headers:[], data:[[]], map:{field:colIndex} }
   const [importDealId, setImportDealId] = useState('') // Deal ID to attach imported leads to
-  const [dealsList, setDealsList] = useState([]) // deals to match on import (id + dealId + name)
-  useEffect(() => { getCol('listings').then((l) => setDealsList(Array.isArray(l) ? l : [])).catch(() => {}) }, [])
+  const [importDeals, setImportDeals] = useState([]) // listings to match on import (id + dealId + name)
+  useEffect(() => { getCol('listings').then((l) => setImportDeals(Array.isArray(l) ? l : [])).catch(() => {}) }, [])
   const [leadPage, setLeadPage] = useState(1) // 4.3 — paginate large lead tables
   const [contactList, setContactList] = usePersistentState('crm_contacts', CRM_CONTACTS)
   // Sync leads + contacts to the backend (MongoDB) when it's reachable; localStorage stays the
@@ -12210,7 +12210,7 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
           }
           const runLeadImport = () => {
             const { data, map } = leadImport
-            const matchedDeal = dealsList.find((d) => d.dealId === importDealId) // attach to this deal
+            const matchedDeal = importDeals.find((d) => d.dealId === importDealId) // attach to this deal
             const existingEmails = new Set(inbox.map((l) => (l.email || '').trim().toLowerCase()).filter(Boolean))
             const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
             const get = (cells, key) => (map[key] >= 0 ? (cells[map[key]] || '').trim() : '')
@@ -12327,7 +12327,7 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
                     <label className="mb-1 block text-xs font-semibold text-slate-600">Match to Deal <span className="font-normal text-slate-400">(attach every imported lead to this deal)</span></label>
                     <select value={importDealId} onChange={(e) => setImportDealId(e.target.value)} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-brand">
                       <option value="">— No deal (use the Property column instead) —</option>
-                      {dealsList.filter((d) => d.dealId).map((d) => <option key={d.id} value={d.dealId}>{d.dealId} — {d.name}</option>)}
+                      {importDeals.filter((d) => d.dealId).map((d) => <option key={d.id} value={d.dealId}>{d.dealId} — {d.name}</option>)}
                     </select>
                   </div>
 
