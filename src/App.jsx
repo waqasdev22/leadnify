@@ -14836,7 +14836,8 @@ const CA_TEMPLATES = [
   { name: 'Business (going-concern) CA', text: `The information regarding this business is confidential. By signing, the recipient agrees not to contact employees, landlords, customers, or suppliers, and to hold all financials and the identity of the business in strict confidence, as required by [COMPANY_NAME].\n\nPLEASE CONTACT THE [COMPANY_NAME] ADVISOR FOR MORE DETAILS.` },
 ]
 
-function TeamSettingsPage() {
+function TeamSettingsPage({ role = 'Member' }) {
+  const isAdminUp = ['Owner', 'Admin'].includes(role)
   const notify = useToast()
   const [members, setMembers] = usePersistentState('team_members', TEAM_SETTINGS_MEMBERS)
   const [brokerType, setBrokerType] = usePersistentState('team_broker', 'property')
@@ -14885,7 +14886,7 @@ function TeamSettingsPage() {
       <p className="mt-1 text-sm text-slate-500">Manage team members and roles from the <span className="font-semibold text-brand">Team &amp; Permissions</span> page.</p>
 
       {/* Embed on your website (moved here from My Deals — Admin/Owner only) */}
-      {(() => {
+      {isAdminUp && (() => {
         let saved = {}
         try { saved = JSON.parse(localStorage.getItem('crebuilder_hub') || '{}') } catch { saved = {} }
         const hubUrl = `${window.location.origin}${window.location.pathname}?hub=vaziamts`
@@ -15533,7 +15534,7 @@ export default function App() {
       case 'profile':
         return <ProfileSettingsPage user={user} />
       case 'teamsettings':
-        return <TeamSettingsPage />
+        return <TeamSettingsPage role={role} />
       case 'documents':
         return <PlaceholderPage label="Documents" icon={FileText} />
       case 'crm':
