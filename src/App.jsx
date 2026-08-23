@@ -469,8 +469,8 @@ const downloadPdf = (item, notify) => {
 
 const NAV_ITEMS = [
   { key: 'crm', label: 'My Leads', icon: Contact },
+  // "Deal Rooms" is merged into "My Deals" — one place for every deal (its deal room opens on click).
   { key: 'listings', label: 'My Deals', icon: Globe },
-  { key: 'deals', label: 'Deal Rooms', icon: FolderLock },
   { key: 'email', label: 'Distribution', icon: Send, soon: true, adminOnly: true },
 ]
 
@@ -9257,6 +9257,12 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
     ...l,
   })
   const rows = listings.map(withDefaults)
+  // Combine: deal rooms that have no matching listing are surfaced in My Deals too, so every
+  // deal lives in one place. (They're unlisted — not pushed to the public microsite.)
+  const standaloneRooms = (dealRooms || [])
+    .filter((r) => !listings.some((l) => l.id === r.id || l.id === r.listingId || (l.name || '').trim().toLowerCase() === (r.name || '').trim().toLowerCase()))
+    .map((r) => ({ id: r.id, dealId: r.dealId, name: r.name, address: r.address, city: r.city || '', state: r.state || '', price: r.price || 0, type: 'Deal Room', size: '—', status: r.status === 'Archived' ? 'Draft' : 'Active', image: r.image || '', featured: false, listed: false, access: r.access || 'Public', ts: r.ts, _roomOnly: true }))
+  const tableRows = [...rows, ...standaloneRooms]
 
   // Persist current listings + brand color so the public "?hub=" link (opened in a
   // new tab) shows exactly what Preview shows.
@@ -9300,14 +9306,14 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listings, primary, micrositeTpl, defaultView, slug, explicitNotifyEmail, micrositeLogo])
 
-  const listedCount = rows.filter((l) => l.listed).length
-  const unlistedCount = rows.length - listedCount
+  const listedCount = tableRows.filter((l) => l.listed).length
+  const unlistedCount = tableRows.length - listedCount
 
   const q = (globalQuery || search).toLowerCase()
-  const filtered = rows.filter((l) => {
+  const filtered = tableRows.filter((l) => {
     if (filter === 'listed' && !l.listed) return false
     if (filter === 'unlisted' && l.listed) return false
-    if (q.trim() && !(l.name.toLowerCase().includes(q) || l.address.toLowerCase().includes(q))) return false
+    if (q.trim() && !((l.name || '').toLowerCase().includes(q) || (l.address || '').toLowerCase().includes(q))) return false
     return true
   })
 
@@ -9407,7 +9413,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
   }
 
   const TABS = [
-    { key: 'all', label: `All (${rows.length})` },
+    { key: 'all', label: `All (${tableRows.length})` },
     { key: 'listed', label: `Listed (${listedCount})` },
     { key: 'unlisted', label: `Unlisted (${unlistedCount})` },
   ]
