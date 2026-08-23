@@ -11900,6 +11900,10 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
   }, [crmDbLoaded])
   const [contactView, setContactView] = useState('people')
   const [contactChip, setContactChip] = useState(null)
+  const [contactSort, setContactSort] = useState({ col: 'name', dir: 'asc' }) // sortable columns
+  const [contactTemp, setContactTemp] = useState('All') // Lead Temp filter
+  const [contactProfile, setContactProfile] = useState('All') // Profile (Broker/Principal) filter
+  const [openContactId, setOpenContactId] = useState(null) // expanded row (email/mobile/activity)
   const [addContactOpen, setAddContactOpen] = useState(false)
   const [newContact, setNewContact] = useState({ email: '', name: '', title: '', phone: '', company: '', leadType: 'Unset', note: '' })
   const [editContact, setEditContact] = useState(null) // contact being edited, or null
@@ -12563,10 +12567,30 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
         {/* CONTACTS */}
         {tab === 'contacts' && (() => {
           const TAGS = ['Hot', 'Warm', 'Cold']
+          const cProfile = (c) => c.profile || (['Buyer', 'Investor', 'Tenant'].includes(c.type) ? 'Principal' : (c.type === 'Broker' ? 'Broker' : ''))
+          const mmddyyyy = (v) => { const t = Date.parse(v); if (!t) return v || '—'; const d = new Date(t); return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}` }
           let rows = contacts
+            .filter((c) => contactTemp === 'All' || c.tag === contactTemp)
+            .filter((c) => contactProfile === 'All' || cProfile(c) === contactProfile)
           if (contactChip && contactChip !== 'Hot first') rows = rows.filter((c) => (TAGS.includes(contactChip) ? c.tag === contactChip : c.type === contactChip))
+          // Column sort (ascending/descending)
+          const sortVal = { name: (c) => (c.name || '').toLowerCase(), company: (c) => (c.company || '').toLowerCase(), profile: (c) => cProfile(c), temp: (c) => ({ Hot: 3, Warm: 2, Cold: 1 }[c.tag] || 0), source: (c) => (c.source || '').toLowerCase(), last: (c) => Date.parse(c.lastSeen) || 0 }
+          rows = [...rows].sort((a, b) => { const va = sortVal[contactSort.col](a), vb = sortVal[contactSort.col](b); const r = va < vb ? -1 : va > vb ? 1 : 0; return contactSort.dir === 'asc' ? r : -r })
           if (contactChip === 'Hot first') rows = [...rows].sort((a, b) => b.score - a.score)
-          const dupes = 1
+          const toggleSort = (col) => setContactSort((s) => ({ col, dir: s.col === col && s.dir === 'asc' ? 'desc' : 'asc' }))
+          // Duplicate detection + auto-merge by phone OR email (never by name/company).
+          const dupeKey = (c) => (c.email || '').trim().toLowerCase() || (c.phone || '').replace(/\D/g, '')
+          const dupeGroups = (() => { const m = {}; contactList.forEach((c) => { const k = dupeKey(c); if (!k) return; (m[k] = m[k] || []).push(c) }); return Object.values(m).filter((g) => g.length > 1) })()
+          const dupes = dupeGroups.length
+          const autoMerge = () => {
+            if (!dupes) { notify('No duplicates found'); return }
+            setContactList((list) => {
+              const byKey = {}; const order = []
+              list.forEach((c) => { const k = dupeKey(c); if (!k) { order.push(c); return } if (!byKey[k]) { byKey[k] = { ...c }; order.push(byKey[k]) } else { const m = byKey[k]; m.name = m.name || c.name; m.phone = (m.phone && m.phone !== '—') ? m.phone : c.phone; m.company = (m.company && m.company !== '—') ? m.company : c.company; m.activity = (m.activity || 0) + (c.activity || 0) } })
+              return order
+            })
+            notify(`Merged ${dupes} duplicate group${dupes === 1 ? '' : 's'} by email/phone`)
+          }
           const inCls = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400'
           const addContact = () => {
             if (!newContact.email.trim()) { notify('Email is required', 'error'); return }
@@ -12659,7 +12683,7 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <button onClick={() => notify('Guided tour coming soon')} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50"><HelpCircle className="h-4 w-4" /> Show me around</button>
-                <button onClick={() => notify('Reviewing possible duplicates')} className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-100"><Copy className="h-4 w-4" /> {dupes} possible duplicate</button>
+                <button onClick={autoMerge} title="Merge duplicates by email or phone" className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-100"><Copy className="h-4 w-4" /> {dupes} possible duplicate{dupes === 1 ? '' : 's'} · Merge</button>
                 <button onClick={exportContacts} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"><Download className="h-4 w-4" /> Export</button>
                 <input ref={contactFileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={(e) => { importContacts(e.target.files[0]); e.target.value = '' }} />
                 <button onClick={() => contactFileRef.current && contactFileRef.current.click()} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"><Upload className="h-4 w-4" /> Import</button>
@@ -12686,36 +12710,70 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
               )}
             </div>
 
+            {/* Filter bar: Search, Lead Temp, Profile */}
             <div className="flex flex-wrap items-center gap-3">
-              <div className="relative w-72 max-w-full"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name, email, or company..." className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100" /></div>
-              <div className="flex flex-wrap gap-2">
-                {CRM_CONTACT_CHIPS.map((c) => (
-                  <button key={c} onClick={() => setContactChip((v) => (v === c ? null : c))} className={`rounded-full px-3 py-1.5 text-sm font-semibold transition ${contactChip === c ? 'bg-brand text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{c === 'Hot first' && '🔥 '}{c}</button>
-                ))}
-              </div>
+              <div className="relative w-72 max-w-full"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name, email, or company..." className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm outline-none transition focus:border-brand focus:ring-2 focus:ring-blue-100" /></div>
+              <select value={contactTemp} onChange={(e) => setContactTemp(e.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-brand">
+                <option value="All">Lead Temp: All</option>
+                <option value="Hot">🔥 Hot</option>
+                <option value="Warm">☀️ Warm</option>
+                <option value="Cold">🧊 Cold</option>
+              </select>
+              <select value={contactProfile} onChange={(e) => setContactProfile(e.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-brand">
+                <option value="All">Profile: All</option>
+                <option value="Broker">Broker</option>
+                <option value="Principal">Principal</option>
+              </select>
             </div>
 
             <div className="scrollbar-slim overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
               <table className="w-full min-w-[860px]">
-                <thead className="border-b border-slate-100 bg-slate-50"><tr><th className={th}>Contact</th><th className={th}>Company</th><th className={th}>Source</th><th className={th}>Score</th><th className={th}>Activity</th><th className={th}>Last seen</th><th className={th + ' text-right'}></th></tr></thead>
+                <thead className="border-b border-slate-100 bg-slate-50"><tr>
+                  {[{ k: 'name', l: 'Contact Name' }, { k: 'company', l: 'Company' }, { k: 'profile', l: 'Profile' }, { k: 'temp', l: 'Lead Temp' }, { k: 'source', l: 'Source' }, { k: 'last', l: 'Last Activity' }].map((col) => (
+                    <th key={col.k} className={th}>
+                      <button onClick={() => toggleSort(col.k)} className="inline-flex items-center gap-1 font-semibold transition hover:text-slate-700">
+                        {col.l}
+                        <ChevronDown className={`h-3 w-3 transition ${contactSort.col === col.k ? 'text-brand ' + (contactSort.dir === 'asc' ? 'rotate-180' : '') : 'text-slate-300'}`} />
+                      </button>
+                    </th>
+                  ))}
+                  <th className={th + ' text-right'}></th>
+                </tr></thead>
                 <tbody className="divide-y divide-slate-100">
-                  {rows.map((c) => (
-                    <tr key={c.id} className="hover:bg-slate-50">
-                      <td className={td}><p className="font-semibold text-slate-800">{c.name}</p><p className="text-xs text-slate-400">{c.email} · {c.phone}</p></td>
+                  {rows.map((c) => {
+                    const open = openContactId === c.id
+                    const temp = c.tag || 'Warm'
+                    const tempIcon = { Hot: '🔥', Warm: '☀️', Cold: '🧊' }[temp] || ''
+                    return (
+                    <React.Fragment key={c.id}>
+                    <tr className="cursor-pointer hover:bg-slate-50" onClick={() => setOpenContactId(open ? null : c.id)}>
+                      <td className={td}><div className="flex items-center gap-2"><ChevronDown className={`h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} /><span className="font-semibold text-slate-800">{c.name}</span></div></td>
                       <td className={`${td} text-brand`}>{c.company}</td>
+                      <td className={td}>{cProfile(c) || '—'}</td>
+                      <td className={td}><span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">{tempIcon} {temp}</span></td>
                       <td className={td}><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${crmContactSrcBadge(c.source)}`}>{c.source}</span></td>
-                      <td className={td}><span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-bold text-amber-700"><span className={`h-2 w-2 rounded-full ${crmScoreDot(c.tag)}`} /> {c.score}</span></td>
-                      <td className={td}>{c.activity} events</td>
-                      <td className={td}>{c.lastSeen}</td>
-                      <td className={td + ' text-right'}>
+                      <td className={td}>{mmddyyyy(c.lastSeen)}</td>
+                      <td className={td + ' text-right'} onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1">
                           <IconButton icon={Pencil} label="Edit contact" onClick={() => setEditContact({ ...c })} />
-                          <IconButton icon={Mail} label="Email" onClick={() => { window.location.href = `mailto:${c.email}` }} />
                           <IconButton icon={Trash2} label="Delete contact" tone="danger" onClick={() => setDelContact(c)} />
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    {open && (
+                      <tr className="bg-slate-50/70">
+                        <td colSpan={7} className="px-4 pb-4 pt-1">
+                          <div className="grid grid-cols-1 gap-x-6 gap-y-3 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-3">
+                            <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Email</p><a href={`mailto:${c.email}`} className="mt-0.5 block text-sm font-semibold text-brand hover:underline">{c.email || '—'}</a></div>
+                            <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Mobile</p><a href={`tel:${c.phone}`} className="mt-0.5 block text-sm font-semibold text-slate-800 hover:underline">{c.phone || '—'}</a></div>
+                            <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Activity</p><p className="mt-0.5 text-sm font-semibold text-slate-800">{c.activity || 0} events</p></div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    </React.Fragment>
+                    )
+                  })}
                   {!rows.length && <tr><td colSpan={7} className="py-10 text-center text-sm text-slate-400">No contacts.</td></tr>}
                 </tbody>
               </table>
