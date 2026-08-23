@@ -8876,6 +8876,169 @@ export const toMicrositeItems = (listings) =>
       }
     })
 
+// Crexi-style New Deal wizard — captures a deal through input fields across seven steps,
+// then hands the assembled deal to onCreate (which builds the listing + deal room).
+const NEW_DEAL_STEPS = ['Property Information', 'Media & Description', 'Property Details', 'OM', 'Confidential Documents', 'Listing Team', 'Save & Exit']
+function NewDealModal({ onClose, onCreate }) {
+  const notify = useToast()
+  const [step, setStep] = useState(0)
+  const [f, setF] = useState({ name: '', propertyType: 'Retail', street: '', city: '', state: '', zip: '', status: 'Active', access: 'Public', cover: '', description: '', photos: [], price: '', capRate: '', noi: '', size: '', om: null, confidential: [], contacts: [], bor: { name: '', company: '', license: '' } })
+  const set = (k, v) => setF((s) => ({ ...s, [k]: v }))
+  const coverRef = useRef(null), photoRef = useRef(null), omRef = useRef(null), confRef = useRef(null)
+  const fsize = (file) => { const mb = file.size / (1024 * 1024); return mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.max(1, Math.round(file.size / 1024))} KB` }
+  const today = () => new Date().toLocaleDateString('en-GB')
+  const inp = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-brand focus:ring-2 focus:ring-blue-100'
+  const lbl = 'mb-1 block text-xs font-semibold text-slate-500'
+
+  const onCover = async (e) => { const file = e.target.files?.[0]; e.target.value = ''; if (!file) return; if (!file.type.startsWith('image/')) { notify('Choose an image', 'error'); return } set('cover', await readFileAsDataUrl(file)) }
+  const onPhotos = async (e) => { const files = Array.from(e.target.files || []).filter((x) => x.type.startsWith('image/')); e.target.value = ''; const added = []; for (const file of files) { if (file.size > MAX_CLOUD_FILE) { notify(`"${file.name}" too large (max 9 MB) — skipped`, 'error'); continue } added.push({ id: uid(), name: file.name, url: await readFileAsDataUrl(file) }) } set('photos', [...f.photos, ...added].slice(0, 12)) }
+  const onOm = async (e) => { const file = e.target.files?.[0]; e.target.value = ''; if (!file) return; if (file.type !== 'application/pdf') { notify('OM must be a PDF', 'error'); return } if (file.size > MAX_CLOUD_FILE) { notify('PDF too large (max 9 MB)', 'error'); return } set('om', { name: file.name, size: fsize(file), date: today(), url: await readFileAsDataUrl(file) }) }
+  const onConf = async (e) => { const files = Array.from(e.target.files || []); e.target.value = ''; const added = []; for (const file of files) { if (file.size > MAX_CLOUD_FILE) { notify(`"${file.name}" too large (max 9 MB) — skipped`, 'error'); continue } added.push({ id: uid(), name: file.name, size: fsize(file), date: today(), url: await readFileAsDataUrl(file) }) } set('confidential', [...f.confidential, ...added]) }
+  const addContact = () => set('contacts', [...f.contacts, { id: uid(), name: '', company: '', email: '', phone: '' }])
+  const setContact = (id, k, v) => set('contacts', f.contacts.map((c) => (c.id === id ? { ...c, [k]: v } : c)))
+  const save = () => { if (!f.name.trim()) { setStep(0); notify('Deal name is required', 'error'); return } onCreate(f) }
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/50 p-4" onClick={onClose}>
+      <div className="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl sm:flex-row" onClick={(e) => e.stopPropagation()}>
+        {/* Steps rail */}
+        <div className="shrink-0 border-b border-slate-100 bg-slate-50 p-4 sm:w-56 sm:border-b-0 sm:border-r">
+          <p className="mb-3 text-base font-extrabold text-slate-900">New Deal</p>
+          <div className="flex gap-1 overflow-x-auto sm:flex-col sm:gap-0.5">
+            {NEW_DEAL_STEPS.map((s, i) => (
+              <button key={s} onClick={() => setStep(i)} className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold transition ${step === i ? 'bg-brand text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
+                <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${step === i ? 'bg-white/25' : 'bg-slate-200 text-slate-600'}`}>{i + 1}</span>
+                <span className="whitespace-nowrap sm:whitespace-normal">{s}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+        {/* Panel */}
+        <div className="flex min-w-0 flex-1 flex-col">
+          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
+            <p className="text-sm font-bold text-slate-900">{NEW_DEAL_STEPS[step]}</p>
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X className="h-5 w-5" /></button>
+          </div>
+          <div className="scrollbar-slim flex-1 overflow-y-auto p-5">
+            {step === 0 && (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="sm:col-span-2"><label className={lbl}>Deal / Property Name *</label><input className={inp} value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="e.g. Riverside Business Park" /></div>
+                <div><label className={lbl}>Property Type</label><select className={inp} value={f.propertyType} onChange={(e) => set('propertyType', e.target.value)}>{PROPERTY_TYPE_CARDS.map((c) => <option key={c.key} value={c.key}>{c.key}</option>)}</select></div>
+                <div><label className={lbl}>Access</label><select className={inp} value={f.access} onChange={(e) => set('access', e.target.value)}>{ACCESS_OPTIONS.map((o) => <option key={o}>{o}</option>)}</select></div>
+                <div className="sm:col-span-2"><label className={lbl}>Street Address</label><input className={inp} value={f.street} onChange={(e) => set('street', e.target.value)} placeholder="123 Main St" /></div>
+                <div><label className={lbl}>City</label><input className={inp} value={f.city} onChange={(e) => set('city', e.target.value)} /></div>
+                <div><label className={lbl}>State</label><input className={inp} value={f.state} onChange={(e) => set('state', e.target.value)} /></div>
+                <div><label className={lbl}>ZIP</label><input className={inp} value={f.zip} onChange={(e) => set('zip', e.target.value)} /></div>
+                <div><label className={lbl}>Status</label><select className={inp} value={f.status} onChange={(e) => set('status', e.target.value)}><option>Active</option><option>Draft</option></select></div>
+              </div>
+            )}
+            {step === 1 && (
+              <div className="space-y-4">
+                <div>
+                  <label className={lbl}>Cover Image</label>
+                  <input ref={coverRef} type="file" accept="image/*" className="hidden" onChange={onCover} />
+                  {f.cover ? (
+                    <div className="relative h-40 overflow-hidden rounded-lg border border-slate-200"><img src={f.cover} alt="" className="h-full w-full object-cover" /><button onClick={() => set('cover', '')} className="absolute right-2 top-2 rounded-lg bg-white/90 px-2 py-1 text-xs font-semibold text-rose-600">Remove</button></div>
+                  ) : (
+                    <button onClick={() => coverRef.current?.click()} className="flex w-full flex-col items-center gap-1 rounded-lg border border-dashed border-slate-300 py-6 text-sm font-medium text-slate-500 hover:border-brand hover:text-brand"><ImageIcon className="h-5 w-5" /> Upload cover image</button>
+                  )}
+                </div>
+                <div><label className={lbl}>Description</label><textarea rows={4} className={inp} value={f.description} onChange={(e) => set('description', e.target.value)} placeholder="Describe the property, location and opportunity…" /></div>
+                <div>
+                  <label className={lbl}>Photos (property page gallery)</label>
+                  <input ref={photoRef} type="file" accept="image/*" multiple className="hidden" onChange={onPhotos} />
+                  {f.photos.length > 0 && <div className="mb-2 grid grid-cols-4 gap-2">{f.photos.map((p) => <div key={p.id} className="group relative aspect-square overflow-hidden rounded-lg border border-slate-200"><img src={p.url} alt="" className="h-full w-full object-cover" /><button onClick={() => set('photos', f.photos.filter((x) => x.id !== p.id))} className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-white/90 text-rose-600 opacity-0 group-hover:opacity-100"><Trash2 className="h-3 w-3" /></button></div>)}</div>}
+                  <button onClick={() => photoRef.current?.click()} className="flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-slate-300 py-3 text-sm font-medium text-slate-500 hover:border-brand hover:text-brand"><Upload className="h-4 w-4" /> Add photos</button>
+                </div>
+              </div>
+            )}
+            {step === 2 && (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div><label className={lbl}>Price ($)</label><input className={inp} value={f.price} onChange={(e) => set('price', e.target.value)} placeholder="4200000" /></div>
+                <div><label className={lbl}>Size (SF)</label><input className={inp} value={f.size} onChange={(e) => set('size', e.target.value)} placeholder="12,500 SF" /></div>
+                <div><label className={lbl}>CAP Rate (%)</label><input className={inp} value={f.capRate} onChange={(e) => set('capRate', e.target.value)} placeholder="6.5" /></div>
+                <div><label className={lbl}>NOI ($)</label><input className={inp} value={f.noi} onChange={(e) => set('noi', e.target.value)} placeholder="273000" /></div>
+              </div>
+            )}
+            {step === 3 && (
+              <div>
+                <label className={lbl}>Offering Memorandum (PDF)</label>
+                <input ref={omRef} type="file" accept="application/pdf" className="hidden" onChange={onOm} />
+                {f.om ? (
+                  <div className="flex items-center gap-3 rounded-lg border border-slate-200 p-3"><FileText className="h-6 w-6 text-brand" /><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-slate-800">{f.om.name}</p><p className="text-xs text-slate-400">{f.om.size}</p></div><button onClick={() => set('om', null)} className="text-rose-600"><Trash2 className="h-4 w-4" /></button></div>
+                ) : (
+                  <button onClick={() => omRef.current?.click()} className="flex w-full flex-col items-center gap-1 rounded-lg border border-dashed border-slate-300 py-6 text-sm font-medium text-slate-500 hover:border-brand hover:text-brand"><Upload className="h-5 w-5" /> Upload OM (PDF only)</button>
+                )}
+                <p className="mt-2 text-xs text-slate-400">This is what visitors download from the property page “Download Package”.</p>
+              </div>
+            )}
+            {step === 4 && (
+              <div>
+                <label className={lbl}>Confidential Documents (behind the access gate)</label>
+                <input ref={confRef} type="file" multiple className="hidden" onChange={onConf} />
+                {f.confidential.length > 0 && <div className="mb-2 space-y-1.5">{f.confidential.map((c) => <div key={c.id} className="flex items-center gap-2 rounded-lg border border-slate-200 p-2 text-sm"><FileText className="h-4 w-4 text-slate-400" /><span className="min-w-0 flex-1 truncate text-slate-700">{c.name}</span><span className="text-xs text-slate-400">{c.size}</span><button onClick={() => set('confidential', f.confidential.filter((x) => x.id !== c.id))} className="text-rose-600"><Trash2 className="h-3.5 w-3.5" /></button></div>)}</div>}
+                <button onClick={() => confRef.current?.click()} className="flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-slate-300 py-3 text-sm font-medium text-slate-500 hover:border-brand hover:text-brand"><Upload className="h-4 w-4" /> Add confidential files</button>
+              </div>
+            )}
+            {step === 5 && (
+              <div className="space-y-4">
+                <div>
+                  <div className="mb-2 flex items-center justify-between"><label className={lbl + ' mb-0'}>Deal Contacts</label><button onClick={addContact} className="text-xs font-semibold text-brand hover:underline">+ Add contact</button></div>
+                  {f.contacts.length === 0 && <p className="text-xs text-slate-400">No contacts yet — add the people on this deal.</p>}
+                  <div className="space-y-2">{f.contacts.map((c) => (
+                    <div key={c.id} className="grid gap-2 rounded-lg border border-slate-200 p-2 sm:grid-cols-2">
+                      <input className={inp} placeholder="Name" value={c.name} onChange={(e) => setContact(c.id, 'name', e.target.value)} />
+                      <input className={inp} placeholder="Company" value={c.company} onChange={(e) => setContact(c.id, 'company', e.target.value)} />
+                      <input className={inp} placeholder="Email" value={c.email} onChange={(e) => setContact(c.id, 'email', e.target.value)} />
+                      <input className={inp} placeholder="Phone" value={c.phone} onChange={(e) => setContact(c.id, 'phone', e.target.value)} />
+                    </div>
+                  ))}</div>
+                </div>
+                <div>
+                  <label className={lbl}>Broker of Record</label>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    <input className={inp} placeholder="Name" value={f.bor.name} onChange={(e) => set('bor', { ...f.bor, name: e.target.value })} />
+                    <input className={inp} placeholder="Company" value={f.bor.company} onChange={(e) => set('bor', { ...f.bor, company: e.target.value })} />
+                    <input className={inp} placeholder="License #" value={f.bor.license} onChange={(e) => set('bor', { ...f.bor, license: e.target.value })} />
+                  </div>
+                </div>
+              </div>
+            )}
+            {step === 6 && (
+              <div className="space-y-3">
+                <p className="text-sm text-slate-500">Review the deal, then save. It’s added to My Deals with a Deal ID and its own deal room.</p>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-2 rounded-lg border border-slate-200 p-4 text-sm">
+                  <div><span className="text-slate-400">Name:</span> <b className="text-slate-800">{f.name || '—'}</b></div>
+                  <div><span className="text-slate-400">Type:</span> <b className="text-slate-800">{f.propertyType}</b></div>
+                  <div className="col-span-2"><span className="text-slate-400">Address:</span> <b className="text-slate-800">{[f.street, f.city, f.state, f.zip].filter(Boolean).join(', ') || '—'}</b></div>
+                  <div><span className="text-slate-400">Price:</span> <b className="text-slate-800">{f.price ? currency(f.price) : '—'}</b></div>
+                  <div><span className="text-slate-400">CAP:</span> <b className="text-slate-800">{f.capRate ? f.capRate + '%' : '—'}</b></div>
+                  <div><span className="text-slate-400">NOI:</span> <b className="text-slate-800">{f.noi ? currency(f.noi) : '—'}</b></div>
+                  <div><span className="text-slate-400">Photos:</span> <b className="text-slate-800">{f.photos.length}</b></div>
+                  <div><span className="text-slate-400">OM:</span> <b className="text-slate-800">{f.om ? '1 file' : '—'}</b></div>
+                  <div><span className="text-slate-400">Confidential:</span> <b className="text-slate-800">{f.confidential.length}</b></div>
+                </div>
+              </div>
+            )}
+          </div>
+          {/* Footer nav */}
+          <div className="flex items-center justify-between border-t border-slate-100 px-5 py-3">
+            <button onClick={() => setStep(Math.max(0, step - 1))} disabled={step === 0} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-40">Back</button>
+            <div className="flex gap-2">
+              <button onClick={save} className="rounded-lg border border-brand px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand/5">Save &amp; Exit</button>
+              {step < NEW_DEAL_STEPS.length - 1 ? (
+                <button onClick={() => setStep(step + 1)} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-hover">Next</button>
+              ) : (
+                <button onClick={save} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-hover">Create Deal</button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCreateNew, onResumeDraft, onOpenDealRoom, dealRooms = [], setDealRooms, onOpenRoom, user, role = 'Member', can = () => true }) {
   // Custom URL + website embed are account-level distribution settings — only Admin/Owner may change them.
   const canManageUrl = ['Owner', 'Admin'].includes(role)
@@ -8965,6 +9128,32 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
   const [editing, setEditing] = useState(null)
   const [confirm, setConfirm] = useState(null)
   const [expandedId, setExpandedId] = useState(null) // row whose expanded detail is open
+  const [newDealOpen, setNewDealOpen] = useState(false) // crexi-style New Deal field wizard
+
+  // Create a deal from the New Deal wizard: one shared Deal ID across the listing + deal room,
+  // with the OM, photos and confidential docs published so the property page/download work.
+  const createDeal = (d) => {
+    const id = uid()
+    const roomId = uid()
+    const dealId = newDealId()
+    const address = [d.street, d.city, d.state, d.zip].filter(Boolean).join(', ') || '—'
+    const cover = d.cover || (d.photos && d.photos[0] && d.photos[0].url) || ''
+    const price = Number(d.price) || 0
+    setListings((list) => [{ id, dealId, name: d.name, address, city: d.city || '', state: d.state || '', ts: Date.now(), price, type: d.propertyType || 'Retail', size: d.size || '—', status: d.status || 'Active', image: cover || propertyImage('1497366216548-37526070297c'), featured: false, listed: true, access: d.access || 'Public', description: d.description || '' }, ...list])
+    setDealRooms && setDealRooms((list) => [{ id: roomId, listingId: id, dealId, name: d.name, address, image: cover, price, capRate: d.capRate || '', noi: d.noi || '', status: d.status || 'Active', access: d.access === 'Public' ? 'Free Access' : (d.access || 'Free Access'), files: (d.confidential || []).length, members: 0, updated: 'just now', ts: Date.now() }, ...list])
+    if (d.om && d.om.url) {
+      putPublicPackage(id, { name: d.om.name, url: d.om.url }).catch(() => {})
+      putPublicPackage(pkgNameKey(d.name), { name: d.om.name, url: d.om.url }).catch(() => {})
+      putFile(`om_${roomId}`, d.om).catch(() => {})
+    }
+    if (d.photos && d.photos.length) {
+      putFile(`photos_${roomId}`, { list: d.photos }).catch(() => {})
+      putGallery(id, d.photos.map((p) => p.url).filter(Boolean).slice(0, 12))
+    }
+    if (d.confidential && d.confidential.length) putFile(`roomfiles_${roomId}`, { list: d.confidential }).catch(() => {})
+    setNewDealOpen(false)
+    notify(`Deal created — ${dealId}`)
+  }
 
   const withDefaults = (l) => ({
     featured: false,
@@ -9327,7 +9516,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                 )}
                 {can('document.create') && (
                   <button
-                    onClick={onCreateNew}
+                    onClick={() => setNewDealOpen(true)}
                     className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-hover"
                   >
                     <Plus className="h-3.5 w-3.5" /> New Deal
@@ -9596,6 +9785,8 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
       </div>
 
       {/* Deal Rooms section removed from My Deals (still shown on the Dashboard & Deal Rooms page). */}
+
+      {newDealOpen && <NewDealModal onClose={() => setNewDealOpen(false)} onCreate={createDeal} />}
 
       <Modal open={!!editRoom} onClose={() => setEditRoom(null)} title="Edit Deal Room">
         {editRoom && (
