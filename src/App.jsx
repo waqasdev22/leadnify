@@ -10455,7 +10455,9 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
   const impressions = prospects.reduce((s, p) => s + (p.impressions || p.views || 0), 0)
   const totalVisitors = prospects.length
   const downloadedOm = downloads
-  const visitorUrl = `${window.location.origin}${window.location.pathname}?room=${room.id}`
+  // Preview / Copy link / Share all point to the public PROPERTY PAGE (Modern theme by default),
+  // matching the property's listing URL — not the internal deal-room gate page.
+  const visitorUrl = `${window.location.origin}${window.location.pathname}?hub=vaziamts&p=${room.listingId || room.id}&t=Modern`
 
   // Save this room so the public "?room=" gate page (opened in a new tab) can render it.
   useEffect(() => {
@@ -11092,12 +11094,12 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
           {/* Share */}
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <p className="text-sm font-bold text-slate-900">Share</p>
-            <p className="text-xs text-slate-400">Send prospects to the gated landing page</p>
+            <p className="text-xs text-slate-400">Share the property page link with prospects</p>
             <div className="mt-3 flex items-center gap-2">
               <button
                 onClick={openVisitor}
                 className="flex-1 truncate rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left text-xs text-slate-500 transition hover:text-brand"
-                title="Open gated landing page"
+                title="Open property page"
               >
                 {visitorUrl}
               </button>
