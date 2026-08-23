@@ -10416,6 +10416,20 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
   // Deal contacts (up to 4 per deal) + Broker of Record (1 per listing) — persisted per room.
   const [dealContacts, setDealContacts] = usePersistentState(`room_${room.id}_contacts`, [])
   const [bor, setBor] = usePersistentState(`room_${room.id}_bor`, null)
+  // Deal Contacts auto-populate from invited team members only (no outsiders).
+  const [teamMembers] = usePersistentState('team_members', TEAM_SETTINGS_MEMBERS)
+  const [contactsSeeded, setContactsSeeded] = usePersistentState(`room_${room.id}_contacts_seeded`, false)
+  useEffect(() => {
+    if (contactsSeeded) return
+    if (dealContacts.length === 0 && teamMembers.length) {
+      setDealContacts(teamMembers.slice(0, 4).map((m) => ({ id: uid(), name: m.name, company: m.company || '—', email: m.email || '', phone: m.phone || '—', license: '', member: true })))
+    }
+    setContactsSeeded(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [room.id])
+  // Members available to add (invited, not already a deal contact).
+  const availableMembers = teamMembers.filter((m) => !dealContacts.some((c) => (c.email || '').toLowerCase() === (m.email || '').toLowerCase()))
+  const [pickMember, setPickMember] = useState('')
   const emptyContact = { name: '', company: '', email: '', phone: '', license: '' }
   const [contactDraft, setContactDraft] = useState(emptyContact)
   const [addingContact, setAddingContact] = useState(false)
@@ -10935,22 +10949,19 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
               ))}
               {!dealContacts.length && !addingContact && <p className="py-2 text-center text-xs text-slate-400">No contacts yet.</p>}
             </div>
-            {addingContact ? (
-              <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <input value={contactDraft.name} onChange={(e) => setContactDraft((d) => ({ ...d, name: e.target.value }))} placeholder="Name" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" />
-                  <input value={contactDraft.company} onChange={(e) => setContactDraft((d) => ({ ...d, company: e.target.value }))} placeholder="Company name" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" />
-                  <input value={contactDraft.email} onChange={(e) => setContactDraft((d) => ({ ...d, email: e.target.value }))} placeholder="Email" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" />
-                  <input value={contactDraft.phone} onChange={(e) => setContactDraft((d) => ({ ...d, phone: e.target.value }))} placeholder="Phone" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" />
-                  <input value={contactDraft.license} onChange={(e) => setContactDraft((d) => ({ ...d, license: e.target.value }))} placeholder="License #" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400 sm:col-span-2" />
+            {/* Add contacts only from invited team members (no outsiders) */}
+            {dealContacts.length < 4 && (
+              availableMembers.length ? (
+                <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+                  <select value={pickMember} onChange={(e) => setPickMember(e.target.value)} className="min-w-[180px] flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand">
+                    <option value="">Add an invited member…</option>
+                    {availableMembers.map((m) => <option key={m.id} value={m.id}>{m.name}{m.email ? ` — ${m.email}` : ''}</option>)}
+                  </select>
+                  <button onClick={() => { const m = teamMembers.find((x) => x.id === pickMember); if (!m) { notify('Choose a member', 'error'); return } setDealContacts((l) => [...l, { id: uid(), name: m.name, company: m.company || '—', email: m.email || '', phone: m.phone || '—', license: '', member: true }]); setPickMember(''); notify('Contact added') }} className="rounded-lg bg-brand px-3 py-2 text-xs font-bold text-white transition hover:bg-brand-hover">Add</button>
                 </div>
-                <div className="flex gap-2">
-                  <button onClick={saveContact} className="rounded-lg bg-brand px-3 py-1.5 text-xs font-bold text-white transition hover:bg-brand-hover">Save contact</button>
-                  <button onClick={() => { setAddingContact(false); setContactDraft(emptyContact) }} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50">Cancel</button>
-                </div>
-              </div>
-            ) : (
-              <button onClick={() => setAddingContact(true)} disabled={dealContacts.length >= 4} className={`mt-3 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${dealContacts.length >= 4 ? 'cursor-not-allowed bg-slate-100 text-slate-400' : 'bg-orange-50 text-brand hover:bg-orange-100'}`} title={dealContacts.length >= 4 ? 'Maximum 4 contacts per deal' : 'Add a contact'}><Plus className="h-3.5 w-3.5" /> Add contact</button>
+              ) : (
+                <p className="mt-3 border-t border-slate-100 pt-3 text-center text-xs text-slate-400">All invited members are already added. Invite more from <span className="font-semibold text-slate-500">Team &amp; Permissions</span>.</p>
+              )
             )}
           </div>
 
