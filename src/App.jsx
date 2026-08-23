@@ -11762,7 +11762,7 @@ function CrmMetric({ label, value, sub }) {
 function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
   // A Member only ever sees their OWN data — no "Whole Team" view, so they can't read or edit
   // anyone else's leads/contacts. Managers/Admins/Owners get the team-wide view.
-  const teamWide = ['Owner', 'Admin', 'Manager'].includes(role) || can('team.view_all_leads')
+  const teamWide = ['Owner', 'Admin', 'Manager'].includes(role) // strictly role-based (no override leak)
   // Only an Admin or Owner may delete a lead inquiry (managers/members cannot).
   const canDeleteLead = ['Owner', 'Admin'].includes(role)
   const notify = useToast()
