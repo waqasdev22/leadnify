@@ -12189,6 +12189,16 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
             notify(`Exported ${rows.length} lead${rows.length === 1 ? '' : 's'} to CSV`)
           }
           // 3.7 Import — parse CSV, auto-guess a column→field map, then open the mapping screen.
+          const downloadTemplate = () => {
+            const cols = ['First Name', 'Last Name', 'Full Name', 'Type', 'Profile', 'Company', 'Listing', 'Date', 'Status', 'Pipeline', 'Source', 'Email', 'Mobile Phone', 'City', 'State']
+            const sample = ['John', 'Smith', 'John Smith', 'Inquiry', 'Broker', 'Acme Realty', 'Test02', '2026-08-23', 'New', 'Active', 'Referral', 'john@acme.com', '555-123-4567', 'Austin', 'TX']
+            const csv = cols.join(',') + '\n' + sample.join(',') + '\n'
+            const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a'); a.href = url; a.download = 'Leadflow-import-template.csv'; a.click()
+            setTimeout(() => URL.revokeObjectURL(url), 5000)
+            notify('Template downloaded — fill it in Excel, save as CSV, then Import')
+          }
           const onLeadFile = (file) => {
             if (!file) return
             const reader = new FileReader()
@@ -12282,6 +12292,7 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
               </div>
               <div className="flex items-center gap-2">
                 <input ref={leadFileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={(e) => { onLeadFile(e.target.files[0]); e.target.value = '' }} />
+                <button onClick={downloadTemplate} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50" title="Download a ready-to-fill import template"><Download className="h-4 w-4" /> Template</button>
                 <button onClick={() => leadFileRef.current && leadFileRef.current.click()} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50" title="Import leads from a CSV (Crexi, LoopNet, etc.)"><Upload className="h-4 w-4" /> Import</button>
                 <button onClick={exportLeads} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50" title="Export the leads shown (respects Mine/Whole Team + filters)"><Download className="h-4 w-4" /> Export</button>
                 <PrimaryButton icon={Plus} onClick={() => setAddLeadOpen(true)}>Add Lead</PrimaryButton>
