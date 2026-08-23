@@ -11576,8 +11576,11 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
   // A Member only ever sees their OWN data — no "Whole Team" view, so they can't read or edit
   // anyone else's leads/contacts. Managers/Admins/Owners get the team-wide view.
   const teamWide = ['Owner', 'Admin', 'Manager'].includes(role) || can('team.view_all_leads')
+  // Only an Admin or Owner may delete a lead inquiry (managers/members cannot).
+  const canDeleteLead = ['Owner', 'Admin'].includes(role)
   const notify = useToast()
   const me = user?.name || CURRENT_USER.name
+  const [openLeadRow, setOpenLeadRow] = useState(null) // lead row expanded to show its details
   const [tab, setTab] = useState('today')
   const [scope, setScope] = useState('mine') // 'mine' | 'team'
   const [search, setSearch] = useState('')
@@ -12042,7 +12045,7 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
           <div className="space-y-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="-mt-2 text-sm text-slate-500">People who just enquired. Reply here, then save the real ones as contacts.</p>
+                <p className="-mt-2 text-sm text-slate-500">People who just inquired on your property.</p>
                 <h2 className="mt-1 text-xl font-extrabold text-slate-900">Leads</h2>
                 <p className="text-sm text-slate-500">{unreadCount} unread inquiry · {ndaCount} active NDA signers</p>
               </div>
@@ -12182,8 +12185,8 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
               </div>
             </div>
 
-            {/* Bulk action bar */}
-            {selLeads.length > 0 && (
+            {/* Bulk action bar — deleting is Admin/Owner only */}
+            {selLeads.length > 0 && canDeleteLead && (
               <div className="flex items-center justify-between rounded-xl border border-orange-200 bg-orange-50 px-4 py-3">
                 <span className="text-sm font-semibold text-slate-700">{selLeads.length} selected</span>
                 <button onClick={deleteSelected} className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-rose-700"><Trash2 className="h-4 w-4" /> Delete selected</button>
@@ -12198,11 +12201,15 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
                   <th className={th}>Name</th><th className={th}>Type</th><th className={th}>Profile</th><th className={th}>Company</th><th className={th}>Listing</th><th className={th}>Date</th><th className={th}>Status</th><th className={th}>Pipeline</th><th className={th}>Source</th><th className={th + ' text-right'}>Actions</th>
                 </tr></thead>
                 <tbody className="divide-y divide-slate-100">
-                  {pageRows.map((l) => (
-                    <tr key={l.id} className={`hover:bg-slate-50 ${selLeads.includes(l.id) ? 'bg-orange-50/40' : ''}`}>
-                      <td className="w-10 px-4 py-3"><input type="checkbox" checked={selLeads.includes(l.id)} onChange={() => toggleSel(l.id)} className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-blue-300" /></td>
+                  {pageRows.map((l) => {
+                    const rowOpen = openLeadRow === l.id
+                    return (
+                    <React.Fragment key={l.id}>
+                    <tr className={`cursor-pointer hover:bg-slate-50 ${selLeads.includes(l.id) ? 'bg-orange-50/40' : ''}`} onClick={() => setOpenLeadRow(rowOpen ? null : l.id)}>
+                      <td className="w-10 px-4 py-3" onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={selLeads.includes(l.id)} onChange={() => toggleSel(l.id)} className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-blue-300" /></td>
                       <td className={td}>
                         <div className="flex items-center gap-2">
+                          <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform ${rowOpen ? 'rotate-180' : ''}`} />
                           {l.unread && <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
                           <div><p className={`text-slate-800 ${l.unread ? 'font-bold' : 'font-semibold'}`}>{l.name}</p><p className="text-xs text-slate-400">{l.email}</p></div>
                         </div>
@@ -12215,18 +12222,38 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
                       <td className={td}><span className={`text-xs font-semibold ${l.active === 'Inactive' ? 'text-slate-400' : 'text-emerald-600'}`}>{l.active || 'Active'}</span></td>
                       <td className={td}><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${LEAD_PIPELINE_BADGE[l.pipeline] || 'bg-slate-100 text-slate-600'}`}>{l.pipeline || 'Active'}</span></td>
                       <td className={td}>{l.source || '—'}</td>
-                      <td className={td + ' text-right'}>
+                      <td className={td + ' text-right'} onClick={(e) => e.stopPropagation()}>
                         {l.type === 'NDA Signer' || l.type === 'Email Lead' ? (
                           l.status === 'Revoked' ? <span className="text-xs text-slate-400">Revoked</span> : <button onClick={() => revoke(l.id)} className="inline-flex items-center gap-1 text-sm font-semibold text-slate-600 transition hover:text-rose-600"><Ban className="h-4 w-4" /> Revoke</button>
                         ) : (
                           <span className="inline-flex items-center gap-1">
                             <IconButton icon={EyeOff} label="Toggle read/unread" onClick={() => markRead(l.id)} />
-                            <IconButton icon={Trash2} label="Delete" tone="danger" onClick={() => del(l.id)} />
+                            {canDeleteLead && <IconButton icon={Trash2} label="Delete" tone="danger" onClick={() => del(l.id)} />}
                           </span>
                         )}
                       </td>
                     </tr>
-                  ))}
+                    {rowOpen && (
+                      <tr className="bg-slate-50/70">
+                        <td colSpan={11} className="px-4 pb-4 pt-1">
+                          <div className="grid grid-cols-2 gap-x-6 gap-y-3 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-4">
+                            <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Name</p><p className="mt-0.5 text-sm font-semibold text-slate-800">{l.name}</p></div>
+                            <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Email</p><p className="mt-0.5 text-sm font-semibold text-slate-800">{l.email}</p></div>
+                            <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Phone</p><p className="mt-0.5 text-sm font-semibold text-slate-800">{l.phone || '—'}</p></div>
+                            <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Profile</p><p className="mt-0.5 text-sm font-semibold text-slate-800">{l.profile || '—'}</p></div>
+                            <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Company</p><p className="mt-0.5 text-sm font-semibold text-slate-800">{l.company || '—'}</p></div>
+                            <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Property</p><p className="mt-0.5 text-sm font-semibold text-slate-800">{l.property || l.listing || '—'}</p></div>
+                            <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Source</p><p className="mt-0.5 text-sm font-semibold text-slate-800">{l.source || '—'}</p></div>
+                            <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Date</p><p className="mt-0.5 text-sm font-semibold text-slate-800">{l.date || '—'}</p></div>
+                            {(l.city || l.state || l.address) && <div className="col-span-2 sm:col-span-4"><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Address</p><p className="mt-0.5 text-sm font-semibold text-slate-800">{l.address || [l.city, l.state].filter(Boolean).join(', ')}</p></div>}
+                            {l.message && <div className="col-span-2 sm:col-span-4"><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Message</p><p className="mt-0.5 text-sm text-slate-700">{l.message}</p></div>}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    </React.Fragment>
+                    )
+                  })}
                   {!rows.length && <tr><td colSpan={11} className="py-10 text-center text-sm text-slate-400">No leads.</td></tr>}
                 </tbody>
               </table>
