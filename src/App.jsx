@@ -8877,6 +8877,70 @@ export const toMicrositeItems = (listings) =>
       }
     })
 
+// Appearance settings (microsite/property themes, default view, brand colour). Values are
+// persisted so the microsite publish (My Deals) reads the same choices. Lives in Team Settings.
+function AppearanceSettings() {
+  const [micrositeTpl, setMicrositeTpl] = usePersistentState('appr_microsite', 'Modern')
+  const [propertyTpl, setPropertyTpl] = usePersistentState('appr_property', 'Match Listings')
+  const [defaultView, setDefaultView] = usePersistentState('appr_view', 'mapgrid')
+  const [sameAsMicrosite, setSameAsMicrosite] = usePersistentState('appr_same', true)
+  const [primary, setPrimary] = usePersistentState('appr_primary', '#0f172a')
+  const secondary = lighten(primary, 0.3)
+  const sectionLabel = 'mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400'
+  return (
+    <div className="mt-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex items-start gap-2">
+        <Palette className="mt-0.5 h-5 w-5 text-slate-400" />
+        <div><p className="text-sm font-bold text-slate-900">Appearance</p><p className="text-xs text-slate-400">Theme, layout and brand colour for your public microsite &amp; property pages. Admins &amp; Owners only.</p></div>
+      </div>
+      <div className="mt-4 grid gap-6 lg:grid-cols-2">
+        <div>
+          <p className={sectionLabel}>Microsite Page</p>
+          <div className="grid grid-cols-3 gap-2">
+            {MICROSITE_TEMPLATES.map((t) => <AppearanceThumb key={t} name={t} color={primary} selected={micrositeTpl === t} onSelect={() => setMicrositeTpl(t)} />)}
+          </div>
+          <p className={`mt-5 ${sectionLabel}`}>Property Pages</p>
+          <div className="grid grid-cols-3 gap-2">
+            {PROPERTY_TEMPLATES.map((t) => <AppearanceThumb key={t} name={t} color={primary} selected={propertyTpl === t} onSelect={() => setPropertyTpl(t)} />)}
+          </div>
+          <p className={`mt-5 ${sectionLabel}`}>Default View</p>
+          <div className="inline-flex gap-1 rounded-lg bg-slate-100 p-1">
+            {HUB_VIEWS.map(({ key, icon: Icon }) => (
+              <button key={key} onClick={() => setDefaultView(key)} title={key} className={`inline-flex h-8 w-8 items-center justify-center rounded-md transition ${defaultView === key ? 'bg-white text-brand shadow-sm' : 'text-slate-400 hover:text-slate-700'}`}><Icon className="h-4 w-4" /></button>
+            ))}
+          </div>
+          <div className="mt-3 flex items-center gap-2"><Toggle on={sameAsMicrosite} onChange={setSameAsMicrosite} /><span className="text-xs text-slate-500">Same as Microsite default view</span></div>
+        </div>
+        <div>
+          <p className={sectionLabel}>Match Your Brokerage</p>
+          <div className="grid grid-cols-6 gap-1.5">
+            {BROKERAGES.map((b) => (
+              <button key={b.label} onClick={() => setPrimary(b.colors[0])} title={b.label} className="overflow-hidden rounded-md border border-slate-200 transition hover:ring-2 hover:ring-blue-200"><div className="flex h-6"><div className="flex-1" style={{ background: b.colors[0] }} /><div className="flex-1" style={{ background: b.colors[1] }} /></div><div className="truncate px-1 py-0.5 text-center text-[7px] font-semibold text-slate-500">{b.label}</div></button>
+            ))}
+          </div>
+          <p className={`mt-4 ${sectionLabel}`}>Color Palettes</p>
+          <div className="grid grid-cols-6 gap-1.5">
+            {COLOR_PALETTES.map((p) => (
+              <button key={p.label} onClick={() => setPrimary(p.color)} title={p.label} className="overflow-hidden rounded-md border border-slate-200 transition hover:ring-2 hover:ring-blue-200"><div className="h-6" style={{ background: p.color }} /><div className="truncate px-1 py-0.5 text-center text-[7px] font-semibold text-slate-500">{p.label}</div></button>
+            ))}
+          </div>
+          <div className="mt-5 flex items-center gap-5 border-t border-slate-100 pt-3">
+            <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-slate-600" title="Click to choose primary color">
+              <span className="h-4 w-4 rounded-full ring-1 ring-slate-200" style={{ background: primary }} /> Primary
+              <span className="font-mono text-[10px] uppercase text-slate-400">{primary}</span>
+              <input type="color" value={primary} onChange={(e) => setPrimary(e.target.value)} className="sr-only" />
+            </label>
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600" title="Auto-generated from primary">
+              <span className="h-4 w-4 rounded-full ring-1 ring-slate-200" style={{ background: secondary }} /> Secondary
+              <span className="font-mono text-[10px] uppercase text-slate-400">{secondary}</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // Crexi-style New Deal wizard — captures a deal through input fields across seven steps,
 // then hands the assembled deal to onCreate (which builds the listing + deal room).
 const NEW_DEAL_STEPS = ['Property Information', 'Media & Description', 'Property Details', 'OM', 'Confidential Documents', 'Listing Team', 'Save & Exit']
@@ -9069,12 +9133,10 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
   const [embedOpen, setEmbedOpen] = useState(false)
 
   // Appearance — defaults per spec: Modern theme, Map + Grid view, Midnight colour.
-  const [micrositeTpl, setMicrositeTpl] = useState('Modern')
-  const [propertyTpl, setPropertyTpl] = useState('Match Listings')
-  const [defaultView, setDefaultView] = useState('mapgrid')
-  const [sameAsMicrosite, setSameAsMicrosite] = useState(true)
-  const [primary, setPrimary] = useState('#0f172a')
-  const secondary = lighten(primary, 0.3)
+  // Read-only here: the Appearance controls live in Team Settings and write these same keys.
+  const [micrositeTpl] = usePersistentState('appr_microsite', 'Modern')
+  const [defaultView] = usePersistentState('appr_view', 'mapgrid')
+  const [primary] = usePersistentState('appr_primary', '#0f172a')
 
   // The email that receives the "someone downloaded the package" notification. Set here on
   // the dashboard (synced across devices); falls back to the signed-in account email. Only
@@ -9341,7 +9403,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
         </button>
       </div>
 
-      <div className={`mt-5 grid items-start gap-5 ${canManageUrl ? 'lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_340px]' : ''}`}>
+      <div className="mt-5">
         {/* LEFT column */}
         <div className="min-w-0 space-y-4">
           {/* Public URL card */}
@@ -9679,103 +9741,6 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
             </div>
           </div>
         </div>
-
-        {/* RIGHT — Appearance panel (Admin/Owner only — team-level branding). */}
-        {canManageUrl && (
-        <div className="scrollbar-slim rounded-xl border border-slate-200 bg-white p-4 shadow-sm lg:sticky lg:top-4 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
-          <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Appearance</p>
-
-          <p className={`mt-4 ${sectionLabel}`}>Microsite Page</p>
-          <div className="grid grid-cols-2 gap-2">
-            {MICROSITE_TEMPLATES.map((t) => (
-              <AppearanceThumb key={t} name={t} color={primary} dark={t === 'Executive'} selected={micrositeTpl === t} onSelect={() => setMicrositeTpl(t)} />
-            ))}
-          </div>
-
-          <p className={`mt-5 ${sectionLabel}`}>Property Pages</p>
-          <div className="grid grid-cols-2 gap-2">
-            {PROPERTY_TEMPLATES.map((t) => (
-              <AppearanceThumb key={t} name={t} color={primary} dark={t === 'Executive'} selected={propertyTpl === t} onSelect={() => setPropertyTpl(t)} />
-            ))}
-          </div>
-
-          <p className={`mt-5 ${sectionLabel}`}>Default View</p>
-          <div className="inline-flex gap-1 rounded-lg bg-slate-100 p-1">
-            {HUB_VIEWS.map(({ key, icon: Icon }) => (
-              <button
-                key={key}
-                onClick={() => setDefaultView(key)}
-                title={key}
-                className={`inline-flex h-8 w-8 items-center justify-center rounded-md transition ${
-                  defaultView === key ? 'bg-white text-brand shadow-sm' : 'text-slate-400 hover:text-slate-700'
-                }`}
-              >
-                <Icon className="h-4 w-4" />
-              </button>
-            ))}
-          </div>
-
-          <div className="mt-3 flex items-center gap-2">
-            <Toggle on={sameAsMicrosite} onChange={setSameAsMicrosite} />
-            <span className="text-xs text-slate-500">Same as Microsite default view</span>
-          </div>
-
-          <p className={`mt-5 ${sectionLabel}`}>Match Your Brokerage</p>
-          <div className="grid grid-cols-4 gap-1.5">
-            {BROKERAGES.map((b) => (
-              <button
-                key={b.label}
-                onClick={() => setPrimary(b.colors[0])}
-                title={b.label}
-                className="overflow-hidden rounded-md border border-slate-200 transition hover:ring-2 hover:ring-orange-200"
-              >
-                <div className="flex h-6">
-                  <div className="flex-1" style={{ background: b.colors[0] }} />
-                  <div className="flex-1" style={{ background: b.colors[1] }} />
-                </div>
-                <div className="truncate px-1 py-0.5 text-center text-[7px] font-semibold text-slate-500">{b.label}</div>
-              </button>
-            ))}
-          </div>
-
-          <p className={`mt-4 ${sectionLabel}`}>Color Palettes</p>
-          <div className="grid grid-cols-4 gap-1.5">
-            {COLOR_PALETTES.map((p) => (
-              <button
-                key={p.label}
-                onClick={() => setPrimary(p.color)}
-                title={p.label}
-                className="overflow-hidden rounded-md border border-slate-200 transition hover:ring-2 hover:ring-orange-200"
-              >
-                <div className="h-6" style={{ background: p.color }} />
-                <div className="truncate px-1 py-0.5 text-center text-[7px] font-semibold text-slate-500">{p.label}</div>
-              </button>
-            ))}
-          </div>
-
-          <div className="mt-5 flex items-center gap-5 border-t border-slate-100 pt-3">
-            <label
-              className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-slate-600"
-              title="Click to choose primary color"
-            >
-              <span className="h-4 w-4 rounded-full ring-1 ring-slate-200" style={{ background: primary }} />
-              Primary
-              <span className="font-mono text-[10px] uppercase text-slate-400">{primary}</span>
-              <input
-                type="color"
-                value={primary}
-                onChange={(e) => setPrimary(e.target.value)}
-                className="sr-only"
-              />
-            </label>
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600" title="Auto-generated from primary">
-              <span className="h-4 w-4 rounded-full ring-1 ring-slate-200" style={{ background: secondary }} />
-              Secondary
-              <span className="font-mono text-[10px] uppercase text-slate-400">{secondary}</span>
-            </span>
-          </div>
-        </div>
-        )}
       </div>
 
       {/* Deal Rooms section removed from My Deals (still shown on the Dashboard & Deal Rooms page). */}
@@ -14907,6 +14872,9 @@ function TeamSettingsPage({ role = 'Member' }) {
           </div>
         )
       })()}
+
+      {/* Appearance (moved here from My Deals — Admin/Owner only) */}
+      {isAdminUp && <AppearanceSettings />}
 
       {/* What do you broker? */}
       <div className="mt-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
