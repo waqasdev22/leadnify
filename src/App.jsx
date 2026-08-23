@@ -12051,15 +12051,14 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
           <Contact className="h-6 w-6 text-brand" />
           <h1 className="text-2xl font-extrabold text-slate-900">My Leads</h1>
         </div>
-        {/* Mine / Whole Team toggle — Members only get "Mine" (can't see others' data) */}
-        {teamWide ? (
+        {/* Mine / Whole Team — only Manager and above can choose; Members always see just
+            their own data (no selector shown to them) per spec. */}
+        {teamWide && (
           <div className="inline-flex rounded-lg bg-slate-100 p-1">
             {[{ k: 'mine', l: 'Mine' }, { k: 'team', l: 'Whole Team' }].map((s) => (
               <button key={s.k} onClick={() => setScope(s.k)} className={`rounded-md px-4 py-1.5 text-sm font-semibold transition ${scope === s.k ? 'bg-white text-brand shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>{s.l}</button>
             ))}
           </div>
-        ) : (
-          <span className="rounded-lg bg-slate-100 px-4 py-1.5 text-sm font-semibold text-slate-500">Mine</span>
         )}
       </div>
 
