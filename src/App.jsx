@@ -10207,17 +10207,20 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
   const [wmStyle, setWmStyle] = useState('Standard')
   const [nda, setNda] = useState({ name: 'NDA Agreement.pdf' })
   const [omFlyer, setOmFlyer] = useState(null) // single OM/Flyer shown above the gate (cloud-synced)
-  // Load this room's OM + confidential files from the cloud whenever the room opens.
+  const [photos, setPhotos] = useState([]) // property photos → shown on the public property page slider/gallery
+  // Load this room's OM + confidential files + photos from the cloud whenever the room opens.
   useEffect(() => {
     let alive = true
     getFile(`om_${room.id}`).then((o) => { if (alive) setOmFlyer(o || null) }).catch(() => {})
     getFile(`roomfiles_${room.id}`).then((v) => { if (alive) setFiles(Array.isArray(v?.list) ? v.list : []) }).catch(() => {})
+    getFile(`photos_${room.id}`).then((v) => { if (alive) setPhotos(Array.isArray(v?.list) ? v.list : []) }).catch(() => {})
     return () => { alive = false }
   }, [room.id])
   const [uploadPct, setUploadPct] = useState(null) // 4.3 — upload progress (null = idle)
   const fileRef = useRef(null)
   const omRef = useRef(null)
   const ndaRef = useRef(null)
+  const photoRef = useRef(null)
 
   // Deal contacts (up to 4 per deal) + Broker of Record (1 per listing) — persisted per room.
   const [dealContacts, setDealContacts] = usePersistentState(`room_${room.id}_contacts`, [])
@@ -10381,6 +10384,41 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
     }
     sniff.onerror = () => notify('Could not read the file — please try again', 'error')
     sniff.readAsArrayBuffer(f.slice(0, 5))
+  }
+  // Property Photos — one or more images shown on the public property page (slider + gallery).
+  // Saved per room and published to the public gallery path so the property URL renders them.
+  const publishPhotos = (list) => {
+    const urls = list.map((p) => p.url).filter(Boolean).slice(0, 12)
+    putGallery(room.listingId || room.id, urls)
+  }
+  const onPhotoUpload = async (e) => {
+    const files = Array.from(e.target.files || [])
+    e.target.value = ''
+    if (!files.length) return
+    const imgs = files.filter((f) => f.type.startsWith('image/'))
+    if (!imgs.length) { notify('Please choose image files (PNG or JPG)', 'error'); return }
+    setUploadPct(20)
+    try {
+      const added = []
+      for (const f of imgs) {
+        if (f.size > MAX_CLOUD_FILE) { notify(`"${f.name}" is too large (max 9 MB) — skipped`, 'error'); continue }
+        const url = await readFileAsDataUrl(f)
+        added.push({ id: uid(), name: f.name, url })
+      }
+      const next = [...photos, ...added].slice(0, 12)
+      setPhotos(next)
+      await putFile(`photos_${room.id}`, { list: next })
+      publishPhotos(next)
+      setUploadPct(100); setTimeout(() => setUploadPct(null), 400)
+      notify(`${added.length} photo${added.length === 1 ? '' : 's'} added — they’ll show on the property page`)
+    } catch { setUploadPct(null); notify('Upload failed — please try again', 'error') }
+  }
+  const removePhoto = async (id) => {
+    const next = photos.filter((p) => p.id !== id)
+    setPhotos(next)
+    await putFile(`photos_${room.id}`, { list: next }).catch(() => {})
+    publishPhotos(next)
+    notify('Photo removed')
   }
   // Open the real uploaded file in a popup/new tab. The window is opened synchronously
   // (to keep the click gesture, so pop-up blockers allow it), then pointed at a blob URL.
@@ -10878,6 +10916,35 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
               <IconButton icon={ExternalLink} label="Open" onClick={openVisitor} />
               <IconButton icon={Copy} label="Copy" onClick={() => copy(visitorUrl, 'Share link copied')} />
             </div>
+          </div>
+
+          {/* Photos — property images shown on the public property page slider + gallery. */}
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="flex items-center gap-2 text-sm font-bold text-slate-900"><ImageIcon className="h-4 w-4 text-brand" /> Photos</p>
+                <p className="text-xs text-slate-400">Shown on the property page slider &amp; gallery</p>
+              </div>
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500">{photos.length}</span>
+            </div>
+            <input ref={photoRef} type="file" accept="image/*" multiple className="hidden" onChange={onPhotoUpload} />
+            {photos.length > 0 && (
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                {photos.map((p) => (
+                  <div key={p.id} className="group relative aspect-square overflow-hidden rounded-lg border border-slate-200">
+                    <img src={p.url} alt={p.name} className="h-full w-full object-cover" />
+                    <button onClick={() => removePhoto(p.id)} title="Remove" className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-white/90 text-rose-600 opacity-0 shadow-sm transition group-hover:opacity-100 hover:bg-white">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button onClick={() => photoRef.current && photoRef.current.click()} className="mt-3 flex w-full flex-col items-center gap-1 rounded-lg border border-dashed border-slate-300 py-5 text-sm font-medium text-slate-500 transition hover:border-brand hover:text-brand">
+              <Upload className="h-5 w-5" />
+              {photos.length ? 'Add more photos' : 'Upload photos'}
+              <span className="text-[11px] font-normal text-slate-400">PNG or JPG · up to 12</span>
+            </button>
           </div>
 
           {/* Property details — shows this deal room's property info right below Share, so a
