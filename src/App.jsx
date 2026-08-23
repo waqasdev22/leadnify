@@ -11462,12 +11462,12 @@ function DealCard({ deal, accent, dragging, onDragStart, onDragEnd, onDelete }) 
 // Their views/foundation still exist (tab === 'pipelines' / 'tasks' render blocks are kept per
 // Milestone I 2.5); they are simply no longer surfaced as tabs here.
 const CRM_TABS = [
-  { key: 'today', label: 'Today', icon: LayoutGrid },
+  // "Today" removed per spec; Reports is now the main (default) view.
+  { key: 'reports', label: 'Reports', icon: BarChart3 },
   { key: 'leads', label: 'Leads', icon: Inbox },
   { key: 'contacts', label: 'Contacts', icon: Users },
   { key: 'scripts', label: 'Scripts', icon: ScrollText },
   { key: 'automations', label: 'Automations', icon: Zap },
-  { key: 'reports', label: 'Reports', icon: BarChart3 },
 ]
 
 const CRM_LEADS = [
@@ -11768,7 +11768,7 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
   const notify = useToast()
   const me = user?.name || CURRENT_USER.name
   const [openLeadRow, setOpenLeadRow] = useState(null) // lead row expanded to show its details
-  const [tab, setTab] = useState('today')
+  const [tab, setTab] = useState('reports')
   const [scope, setScope] = useState('mine') // 'mine' | 'team'
   const [search, setSearch] = useState('')
   const [tasks, setTasks] = usePersistentState('crm_tasks', CRM_TASKS_SEED)
