@@ -11461,6 +11461,17 @@ function DealCard({ deal, accent, dragging, onDragStart, onDragEnd, onDelete }) 
 // Milestone II 3.4 — Pipelines and Tasks are removed from the final user-facing top panel.
 // Their views/foundation still exist (tab === 'pipelines' / 'tasks' render blocks are kept per
 // Milestone I 2.5); they are simply no longer surfaced as tabs here.
+const CRM_TIMELINES = [
+  { k: 'all', l: 'All Time', days: null },
+  { k: 'today', l: 'Today', days: 0 },
+  { k: '1w', l: '1 Week', days: 7 },
+  { k: '14d', l: '14 Days', days: 14 },
+  { k: '30d', l: '30 Days', days: 30 },
+  { k: '45d', l: '45 Days', days: 45 },
+  { k: '90d', l: '90 Days', days: 90 },
+  { k: '1y', l: '1 Year', days: 365 },
+]
+
 const CRM_TABS = [
   // "Today" removed per spec; Reports is now the main (default) view.
   { key: 'reports', label: 'Reports', icon: BarChart3 },
@@ -11802,7 +11813,8 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
   const [propertyFilter, setPropertyFilter] = useState('all')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
-  const clearLeadFilters = () => { setSearch(''); setLeadTypeFilter('All'); setPropertyFilter('all'); setDateFrom(''); setDateTo(''); setLeadFilter('All') }
+  const [timeline, setTimeline] = useState('all') // relative date window
+  const clearLeadFilters = () => { setSearch(''); setLeadTypeFilter('All'); setPropertyFilter('all'); setDateFrom(''); setDateTo(''); setLeadFilter('All'); setTimeline('all') }
   const [addLeadOpen, setAddLeadOpen] = useState(false)
   const [newLead, setNewLead] = useState({ name: '', email: '', type: 'Inquiry', company: '', listing: '', property: '', profile: 'Principal', pipeline: 'Active', source: 'Website' })
   const [selLeads, setSelLeads] = useState([])
@@ -12141,11 +12153,19 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
             if (dateTo && t > Date.parse(dateTo) + 86400000) return false
             return true
           }
+          const inTimeline = (l) => {
+            if (timeline === 'all') return true
+            const t = l.ts || Date.parse(l.date) || 0
+            if (timeline === 'today') { const d = new Date(); d.setHours(0, 0, 0, 0); return t >= d.getTime() }
+            const days = (CRM_TIMELINES.find((x) => x.k === timeline) || {}).days || 0
+            return t >= Date.now() - days * 86400000
+          }
           const rows = scopedInbox
             .filter(typeFor[leadFilter])
             .filter((l) => leadTypeFilter === 'All' || l.profile === leadTypeFilter)
             .filter((l) => propertyFilter === 'all' || (l.property || l.listing) === propertyFilter)
             .filter(inDateRange)
+            .filter(inTimeline)
             .filter((l) => (l.name + l.email + l.company).toLowerCase().includes(search.toLowerCase()))
           const leadProperties = Array.from(new Set(inbox.map((l) => l.property || l.listing).filter(Boolean)))
           // 4.3 — paginate the lead table instead of rendering every row at once.
@@ -12408,6 +12428,12 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
                   <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} title="To date" className="w-full rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700 outline-none focus:border-brand" />
                 </div>
                 <button onClick={clearLeadFilters} className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"><X className="h-4 w-4" /> Clear</button>
+              </div>
+              {/* Timeline presets */}
+              <div className="mt-2 flex flex-wrap gap-1.5 border-t border-slate-100 pt-2">
+                {CRM_TIMELINES.map((t) => (
+                  <button key={t.k} onClick={() => setTimeline(t.k)} className={`rounded-full px-3 py-1 text-xs font-semibold transition ${timeline === t.k ? 'bg-brand text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{t.l}</button>
+                ))}
               </div>
             </div>
 
