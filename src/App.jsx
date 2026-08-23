@@ -8123,8 +8123,8 @@ function AppearanceThumb({ name, color, selected, onSelect, dark }) {
   )
 }
 
-const MICROSITE_TEMPLATES = ['Modern', 'Executive', 'Metro', 'Gold', 'Cypress', 'Vail', 'Evergreen']
-const PROPERTY_TEMPLATES = ['Match Listings', 'Modern', 'Executive', 'Metro', 'Bold', 'Cypress', 'Vail', 'Evergreen']
+const MICROSITE_TEMPLATES = ['Modern', 'Metro', 'Bold']
+const PROPERTY_TEMPLATES = ['Match Listings', 'Modern', 'Metro', 'Bold']
 const ACCESS_OPTIONS = ['Public', 'Password Protected', 'Registered Users', 'Private']
 // Listing status controls (Milestone I 2.3). Statuses that keep a listing public vs. pull it
 // from the public map/microsite are decided in PUBLIC_STATUSES (Milestone II 3.6 visibility).
@@ -8456,9 +8456,11 @@ export function buildMicrositeHtml(items, brandColor, template = 'Modern', defau
   // Each microsite theme drives the accent colour + heading font. Because every
   // accent in the CSS below reads ${primary}, reassigning it themes the whole page.
   const THEMES = {
-    Modern: { accent: brandColor || '#F97316', font: "Inter,system-ui,-apple-system,sans-serif", hero: brandColor || '#F97316' },
-    Executive: { accent: '#1f2937', font: "Georgia,'Times New Roman',serif", hero: '#111827' },
+    Modern: { accent: brandColor || '#0A63CB', font: "Inter,system-ui,-apple-system,sans-serif", hero: brandColor || '#0A63CB' },
     Metro: { accent: '#2563eb', font: "Inter,system-ui,sans-serif", hero: '#1d4ed8' },
+    Bold: { accent: brandColor || '#0A63CB', font: "'Arial Black',Inter,system-ui,sans-serif", hero: '#0f172a' },
+    // Legacy themes kept so older saved links still resolve; not offered in the picker.
+    Executive: { accent: '#1f2937', font: "Georgia,'Times New Roman',serif", hero: '#111827' },
     Gold: { accent: '#c2900f', font: "Georgia,serif", hero: '#b8860b' },
     Cypress: { accent: '#0f766e', font: "Inter,system-ui,sans-serif", hero: '#0f766e' },
     Vail: { accent: '#334155', font: "Inter,system-ui,sans-serif", hero: '#1e293b' },
@@ -8902,12 +8904,12 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
   const [slugDraft, setSlugDraft] = useState(slug)
   const [embedOpen, setEmbedOpen] = useState(false)
 
-  // Appearance
+  // Appearance — defaults per spec: Modern theme, Map + Grid view, Midnight colour.
   const [micrositeTpl, setMicrositeTpl] = useState('Modern')
   const [propertyTpl, setPropertyTpl] = useState('Match Listings')
-  const [defaultView, setDefaultView] = useState('grid')
+  const [defaultView, setDefaultView] = useState('mapgrid')
   const [sameAsMicrosite, setSameAsMicrosite] = useState(true)
-  const [primary, setPrimary] = useState('#F97316')
+  const [primary, setPrimary] = useState('#0f172a')
   const secondary = lighten(primary, 0.3)
 
   // The email that receives the "someone downloaded the package" notification. Set here on
@@ -9149,7 +9151,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
         </button>
       </div>
 
-      <div className="mt-5 grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_340px]">
+      <div className={`mt-5 grid items-start gap-5 ${canManageUrl ? 'lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_340px]' : ''}`}>
         {/* LEFT column */}
         <div className="min-w-0 space-y-4">
           {/* Public URL card */}
@@ -9495,7 +9497,8 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
           </div>
         </div>
 
-        {/* RIGHT — Appearance panel */}
+        {/* RIGHT — Appearance panel (Admin/Owner only — team-level branding). */}
+        {canManageUrl && (
         <div className="scrollbar-slim rounded-xl border border-slate-200 bg-white p-4 shadow-sm lg:sticky lg:top-4 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
           <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Appearance</p>
 
@@ -9589,6 +9592,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
             </span>
           </div>
         </div>
+        )}
       </div>
 
       {/* Deal Rooms section removed from My Deals (still shown on the Dashboard & Deal Rooms page). */}
