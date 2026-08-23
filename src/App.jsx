@@ -9374,14 +9374,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                   <Pencil className="h-3.5 w-3.5" /> Custom URL
                 </button>
               )}
-              {canManageUrl && (
-                <button
-                  onClick={() => setEmbedOpen(true)}
-                  className="inline-flex items-center gap-1.5 font-medium transition hover:text-brand"
-                >
-                  <Code2 className="h-3.5 w-3.5" /> Embed on Your Website
-                </button>
-              )}
+              {/* "Embed on Your Website" moved to Team Settings (Admin/Owner only) per spec. */}
               <span className="inline-flex items-center gap-2">
                 <Toggle on={inquiryForm} onChange={setInquiryForm} /> Inquiry Form
               </span>
@@ -14888,6 +14881,28 @@ function TeamSettingsPage() {
         </div>
       </div>
       <p className="mt-1 text-sm text-slate-500">Manage team members and roles from the <span className="font-semibold text-brand">Team &amp; Permissions</span> page.</p>
+
+      {/* Embed on your website (moved here from My Deals — Admin/Owner only) */}
+      {(() => {
+        let saved = {}
+        try { saved = JSON.parse(localStorage.getItem('crebuilder_hub') || '{}') } catch { saved = {} }
+        const hubUrl = `${window.location.origin}${window.location.pathname}?hub=vaziamts`
+        const embedUrl = `${hubUrl}&t=${encodeURIComponent(saved.template || 'Modern')}&c=${(saved.primary || '#0f172a').replace('#', '')}&v=${encodeURIComponent(saved.defaultView || 'mapgrid')}`
+        const embedCode = `<iframe id="cre-listings" src="${embedUrl}" width="100%" height="900" frameborder="0" style="border:none;border-radius:8px" title="Property Listings"></iframe>`
+        return (
+          <div className="mt-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-start gap-2">
+              <Code2 className="mt-0.5 h-5 w-5 text-slate-400" />
+              <div><p className="text-sm font-bold text-slate-900">Embed on your website</p><p className="text-xs text-slate-400">Paste this snippet into your site to show your live listings. Only Admins &amp; Owners can access this.</p></div>
+            </div>
+            <pre className="scrollbar-slim mt-3 overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-200"><code>{embedCode}</code></pre>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <button onClick={() => { copyToClipboard(embedCode); notify('Embed code copied') }} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand-hover"><Copy className="h-4 w-4" /> Copy embed code</button>
+              <a href={embedUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"><ExternalLink className="h-4 w-4" /> Preview</a>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* What do you broker? */}
       <div className="mt-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
