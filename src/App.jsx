@@ -11820,6 +11820,9 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
   const [selLeads, setSelLeads] = useState([])
   const leadFileRef = useRef(null)
   const [leadImport, setLeadImport] = useState(null) // { headers:[], data:[[]], map:{field:colIndex} }
+  const [importDealId, setImportDealId] = useState('') // Deal ID to attach imported leads to
+  const [dealsList, setDealsList] = useState([]) // deals to match on import (id + dealId + name)
+  useEffect(() => { getCol('listings').then((l) => setDealsList(Array.isArray(l) ? l : [])).catch(() => {}) }, [])
   const [leadPage, setLeadPage] = useState(1) // 4.3 — paginate large lead tables
   const [contactList, setContactList] = usePersistentState('crm_contacts', CRM_CONTACTS)
   // Sync leads + contacts to the backend (MongoDB) when it's reachable; localStorage stays the
@@ -12207,6 +12210,7 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
           }
           const runLeadImport = () => {
             const { data, map } = leadImport
+            const matchedDeal = dealsList.find((d) => d.dealId === importDealId) // attach to this deal
             const existingEmails = new Set(inbox.map((l) => (l.email || '').trim().toLowerCase()).filter(Boolean))
             const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
             const get = (cells, key) => (map[key] >= 0 ? (cells[map[key]] || '').trim() : '')
@@ -12220,7 +12224,9 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
               added.push({
                 id: uid(), name, email: get(cells, 'email') || '—', type: get(cells, 'type') || 'Inquiry',
                 profile: get(cells, 'profile') || 'Principal', company: get(cells, 'company') || '—',
-                listing: 'Imported', property: get(cells, 'property') || '',
+                listing: matchedDeal ? matchedDeal.name : 'Imported',
+                property: matchedDeal ? matchedDeal.name : (get(cells, 'property') || ''),
+                dealId: matchedDeal ? matchedDeal.dealId : (get(cells, 'dealId') || ''),
                 pipeline: get(cells, 'pipeline') || 'Active', source: get(cells, 'source') || 'Website',
                 active: 'Active', date: today, status: 'New', unread: false, owner: me,
               })
@@ -12314,6 +12320,15 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
                       <p className="text-sm text-slate-500">Match your spreadsheet columns to lead fields, then import.</p>
                     </div>
                     <button onClick={() => setLeadImport(null)} className="text-slate-400 hover:text-slate-700"><X className="h-5 w-5" /></button>
+                  </div>
+
+                  {/* Match every imported lead to a deal (by Deal ID) */}
+                  <div className="mt-4 rounded-lg border border-blue-100 bg-blue-50/50 p-3">
+                    <label className="mb-1 block text-xs font-semibold text-slate-600">Match to Deal <span className="font-normal text-slate-400">(attach every imported lead to this deal)</span></label>
+                    <select value={importDealId} onChange={(e) => setImportDealId(e.target.value)} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-brand">
+                      <option value="">— No deal (use the Property column instead) —</option>
+                      {dealsList.filter((d) => d.dealId).map((d) => <option key={d.id} value={d.dealId}>{d.dealId} — {d.name}</option>)}
+                    </select>
                   </div>
 
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
