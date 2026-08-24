@@ -12293,7 +12293,7 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
               id: uid(), name: newLead.name.trim(), email: newLead.email.trim() || '—', type: newLead.type,
               company: newLead.company.trim() || '—', listing: newLead.listing.trim() || 'Unknown',
               property: newLead.property || '', profile: newLead.profile, pipeline: newLead.pipeline, source: newLead.source, active: 'Active',
-              date: today, status: isInq ? 'Unread' : 'New', unread: isInq, owner: me,
+              date: today, ts: Date.now(), status: isInq ? 'Unread' : 'New', unread: isInq, owner: me,
             }, ...list])
             fireLeadAutomations(`"${newLead.name.trim()}"`)
             notify(newLead.property ? `Lead added to ${newLead.property}` : 'Lead added')
