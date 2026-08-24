@@ -14136,7 +14136,9 @@ function beginOAuth(providerKey) {
   const base = { client_id: cfg.clientId, redirect_uri: window.location.origin, response_type: 'code', state: providerKey, ...cfg.extra }
   if (cfg.scope) base.scope = cfg.scope
   const url = `${cfg.authorize}?${new URLSearchParams(base).toString()}`
-  const w = window.open(url, 'leadflow_oauth', 'width=560,height=720,menubar=no,toolbar=no,noopener=no')
+  // Open in a NEW browser TAB (not a small popup window). The dashboard tab stays put; the new
+  // tab posts the auth code back and closes itself when done.
+  const w = window.open(url, '_blank')
   if (!w) { window.location.href = url; return 'redirect' } // pop-up blocked — fall back to same tab
   try { w.focus() } catch { /* ignore */ }
   return w
