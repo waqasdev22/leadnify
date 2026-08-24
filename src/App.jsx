@@ -11493,6 +11493,7 @@ const CRM_TABS = [
   // "Today" removed per spec; Reports is now the main (default) view.
   { key: 'reports', label: 'Reports', icon: BarChart3 },
   { key: 'leads', label: 'Leads', icon: Inbox },
+  { key: 'pipelines', label: 'Pipeline', icon: TrendingUp },
   { key: 'contacts', label: 'Contacts', icon: Users },
   { key: 'scripts', label: 'Scripts', icon: ScrollText },
   { key: 'automations', label: 'Automations', icon: Zap },
