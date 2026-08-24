@@ -12407,16 +12407,22 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
             {(() => {
               const scoped = PROPERTY_MARKETING.filter((p) => (scope === 'mine' ? p.owner === me : true))
               const psum = (k) => scoped.reduce((a, p) => a + (p[k] || 0), 0)
-              const leadsCaptured = inbox.filter((l) => (scope === 'mine' ? l.owner === me : true)).length
+              const scopedLeads = inbox.filter((l) => (scope === 'mine' ? l.owner === me : true))
+              const leadsCaptured = scopedLeads.length
+              // Derive real metrics from actual lead activity (Impressions/Page Views still need
+              // analytics, so they add any GA figure on top of the live counts).
+              const visitors = new Set(scopedLeads.map((l) => (l.email || '').toLowerCase()).filter((e) => e && e !== '—')).size || scopedLeads.length
+              const openOms = scopedLeads.filter((l) => /download|package|\bom\b/i.test(l.source || '') || /download/i.test(l.message || '')).length
+              const executedCas = scopedLeads.filter((l) => l.type === 'NDA Signer').length
               const weeks = Array.from({ length: 12 }, (_, i) => scoped.reduce((a, p) => a + ((p.weeklyViews && p.weeklyViews[i]) || 0), 0))
               const maxWeek = Math.max(1, ...weeks)
               const mtiles = [
                 { label: 'Leads Captured', v: leadsCaptured, icon: UserPlus, tone: 'bg-orange-50 text-brand' },
                 { label: 'Total Impressions', v: psum('impressions'), icon: Eye, tone: 'bg-blue-50 text-blue-500' },
                 { label: 'Page Views', v: psum('pageViews'), icon: BarChart3, tone: 'bg-violet-50 text-violet-500' },
-                { label: 'Visitors', v: psum('visitors'), icon: Users, tone: 'bg-emerald-50 text-emerald-500' },
-                { label: 'Open OMs', v: psum('openOms'), icon: FileText, tone: 'bg-amber-50 text-amber-500' },
-                { label: 'Executed CAs', v: psum('executedCa'), icon: CheckSquare, tone: 'bg-rose-50 text-rose-500' },
+                { label: 'Visitors', v: visitors, icon: Users, tone: 'bg-emerald-50 text-emerald-500' },
+                { label: 'Open OMs', v: openOms, icon: FileText, tone: 'bg-amber-50 text-amber-500' },
+                { label: 'Executed CAs', v: executedCas, icon: CheckSquare, tone: 'bg-rose-50 text-rose-500' },
               ]
               return (
                 <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
