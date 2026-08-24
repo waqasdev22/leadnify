@@ -14242,7 +14242,7 @@ function EmailBlastPage({ user, onNavigate, role = 'Member' }) {
   // Connect directly (no confirm popup): show "Opening…" briefly, then open the provider in a
   // popup (dashboard never reloads) or connect. The message listener below finishes the connect.
   const startConnect = (p) => {
-    if (openingKey) return
+    if (openingKey === p.key) return // only block re-clicking the SAME one; others can still connect
     setOpeningKey(p.key)
     setTimeout(() => {
       const res = beginOAuth(p.key)
