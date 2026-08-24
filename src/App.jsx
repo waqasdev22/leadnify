@@ -13790,10 +13790,15 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
               const maxReach = Math.max(1, ...reach.map((r) => r.n))
               const fmt = (v) => v.toLocaleString()
               // Live: real leads YOU captured (from My Leads), filtered to the selected property + scope.
-              const liveLeads = inbox
+              const reportLeads = inbox
                 .filter((l) => (scope === 'mine' ? l.owner === me : true))
-                .filter((l) => (reportProperty === 'all' ? true : l.property === reportProperty)).length
-              const totals = { impressions: sum('impressions'), pageViews: sum('pageViews'), visitors: sum('visitors'), openOms: sum('openOms'), executedCa: sum('executedCa'), leads: liveLeads }
+                .filter((l) => (reportProperty === 'all' ? true : l.property === reportProperty))
+              const liveLeads = reportLeads.length
+              // Derive Visitors / Open OMs / Executed CAs from real lead activity (like the Leads tab).
+              const liveVisitors = new Set(reportLeads.map((l) => (l.email || '').toLowerCase()).filter((e) => e && e !== '—')).size || reportLeads.length
+              const liveOpenOms = reportLeads.filter((l) => /download|package|\bom\b/i.test(l.source || '') || /download/i.test(l.message || '')).length
+              const liveExecutedCa = reportLeads.filter((l) => l.type === 'NDA Signer').length
+              const totals = { impressions: sum('impressions'), pageViews: sum('pageViews'), visitors: liveVisitors, openOms: liveOpenOms, executedCa: liveExecutedCa, leads: liveLeads }
               const tiles = [
                 { label: 'Leads captured', v: liveLeads, icon: UserPlus, tone: 'bg-orange-50 text-brand', live: true },
                 { label: 'Total Impressions', v: totals.impressions, icon: Eye, tone: 'bg-blue-50 text-blue-500' },
