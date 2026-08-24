@@ -14127,15 +14127,19 @@ const EMAIL_OAUTH = {
     extra: {},
   },
 }
-// Opens the provider's sign-in in the SAME tab (full page). Returns 'redirect' when it navigated,
-// or false if no client ID is configured (caller falls back to the demo connect).
+// Opens the provider's sign-in in a NEW popup window (the dashboard tab never navigates away).
+// Returns the popup window (caller watches it; the popup posts the code back and closes), or
+// 'redirect' if pop-ups are blocked (same-tab fallback), or false if no client ID is configured.
 function beginOAuth(providerKey) {
   const cfg = EMAIL_OAUTH[providerKey]
   if (!cfg || !cfg.clientId) return false
   const base = { client_id: cfg.clientId, redirect_uri: window.location.origin, response_type: 'code', state: providerKey, ...cfg.extra }
   if (cfg.scope) base.scope = cfg.scope
-  window.location.href = `${cfg.authorize}?${new URLSearchParams(base).toString()}`
-  return 'redirect'
+  const url = `${cfg.authorize}?${new URLSearchParams(base).toString()}`
+  const w = window.open(url, 'leadflow_oauth', 'width=560,height=720,menubar=no,toolbar=no,noopener=no')
+  if (!w) { window.location.href = url; return 'redirect' } // pop-up blocked — fall back to same tab
+  try { w.focus() } catch { /* ignore */ }
+  return w
 }
 
 const EMAIL_CAMPAIGNS_SEED = []
