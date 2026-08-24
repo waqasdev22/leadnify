@@ -12508,7 +12508,7 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
               <table className="w-full min-w-[1200px]">
                 <thead className="border-b border-slate-100 bg-slate-50"><tr>
                   <th className="w-10 px-4 py-3"><input type="checkbox" checked={allSelected} onChange={toggleAll} className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-blue-300" /></th>
-                  <th className={th}>Name</th><th className={th}>Type</th><th className={th}>Profile</th><th className={th}>Company</th><th className={th}>Listing</th><th className={th}>Date</th><th className={th}>Status</th><th className={th}>Pipeline</th><th className={th}>Source</th><th className={th + ' text-right'}>Actions</th>
+                  <th className={th}>Name</th><th className={th}>Type</th><th className={th}>Profile</th><th className={th}>Company</th><th className={th}>Listing</th><th className={th}>Date</th><th className={th}>Status</th><th className={th}>Pipeline</th><th className={th}>Source</th><th className={th}>Owner</th><th className={th + ' text-right'}>Actions</th>
                 </tr></thead>
                 <tbody className="divide-y divide-slate-100">
                   {pageRows.map((l) => {
@@ -12532,6 +12532,7 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
                       <td className={td}><span className={`text-xs font-semibold ${l.active === 'Inactive' ? 'text-slate-400' : 'text-emerald-600'}`}>{l.active || 'Active'}</span></td>
                       <td className={td}><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${LEAD_PIPELINE_BADGE[l.pipeline] || 'bg-slate-100 text-slate-600'}`}>{l.pipeline || 'Active'}</span></td>
                       <td className={td}>{l.source || '—'}</td>
+                      <td className={td}><span className={l.owner === me ? 'font-semibold text-slate-700' : 'text-slate-500'}>{l.owner || '—'}</span></td>
                       <td className={td + ' text-right'} onClick={(e) => e.stopPropagation()}>
                         {l.type === 'NDA Signer' || l.type === 'Email Lead' ? (
                           l.status === 'Revoked' ? <span className="text-xs text-slate-400">Revoked</span> : <button onClick={() => revoke(l.id)} className="inline-flex items-center gap-1 text-sm font-semibold text-slate-600 transition hover:text-rose-600"><Ban className="h-4 w-4" /> Revoke</button>
@@ -12545,7 +12546,7 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
                     </tr>
                     {rowOpen && (
                       <tr className="bg-slate-50/70">
-                        <td colSpan={11} className="px-4 pb-4 pt-1">
+                        <td colSpan={12} className="px-4 pb-4 pt-1">
                           <div className="grid grid-cols-2 gap-x-6 gap-y-3 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-4">
                             <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Name</p><p className="mt-0.5 text-sm font-semibold text-slate-800">{l.name}</p></div>
                             <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Email</p><p className="mt-0.5 text-sm font-semibold text-slate-800">{l.email}</p></div>
@@ -12564,7 +12565,7 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
                     </React.Fragment>
                     )
                   })}
-                  {!rows.length && <tr><td colSpan={11} className="py-10 text-center text-sm text-slate-400">No leads.</td></tr>}
+                  {!rows.length && <tr><td colSpan={12} className="py-10 text-center text-sm text-slate-400">No leads.</td></tr>}
                 </tbody>
               </table>
             </div>
