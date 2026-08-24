@@ -13787,7 +13787,19 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
               const sum = (k) => sel.reduce((a, p) => a + p[k], 0)
               const weeks = Array.from({ length: 12 }, (_, i) => sel.reduce((a, p) => a + (p.weeklyViews[i] || 0), 0))
               const maxWeek = Math.max(1, ...weeks)
-              const reach = MARKETING_TYPES.map((t) => ({ t, n: sel.reduce((a, p) => a + (p.reach[t] || 0), 0) }))
+              // Total reach by marketing type — derived from each lead's Source (real data).
+              const typeForSource = (s) => {
+                const x = (s || '').toLowerCase()
+                if (/social|instagram|facebook|linkedin/.test(x)) return 'Social'
+                if (/crexi|loopnet|listing service|bizbuysell/.test(x)) return 'Listing Services'
+                if (/email|blast/.test(x)) return 'Email'
+                if (/text|sms/.test(x)) return 'Text'
+                return 'Website'
+              }
+              const reach = MARKETING_TYPES.map((t) => ({
+                t,
+                n: sel.reduce((a, p) => a + (p.reach[t] || 0), 0) + reportLeads.filter((l) => typeForSource(l.source) === t).length,
+              }))
               const maxReach = Math.max(1, ...reach.map((r) => r.n))
               const fmt = (v) => v.toLocaleString()
               // Live: real leads YOU captured (from My Leads), filtered to the selected property + scope.
