@@ -11722,7 +11722,7 @@ const LEAD_PLATFORMS = [
   { key: 'marketplace', name: 'Marketplace', color: 'bg-rose-500' },
 ]
 // Leads "inbox" — raw enquiries, NDA signers, email/forwarded leads.
-const CRM_FORWARD_ADDR = 'leads+qx-s_yJEz4LH5tklhdOK0ojxlZpObhOYFJda7A442mY@inbound.mycreblueprint.com'
+const CRM_FORWARD_ADDR = 'leads+qx-s_yJEz4LH5tklhdOK0ojxlZpObhOYFJda7A442mY@inbound.leadflow.io'
 // Milestone II 3.5 — required column value sets for the Leads table.
 const LEAD_PROFILES = ['Broker', 'Principal']
 const LEAD_PIPELINES = ['Active', 'Call for Offers', 'Highest and Best', 'Under Contract', 'Closed', 'On Hold', 'No Longer for Sale']
@@ -13444,7 +13444,7 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
         {tab === 'tasks' && (() => {
           const openTasks = myTasks.filter((t) => !t.done)
           const doneTasks = myTasks.filter((t) => t.done)
-          const calUrl = `https://app.mycreblueprint.com/cal/${(me || 'user').toLowerCase().replace(/\s+/g, '')}-${uid()}.ics`
+          const calUrl = `https://app.leadflow.io/cal/${(me || 'user').toLowerCase().replace(/\s+/g, '')}-${uid()}.ics`
           const fmtDue = (t) => { if (t.dueAt) { const d = new Date(t.dueAt); if (!isNaN(d)) return `due ${d.toLocaleString('en-GB')}` } return t.due && t.due !== 'No date' ? `due ${t.due}` : 'No due date' }
           const deleteTask = (id) => { setTasks((l) => l.filter((t) => t.id !== id)); notify('Task deleted', 'error') }
           const TaskRow = (t) => (
@@ -14418,7 +14418,7 @@ function EmailBlastPage({ user, onNavigate, role = 'Member' }) {
             <label className="inline-flex items-center gap-1.5 text-sm text-slate-600"><input type="checkbox" checked={useSignature} onChange={(e) => setUseSignature(e.target.checked)} className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-orange-400" /> Use it</label>
           </div>
           <label className="mt-4 block text-xs font-semibold text-slate-500">Signature</label>
-          <textarea value={sigDraft} onChange={(e) => setSigDraft(e.target.value)} rows={4} placeholder="Your Name | Broker | mycreblueprint.com | 555-000-0000" className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" />
+          <textarea value={sigDraft} onChange={(e) => setSigDraft(e.target.value)} rows={4} placeholder="Your Name | Broker | leadflow.io | 555-000-0000" className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" />
           <label className="mt-3 block text-xs font-semibold text-slate-500">Logo URL (optional)</label>
           <input value={sigLogoDraft} onChange={(e) => setSigLogoDraft(e.target.value)} placeholder="https://.../logo.png" className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" />
           <p className="mt-1 text-xs text-slate-400">Must be a public http(s) image link — mail clients can't read an uploaded file.</p>
