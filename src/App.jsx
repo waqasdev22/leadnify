@@ -11797,7 +11797,9 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
   const me = user?.name || CURRENT_USER.name
   const [openLeadRow, setOpenLeadRow] = useState(null) // lead row expanded to show its details
   const [tab, setTab] = useState('reports')
-  const [scope, setScope] = useState('mine') // 'mine' | 'team'
+  // No Mine/Whole Team toggle (removed per spec). Scope is automatic and role-based:
+  // Manager and above see the whole team's data; Members see only their own.
+  const scope = teamWide ? 'team' : 'mine'
   const [search, setSearch] = useState('')
   const [tasks, setTasks] = usePersistentState('crm_tasks', CRM_TASKS_SEED)
   const [autos, setAutos] = usePersistentState('crm_autos', CRM_AUTOMATIONS_SEED)
@@ -12087,15 +12089,9 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
           <Contact className="h-6 w-6 text-brand" />
           <h1 className="text-2xl font-extrabold text-slate-900">My Leads</h1>
         </div>
-        {/* Mine / Whole Team — only Manager and above can choose; Members always see just
-            their own data (no selector shown to them) per spec. */}
-        {teamWide && (
-          <div className="inline-flex rounded-lg bg-slate-100 p-1">
-            {[{ k: 'mine', l: 'Mine' }, { k: 'team', l: 'Whole Team' }].map((s) => (
-              <button key={s.k} onClick={() => setScope(s.k)} className={`rounded-md px-4 py-1.5 text-sm font-semibold transition ${scope === s.k ? 'bg-white text-brand shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>{s.l}</button>
-            ))}
-          </div>
-        )}
+        {/* Scope is automatic (removed the Mine/Whole Team toggle per spec): Manager and above
+            see the whole team's data; Members see only their own. */}
+        {teamWide && <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">Whole team view</span>}
       </div>
 
       {/* Top bar tabs */}
