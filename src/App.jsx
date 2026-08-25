@@ -12266,14 +12266,25 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
             }
           }
           const runLeadImport = () => {
-            const { data, map } = leadImport
+            const { data, map, headers } = leadImport
             const matchedDeal = importDeals.find((d) => d.dealId === importDealId) // attach to this deal
             const existingEmails = new Set(inbox.map((l) => (l.email || '').trim().toLowerCase()).filter(Boolean))
             const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
             const get = (cells, key) => (map[key] >= 0 ? (cells[map[key]] || '').trim() : '')
+            // If "Full Name" is blank, build the name from separate First/Last Name columns.
+            const hdr = (headers || []).map((h) => String(h).toLowerCase().trim())
+            const firstIdx = hdr.findIndex((h) => h === 'first name' || h === 'firstname' || h === 'first')
+            const lastIdx = hdr.findIndex((h) => h === 'last name' || h === 'lastname' || h === 'last')
+            const getName = (cells) => {
+              const full = get(cells, 'name')
+              if (full) return full
+              const fn = firstIdx >= 0 ? String(cells[firstIdx] || '').trim() : ''
+              const ln = lastIdx >= 0 ? String(cells[lastIdx] || '').trim() : ''
+              return (fn + ' ' + ln).trim()
+            }
             const added = []; let invalid = 0; let dupes = 0; const seen = new Set()
             data.forEach((cells) => {
-              const name = get(cells, 'name')
+              const name = getName(cells)
               if (!name) { invalid++; return }
               const email = get(cells, 'email').toLowerCase()
               if (email && (existingEmails.has(email) || seen.has(email))) { dupes++; return }
@@ -12295,11 +12306,15 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
             setLeadImport(null)
           }
           const importPreview = leadImport ? (() => {
-            const { data, map } = leadImport
+            const { data, map, headers } = leadImport
+            const hdr = (headers || []).map((h) => String(h).toLowerCase().trim())
+            const fI = hdr.findIndex((h) => h === 'first name' || h === 'firstname' || h === 'first')
+            const lI = hdr.findIndex((h) => h === 'last name' || h === 'lastname' || h === 'last')
             const existingEmails = new Set(inbox.map((l) => (l.email || '').trim().toLowerCase()).filter(Boolean))
             let valid = 0, invalid = 0, dupes = 0; const seen = new Set()
             data.forEach((cells) => {
-              const name = map.name >= 0 ? (cells[map.name] || '').trim() : ''
+              let name = map.name >= 0 ? (cells[map.name] || '').trim() : ''
+              if (!name) name = ((fI >= 0 ? String(cells[fI] || '').trim() : '') + ' ' + (lI >= 0 ? String(cells[lI] || '').trim() : '')).trim()
               if (!name) { invalid++; return }
               const email = (map.email >= 0 ? (cells[map.email] || '').trim() : '').toLowerCase()
               if (email && (existingEmails.has(email) || seen.has(email))) { dupes++; return }
