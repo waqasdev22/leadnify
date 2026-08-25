@@ -13787,6 +13787,11 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
               const sum = (k) => sel.reduce((a, p) => a + p[k], 0)
               const weeks = Array.from({ length: 12 }, (_, i) => sel.reduce((a, p) => a + (p.weeklyViews[i] || 0), 0))
               const maxWeek = Math.max(1, ...weeks)
+              // Live: real leads YOU captured (from My Leads), filtered to the selected property + scope.
+              const reportLeads = inbox
+                .filter((l) => (scope === 'mine' ? l.owner === me : true))
+                .filter((l) => (reportProperty === 'all' ? true : l.property === reportProperty))
+              const liveLeads = reportLeads.length
               // Total reach by marketing type — derived from each lead's Source (real data).
               const typeForSource = (s) => {
                 const x = (s || '').toLowerCase()
@@ -13802,11 +13807,6 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
               }))
               const maxReach = Math.max(1, ...reach.map((r) => r.n))
               const fmt = (v) => v.toLocaleString()
-              // Live: real leads YOU captured (from My Leads), filtered to the selected property + scope.
-              const reportLeads = inbox
-                .filter((l) => (scope === 'mine' ? l.owner === me : true))
-                .filter((l) => (reportProperty === 'all' ? true : l.property === reportProperty))
-              const liveLeads = reportLeads.length
               // Derive Visitors / Open OMs / Executed CAs from real lead activity (like the Leads tab).
               const liveVisitors = new Set(reportLeads.map((l) => (l.email || '').toLowerCase()).filter((e) => e && e !== '—')).size || reportLeads.length
               const liveOpenOms = reportLeads.filter((l) => /download|package|\bom\b/i.test(l.source || '') || /download/i.test(l.message || '')).length
