@@ -13878,7 +13878,7 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
                     <div className="flex items-center gap-2">
                       <select value={reportProperty} onChange={(e) => setReportProperty(e.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-orange-400">
                         <option value="all">All properties</option>
-                        {scoped.map((p) => <option key={p.name} value={p.name}>{p.name}</option>)}
+                        {Array.from(new Set([...importDeals.map((d) => d.name), ...scoped.map((p) => p.name), ...inbox.map((l) => l.property || l.listing)].filter(Boolean))).map((n) => <option key={n} value={n}>{n}</option>)}
                       </select>
                       <button onClick={() => { if (!openPropertyReportPrint(sel, totals, weeks, reach, reportProperty)) notify('Allow pop-ups to open the report', 'error') }} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"><Printer className="h-4 w-4" /> Print / Export</button>
                     </div>
