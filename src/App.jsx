@@ -9654,9 +9654,9 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                           </button>
                           <img src={l.image} onError={(e) => (e.currentTarget.src = FALLBACK_IMG)} alt="" className="h-8 w-10 rounded object-cover" />
                           <button
-                            onClick={() => (l._draft ? onResumeDraft(l._draft) : (onOpenDealRoom ? onOpenDealRoom(l) : (setEditing(l), setModalOpen(true))))}
+                            onClick={() => (onOpenDealRoom ? onOpenDealRoom(l) : (setEditing(l), setModalOpen(true)))}
                             className="font-semibold text-slate-800 hover:text-brand"
-                            title={l._draft ? 'Resume where you left off' : 'Open Deal Room'}
+                            title="Open Deal Room"
                           >
                             {l.name}
                           </button>
@@ -15650,21 +15650,15 @@ export default function App() {
     setMobileNav(false)
   }
 
-  // "Create New" (document) — usable from Dashboard and Listing Hub.
-  // Goes to the Dashboard and opens the create-document flow there.
+  // Document creation removed per spec — every "create/new" path now goes to My Deals, where
+  // the crexi-style New Deal wizard captures details as input fields (no document builder).
   const startCreate = () => {
-    setActive('dashboard')
+    setActive('listings')
     setMobileNav(false)
-    setCreateNonce((n) => n + 1)
   }
-
-  // Resume an in-progress draft from the Listing Hub — jumps to the Dashboard and
-  // reopens the Document Builder where the user left off.
-  const resumeDraft = (draft) => {
-    if (!draft) return
-    setActive('dashboard')
+  const resumeDraft = () => {
+    setActive('listings')
     setMobileNav(false)
-    setResume({ draft, nonce: (resume?.nonce || 0) + 1 })
   }
 
   // Clicking a property on the Dashboard opens that property's Deal Room —
