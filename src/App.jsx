@@ -14,6 +14,7 @@ import { EMAILJS } from './emailConfig'
 import { auth, googleProvider, db, createMemberAccount } from './firebase'
 import { ref as dbRef, get as dbGet, set as dbSet, update as dbUpdate, remove as dbRemove, onValue } from 'firebase/database'
 import { PERMISSION_GROUPS, ROLE_PRESETS, ROLES, ROLE_INFO, resolvePerms, decodeOverrides, encodeOverrides } from './permissions'
+import * as XLSX from 'xlsx'
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -12220,31 +12221,49 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
           const downloadTemplate = () => {
             const cols = ['First Name', 'Last Name', 'Full Name', 'Type', 'Profile', 'Company', 'Listing', 'Date', 'Status', 'Pipeline', 'Source', 'Email', 'Mobile Phone', 'City', 'State']
             const sample = ['John', 'Smith', 'John Smith', 'Inquiry', 'Broker', 'Acme Realty', 'Test02', '2026-08-23', 'New', 'Active', 'Referral', 'john@acme.com', '555-123-4567', 'Austin', 'TX']
-            const csv = cols.join(',') + '\n' + sample.join(',') + '\n'
-            const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })
-            const url = URL.createObjectURL(blob)
-            const a = document.createElement('a'); a.href = url; a.download = 'Leadflow-import-template.csv'; a.click()
-            setTimeout(() => URL.revokeObjectURL(url), 5000)
-            notify('Template downloaded — fill it in Excel, save as CSV, then Import')
+            // Real Excel (.xlsx) template with the pre-set columns + one sample row.
+            const ws = XLSX.utils.aoa_to_sheet([cols, sample])
+            ws['!cols'] = cols.map(() => ({ wch: 16 }))
+            const wb = XLSX.utils.book_new()
+            XLSX.utils.book_append_sheet(wb, ws, 'Leads')
+            XLSX.writeFile(wb, 'Leadflow-import-template.xlsx')
+            notify('Excel template downloaded — fill it in and Import')
+          }
+          const buildImport = (headers, data) => {
+            if (!headers.length || !data.length) { notify('The file looks empty', 'error'); return }
+            const lower = headers.map((h) => String(h).toLowerCase().trim())
+            const map = {}
+            LEAD_IMPORT_FIELDS.forEach((f) => {
+              let idx = lower.findIndex((h) => f.aliases.some((a) => h === a))
+              if (idx < 0) idx = lower.findIndex((h) => f.aliases.some((a) => h.includes(a)))
+              map[f.key] = idx
+            })
+            setLeadImport({ headers: headers.map((h) => String(h).trim()), data, map })
           }
           const onLeadFile = (file) => {
             if (!file) return
+            const name = (file.name || '').toLowerCase()
             const reader = new FileReader()
-            reader.onload = () => {
-              const lines = String(reader.result).split(/\r?\n/).filter((l) => l.trim())
-              if (lines.length < 2) { notify('CSV looks empty', 'error'); return }
-              const headers = parseCsvLine(lines[0]).map((h) => h.trim())
-              const data = lines.slice(1).map((ln) => parseCsvLine(ln))
-              const lower = headers.map((h) => h.toLowerCase())
-              const map = {}
-              LEAD_IMPORT_FIELDS.forEach((f) => {
-                let idx = lower.findIndex((h) => f.aliases.some((a) => h === a))
-                if (idx < 0) idx = lower.findIndex((h) => f.aliases.some((a) => h.includes(a)))
-                map[f.key] = idx
-              })
-              setLeadImport({ headers, data, map })
+            if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
+              // Real Excel — parse with SheetJS into rows of cells.
+              reader.onload = () => {
+                try {
+                  const wb = XLSX.read(new Uint8Array(reader.result), { type: 'array' })
+                  const ws = wb.Sheets[wb.SheetNames[0]]
+                  const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, blankrows: false, defval: '' })
+                  if (aoa.length < 2) { notify('The Excel file looks empty', 'error'); return }
+                  buildImport(aoa[0], aoa.slice(1).map((r) => r.map((c) => (c == null ? '' : String(c)))))
+                } catch { notify('Could not read that Excel file', 'error') }
+              }
+              reader.readAsArrayBuffer(file)
+            } else {
+              reader.onload = () => {
+                const lines = String(reader.result).split(/\r?\n/).filter((l) => l.trim())
+                if (lines.length < 2) { notify('CSV looks empty', 'error'); return }
+                buildImport(parseCsvLine(lines[0]).map((h) => h.trim()), lines.slice(1).map((ln) => parseCsvLine(ln)))
+              }
+              reader.readAsText(file)
             }
-            reader.readAsText(file)
           }
           const runLeadImport = () => {
             const { data, map } = leadImport
@@ -12319,7 +12338,7 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
                 <p className="text-sm text-slate-500">{unreadCount} unread inquiry · {ndaCount} active NDA signers</p>
               </div>
               <div className="flex items-center gap-2">
-                <input ref={leadFileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={(e) => { onLeadFile(e.target.files[0]); e.target.value = '' }} />
+                <input ref={leadFileRef} type="file" accept=".xlsx,.xls,.csv,text/csv" className="hidden" onChange={(e) => { onLeadFile(e.target.files[0]); e.target.value = '' }} />
                 <button onClick={downloadTemplate} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50" title="Download a ready-to-fill import template"><Download className="h-4 w-4" /> Template</button>
                 <button onClick={() => leadFileRef.current && leadFileRef.current.click()} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50" title="Import leads from a CSV (Crexi, LoopNet, etc.)"><Upload className="h-4 w-4" /> Import</button>
                 <button onClick={exportLeads} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50" title="Export the leads shown (respects Mine/Whole Team + filters)"><Download className="h-4 w-4" /> Export</button>
