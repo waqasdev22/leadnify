@@ -8982,7 +8982,7 @@ const NEW_DEAL_STEPS = ['Property Information', 'Media & Description', 'Property
 function NewDealModal({ onClose, onCreate }) {
   const notify = useToast()
   const [step, setStep] = useState(0)
-  const [f, setF] = useState({ name: '', propertyType: 'Retail', street: '', city: '', state: '', zip: '', status: 'Active', access: 'Public', cover: '', description: '', photos: [], price: '', capRate: '', noi: '', size: '', om: null, confidential: [], contacts: [], bor: { name: '', company: '', license: '' } })
+  const [f, setF] = useState({ name: '', propertyType: 'Retail', saleType: 'For Sale', street: '', city: '', state: '', zip: '', status: 'Active', access: 'Public', cover: '', description: '', photos: [], price: '', capRate: '', noi: '', size: '', om: null, confidential: [], contacts: [], bor: { name: '', company: '', license: '' } })
   const set = (k, v) => setF((s) => ({ ...s, [k]: v }))
   const coverRef = useRef(null), photoRef = useRef(null), omRef = useRef(null), confRef = useRef(null)
   const fsize = (file) => { const mb = file.size / (1024 * 1024); return mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.max(1, Math.round(file.size / 1024))} KB` }
@@ -9024,6 +9024,7 @@ function NewDealModal({ onClose, onCreate }) {
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="sm:col-span-2"><label className={lbl}>Deal / Property Name *</label><input className={inp} value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="e.g. Riverside Business Park" /></div>
                 <div><label className={lbl}>Property Type</label><select className={inp} value={f.propertyType} onChange={(e) => set('propertyType', e.target.value)}>{PROPERTY_TYPE_CARDS.map((c) => <option key={c.key} value={c.key}>{c.key}</option>)}</select></div>
+                <div><label className={lbl}>Offering</label><select className={inp} value={f.saleType} onChange={(e) => set('saleType', e.target.value)}><option value="For Sale">For Sale</option><option value="For Lease">For Lease</option></select></div>
                 <div><label className={lbl}>Access</label><select className={inp} value={f.access} onChange={(e) => set('access', e.target.value)}>{ACCESS_OPTIONS.map((o) => <option key={o}>{o}</option>)}</select></div>
                 <div className="sm:col-span-2"><label className={lbl}>Street Address</label><input className={inp} value={f.street} onChange={(e) => set('street', e.target.value)} placeholder="123 Main St" /></div>
                 <div><label className={lbl}>City</label><input className={inp} value={f.city} onChange={(e) => set('city', e.target.value)} /></div>
@@ -9238,7 +9239,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
     const address = [d.street, d.city, d.state, d.zip].filter(Boolean).join(', ') || '—'
     const cover = d.cover || (d.photos && d.photos[0] && d.photos[0].url) || ''
     const price = Number(d.price) || 0
-    setListings((list) => [{ id, dealId, name: d.name, address, city: d.city || '', state: d.state || '', ts: Date.now(), price, type: d.propertyType || 'Retail', size: d.size || '—', status: d.status || 'Active', image: cover || propertyImage('1497366216548-37526070297c'), featured: false, listed: true, access: d.access || 'Public', description: d.description || '' }, ...list])
+    setListings((list) => [{ id, dealId, name: d.name, address, city: d.city || '', state: d.state || '', ts: Date.now(), price, type: d.propertyType || 'Retail', saleType: d.saleType || 'For Sale', size: d.size || '—', status: d.status || 'Active', image: cover || propertyImage('1497366216548-37526070297c'), featured: false, listed: true, access: d.access || 'Public', description: d.description || '' }, ...list])
     setDealRooms && setDealRooms((list) => [{ id: roomId, listingId: id, dealId, name: d.name, address, image: cover, price, capRate: d.capRate || '', noi: d.noi || '', status: d.status || 'Active', access: d.access === 'Public' ? 'Free Access' : (d.access || 'Free Access'), files: (d.confidential || []).length, members: 0, updated: 'just now', ts: Date.now() }, ...list])
     if (d.om && d.om.url) {
       putPublicPackage(id, { name: d.om.name, url: d.om.url }).catch(() => {})
@@ -9619,6 +9620,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                     <th className="py-2 pr-3 font-semibold">Price</th>
                     <th className="py-2 pr-3 font-semibold">Last Updated</th>
                     <th className="py-2 pr-3 font-semibold">Type</th>
+                    <th className="py-2 pr-3 font-semibold">Offering</th>
                     <th className="py-2 pr-3 font-semibold">Status</th>
                     <th className="py-2 pr-3 text-center font-semibold">Featured</th>
                     <th className="py-2 pr-3 text-center font-semibold">Listed</th>
@@ -9665,6 +9667,20 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                         <div className="flex flex-wrap gap-1">
                           <span className="rounded bg-orange-50 px-1.5 py-0.5 text-[10px] font-semibold text-orange-700">OM</span>
                           <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">{l.type}</span>
+                        </div>
+                      </td>
+                      <td className="py-2.5 pr-3">
+                        <div className="relative">
+                          <select
+                            value={l.saleType || 'For Sale'}
+                            onChange={(e) => patch(l.id, { saleType: e.target.value })}
+                            className={`w-full appearance-none rounded-lg border-0 py-1.5 pl-2.5 pr-7 text-xs font-semibold outline-none ring-1 ring-inset ring-transparent focus:ring-orange-400 ${(l.saleType || 'For Sale') === 'For Lease' ? 'bg-teal-50 text-teal-700' : 'bg-rose-50 text-rose-700'}`}
+                            title="What the public microsite shows for this property"
+                          >
+                            <option value="For Sale" className="bg-white text-slate-700">For Sale</option>
+                            <option value="For Lease" className="bg-white text-slate-700">For Lease</option>
+                          </select>
+                          <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-current opacity-60" />
                         </div>
                       </td>
                       <td className="py-2.5 pr-3">
