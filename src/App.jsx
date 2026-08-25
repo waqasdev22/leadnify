@@ -8618,7 +8618,7 @@ body.detail-open .detail{display:block}
 <div class="content ${VIEW}" id="content"><div id="map"></div><div id="cards"></div></div>
 <footer class="list-footer"><div class="line"></div><p>Powered by <b>Leadflow.io</b></p></footer>
 <div class="detail" id="detailView"></div>
-<script src="https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''}&loading=async"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''}"></script>
 <script>
 var CAPTURE_API=${JSON.stringify(import.meta.env.VITE_API_URL || 'http://localhost:4000/api')};
 var OWNER_UID=${JSON.stringify(ownerUid || '')};
@@ -8629,7 +8629,7 @@ var PRIMARY=${JSON.stringify(primary)};
 var state={view:'${VIEW}',filter:'All',search:'',sort:'Newest'};
 var map=null,markers=[];
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
-function gReady(){return typeof google!=='undefined'&&google.maps;}
+function gReady(){return typeof google!=='undefined'&&google.maps&&google.maps.Map;}
 function gStyle(){return [{featureType:'poi',stylers:[{visibility:'off'}]},{featureType:'transit',elementType:'labels.icon',stylers:[{visibility:'off'}]}];}
 function pinIcon(){return {path:'M12 2C8 2 5 5 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-4-3-7-7-7z',fillColor:PRIMARY,fillOpacity:1,strokeColor:'#ffffff',strokeWeight:1.5,scale:1.7,anchor:new google.maps.Point(12,22)};}
 function filtered(){var a=DATA.slice();if(state.filter!=='All')a=a.filter(function(l){return l.saleType===state.filter;});if(state.search){var q=state.search.toLowerCase();a=a.filter(function(l){return (l.name+' '+l.address).toLowerCase().indexOf(q)>-1;});}if(state.sort==='PriceHigh')a.sort(function(x,y){return y.price-x.price;});else if(state.sort==='PriceLow')a.sort(function(x,y){return x.price-y.price;});else a.sort(function(x,y){return y.id-x.id;});return a;}
