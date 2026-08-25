@@ -12490,15 +12490,18 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
               )
             })()}
 
-            {/* Forward-in address */}
+            {/* Forward-in address — Coming Soon (inbound email backend not yet provisioned) */}
             <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-              <p className="flex items-center gap-2 text-sm font-bold text-slate-900"><Mail className="h-4 w-4 text-slate-400" /> Forward leads straight into your CRM</p>
-              <p className="mt-1 text-xs text-slate-500">Forward a LoopNet, BizBuySell, or Crexi lead email to your personal address below — or set an auto-forward rule — and it becomes a contact here, tagged with the source.</p>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <input readOnly value={CRM_FORWARD_ADDR} className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-xs text-slate-600 outline-none" />
-                <button onClick={() => { copyToClipboard(CRM_FORWARD_ADDR); notify('Address copied') }} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"><Copy className="h-4 w-4" /> Copy</button>
+              <p className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                <Mail className="h-4 w-4 text-slate-400" /> Forward leads straight into your CRM
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">Coming Soon</span>
+              </p>
+              <p className="mt-1 text-xs text-slate-500">Soon you'll get a private address that turns forwarded LoopNet, BizBuySell, or Crexi lead emails into contacts here, tagged with the source. We're finishing the inbound email setup — it isn't active yet.</p>
+              <div className="mt-3 flex flex-wrap items-center gap-2 opacity-60">
+                <input readOnly disabled value={CRM_FORWARD_ADDR} className="min-w-0 flex-1 cursor-not-allowed rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 font-mono text-xs text-slate-400 outline-none" />
+                <button disabled title="Available once inbound email is live" className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-400"><Copy className="h-4 w-4" /> Copy</button>
               </div>
-              <p className="mt-2 text-xs text-slate-400">This address is private to you.</p>
+              <p className="mt-2 text-xs text-slate-400">Your address will be private to you. Until this is live, add leads with <b className="font-semibold text-slate-500">Import</b> or the <b className="font-semibold text-slate-500">Add Lead</b> button.</p>
             </div>
 
             {/* Filter bar (Exhibit F): Search, Lead Type, Property, Date range, Clear */}
