@@ -12633,7 +12633,16 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
         {tab === 'contacts' && (() => {
           const TAGS = ['Hot', 'Warm', 'Cold']
           const cProfile = (c) => c.profile || (['Buyer', 'Investor', 'Tenant'].includes(c.type) ? 'Principal' : (c.type === 'Broker' ? 'Broker' : ''))
-          const mmddyyyy = (v) => { const t = Date.parse(v); if (!t) return v || '—'; const d = new Date(t); return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}` }
+          const mmddyyyy = (v) => {
+            if (!v) return '—'
+            // Handle a dd/mm/yyyy string (en-GB) → convert to mm/dd/yyyy.
+            const dmy = String(v).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+            if (dmy) return `${dmy[2].padStart(2, '0')}/${dmy[1].padStart(2, '0')}/${dmy[3]}`
+            const t = Date.parse(v)
+            if (!t) return String(v)
+            const d = new Date(t)
+            return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`
+          }
           let rows = contacts
             .filter((c) => contactTemp === 'All' || c.tag === contactTemp)
             .filter((c) => contactProfile === 'All' || cProfile(c) === contactProfile)
