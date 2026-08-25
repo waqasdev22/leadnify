@@ -9273,42 +9273,28 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
   // Persist current listings + brand color so the public "?hub=" link (opened in a
   // new tab) shows exactly what Preview shows.
   useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      // Resolve the download-notification recipient. Priority:
-      //  1) the owner's explicitly-set notification email (My Deals field), else
-      //  2) the email of the team member whose role is "Owner" (so downloads always notify
-      //     the Owner account, never whichever admin/member is signed in), else
-      //  3) the email already saved on the published hub (don't clobber it), else
-      //  4) the currently signed-in email (first-time setup only, last resort).
-      let ownerEmail = explicitNotifyEmail
-      if (!ownerEmail) {
+    // Publish the listings + branding IMMEDIATELY (no awaits before this) so Preview and the
+    // public ?hub= link always reflect the latest deals right away.
+    const baseEmail = explicitNotifyEmail || (auth.currentUser && auth.currentUser.email) || (user && user.email) || ''
+    const hubData = { items: toMicrositeItems(rows), primary, template: micrositeTpl, defaultView, ownerUid: (auth.currentUser && auth.currentUser.uid) || '', ownerEmail: baseEmail, logoUrl: micrositeLogo || '' }
+    try { localStorage.setItem('crebuilder_hub', JSON.stringify(hubData)) } catch { /* ignore */ }
+    putPublicHub(slug, hubData).catch(() => {})
+    // Then, without blocking, refine the download-notification email to the team Owner's and
+    // re-publish just that (only when no explicit notification email is set).
+    if (!explicitNotifyEmail) {
+      let cancelled = false
+      ;(async () => {
+        let ownerEmail = ''
         try {
           const usersSnap = await dbGet(dbRef(db, 'users'))
           const users = usersSnap.val() || {}
           const ownerEntry = Object.values(users).find((u) => u && u.role === 'Owner' && u.email)
           if (ownerEntry) ownerEmail = ownerEntry.email
-        } catch { /* users not readable — fall through */ }
-      }
-      if (!ownerEmail) {
-        try {
-          const r = await fetch('https://cre-dashboard-ba596-default-rtdb.firebaseio.com/public/hub/' + encodeURIComponent(slug) + '.json')
-          const cloud = await r.json()
-          ownerEmail = (cloud && cloud.ownerEmail) || ''
-        } catch { /* hub not reachable — fall through */ }
-        if (!ownerEmail) ownerEmail = (auth.currentUser && auth.currentUser.email) || (user && user.email) || ''
-      }
-      if (cancelled) return
-      try {
-        const hubData = { items: toMicrositeItems(rows), primary, template: micrositeTpl, defaultView, ownerUid: (auth.currentUser && auth.currentUser.uid) || '', ownerEmail, logoUrl: micrositeLogo || '' }
-        localStorage.setItem('crebuilder_hub', JSON.stringify(hubData))
-        // Publish to the cloud so the public ?hub=<slug> link works on any device/browser.
-        putPublicHub(slug, hubData).catch(() => {})
-      } catch {
-        /* ignore storage errors */
-      }
-    })()
-    return () => { cancelled = true }
+        } catch { /* ignore */ }
+        if (!cancelled && ownerEmail && ownerEmail !== baseEmail) putPublicHub(slug, { ...hubData, ownerEmail }).catch(() => {})
+      })()
+      return () => { cancelled = true }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listings, primary, micrositeTpl, defaultView, slug, explicitNotifyEmail, micrositeLogo])
 
