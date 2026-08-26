@@ -12506,7 +12506,7 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
 
             {/* Filter bar (Exhibit F): Search, Lead Type, Property, Date range, Clear */}
             <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-7">
                 <div className="relative lg:col-span-2">
                   <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name…" className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm outline-none transition focus:border-brand focus:ring-2 focus:ring-blue-100" />
@@ -12520,12 +12520,12 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
                   <option value="all">All Properties</option>
                   {leadProperties.map((p) => <option key={p} value={p}>{p}</option>)}
                 </select>
-                <div className="flex items-center gap-1">
-                  <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} title="From date" className="w-full rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700 outline-none focus:border-brand" />
-                  <span className="text-slate-400">–</span>
-                  <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} title="To date" className="w-full rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700 outline-none focus:border-brand" />
+                <div className="flex min-w-0 items-center gap-1 lg:col-span-2">
+                  <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} title="From date" className="w-full min-w-0 rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700 outline-none focus:border-brand" />
+                  <span className="shrink-0 text-slate-400">–</span>
+                  <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} title="To date" className="w-full min-w-0 rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700 outline-none focus:border-brand" />
                 </div>
-                <button onClick={clearLeadFilters} className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"><X className="h-4 w-4" /> Clear</button>
+                <button onClick={clearLeadFilters} className="inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"><X className="h-4 w-4" /> Clear</button>
               </div>
               {/* Timeline presets */}
               <div className="mt-2 flex flex-wrap gap-1.5 border-t border-slate-100 pt-2">
