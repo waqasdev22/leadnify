@@ -965,9 +965,10 @@ function Sidebar({ active, onNavigate, onSignOut, user, forceCollapsed, responsi
   const navItems = can
     ? [
         ...NAV_ITEMS.filter((n) => !NAV_PERM[n.key] || can(NAV_PERM[n.key])),
-        // Team & Permissions is shown to anyone who can invite members (Owner/Admin/Manager).
-        // Managers can invite but can't change roles/permissions — enforced inside the page.
-        ...(can('team.invite') ? [{ key: 'team', label: 'Team & Permissions', icon: Users, dividerBefore: true }] : []),
+        // Team & Permissions is shown to Owner/Admin/Manager (role-based, so a stray "all
+        // permissions" override can never surface it for a Member). Managers can only invite;
+        // changing roles/permissions is locked to Owner/Admin inside the page.
+        ...(['Owner', 'Admin', 'Manager'].includes(role) ? [{ key: 'team', label: 'Team & Permissions', icon: Users, dividerBefore: true }] : []),
         { key: 'profile', label: 'Profile Settings', icon: User, dividerBefore: true },
         // Team Settings (embed, appearance, company CA) stays strictly Owner/Admin.
         ...(isAdminUp ? [{ key: 'teamsettings', label: 'Team Settings', icon: Users }] : []),
@@ -15369,11 +15370,12 @@ function PermToggle({ on, onClick, disabled }) {
   )
 }
 
-function TeamPermissionsPage({ myUid, can = () => true }) {
+function TeamPermissionsPage({ myUid, role = 'Member', can = () => true }) {
   const notify = useToast()
-  // A Manager can invite/add members, but only Owner/Admin can change roles or fine-tune
-  // permissions (client permissions matrix). canManage gates all role/permission editing.
-  const canManage = can('team.manage_permissions')
+  // A Manager can invite/add members, but changing roles or fine-tuning permissions is
+  // strictly Owner/Admin (client permissions matrix). This is role-based on purpose — it must
+  // NOT be grantable via a per-user "all permissions" override, or a Member could self-manage.
+  const canManage = ['Owner', 'Admin'].includes(role)
   const [users, setUsers] = useState({})
   const [openUid, setOpenUid] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -15812,9 +15814,9 @@ export default function App() {
       case 'deals':
         return <DealRoomsPage dealRooms={dealRooms} setDealRooms={setDealRooms} onEditDocument={resumeDraft} openTarget={dealRoomTarget} onOpenHandled={() => setDealRoomTarget(null)} user={user} role={role} />
       case 'team':
-        // Team & Permissions is open to anyone who can invite (Owner/Admin/Manager). A Manager
-        // can add members but the role/permission controls are locked inside the page.
-        return can('team.invite') ? <TeamPermissionsPage myUid={myUid} can={can} /> : <NoAccessPage />
+        // Role-based (not override-based): Owner/Admin/Manager may open this page. A Manager can
+        // only add members; changing roles/permissions is locked to Owner/Admin inside the page.
+        return ['Owner', 'Admin', 'Manager'].includes(role) ? <TeamPermissionsPage myUid={myUid} role={role} can={can} /> : <NoAccessPage />
       case 'profile':
         return <ProfileSettingsPage user={user} />
       case 'teamsettings':
