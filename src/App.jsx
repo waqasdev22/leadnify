@@ -9733,7 +9733,9 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                             const w = window.open(`${hubUrl}&p=${l.id}`, '_blank')
                             if (!w) notify('Please allow pop-ups to open the preview', 'error')
                           }} />
-                          <IconButton icon={Trash2} label="Delete" tone="danger" onClick={() => setConfirm(l)} />
+                          {can('listing.delete') && (
+                            <IconButton icon={Trash2} label="Delete" tone="danger" onClick={() => setConfirm(l)} />
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -10390,7 +10392,10 @@ function DocumentHubView({ room, onBack, notify, onEditDocument }) {
   )
 }
 
-function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
+function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member' }) {
+  // Client permissions matrix: a Member can view a deal room but can't edit its
+  // Deal Contacts or Broker of Record (Owner / Admin / Manager can).
+  const canEditDealParties = role !== 'Member'
   const [hubOpen, setHubOpen] = useState(false)
   // OM/Flyer + confidential files are stored in the cloud (per account) so they sync
   // across devices — loaded on open, saved on every change.
@@ -10951,13 +10956,18 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
                     <p className="text-sm font-semibold text-slate-800">{c.name}{c.company ? <span className="font-normal text-slate-500"> · {c.company}</span> : null}</p>
                     <p className="mt-0.5 text-xs text-slate-500">{[c.email, c.phone, c.license && `Lic# ${c.license}`].filter(Boolean).join(' · ') || '—'}</p>
                   </div>
-                  <button onClick={() => { setDealContacts((l) => l.filter((x) => x.id !== c.id)); notify('Contact removed', 'error') }} className="shrink-0 text-slate-400 hover:text-rose-500" title="Remove contact"><Trash2 className="h-4 w-4" /></button>
+                  {canEditDealParties && (
+                    <button onClick={() => { setDealContacts((l) => l.filter((x) => x.id !== c.id)); notify('Contact removed', 'error') }} className="shrink-0 text-slate-400 hover:text-rose-500" title="Remove contact"><Trash2 className="h-4 w-4" /></button>
+                  )}
                 </div>
               ))}
               {!dealContacts.length && !addingContact && <p className="py-2 text-center text-xs text-slate-400">No contacts yet.</p>}
             </div>
+            {!canEditDealParties && (
+              <p className="mt-3 border-t border-slate-100 pt-3 text-center text-xs text-slate-400">Only Manager, Admin or Owner can edit deal contacts.</p>
+            )}
             {/* Add contacts only from invited team members (no outsiders) */}
-            {dealContacts.length < 4 && (
+            {canEditDealParties && dealContacts.length < 4 && (
               availableMembers.length ? (
                 <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
                   <select value={pickMember} onChange={(e) => setPickMember(e.target.value)} className="min-w-[180px] flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand">
@@ -10979,10 +10989,12 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
             {bor && !editingBor ? (
               <div className="mt-3 flex items-start justify-between gap-3">
                 <p className="text-xs leading-relaxed text-slate-400">{[bor.name, bor.company, bor.license && `License ${bor.license}`].filter(Boolean).join(' · ')}</p>
-                <div className="flex shrink-0 gap-3 text-xs font-semibold">
-                  <button onClick={() => { setBorDraft({ name: bor.name || '', company: bor.company || '', license: bor.license || '' }); setEditingBor(true) }} className="text-brand hover:underline">Edit</button>
-                  <button onClick={() => { setBor(null); notify('Broker of Record removed', 'error') }} className="text-slate-400 hover:text-rose-500">Remove</button>
-                </div>
+                {canEditDealParties && (
+                  <div className="flex shrink-0 gap-3 text-xs font-semibold">
+                    <button onClick={() => { setBorDraft({ name: bor.name || '', company: bor.company || '', license: bor.license || '' }); setEditingBor(true) }} className="text-brand hover:underline">Edit</button>
+                    <button onClick={() => { setBor(null); notify('Broker of Record removed', 'error') }} className="text-slate-400 hover:text-rose-500">Remove</button>
+                  </div>
+                )}
               </div>
             ) : editingBor ? (
               <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
@@ -10994,8 +11006,10 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument }) {
                   <button onClick={() => setEditingBor(false)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50">Cancel</button>
                 </div>
               </div>
-            ) : (
+            ) : canEditDealParties ? (
               <button onClick={() => { setBorDraft({ name: '', company: '', license: '' }); setEditingBor(true) }} className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-orange-50 px-3 py-1.5 text-xs font-semibold text-brand transition hover:bg-orange-100"><Plus className="h-3.5 w-3.5" /> Add Broker of Record</button>
+            ) : (
+              <p className="mt-3 text-center text-xs text-slate-400">Only Manager, Admin or Owner can edit the Broker of Record.</p>
             )}
           </div>
 
@@ -11299,7 +11313,7 @@ function DealRoomTransferModal({ room, user, onClose, onTransfer }) {
   )
 }
 
-function DealRoomsPage({ dealRooms, setDealRooms, onEditDocument, openTarget, onOpenHandled, user }) {
+function DealRoomsPage({ dealRooms, setDealRooms, onEditDocument, openTarget, onOpenHandled, user, role = 'Member' }) {
   const notify = useToast()
   const [modalOpen, setModalOpen] = useState(false)
   const [confirm, setConfirm] = useState(null)
@@ -11342,7 +11356,7 @@ function DealRoomsPage({ dealRooms, setDealRooms, onEditDocument, openTarget, on
   if (openRoom) {
     return (
       <div className="mx-auto max-w-[1600px] p-6">
-        <DealRoomDetail room={openRoom} onBack={() => setOpenRoom(null)} notify={notify} onEditDocument={onEditDocument} />
+        <DealRoomDetail room={openRoom} onBack={() => setOpenRoom(null)} notify={notify} onEditDocument={onEditDocument} role={role} />
       </div>
     )
   }
@@ -15782,7 +15796,7 @@ export default function App() {
       case 'listings':
         return <ListingHubPage listings={listings} setListings={setListings} setPackages={setPackages} globalQuery={query} onCreateNew={startCreate} onResumeDraft={resumeDraft} onOpenDealRoom={openDealRoomFor} dealRooms={dealRooms} setDealRooms={setDealRooms} onOpenRoom={(room) => { setDealRoomTarget(room); setActive('deals'); setMobileNav(false) }} user={user} role={role} can={can} />
       case 'deals':
-        return <DealRoomsPage dealRooms={dealRooms} setDealRooms={setDealRooms} onEditDocument={resumeDraft} openTarget={dealRoomTarget} onOpenHandled={() => setDealRoomTarget(null)} user={user} />
+        return <DealRoomsPage dealRooms={dealRooms} setDealRooms={setDealRooms} onEditDocument={resumeDraft} openTarget={dealRoomTarget} onOpenHandled={() => setDealRoomTarget(null)} user={user} role={role} />
       case 'team':
         // Hard guard: Team & Permissions is Admin/Owner only (belt-and-suspenders with the nav).
         return ['Owner', 'Admin'].includes(role) ? <TeamPermissionsPage myUid={myUid} /> : <NoAccessPage />

@@ -16,9 +16,12 @@ export const PERMISSION_GROUPS = [
     perms: [
       { key: 'listing.create', label: 'Create listing' },
       { key: 'listing.edit', label: 'Edit listing' },
-      { key: 'listing.delete', label: 'Delete listing' },
+      { key: 'listing.delete', label: 'Delete deal' },
       { key: 'listing.publish', label: 'Publish / unpublish listing' },
       { key: 'listing.feature', label: 'Set featured listing' },
+      { key: 'deal.edit_contacts', label: 'Edit deal contacts' },
+      { key: 'deal.edit_broker', label: 'Edit broker of record' },
+      { key: 'deal.edit_owner', label: 'Edit deal owner' },
     ],
   },
   {
@@ -52,26 +55,29 @@ export const PERMISSION_GROUPS = [
 export const ALL_PERMS = PERMISSION_GROUPS.flatMap((g) => g.perms.map((p) => p.key))
 
 // Role presets — the default permission set for each role.
-// Owner  = account owner, full control.
-// Admin  = Manager + team management & billing (effectively everything).
-// Manager= all features, sees all team members' leads & data. Paid seat.
-// Member = all features, sees only their own leads & data. Paid seat.
-const NO_TEAM_MGMT = ['team.invite', 'team.manage_permissions', 'billing.manage']
+// Mirrors the client's "User Permissions" matrix:
+//   Owner  = full control, the only role that can delete a deal.
+//   Admin  = everything except deleting a deal.
+//   Manager= everything except deleting a deal and team-mgmt (roles/billing); CAN invite.
+//   Member = like Manager, but can't invite, can't feature, and can't edit a deal's
+//            contacts / broker of record / owner. Still sees all team leads & data.
+const OWNER_ONLY = ['listing.delete', 'dealroom.delete']          // Delete deal — Owner only
+const OWNER_ADMIN_ONLY = ['team.manage_permissions', 'billing.manage'] // roles & billing
+const MEMBER_EXCLUDE = ['team.invite', 'listing.feature', 'deal.edit_contacts', 'deal.edit_broker', 'deal.edit_owner']
 export const ROLE_PRESETS = {
   Owner: [...ALL_PERMS],
-  Admin: [...ALL_PERMS],
-  Manager: ALL_PERMS.filter((k) => !NO_TEAM_MGMT.includes(k)),
-  // Member sees only their own data and cannot feature listings (Milestone I 2.7).
-  Member: ALL_PERMS.filter((k) => !NO_TEAM_MGMT.includes(k) && k !== 'team.view_all_leads' && k !== 'listing.feature'),
+  Admin: ALL_PERMS.filter((k) => !OWNER_ONLY.includes(k)),
+  Manager: ALL_PERMS.filter((k) => !OWNER_ONLY.includes(k) && !OWNER_ADMIN_ONLY.includes(k)),
+  Member: ALL_PERMS.filter((k) => !OWNER_ONLY.includes(k) && !OWNER_ADMIN_ONLY.includes(k) && !MEMBER_EXCLUDE.includes(k)),
 }
 
 export const ROLES = Object.keys(ROLE_PRESETS)
 
 export const ROLE_INFO = {
-  Owner: { color: 'amber', desc: 'Account owner — full control, including billing & team management.' },
-  Admin: { color: 'rose', desc: 'All features plus team management & billing.' },
-  Manager: { color: 'indigo', desc: "All features. Sees all team members' leads & data. Paid seat." },
-  Member: { color: 'slate', desc: 'All features. Sees only their own leads & data. Paid seat.' },
+  Owner: { color: 'amber', desc: 'Account owner — full control, including billing, team management, and the only role that can delete a deal.' },
+  Admin: { color: 'rose', desc: 'Everything except deleting a deal — full team management & billing.' },
+  Manager: { color: 'indigo', desc: "All features except deleting a deal and managing roles/billing. Can invite members and sees all team leads & data. Paid seat." },
+  Member: { color: 'slate', desc: "Sees all team leads & data, but can't invite, feature listings, or edit a deal's contacts / broker / owner. Paid seat." },
 }
 
 // Realtime DB keys can't contain "." — encode permission keys for storage.
