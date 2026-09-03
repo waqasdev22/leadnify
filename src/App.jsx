@@ -965,10 +965,11 @@ function Sidebar({ active, onNavigate, onSignOut, user, forceCollapsed, responsi
   const navItems = can
     ? [
         ...NAV_ITEMS.filter((n) => !NAV_PERM[n.key] || can(NAV_PERM[n.key])),
-        // Team & Permissions and Team Settings are strictly Owner/Admin (role-based, so a stray
-        // permission override can never surface them for a Manager/Member).
-        ...(isAdminUp ? [{ key: 'team', label: 'Team & Permissions', icon: Users, dividerBefore: true }] : []),
+        // Team & Permissions is shown to anyone who can invite members (Owner/Admin/Manager).
+        // Managers can invite but can't change roles/permissions — enforced inside the page.
+        ...(can('team.invite') ? [{ key: 'team', label: 'Team & Permissions', icon: Users, dividerBefore: true }] : []),
         { key: 'profile', label: 'Profile Settings', icon: User, dividerBefore: true },
+        // Team Settings (embed, appearance, company CA) stays strictly Owner/Admin.
         ...(isAdminUp ? [{ key: 'teamsettings', label: 'Team Settings', icon: Users }] : []),
       ]
     : NAV_ITEMS
@@ -15368,8 +15369,11 @@ function PermToggle({ on, onClick, disabled }) {
   )
 }
 
-function TeamPermissionsPage({ myUid }) {
+function TeamPermissionsPage({ myUid, can = () => true }) {
   const notify = useToast()
+  // A Manager can invite/add members, but only Owner/Admin can change roles or fine-tune
+  // permissions (client permissions matrix). canManage gates all role/permission editing.
+  const canManage = can('team.manage_permissions')
   const [users, setUsers] = useState({})
   const [openUid, setOpenUid] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -15379,7 +15383,11 @@ function TeamPermissionsPage({ myUid }) {
   const [busy, setBusy] = useState(false)
 
   const submitMember = async () => {
-    const { name, email, password, role, allPerms } = form
+    const { name, email, password } = form
+    // Managers can invite, but only as a plain Member with no permission overrides —
+    // choosing a higher role or granting all permissions is Owner/Admin only.
+    const role = canManage ? form.role : 'Member'
+    const allPerms = canManage ? form.allPerms : false
     if (!email.trim() || password.length < 6) { notify('Enter an email and a password of 6+ characters', 'error'); return }
     setBusy(true)
     try {
@@ -15427,7 +15435,7 @@ function TeamPermissionsPage({ myUid }) {
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-500"><Users className="h-6 w-6" /></div>
           <div>
             <h1 className="text-2xl font-extrabold text-slate-900">Team &amp; Permissions</h1>
-            <p className="mt-1 text-sm text-slate-500">Set each member's role, then fine-tune exactly which functions they can use.</p>
+            <p className="mt-1 text-sm text-slate-500">{canManage ? "Set each member's role, then fine-tune exactly which functions they can use." : 'Invite new members to your team. Roles and permissions are managed by an Admin or Owner.'}</p>
           </div>
         </div>
         <button onClick={() => setAddOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover"><Plus className="h-4 w-4" /> Add Member</button>
@@ -15454,16 +15462,22 @@ function TeamPermissionsPage({ myUid }) {
                 <label className="mb-1 block text-sm font-semibold text-slate-700">Temporary Password</label>
                 <input value={form.password} onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} placeholder="At least 6 characters" className={inputCls} />
               </div>
-              <div>
-                <label className="mb-1 block text-sm font-semibold text-slate-700">Role</label>
-                <select value={form.role} onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))} className={inputCls}>
-                  {ROLES.map((r) => <option key={r}>{r}</option>)}
-                </select>
-              </div>
-              <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
-                <input type="checkbox" checked={form.allPerms} onChange={(e) => setForm((f) => ({ ...f, allPerms: e.target.checked }))} className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-blue-300" />
-                Grant <b>all permissions</b> to this member
-              </label>
+              {canManage ? (
+                <>
+                  <div>
+                    <label className="mb-1 block text-sm font-semibold text-slate-700">Role</label>
+                    <select value={form.role} onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))} className={inputCls}>
+                      {ROLES.map((r) => <option key={r}>{r}</option>)}
+                    </select>
+                  </div>
+                  <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                    <input type="checkbox" checked={form.allPerms} onChange={(e) => setForm((f) => ({ ...f, allPerms: e.target.checked }))} className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-blue-300" />
+                    Grant <b>all permissions</b> to this member
+                  </label>
+                </>
+              ) : (
+                <p className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">New members join as <b>Member</b>. Only an Admin or Owner can change roles &amp; permissions afterward.</p>
+              )}
             </div>
             <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-3">
               <button onClick={() => setAddOpen(false)} disabled={busy} className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 transition hover:text-slate-900">Cancel</button>
@@ -15496,17 +15510,17 @@ function TeamPermissionsPage({ myUid }) {
                     <p className="truncate text-xs text-slate-500">{u.email}</p>
                   </div>
                   <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${roleBadge(u.role)}`}>{u.role}</span>
-                  <select value={u.role} onChange={(e) => setUserRole(u.uid, e.target.value)} disabled={isMe} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-700 outline-none disabled:opacity-50">
+                  <select value={u.role} onChange={(e) => setUserRole(u.uid, e.target.value)} disabled={isMe || !canManage} title={canManage ? '' : 'Only an Admin or Owner can change roles'} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-700 outline-none disabled:opacity-50">
                     {ROLES.map((r) => <option key={r}>{r}</option>)}
                   </select>
                   <button onClick={() => setOpenUid(open ? null : u.uid)} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
                     Permissions <ChevronDown className={`h-4 w-4 transition ${open ? 'rotate-180' : ''}`} />
                   </button>
-                  {isMe ? (
+                  {canManage && (isMe ? (
                     <span className="inline-flex h-8 w-8 items-center justify-center text-slate-300" title="You can't remove yourself"><Trash2 className="h-4 w-4" /></span>
                   ) : (
                     <button onClick={() => setConfirmDelUser(u)} title="Remove from team" className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-4 w-4" /></button>
-                  )}
+                  ))}
                 </div>
                 {open && (
                   <div className="border-t border-slate-100 bg-slate-50/50 p-4">
@@ -15523,7 +15537,7 @@ function TeamPermissionsPage({ myUid }) {
                               return (
                                 <div key={p.key} className="flex items-center justify-between gap-2 rounded-lg bg-white px-3 py-2 ring-1 ring-slate-100">
                                   <span className="text-sm text-slate-700">{p.label}{overridden && <span className="ml-1.5 rounded bg-orange-50 px-1 py-0.5 text-[9px] font-bold uppercase text-orange-600">custom</span>}</span>
-                                  <PermToggle on={on} onClick={() => togglePerm(u.uid, p.key)} disabled={isMe} />
+                                  <PermToggle on={on} onClick={() => togglePerm(u.uid, p.key)} disabled={isMe || !canManage} />
                                 </div>
                               )
                             })}
@@ -15798,8 +15812,9 @@ export default function App() {
       case 'deals':
         return <DealRoomsPage dealRooms={dealRooms} setDealRooms={setDealRooms} onEditDocument={resumeDraft} openTarget={dealRoomTarget} onOpenHandled={() => setDealRoomTarget(null)} user={user} role={role} />
       case 'team':
-        // Hard guard: Team & Permissions is Admin/Owner only (belt-and-suspenders with the nav).
-        return ['Owner', 'Admin'].includes(role) ? <TeamPermissionsPage myUid={myUid} /> : <NoAccessPage />
+        // Team & Permissions is open to anyone who can invite (Owner/Admin/Manager). A Manager
+        // can add members but the role/permission controls are locked inside the page.
+        return can('team.invite') ? <TeamPermissionsPage myUid={myUid} can={can} /> : <NoAccessPage />
       case 'profile':
         return <ProfileSettingsPage user={user} />
       case 'teamsettings':
