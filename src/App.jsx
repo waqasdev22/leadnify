@@ -15404,6 +15404,9 @@ function TeamPermissionsPage({ myUid, role = 'Member', can = () => true }) {
     } finally { setBusy(false) }
   }
 
+  // Close the Add Member dialog and clear whatever was typed, so it opens blank next time.
+  const closeAddMember = () => { setAddOpen(false); setForm({ name: '', email: '', password: '', role: 'Member', allPerms: false }) }
+
   useEffect(() => {
     return onValue(dbRef(db, 'users'), (snap) => { setUsers(snap.val() || {}); setLoading(false) }, () => { setErr(true); setLoading(false) })
   }, [])
@@ -15444,11 +15447,11 @@ function TeamPermissionsPage({ myUid, role = 'Member', can = () => true }) {
       </div>
 
       {addOpen && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => !busy && setAddOpen(false)}>
-          <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
               <h3 className="text-lg font-extrabold text-slate-900">Add Team Member</h3>
-              <button onClick={() => setAddOpen(false)} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"><X className="h-5 w-5" /></button>
+              <button onClick={() => !busy && closeAddMember()} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"><X className="h-5 w-5" /></button>
             </div>
             <div className="space-y-3 p-5">
               <p className="text-xs text-slate-500">Creates a login for the member. Share the email &amp; password with them — they can change the password later.</p>
@@ -15482,7 +15485,7 @@ function TeamPermissionsPage({ myUid, role = 'Member', can = () => true }) {
               )}
             </div>
             <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-3">
-              <button onClick={() => setAddOpen(false)} disabled={busy} className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 transition hover:text-slate-900">Cancel</button>
+              <button onClick={closeAddMember} disabled={busy} className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 transition hover:text-slate-900">Cancel</button>
               <button onClick={submitMember} disabled={busy} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover disabled:opacity-60">{busy ? 'Adding…' : 'Add Member'}</button>
             </div>
           </div>
