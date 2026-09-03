@@ -14194,6 +14194,14 @@ const EMAIL_OAUTH = {
     scope: 'contact_data campaign_data offline_access',
     extra: {},
   },
+  // LinkedIn — same OAuth flow as Gmail. Needs a LinkedIn Developer App's Client ID in
+  // VITE_LINKEDIN_CLIENT_ID (and the app's "Share on LinkedIn" + OpenID products approved).
+  linkedin: {
+    authorize: 'https://www.linkedin.com/oauth/v2/authorization',
+    clientId: import.meta.env.VITE_LINKEDIN_CLIENT_ID,
+    scope: 'openid profile w_member_social',
+    extra: {},
+  },
 }
 // Opens the provider's sign-in in a NEW popup window (the dashboard tab never navigates away).
 // Returns the popup window (caller watches it; the popup posts the code back and closes), or
@@ -14353,7 +14361,8 @@ function EmailBlastPage({ user, onNavigate, role = 'Member' }) {
     if (code && state && EMAIL_OAUTH[state]) {
       setConns((c) => ({ ...c, [state]: true }))
       setConnDates((d) => ({ ...d, [state]: new Date().toLocaleDateString('en-GB') }))
-      notify(`Connected ${EMAIL_PROVIDERS.find((x) => x.key === state)?.name || state}`, 'success')
+      if (state === 'linkedin') setLiConnected(true)
+      notify(`Connected ${state === 'linkedin' ? 'LinkedIn' : (EMAIL_PROVIDERS.find((x) => x.key === state)?.name || state)}`, 'success')
       const url = new URL(window.location.href); url.searchParams.delete('code'); url.searchParams.delete('state'); url.searchParams.delete('scope'); window.history.replaceState({}, '', url.pathname + url.search)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -14366,8 +14375,9 @@ function EmailBlastPage({ user, onNavigate, role = 'Member' }) {
       if (d && d.type === 'oauth-connect' && d.state && EMAIL_OAUTH[d.state]) {
         setConns((c) => ({ ...c, [d.state]: true }))
         setConnDates((dd) => ({ ...dd, [d.state]: new Date().toLocaleDateString('en-GB') }))
+        if (d.state === 'linkedin') setLiConnected(true)
         setOpeningKey(null)
-        notify(`Connected ${EMAIL_PROVIDERS.find((x) => x.key === d.state)?.name || d.state}`, 'success')
+        notify(`Connected ${d.state === 'linkedin' ? 'LinkedIn' : (EMAIL_PROVIDERS.find((x) => x.key === d.state)?.name || d.state)}`, 'success')
       }
     }
     window.addEventListener('message', onMsg)
@@ -14604,7 +14614,7 @@ function EmailBlastPage({ user, onNavigate, role = 'Member' }) {
                 <button onClick={() => { setLiConnected(false); notify('Disconnected LinkedIn', 'error') }} className="text-xs font-medium text-slate-400 hover:text-rose-500">Disconnect</button>
               </div>
             ) : (
-              <button onClick={() => { setLiConnected(true); notify('Connected LinkedIn') }} className="rounded-full bg-orange-50 px-4 py-1.5 text-sm font-semibold text-brand transition hover:bg-orange-100">Connect</button>
+              <button onClick={() => { const r = beginOAuth('linkedin'); if (r === false) notify('LinkedIn isn\'t set up yet — add your LinkedIn app Client ID (VITE_LINKEDIN_CLIENT_ID) to enable Connect', 'error') }} className="rounded-full bg-orange-50 px-4 py-1.5 text-sm font-semibold text-brand transition hover:bg-orange-100">Connect</button>
             )}
           </div>
           {liScheduled.length > 0 && (
