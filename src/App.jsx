@@ -14195,11 +14195,13 @@ const EMAIL_OAUTH = {
     extra: {},
   },
   // LinkedIn — same OAuth flow as Gmail. Needs a LinkedIn Developer App's Client ID in
-  // VITE_LINKEDIN_CLIENT_ID (and the app's "Share on LinkedIn" + OpenID products approved).
+  // VITE_LINKEDIN_CLIENT_ID. Scope is just sign-in for now (needs the "Sign In with LinkedIn
+  // using OpenID Connect" product); add "w_member_social" back once "Share on LinkedIn" is
+  // approved, to also enable posting.
   linkedin: {
     authorize: 'https://www.linkedin.com/oauth/v2/authorization',
     clientId: import.meta.env.VITE_LINKEDIN_CLIENT_ID,
-    scope: 'openid profile w_member_social',
+    scope: 'openid profile email',
     extra: {},
   },
 }
