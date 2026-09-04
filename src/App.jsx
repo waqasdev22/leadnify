@@ -14212,7 +14212,9 @@ const EMAIL_OAUTH = {
     authorize: 'https://www.instagram.com/oauth/authorize',
     clientId: import.meta.env.VITE_INSTAGRAM_CLIENT_ID,
     scope: 'instagram_business_basic',
-    extra: {},
+    // force_reauth makes Instagram always show its own login page, so each person signs in with
+    // their own Instagram account instead of being auto-continued as whoever is already logged in.
+    extra: { force_reauth: 'true' },
   },
 }
 // Opens the provider's sign-in in a NEW popup window (the dashboard tab never navigates away).
