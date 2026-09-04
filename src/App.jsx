@@ -14212,7 +14212,7 @@ const EMAIL_OAUTH = {
   instagram: {
     authorize: 'https://www.facebook.com/v21.0/dialog/oauth',
     clientId: import.meta.env.VITE_INSTAGRAM_CLIENT_ID,
-    scope: 'public_profile,email',
+    scope: 'public_profile',
     extra: {},
   },
 }
