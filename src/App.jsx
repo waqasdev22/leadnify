@@ -14204,14 +14204,14 @@ const EMAIL_OAUTH = {
     scope: 'openid profile email',
     extra: {},
   },
-  // Instagram — connects via Facebook Login (Meta), the reliable path that works from any country
-  // without Meta App Review. Uses the Facebook app's App ID in VITE_INSTAGRAM_CLIENT_ID. Pure
-  // Instagram-only login + real posting need Meta App Review + Business Verification (add the
-  // instagram_content_publish scope then).
+  // Instagram — direct Instagram Business Login (Instagram's own login, no Facebook screen).
+  // Uses the "Instagram app ID" from the app's Instagram business login setup in
+  // VITE_INSTAGRAM_CLIENT_ID. The account must be Business/Creator and added as an Instagram
+  // tester (accepted in Instagram) while the app is in development.
   instagram: {
-    authorize: 'https://www.facebook.com/v21.0/dialog/oauth',
+    authorize: 'https://www.instagram.com/oauth/authorize',
     clientId: import.meta.env.VITE_INSTAGRAM_CLIENT_ID,
-    scope: 'public_profile',
+    scope: 'instagram_business_basic',
     extra: {},
   },
 }
@@ -14221,7 +14221,9 @@ const EMAIL_OAUTH = {
 function beginOAuth(providerKey) {
   const cfg = EMAIL_OAUTH[providerKey]
   if (!cfg || !cfg.clientId) return false
-  const base = { client_id: cfg.clientId, redirect_uri: window.location.origin, response_type: 'code', state: providerKey, ...cfg.extra }
+  // Instagram's business login registers the redirect WITH a trailing slash — match it exactly.
+  const redirectUri = providerKey === 'instagram' ? window.location.origin + '/' : window.location.origin
+  const base = { client_id: cfg.clientId, redirect_uri: redirectUri, response_type: 'code', state: providerKey, ...cfg.extra }
   if (cfg.scope) base.scope = cfg.scope
   const url = `${cfg.authorize}?${new URLSearchParams(base).toString()}`
   // Open in a NEW browser TAB (not a small popup window). The dashboard tab stays put; the new
