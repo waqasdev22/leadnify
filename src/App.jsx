@@ -14204,6 +14204,15 @@ const EMAIL_OAUTH = {
     scope: 'openid profile email',
     extra: {},
   },
+  // Instagram — connects via Facebook Login (Meta). Needs a Facebook Developer App's App ID in
+  // VITE_INSTAGRAM_CLIENT_ID, with the Instagram account set to Business and linked to a
+  // Facebook Page. Add instagram_content_publish once Meta approves it, to also enable posting.
+  instagram: {
+    authorize: 'https://www.facebook.com/v21.0/dialog/oauth',
+    clientId: import.meta.env.VITE_INSTAGRAM_CLIENT_ID,
+    scope: 'instagram_basic,pages_show_list',
+    extra: {},
+  },
 }
 // Opens the provider's sign-in in a NEW popup window (the dashboard tab never navigates away).
 // Returns the popup window (caller watches it; the popup posts the code back and closes), or
@@ -14260,6 +14269,7 @@ function EmailBlastPage({ user, onNavigate, role = 'Member' }) {
   const [templates, setTemplates] = usePersistentState('email_templates', EMAIL_TEMPLATES_SEED)
   const [tplEdit, setTplEdit] = useState(null) // template being edited (Manager+)
   const [liConnected, setLiConnected] = usePersistentState('email_linkedin', false)
+  const [igConnected, setIgConnected] = usePersistentState('email_instagram', false)
   const [liPost, setLiPost] = useState(null) // { listing, when } scheduling draft
   const [liScheduled, setLiScheduled] = usePersistentState('email_li_posts', [])
   const saveTpl = () => {
@@ -14364,7 +14374,8 @@ function EmailBlastPage({ user, onNavigate, role = 'Member' }) {
       setConns((c) => ({ ...c, [state]: true }))
       setConnDates((d) => ({ ...d, [state]: new Date().toLocaleDateString('en-GB') }))
       if (state === 'linkedin') setLiConnected(true)
-      notify(`Connected ${state === 'linkedin' ? 'LinkedIn' : (EMAIL_PROVIDERS.find((x) => x.key === state)?.name || state)}`, 'success')
+      if (state === 'instagram') setIgConnected(true)
+      notify(`Connected ${state === 'linkedin' ? 'LinkedIn' : state === 'instagram' ? 'Instagram' : (EMAIL_PROVIDERS.find((x) => x.key === state)?.name || state)}`, 'success')
       const url = new URL(window.location.href); url.searchParams.delete('code'); url.searchParams.delete('state'); url.searchParams.delete('scope'); window.history.replaceState({}, '', url.pathname + url.search)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -14378,8 +14389,9 @@ function EmailBlastPage({ user, onNavigate, role = 'Member' }) {
         setConns((c) => ({ ...c, [d.state]: true }))
         setConnDates((dd) => ({ ...dd, [d.state]: new Date().toLocaleDateString('en-GB') }))
         if (d.state === 'linkedin') setLiConnected(true)
+        if (d.state === 'instagram') setIgConnected(true)
         setOpeningKey(null)
-        notify(`Connected ${d.state === 'linkedin' ? 'LinkedIn' : (EMAIL_PROVIDERS.find((x) => x.key === d.state)?.name || d.state)}`, 'success')
+        notify(`Connected ${d.state === 'linkedin' ? 'LinkedIn' : d.state === 'instagram' ? 'Instagram' : (EMAIL_PROVIDERS.find((x) => x.key === d.state)?.name || d.state)}`, 'success')
       }
     }
     window.addEventListener('message', onMsg)
@@ -14607,7 +14619,7 @@ function EmailBlastPage({ user, onNavigate, role = 'Member' }) {
               <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#0A66C2] text-white"><Linkedin className="h-5 w-5" /></span>
               <div>
                 <p className="text-sm font-bold text-slate-900">LinkedIn</p>
-                <p className="text-xs text-slate-400">Post a listing to your feed{liConnected ? ' — connected' : ''}. (Instagram, Facebook & X come later.)</p>
+                <p className="text-xs text-slate-400">Post a listing to your feed{liConnected ? ' — connected' : ''}. (Facebook & X come later.)</p>
               </div>
             </div>
             {liConnected ? (
@@ -14617,6 +14629,21 @@ function EmailBlastPage({ user, onNavigate, role = 'Member' }) {
               </div>
             ) : (
               <button onClick={() => { const r = beginOAuth('linkedin'); if (r === false) notify('LinkedIn isn\'t set up yet — add your LinkedIn app Client ID (VITE_LINKEDIN_CLIENT_ID) to enable Connect', 'error') }} className="rounded-full bg-orange-50 px-4 py-1.5 text-sm font-semibold text-brand transition hover:bg-orange-100">Connect</button>
+            )}
+          </div>
+          {/* Instagram — connects via Facebook (Meta). Needs a Business IG account + Facebook Page. */}
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3">
+            <div className="flex items-center gap-3">
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-tr from-[#F58529] via-[#DD2A7B] to-[#8134AF] text-white"><Instagram className="h-5 w-5" /></span>
+              <div>
+                <p className="text-sm font-bold text-slate-900">Instagram</p>
+                <p className="text-xs text-slate-400">Post a listing to your feed{igConnected ? ' — connected' : ''}. (Business account + Facebook Page required.)</p>
+              </div>
+            </div>
+            {igConnected ? (
+              <button onClick={() => { setIgConnected(false); notify('Disconnected Instagram', 'error') }} className="text-xs font-medium text-slate-400 hover:text-rose-500">Disconnect</button>
+            ) : (
+              <button onClick={() => { const r = beginOAuth('instagram'); if (r === false) notify('Instagram isn\'t set up yet — add your Facebook app ID (VITE_INSTAGRAM_CLIENT_ID) to enable Connect', 'error') }} className="rounded-full bg-orange-50 px-4 py-1.5 text-sm font-semibold text-brand transition hover:bg-orange-100">Connect</button>
             )}
           </div>
           {liScheduled.length > 0 && (
