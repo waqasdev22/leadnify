@@ -3,6 +3,7 @@ import { getDatabase } from "firebase/database";
 import { getFirestore } from "firebase/firestore";
 import { getAuth, GoogleAuthProvider, createUserWithEmailAndPassword, updateProfile, signOut } from "firebase/auth";
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
+import { getFunctions, httpsCallable } from "firebase/functions";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCM6FECzAa6maN6UF6O0JaSPAsqaO__ePc",
@@ -21,6 +22,15 @@ export const fdb = getFirestore(app); // Cloud Firestore
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 export const storage = getStorage(app);
+export const functions = getFunctions(app);
+
+// Exchange a social OAuth code (LinkedIn/Instagram) on the server for the real connected
+// account. Returns { provider, name, email/username, ... } — no secrets ever touch the browser.
+export async function connectSocialAccount({ provider, code, redirectUri }) {
+  const call = httpsCallable(functions, "connectSocial");
+  const res = await call({ provider, code, redirectUri });
+  return res.data;
+}
 
 // Upload a file to Firebase Storage and return its public download URL.
 // Images live in the cloud; only the small URL is stored in the document —

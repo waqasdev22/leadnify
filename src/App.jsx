@@ -11,7 +11,7 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { getCol, putCol, saveUser, sendEmail, setApiNamespace, getFile, putFile, delFile, MAX_CLOUD_FILE, putPublicPackage, getPublicPackage, delPublicPackage, drainPublicLeads, putPublicHub, putGallery, kvGet, kvSet } from './api'
 import { EMAILJS } from './emailConfig'
-import { auth, googleProvider, db, createMemberAccount } from './firebase'
+import { auth, googleProvider, db, createMemberAccount, connectSocialAccount } from './firebase'
 import { ref as dbRef, get as dbGet, set as dbSet, update as dbUpdate, remove as dbRemove, onValue } from 'firebase/database'
 import { PERMISSION_GROUPS, ROLE_PRESETS, ROLES, ROLE_INFO, resolvePerms, decodeOverrides, encodeOverrides } from './permissions'
 import * as XLSX from 'xlsx'
@@ -14277,6 +14277,21 @@ function EmailBlastPage({ user, onNavigate, role = 'Member' }) {
   const [tplEdit, setTplEdit] = useState(null) // template being edited (Manager+)
   const [liConnected, setLiConnected] = usePersistentState('email_linkedin', false)
   const [igConnected, setIgConnected] = usePersistentState('email_instagram', false)
+  // The actual connected account per provider (name/email/username), resolved by the backend.
+  const [socialAccounts, setSocialAccounts] = usePersistentState('email_social_accounts', {})
+  // Finish a social connect: send the OAuth code to the backend, which returns the real account.
+  const finishSocialConnect = async (provider, code) => {
+    const redirectUri = provider === 'instagram' ? window.location.origin + '/' : window.location.origin
+    try {
+      const acct = await connectSocialAccount({ provider, code, redirectUri })
+      setSocialAccounts((m) => ({ ...m, [provider]: acct }))
+      if (provider === 'linkedin') setLiConnected(true)
+      if (provider === 'instagram') setIgConnected(true)
+      notify(`Connected ${acct.name || acct.email || provider}`, 'success')
+    } catch (e) {
+      notify(`Couldn't finish ${provider} connect — ${String(e.message || e)}`, 'error')
+    }
+  }
   const [liPost, setLiPost] = useState(null) // { listing, when } scheduling draft
   const [liScheduled, setLiScheduled] = usePersistentState('email_li_posts', [])
   const saveTpl = () => {
@@ -14378,11 +14393,14 @@ function EmailBlastPage({ user, onNavigate, role = 'Member' }) {
     const q = new URLSearchParams(window.location.search)
     const code = q.get('code'), state = q.get('state')
     if (code && state && EMAIL_OAUTH[state]) {
-      setConns((c) => ({ ...c, [state]: true }))
-      setConnDates((d) => ({ ...d, [state]: new Date().toLocaleDateString('en-GB') }))
-      if (state === 'linkedin') setLiConnected(true)
-      if (state === 'instagram') setIgConnected(true)
-      notify(`Connected ${state === 'linkedin' ? 'LinkedIn' : state === 'instagram' ? 'Instagram' : (EMAIL_PROVIDERS.find((x) => x.key === state)?.name || state)}`, 'success')
+      if (state === 'linkedin' || state === 'instagram') {
+        // Resolve the real account on the backend (token exchange + profile).
+        finishSocialConnect(state, code)
+      } else {
+        setConns((c) => ({ ...c, [state]: true }))
+        setConnDates((d) => ({ ...d, [state]: new Date().toLocaleDateString('en-GB') }))
+        notify(`Connected ${EMAIL_PROVIDERS.find((x) => x.key === state)?.name || state}`, 'success')
+      }
       const url = new URL(window.location.href); url.searchParams.delete('code'); url.searchParams.delete('state'); url.searchParams.delete('scope'); window.history.replaceState({}, '', url.pathname + url.search)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -14393,12 +14411,14 @@ function EmailBlastPage({ user, onNavigate, role = 'Member' }) {
       if (e.origin !== window.location.origin) return
       const d = e.data
       if (d && d.type === 'oauth-connect' && d.state && EMAIL_OAUTH[d.state]) {
-        setConns((c) => ({ ...c, [d.state]: true }))
-        setConnDates((dd) => ({ ...dd, [d.state]: new Date().toLocaleDateString('en-GB') }))
-        if (d.state === 'linkedin') setLiConnected(true)
-        if (d.state === 'instagram') setIgConnected(true)
         setOpeningKey(null)
-        notify(`Connected ${d.state === 'linkedin' ? 'LinkedIn' : d.state === 'instagram' ? 'Instagram' : (EMAIL_PROVIDERS.find((x) => x.key === d.state)?.name || d.state)}`, 'success')
+        if (d.state === 'linkedin' || d.state === 'instagram') {
+          finishSocialConnect(d.state, d.code)
+        } else {
+          setConns((c) => ({ ...c, [d.state]: true }))
+          setConnDates((dd) => ({ ...dd, [d.state]: new Date().toLocaleDateString('en-GB') }))
+          notify(`Connected ${EMAIL_PROVIDERS.find((x) => x.key === d.state)?.name || d.state}`, 'success')
+        }
       }
     }
     window.addEventListener('message', onMsg)
@@ -14626,7 +14646,7 @@ function EmailBlastPage({ user, onNavigate, role = 'Member' }) {
               <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#0A66C2] text-white"><Linkedin className="h-5 w-5" /></span>
               <div>
                 <p className="text-sm font-bold text-slate-900">LinkedIn</p>
-                <p className="text-xs text-slate-400">Post a listing to your feed{liConnected ? ' — connected' : ''}. (Facebook & X come later.)</p>
+                <p className="text-xs text-slate-400">{liConnected && socialAccounts.linkedin ? `Connected as ${socialAccounts.linkedin.name || socialAccounts.linkedin.email}` : 'Post a listing to your feed. (Facebook & X come later.)'}</p>
               </div>
             </div>
             {liConnected ? (
@@ -14644,7 +14664,7 @@ function EmailBlastPage({ user, onNavigate, role = 'Member' }) {
               <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-tr from-[#F58529] via-[#DD2A7B] to-[#8134AF] text-white"><Instagram className="h-5 w-5" /></span>
               <div>
                 <p className="text-sm font-bold text-slate-900">Instagram</p>
-                <p className="text-xs text-slate-400">Post a listing to your feed{igConnected ? ' — connected' : ''}. (Business account + Facebook Page required.)</p>
+                <p className="text-xs text-slate-400">{igConnected && socialAccounts.instagram ? `Connected as ${socialAccounts.instagram.name || socialAccounts.instagram.username}` : 'Post a listing to your feed. (Business/Creator account required.)'}</p>
               </div>
             </div>
             {igConnected ? (
