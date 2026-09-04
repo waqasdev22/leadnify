@@ -14202,7 +14202,9 @@ const EMAIL_OAUTH = {
     authorize: 'https://www.linkedin.com/oauth/v2/authorization',
     clientId: import.meta.env.VITE_LINKEDIN_CLIENT_ID,
     scope: 'openid profile email',
-    extra: {},
+    // prompt=login forces LinkedIn to show its login screen every time, so the person signs in
+    // with the account they choose instead of being auto-continued as whoever is already logged in.
+    extra: { prompt: 'login' },
   },
   // Instagram — direct Instagram Business Login (Instagram's own login, no Facebook screen).
   // Uses the "Instagram app ID" from the app's Instagram business login setup in
