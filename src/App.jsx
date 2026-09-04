@@ -14204,15 +14204,13 @@ const EMAIL_OAUTH = {
     scope: 'openid profile email',
     extra: {},
   },
-  // Instagram — connects via Facebook Login (Meta). Needs a Facebook Developer App's App ID in
-  // VITE_INSTAGRAM_CLIENT_ID, with the Instagram account set to Business and linked to a
-  // Facebook Page. Scope is basic login for now (default, always valid); add
-  // instagram_basic / pages_show_list / instagram_content_publish once the Instagram product is
-  // added and Meta approves it, to enable reading the account and posting.
+  // Instagram — direct Instagram Business Login (no Facebook screen). Uses the "Instagram app ID"
+  // from the app's "Manage messaging & content on Instagram" / Instagram business login setup,
+  // in VITE_INSTAGRAM_CLIENT_ID. The Instagram account must be Business/Creator.
   instagram: {
-    authorize: 'https://www.facebook.com/v21.0/dialog/oauth',
+    authorize: 'https://www.instagram.com/oauth/authorize',
     clientId: import.meta.env.VITE_INSTAGRAM_CLIENT_ID,
-    scope: 'public_profile',
+    scope: 'instagram_business_basic',
     extra: {},
   },
 }
