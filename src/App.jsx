@@ -8908,19 +8908,35 @@ export const toMicrositeItems = (listings) =>
         // Crexi-style property detail facts (only the ones that are filled in are shown).
         details: [
           ['Price', l.price ? compactPrice(l.price) : ''],
-          ['Cap Rate', l.capRate ? l.capRate + '%' : ''],
-          ['NOI', l.noi ? compactPrice(l.noi) : ''],
           ['Price / SF', l.pricePerSf ? '$' + l.pricePerSf : ''],
+          ['Cap Rate', l.capRate ? l.capRate + '%' : ''],
+          ['Pro-forma Cap Rate', l.proformaCap ? l.proformaCap + '%' : ''],
+          ['NOI', l.noi ? compactPrice(l.noi) : ''],
+          ['Pro-forma NOI', l.proformaNoi ? compactPrice(l.proformaNoi) : ''],
+          ['Investment Type', l.investmentType || ''],
+          ['Sale Condition', l.saleCondition || ''],
+          ['Class', l.propertyClass || ''],
           ['Building Size', l.size && l.size !== '—' ? l.size : ''],
           ['Lot Size', l.lotSize || ''],
+          ['Number of Units', l.numUnits || ''],
           ['Year Built', l.yearBuilt || ''],
+          ['Years Renovated', l.yearsRenovated || ''],
           ['Occupancy', l.occupancy ? l.occupancy + '%' : ''],
+          ['Tenant / Brand', l.tenantBrand || ''],
           ['Tenants', l.tenants || ''],
           ['Tenancy', l.tenancy || ''],
+          ['Tenant Credit', l.tenantCredit || ''],
           ['Lease Type', l.leaseTypeDetail || ''],
+          ['Ground Lease', l.groundLease ? 'Yes' : ''],
+          ['Lease Commencement', l.leaseCommence || ''],
+          ['Lease Expiration', l.leaseExpiration || ''],
+          ['Lease Term', l.leaseTerm ? l.leaseTerm + ' yrs' : ''],
+          ['Remaining Term', l.remainingTerm ? l.remainingTerm + ' yrs' : ''],
+          ['Lease Options', l.leaseOptions || ''],
+          ['Rent Bumps', l.rentBumps || ''],
           ['Sub-type', l.subtype || ''],
           ['Zoning', l.zoning || ''],
-          ['Parking', l.parking ? l.parking + ' spaces' : ''],
+          ['Parking', l.parking ? l.parking + (l.parkingType && l.parkingType !== 'spaces' ? ' (' + l.parkingType + ')' : ' spaces') : ''],
         ].filter((r) => r[1]),
         lat,
         lng,
@@ -9032,7 +9048,7 @@ const NEW_DEAL_STEPS = ['Property Information', 'Media & Description', 'Property
 function NewDealModal({ onClose, onCreate }) {
   const notify = useToast()
   const [step, setStep] = useState(0)
-  const [f, setF] = useState({ name: '', propertyType: 'Retail', saleType: 'For Sale', gate: 'Contact Required', street: '', city: '', state: '', zip: '', status: 'Active', access: 'Public', cover: '', subheader: '', highlights: '', description: '', photos: [], price: '', unpriced: false, expiration: '', capRate: '', noi: '', size: '', lotSize: '', yearBuilt: '', occupancy: '', tenants: '', leaseTypeDetail: '', tenancy: '', zoning: '', parking: '', subtype: '', pricePerSf: '', om: null, confidential: [], contacts: [], bor: { name: '', company: '', license: '' } })
+  const [f, setF] = useState({ name: '', propertyType: 'Retail', saleType: 'For Sale', gate: 'Contact Required', street: '', city: '', state: '', zip: '', status: 'Active', access: 'Public', cover: '', subheader: '', highlights: '', description: '', photos: [], price: '', unpriced: false, expiration: '', capRate: '', noi: '', size: '', lotSize: '', yearBuilt: '', occupancy: '', tenants: '', leaseTypeDetail: '', tenancy: '', zoning: '', parking: '', subtype: '', pricePerSf: '', saleCondition: '', propertyClass: '', yearsRenovated: '', numUnits: '', tenantBrand: '', parkingType: '', groundLease: false, tenantCredit: '', leaseCommence: '', leaseExpiration: '', leaseTerm: '', remainingTerm: '', leaseOptions: '', rentBumps: '', investmentType: '', proformaNoi: '', proformaCap: '', om: null, confidential: [], contacts: [], bor: { name: '', company: '', license: '' } })
   const set = (k, v) => setF((s) => ({ ...s, [k]: v }))
   const coverRef = useRef(null), photoRef = useRef(null), omRef = useRef(null), confRef = useRef(null)
   const fsize = (file) => { const mb = file.size / (1024 * 1024); return mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.max(1, Math.round(file.size / 1024))} KB` }
@@ -9108,21 +9124,56 @@ function NewDealModal({ onClose, onCreate }) {
               </div>
             )}
             {step === 2 && (
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div><label className={lbl}>Price ($)</label><input className={inp} value={f.price} onChange={(e) => set('price', e.target.value)} disabled={f.unpriced} placeholder="4200000" /><label className="mt-1 flex items-center gap-1.5 text-xs text-slate-600"><input type="checkbox" checked={f.unpriced} onChange={(e) => set('unpriced', e.target.checked)} className="h-3.5 w-3.5 rounded border-slate-300" /> Unpriced (contact for price)</label></div>
-                <div><label className={lbl}>CAP Rate (%)</label><input className={inp} value={f.capRate} onChange={(e) => set('capRate', e.target.value)} placeholder="6.5" /></div>
-                <div><label className={lbl}>NOI ($)</label><input className={inp} value={f.noi} onChange={(e) => set('noi', e.target.value)} placeholder="273000" /></div>
-                <div><label className={lbl}>Price / SF ($)</label><input className={inp} value={f.pricePerSf} onChange={(e) => set('pricePerSf', e.target.value)} placeholder="336" /></div>
-                <div><label className={lbl}>Building Size (SF)</label><input className={inp} value={f.size} onChange={(e) => set('size', e.target.value)} placeholder="12,500 SF" /></div>
-                <div><label className={lbl}>Lot Size</label><input className={inp} value={f.lotSize} onChange={(e) => set('lotSize', e.target.value)} placeholder="1.2 acres" /></div>
-                <div><label className={lbl}>Year Built</label><input className={inp} value={f.yearBuilt} onChange={(e) => set('yearBuilt', e.target.value)} placeholder="2005" /></div>
-                <div><label className={lbl}>Occupancy (%)</label><input className={inp} value={f.occupancy} onChange={(e) => set('occupancy', e.target.value)} placeholder="100" /></div>
-                <div><label className={lbl}>Number of Tenants</label><input className={inp} value={f.tenants} onChange={(e) => set('tenants', e.target.value)} placeholder="1" /></div>
-                <div><label className={lbl}>Tenancy</label><select className={inp} value={f.tenancy} onChange={(e) => set('tenancy', e.target.value)}><option value="">Select…</option><option>Single-Tenant</option><option>Multi-Tenant</option></select></div>
-                <div><label className={lbl}>Lease Type</label><select className={inp} value={f.leaseTypeDetail} onChange={(e) => set('leaseTypeDetail', e.target.value)}><option value="">Select…</option><option>NNN (Triple Net)</option><option>NN (Double Net)</option><option>Gross</option><option>Modified Gross</option><option>Absolute Net</option><option>Ground Lease</option></select></div>
-                <div><label className={lbl}>Property Sub-type</label><input className={inp} value={f.subtype} onChange={(e) => set('subtype', e.target.value)} placeholder="e.g. Single-Tenant Net Lease" /></div>
-                <div><label className={lbl}>Zoning</label><input className={inp} value={f.zoning} onChange={(e) => set('zoning', e.target.value)} placeholder="e.g. C-2 Commercial" /></div>
-                <div><label className={lbl}>Parking (spaces)</label><input className={inp} value={f.parking} onChange={(e) => set('parking', e.target.value)} placeholder="45" /></div>
+              <div className="space-y-6">
+                {/* ① Property details (Crexi-style) */}
+                <div>
+                  <p className="mb-2 border-b border-slate-100 pb-1 text-sm font-bold text-slate-800">Property details</p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div><label className={lbl}>Sale condition</label><select className={inp} value={f.saleCondition} onChange={(e) => set('saleCondition', e.target.value)}><option value="">N/A</option><option>For sale by owner</option><option>Distressed</option><option>1031 exchange</option><option>Sale for leaseback</option><option>Bank owned foreclosure</option></select></div>
+                    <div><label className={lbl}>Class</label><select className={inp} value={f.propertyClass} onChange={(e) => set('propertyClass', e.target.value)}><option value="">N/A</option><option>A</option><option>B</option><option>C</option><option>D</option></select></div>
+                    <div><label className={lbl}>Year Built</label><input className={inp} value={f.yearBuilt} onChange={(e) => set('yearBuilt', e.target.value)} placeholder="2005" /></div>
+                    <div><label className={lbl}>Years renovated</label><input className={inp} value={f.yearsRenovated} onChange={(e) => set('yearsRenovated', e.target.value)} placeholder="2018, 2022" /></div>
+                    <div><label className={lbl}>Number of units</label><input className={inp} value={f.numUnits} onChange={(e) => set('numUnits', e.target.value)} placeholder="1" /></div>
+                    <div><label className={lbl}>Net rentable / Building Size (SF)</label><input className={inp} value={f.size} onChange={(e) => set('size', e.target.value)} placeholder="12,500 SF" /></div>
+                    <div><label className={lbl}>Lot Size</label><input className={inp} value={f.lotSize} onChange={(e) => set('lotSize', e.target.value)} placeholder="1.2 acres" /></div>
+                    <div><label className={lbl}>Zoning</label><input className={inp} value={f.zoning} onChange={(e) => set('zoning', e.target.value)} placeholder="e.g. C-2 Commercial" /></div>
+                    <div><label className={lbl}>Tenant / Brand</label><input className={inp} value={f.tenantBrand} onChange={(e) => set('tenantBrand', e.target.value)} placeholder="e.g. Starbucks" /></div>
+                    <div><label className={lbl}>Property Sub-type</label><input className={inp} value={f.subtype} onChange={(e) => set('subtype', e.target.value)} placeholder="e.g. Single-Tenant Net Lease" /></div>
+                    <div><label className={lbl}>Parking type</label><select className={inp} value={f.parkingType} onChange={(e) => set('parkingType', e.target.value)}><option value="">N/A</option><option>spaces</option><option>per key</option><option>per unit</option><option>per 1,000 sq ft</option></select></div>
+                    <div><label className={lbl}>Number of parking spaces</label><input className={inp} value={f.parking} onChange={(e) => set('parking', e.target.value)} placeholder="45" /></div>
+                  </div>
+                </div>
+                {/* ② Lease information (Crexi-style) */}
+                <div>
+                  <p className="mb-2 border-b border-slate-100 pb-1 text-sm font-bold text-slate-800">Lease information</p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div><label className={lbl}>Lease type</label><select className={inp} value={f.leaseTypeDetail} onChange={(e) => set('leaseTypeDetail', e.target.value)}><option value="">Select…</option><option>Net</option><option>NN (Double Net)</option><option>NN+</option><option>NNN (Triple Net)</option><option>Absolute NNN</option><option>Gross</option><option>Modified Gross</option><option>Ground Lease</option></select></div>
+                    <div><label className={lbl}>Tenancy</label><select className={inp} value={f.tenancy} onChange={(e) => set('tenancy', e.target.value)}><option value="">Select…</option><option>Vacant</option><option>Single-Tenant</option><option>Multi-Tenant</option></select></div>
+                    <div><label className={lbl}>Number of Tenants</label><input className={inp} value={f.tenants} onChange={(e) => set('tenants', e.target.value)} placeholder="1" /></div>
+                    <div><label className={lbl}>Tenant credit</label><select className={inp} value={f.tenantCredit} onChange={(e) => set('tenantCredit', e.target.value)}><option value="">Select…</option><option>Credit Rated</option><option>Franchise</option><option>No credit rating</option><option>Corporate guarantee</option></select></div>
+                    <div><label className={lbl}>Lease commencement date</label><input type="date" className={inp} value={f.leaseCommence} onChange={(e) => set('leaseCommence', e.target.value)} /></div>
+                    <div><label className={lbl}>Lease expiration date</label><input type="date" className={inp} value={f.leaseExpiration} onChange={(e) => set('leaseExpiration', e.target.value)} /></div>
+                    <div><label className={lbl}>Lease term (years)</label><input className={inp} value={f.leaseTerm} onChange={(e) => set('leaseTerm', e.target.value)} placeholder="20" /></div>
+                    <div><label className={lbl}>Remaining term (years)</label><input className={inp} value={f.remainingTerm} onChange={(e) => set('remainingTerm', e.target.value)} placeholder="12" /></div>
+                    <div><label className={lbl}>Lease options</label><input className={inp} value={f.leaseOptions} onChange={(e) => set('leaseOptions', e.target.value)} placeholder="Four (4), Five (5) Yr" /></div>
+                    <div><label className={lbl}>Rent bumps</label><select className={inp} value={f.rentBumps} onChange={(e) => set('rentBumps', e.target.value)}><option value="">Select…</option><option>Yes</option><option>No</option></select></div>
+                    <div className="sm:col-span-2"><label className="flex items-center gap-2 text-xs font-medium text-slate-600"><input type="checkbox" checked={f.groundLease} onChange={(e) => set('groundLease', e.target.checked)} className="h-3.5 w-3.5 rounded border-slate-300" /> This is a ground lease</label></div>
+                  </div>
+                </div>
+                {/* ③ Investment details (Crexi-style) */}
+                <div>
+                  <p className="mb-2 border-b border-slate-100 pb-1 text-sm font-bold text-slate-800">Investment details</p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div><label className={lbl}>Price ($)</label><input className={inp} value={f.price} onChange={(e) => set('price', e.target.value)} disabled={f.unpriced} placeholder="4200000" /><label className="mt-1 flex items-center gap-1.5 text-xs text-slate-600"><input type="checkbox" checked={f.unpriced} onChange={(e) => set('unpriced', e.target.checked)} className="h-3.5 w-3.5 rounded border-slate-300" /> Unpriced (contact for price)</label></div>
+                    <div><label className={lbl}>Price / SF ($)</label><input className={inp} value={f.pricePerSf} onChange={(e) => set('pricePerSf', e.target.value)} placeholder="336" /></div>
+                    <div><label className={lbl}>Investment type</label><select className={inp} value={f.investmentType} onChange={(e) => set('investmentType', e.target.value)}><option value="">Select…</option><option>Institutional</option><option>Stabilized</option><option>Value Add</option><option>Redevelopment</option><option>Owner/User</option><option>Core+</option><option>Core</option><option>Net Lease</option><option>Sale/Leaseback</option></select></div>
+                    <div><label className={lbl}>Occupancy (%)</label><input className={inp} value={f.occupancy} onChange={(e) => set('occupancy', e.target.value)} placeholder="100" /></div>
+                    <div><label className={lbl}>Net operating income ($)</label><input className={inp} value={f.noi} onChange={(e) => set('noi', e.target.value)} placeholder="273000" /></div>
+                    <div><label className={lbl}>Pro-forma NOI ($)</label><input className={inp} value={f.proformaNoi} onChange={(e) => set('proformaNoi', e.target.value)} placeholder="290000" /></div>
+                    <div><label className={lbl}>Cap rate (%)</label><input className={inp} value={f.capRate} onChange={(e) => set('capRate', e.target.value)} placeholder="6.5" /></div>
+                    <div><label className={lbl}>Pro-forma cap rate (%)</label><input className={inp} value={f.proformaCap} onChange={(e) => set('proformaCap', e.target.value)} placeholder="6.9" /></div>
+                  </div>
+                </div>
               </div>
             )}
             {step === 3 && (
@@ -9303,7 +9354,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
     const address = [d.street, d.city, d.state, d.zip].filter(Boolean).join(', ') || '—'
     const cover = d.cover || (d.photos && d.photos[0] && d.photos[0].url) || ''
     const price = Number(d.price) || 0
-    setListings((list) => [{ id, dealId, name: d.name, address, city: d.city || '', state: d.state || '', ts: Date.now(), price, type: d.propertyType || 'Retail', saleType: d.saleType || 'For Sale', gate: d.gate || 'Contact Required', size: d.size || '—', status: d.status || 'Active', image: cover || propertyImage('1497366216548-37526070297c'), featured: false, listed: true, access: d.access || 'Public', subheader: d.subheader || '', highlights: d.highlights || '', description: d.description || '', capRate: d.capRate || '', noi: d.noi || '', pricePerSf: d.pricePerSf || '', lotSize: d.lotSize || '', yearBuilt: d.yearBuilt || '', occupancy: d.occupancy || '', tenants: d.tenants || '', tenancy: d.tenancy || '', leaseTypeDetail: d.leaseTypeDetail || '', subtype: d.subtype || '', zoning: d.zoning || '', parking: d.parking || '', unpriced: !!d.unpriced, expiration: d.expiration || '' }, ...list])
+    setListings((list) => [{ id, dealId, name: d.name, address, city: d.city || '', state: d.state || '', ts: Date.now(), price, type: d.propertyType || 'Retail', saleType: d.saleType || 'For Sale', gate: d.gate || 'Contact Required', size: d.size || '—', status: d.status || 'Active', image: cover || propertyImage('1497366216548-37526070297c'), featured: false, listed: true, access: d.access || 'Public', subheader: d.subheader || '', highlights: d.highlights || '', description: d.description || '', capRate: d.capRate || '', noi: d.noi || '', pricePerSf: d.pricePerSf || '', lotSize: d.lotSize || '', yearBuilt: d.yearBuilt || '', occupancy: d.occupancy || '', tenants: d.tenants || '', tenancy: d.tenancy || '', leaseTypeDetail: d.leaseTypeDetail || '', subtype: d.subtype || '', zoning: d.zoning || '', parking: d.parking || '', unpriced: !!d.unpriced, expiration: d.expiration || '', saleCondition: d.saleCondition || '', propertyClass: d.propertyClass || '', yearsRenovated: d.yearsRenovated || '', numUnits: d.numUnits || '', tenantBrand: d.tenantBrand || '', parkingType: d.parkingType || '', groundLease: !!d.groundLease, tenantCredit: d.tenantCredit || '', leaseCommence: d.leaseCommence || '', leaseExpiration: d.leaseExpiration || '', leaseTerm: d.leaseTerm || '', remainingTerm: d.remainingTerm || '', leaseOptions: d.leaseOptions || '', rentBumps: d.rentBumps || '', investmentType: d.investmentType || '', proformaNoi: d.proformaNoi || '', proformaCap: d.proformaCap || '' }, ...list])
     setDealRooms && setDealRooms((list) => [{ id: roomId, listingId: id, dealId, name: d.name, address, image: cover, price, capRate: d.capRate || '', noi: d.noi || '', status: d.status || 'Active', access: d.access === 'Public' ? 'Free Access' : (d.access || 'Free Access'), files: (d.confidential || []).length, members: 0, updated: 'just now', ts: Date.now() }, ...list])
     if (d.om && d.om.url) {
       putPublicPackage(id, { name: d.om.name, url: d.om.url }).catch(() => {})
