@@ -8829,7 +8829,7 @@ var EJS_ON=EJS.s&&EJS.s!=='YOUR_SERVICE_ID'&&EJS.t&&EJS.t!=='YOUR_TEMPLATE_ID'&&
 function sendCodeEmail(to,code){if(!EJS_ON)return Promise.resolve(false);return fetch('https://api.emailjs.com/api/v1.0/email/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({service_id:EJS.s,template_id:EJS.t,user_id:EJS.u,template_params:{to_email:to,email:to,name:'Leadflow.io',subject:'Your verification code — '+NAME,message:'Your 6-digit verification code is: '+code+'\\n\\nEnter this code to access the confidential documents for '+NAME+'.\\n\\nIf you did not request this, you can ignore this email.'}})}).then(function(r){return r.ok;}).catch(function(){return false;});}
 var DATA={};
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
-function stepBar(a){var s=[[1,'Your info'],[2,'Verify email'],[3,'Review & sign']];var h='<div class="steps">';for(var i=0;i<s.length;i++){var n=s[i][0];h+='<div class="step'+(a===n?' active':'')+'"><span class="stepn">'+(a>n?'&#10003;':n)+'</span>'+s[i][1]+'</div>';if(i<2)h+='<span class="stepline"></span>';}return h+'</div>';}
+function stepBar(a){var s=[[1,'Your info'],[2,'Review & sign']];var h='<div class="steps">';for(var i=0;i<s.length;i++){var n=s[i][0];h+='<div class="step'+(a===n?' active':'')+'"><span class="stepn">'+(a>n?'&#10003;':n)+'</span>'+s[i][1]+'</div>';if(i<s.length-1)h+='<span class="stepline"></span>';}return h+'</div>';}
 function shell(inner){document.body.innerHTML='<div class="formwrap"><div class="fcard">'+inner+'</div></div>';window.scrollTo(0,0);}
 function showForm(){
   shell('<h2>Confidentiality Agreement</h2><div class="sub">'+esc(NAME)+' &mdash; sign to access the full Offering Memorandum and confidential documents.</div>'
@@ -8838,28 +8838,17 @@ function showForm(){
    +'<div class="frow"><div class="fg"><label>Full Name</label><input class="finput" id="fn" placeholder="Jane Smith" required></div><div class="fg"><label>Email</label><input class="finput" id="em" type="email" placeholder="jane@example.com" required></div></div>'
    +'<div class="frow"><div class="fg"><label>Company (optional)</label><input class="finput" id="co" placeholder="Smith Capital Partners"></div><div class="fg"><label>Title (optional)</label><input class="finput" id="ti" placeholder="Principal"></div></div>'
    +'<div class="fg"><label>Phone</label><input class="finput" id="ph" placeholder="(555) 555-5555"></div>'
-   +'<button class="bigbtn" type="submit">Continue &mdash; verify my email</button>'
-   +'<div class="fnote">We&#39;ll email you a 6-digit code to confirm your identity before signing.</div>'
+   +'<button class="bigbtn" type="submit">Continue</button>'
    +'</form>');
 }
 function newCode(){var c='';for(var i=0;i<6;i++)c+=Math.floor(Math.random()*10);return c;}
-function toStep2(e){e.preventDefault();DATA.name=document.getElementById('fn').value;DATA.email=document.getElementById('em').value;DATA.company=document.getElementById('co').value;DATA.title=document.getElementById('ti').value;
-  DATA.code=newCode();
-  sendCodeEmail(DATA.email,DATA.code);
-  var note=EJS_ON?'Didn&#39;t get it? <a href="#" onclick="return resendCode()" style="color:#F97316;text-decoration:none">Resend code</a> &middot; check your Spam folder too':'Email is not set up yet, so for now your code is <b>'+DATA.code+'</b>';
-  shell('<h2>Verify your email</h2><div class="sub">We sent a 6-digit code to <b>'+esc(DATA.email)+'</b>. Enter it below.</div>'
-   +stepBar(2)
-   +'<div class="fg"><label>6-digit code</label><input class="finput otp" id="otp" maxlength="6" inputmode="numeric" placeholder="------"></div>'
-   +'<div id="otperr" style="color:#dc2626;font-size:13px;margin:-4px 0 8px;display:none">Incorrect code — please try again.</div>'
-   +'<button class="bigbtn" onclick="verifyCode()">Verify &amp; continue</button>'
-   +'<div class="fnote">'+note+'</div>');
-  return false;
-}
+// Email verification removed per client request — go straight from "Your info" to "Review & sign".
+function toStep2(e){e.preventDefault();DATA.name=document.getElementById('fn').value;DATA.email=document.getElementById('em').value;DATA.company=document.getElementById('co').value;DATA.title=document.getElementById('ti').value;toStep3();return false;}
 function resendCode(){DATA.code=newCode();sendCodeEmail(DATA.email,DATA.code);var e=document.getElementById('otperr');if(e){e.textContent='A new code was sent to your email.';e.style.color='#16a34a';e.style.display='block';}return false;}
 function verifyCode(){var v=(document.getElementById('otp').value||'').trim();if(v===DATA.code){toStep3();}else{var e=document.getElementById('otperr');if(e){e.textContent='Incorrect code — please try again.';e.style.color='#dc2626';e.style.display='block';}}}
 function toStep3(){
   shell('<h2>Review &amp; sign</h2><div class="sub">Confirm your details and e-sign the confidentiality agreement.</div>'
-   +stepBar(3)
+   +stepBar(2)
    +'<div class="summary"><b>'+esc(DATA.name)+'</b> &middot; '+esc(DATA.email)+(DATA.company?' &middot; '+esc(DATA.company):'')+'</div>'
    +'<div class="ndabox">This Confidentiality Agreement governs access to the Offering Memorandum for '+esc(NAME)+' at '+esc(ADDR)+'. By signing, you agree to keep all materials strictly confidential, to use them solely to evaluate this opportunity, and not to disclose or reproduce them without the listing broker&#39;s written consent. Your signature is captured with your IP address and a timestamp.</div>'
    +'<div class="fg"><label>Type your full name to sign</label><input class="finput" id="sig" placeholder="'+esc(DATA.name)+'"></div>'
