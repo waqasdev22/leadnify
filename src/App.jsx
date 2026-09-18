@@ -8671,7 +8671,8 @@ return '<div class="dhero"><img src="'+esc(l.image)+'"/><div class="ov"></div><d
 +'<div class="dtabs"><div class="dtabsin">'+['Overview','Location','Gallery','Contact'].map(function(t){return '<a href="#sec-'+t.replace(/ /g,'')+'">'+t+'</a>';}).join('')+'</div></div>'
 +'<div class="sec" id="sec-Overview"><div class="secin"><div class="snum">#1 &mdash; Overview</div><div class="stitle">The Opportunity</div><div class="opp">'+[['Price',fullPrice(l.price)],['Property Type',esc(l.type)||'&mdash;'],['Sale Type',esc(l.saleType)||'&mdash;']].concat(l.leaseType?[['Lease Type',esc(l.leaseType)]]:[]).map(function(p){return '<div class="oppc"><b>'+p[1]+'</b><span>'+p[0]+'</span></div>';}).join('')+'</div><p class="oppdesc">'+(l.description?esc(l.description):(esc(l.name)+' is a '+esc(l.type)+' investment opportunity located at '+esc(l.address)+'.'))+'</p></div></div>'
 +((l.highlights&&l.highlights.length)?'<div class="sec band" id="sec-Highlights"><div class="secin"><div class="snum">#2 &mdash; Highlights</div><div class="stitle">Investment Highlights</div><div class="hlist">'+l.highlights.map(function(h){return '<div><i>&#10003;</i><span>'+esc(h)+'</span></div>';}).join('')+'</div></div></div>':'')
-+'<div class="sec band" id="sec-Location"><div class="secin"><div class="snum">#2 &mdash; Location</div><div class="stitle">Location</div><div id="dmap"></div></div></div>'
++((l.details&&l.details.length)?'<div class="sec" id="sec-Details"><div class="secin"><div class="snum">#3 &mdash; Details</div><div class="stitle">Property Details</div><div class="areatbl"><div class="fh">Property Facts</div>'+l.details.map(function(r){return frow(r[0],r[1]);}).join('')+'</div></div></div>':'')
++'<div class="sec band" id="sec-Location"><div class="secin"><div class="snum">#4 &mdash; Location</div><div class="stitle">Location</div><div id="dmap"></div></div></div>'
 +'<div class="sec alt" id="sec-Gallery"><div class="secin"><div class="snum">Gallery</div><div class="stitle">'+esc(l.name)+'</div><div class="gal">'+galInner+'</div></div></div>'
 +'<div class="sec contact" id="sec-Contact"><div class="secin"><div class="snum">#5 &mdash; Contact</div><div class="stitle">Contact Us</div><div class="cgrid"><div class="ccard"><div class="cl">Listing Agent</div><div class="agent"><div class="av">'+AGENT.initials+'</div><div><div class="nm">'+AGENT.name+'</div><div class="rl">'+AGENT.role+'</div></div></div><a class="aemail" href="mailto:'+AGENT.email+'">'+AGENT.email+'</a><button class="btnp" onclick="dlPkg()">Download Marketing Package</button><button class="btno">Share</button></div><div class="ccard"><div class="cl">Request Information</div><form onsubmit="return submitInquiry(event)"><input class="finput" placeholder="Your Name *" required/><input class="finput" type="email" placeholder="Email *" required/><input class="finput" placeholder="Phone (optional)"/><textarea class="finput" rows="3">I\\'m interested in '+esc(l.name)+'. Please send me more information.</textarea><button class="btnp" type="submit">Send Inquiry</button></form></div></div></div></div>'
 +'<footer><div class="line"></div><p>Powered by <b>Leadflow.io</b></p></footer>';}
@@ -8903,6 +8904,23 @@ export const toMicrositeItems = (listings) =>
         subheader: l.subheader || '',
         highlights: (l.highlights || '').split('\n').map((h) => h.trim()).filter(Boolean),
         description: l.description || '',
+        // Crexi-style property detail facts (only the ones that are filled in are shown).
+        details: [
+          ['Price', l.price ? compactPrice(l.price) : ''],
+          ['Cap Rate', l.capRate ? l.capRate + '%' : ''],
+          ['NOI', l.noi ? compactPrice(l.noi) : ''],
+          ['Price / SF', l.pricePerSf ? '$' + l.pricePerSf : ''],
+          ['Building Size', l.size && l.size !== '—' ? l.size : ''],
+          ['Lot Size', l.lotSize || ''],
+          ['Year Built', l.yearBuilt || ''],
+          ['Occupancy', l.occupancy ? l.occupancy + '%' : ''],
+          ['Tenants', l.tenants || ''],
+          ['Tenancy', l.tenancy || ''],
+          ['Lease Type', l.leaseTypeDetail || ''],
+          ['Sub-type', l.subtype || ''],
+          ['Zoning', l.zoning || ''],
+          ['Parking', l.parking ? l.parking + ' spaces' : ''],
+        ].filter((r) => r[1]),
         lat,
         lng,
         // Marketing package (PDF) for the public "Download Package" button — fetched by
@@ -9013,7 +9031,7 @@ const NEW_DEAL_STEPS = ['Property Information', 'Media & Description', 'Property
 function NewDealModal({ onClose, onCreate }) {
   const notify = useToast()
   const [step, setStep] = useState(0)
-  const [f, setF] = useState({ name: '', propertyType: 'Retail', saleType: 'For Sale', gate: 'Contact Required', street: '', city: '', state: '', zip: '', status: 'Active', access: 'Public', cover: '', subheader: '', highlights: '', description: '', photos: [], price: '', capRate: '', noi: '', size: '', om: null, confidential: [], contacts: [], bor: { name: '', company: '', license: '' } })
+  const [f, setF] = useState({ name: '', propertyType: 'Retail', saleType: 'For Sale', gate: 'Contact Required', street: '', city: '', state: '', zip: '', status: 'Active', access: 'Public', cover: '', subheader: '', highlights: '', description: '', photos: [], price: '', capRate: '', noi: '', size: '', lotSize: '', yearBuilt: '', occupancy: '', tenants: '', leaseTypeDetail: '', tenancy: '', zoning: '', parking: '', subtype: '', pricePerSf: '', om: null, confidential: [], contacts: [], bor: { name: '', company: '', license: '' } })
   const set = (k, v) => setF((s) => ({ ...s, [k]: v }))
   const coverRef = useRef(null), photoRef = useRef(null), omRef = useRef(null), confRef = useRef(null)
   const fsize = (file) => { const mb = file.size / (1024 * 1024); return mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.max(1, Math.round(file.size / 1024))} KB` }
@@ -9090,9 +9108,19 @@ function NewDealModal({ onClose, onCreate }) {
             {step === 2 && (
               <div className="grid gap-3 sm:grid-cols-2">
                 <div><label className={lbl}>Price ($)</label><input className={inp} value={f.price} onChange={(e) => set('price', e.target.value)} placeholder="4200000" /></div>
-                <div><label className={lbl}>Size (SF)</label><input className={inp} value={f.size} onChange={(e) => set('size', e.target.value)} placeholder="12,500 SF" /></div>
                 <div><label className={lbl}>CAP Rate (%)</label><input className={inp} value={f.capRate} onChange={(e) => set('capRate', e.target.value)} placeholder="6.5" /></div>
                 <div><label className={lbl}>NOI ($)</label><input className={inp} value={f.noi} onChange={(e) => set('noi', e.target.value)} placeholder="273000" /></div>
+                <div><label className={lbl}>Price / SF ($)</label><input className={inp} value={f.pricePerSf} onChange={(e) => set('pricePerSf', e.target.value)} placeholder="336" /></div>
+                <div><label className={lbl}>Building Size (SF)</label><input className={inp} value={f.size} onChange={(e) => set('size', e.target.value)} placeholder="12,500 SF" /></div>
+                <div><label className={lbl}>Lot Size</label><input className={inp} value={f.lotSize} onChange={(e) => set('lotSize', e.target.value)} placeholder="1.2 acres" /></div>
+                <div><label className={lbl}>Year Built</label><input className={inp} value={f.yearBuilt} onChange={(e) => set('yearBuilt', e.target.value)} placeholder="2005" /></div>
+                <div><label className={lbl}>Occupancy (%)</label><input className={inp} value={f.occupancy} onChange={(e) => set('occupancy', e.target.value)} placeholder="100" /></div>
+                <div><label className={lbl}>Number of Tenants</label><input className={inp} value={f.tenants} onChange={(e) => set('tenants', e.target.value)} placeholder="1" /></div>
+                <div><label className={lbl}>Tenancy</label><select className={inp} value={f.tenancy} onChange={(e) => set('tenancy', e.target.value)}><option value="">Select…</option><option>Single-Tenant</option><option>Multi-Tenant</option></select></div>
+                <div><label className={lbl}>Lease Type</label><select className={inp} value={f.leaseTypeDetail} onChange={(e) => set('leaseTypeDetail', e.target.value)}><option value="">Select…</option><option>NNN (Triple Net)</option><option>NN (Double Net)</option><option>Gross</option><option>Modified Gross</option><option>Absolute Net</option><option>Ground Lease</option></select></div>
+                <div><label className={lbl}>Property Sub-type</label><input className={inp} value={f.subtype} onChange={(e) => set('subtype', e.target.value)} placeholder="e.g. Single-Tenant Net Lease" /></div>
+                <div><label className={lbl}>Zoning</label><input className={inp} value={f.zoning} onChange={(e) => set('zoning', e.target.value)} placeholder="e.g. C-2 Commercial" /></div>
+                <div><label className={lbl}>Parking (spaces)</label><input className={inp} value={f.parking} onChange={(e) => set('parking', e.target.value)} placeholder="45" /></div>
               </div>
             )}
             {step === 3 && (
@@ -9273,7 +9301,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
     const address = [d.street, d.city, d.state, d.zip].filter(Boolean).join(', ') || '—'
     const cover = d.cover || (d.photos && d.photos[0] && d.photos[0].url) || ''
     const price = Number(d.price) || 0
-    setListings((list) => [{ id, dealId, name: d.name, address, city: d.city || '', state: d.state || '', ts: Date.now(), price, type: d.propertyType || 'Retail', saleType: d.saleType || 'For Sale', gate: d.gate || 'Contact Required', size: d.size || '—', status: d.status || 'Active', image: cover || propertyImage('1497366216548-37526070297c'), featured: false, listed: true, access: d.access || 'Public', subheader: d.subheader || '', highlights: d.highlights || '', description: d.description || '' }, ...list])
+    setListings((list) => [{ id, dealId, name: d.name, address, city: d.city || '', state: d.state || '', ts: Date.now(), price, type: d.propertyType || 'Retail', saleType: d.saleType || 'For Sale', gate: d.gate || 'Contact Required', size: d.size || '—', status: d.status || 'Active', image: cover || propertyImage('1497366216548-37526070297c'), featured: false, listed: true, access: d.access || 'Public', subheader: d.subheader || '', highlights: d.highlights || '', description: d.description || '', capRate: d.capRate || '', noi: d.noi || '', pricePerSf: d.pricePerSf || '', lotSize: d.lotSize || '', yearBuilt: d.yearBuilt || '', occupancy: d.occupancy || '', tenants: d.tenants || '', tenancy: d.tenancy || '', leaseTypeDetail: d.leaseTypeDetail || '', subtype: d.subtype || '', zoning: d.zoning || '', parking: d.parking || '' }, ...list])
     setDealRooms && setDealRooms((list) => [{ id: roomId, listingId: id, dealId, name: d.name, address, image: cover, price, capRate: d.capRate || '', noi: d.noi || '', status: d.status || 'Active', access: d.access === 'Public' ? 'Free Access' : (d.access || 'Free Access'), files: (d.confidential || []).length, members: 0, updated: 'just now', ts: Date.now() }, ...list])
     if (d.om && d.om.url) {
       putPublicPackage(id, { name: d.om.name, url: d.om.url }).catch(() => {})
