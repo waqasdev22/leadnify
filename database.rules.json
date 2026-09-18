@@ -25,6 +25,12 @@
           ".write": true
         }
       },
+      "approvals": {
+        "$uid": {
+          ".read": true,
+          ".write": true
+        }
+      },
       "hub": {
         "$slug": {
           ".read": true,
