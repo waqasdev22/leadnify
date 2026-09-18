@@ -10478,7 +10478,8 @@ function DocumentHubView({ room, onBack, notify, onEditDocument }) {
   )
 }
 
-function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member', setListings }) {
+function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member', setListings, onUpdateRoom }) {
+  const [editOpen, setEditOpen] = useState(false)
   // Client permissions matrix: a Member can view a deal room but can't edit its
   // Deal Contacts or Broker of Record (Owner / Admin / Manager can).
   const canEditDealParties = role !== 'Member'
@@ -10835,8 +10836,8 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => notify('Guided tour coming soon')} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
-              <HelpCircle className="h-4 w-4" /> Show me around
+            <button onClick={() => setEditOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+              <Pencil className="h-4 w-4" /> Edit Deal
             </button>
             <PrimaryButton icon={Copy} onClick={() => copy(visitorUrl, 'Visitor link copied')}>Copy visitor link</PrimaryButton>
             <button onClick={openVisitor} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
@@ -11345,6 +11346,14 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
           </div>
         </div>
       </div>
+      <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Edit Deal">
+        <DealRoomForm
+          initial={{ name: room.name || '', address: room.address || '', price: room.price ?? '', capRate: room.capRate ?? '', noi: room.noi ?? '', status: DEAL_ROOM_STATUSES.includes(room.status) ? room.status : 'Active', access: room.access || 'Free Access', image: room.image || '' }}
+          submitLabel="Save changes"
+          onCancel={() => setEditOpen(false)}
+          onSubmit={(data) => { onUpdateRoom && onUpdateRoom(room.id, data); setEditOpen(false); notify('Deal updated') }}
+        />
+      </Modal>
     </div>
   )
 }
@@ -11487,7 +11496,7 @@ function DealRoomsPage({ dealRooms, setDealRooms, setListings, onEditDocument, o
   if (openRoom) {
     return (
       <div className="mx-auto max-w-[1600px] p-6">
-        <DealRoomDetail room={openRoom} onBack={() => setOpenRoom(null)} notify={notify} onEditDocument={onEditDocument} role={role} setListings={setListings} />
+        <DealRoomDetail room={openRoom} onBack={() => setOpenRoom(null)} notify={notify} onEditDocument={onEditDocument} role={role} setListings={setListings} onUpdateRoom={(id, data) => { updateRoom(id, data); setOpenRoom((r) => (r ? { ...r, ...data } : r)) }} />
       </div>
     )
   }
