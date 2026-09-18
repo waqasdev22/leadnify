@@ -10437,14 +10437,28 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
   // Deal Contacts or Broker of Record (Owner / Admin / Manager can).
   const canEditDealParties = role !== 'Member'
   // Keep the linked listing's download gate in sync with this room's Access gate, so the public
-  // microsite (Preview / visitor link) enforces exactly the access type set here.
+  // microsite (Preview / visitor link) enforces exactly the access type set here — and push the
+  // change straight to the published hub so it takes effect without reopening My Deals.
   const syncListingGate = (gateVal) => {
-    if (!setListings) return
-    setListings((list) => list.map((l) => (
-      (room.listingId && l.id === room.listingId) || (l.name && room.name && l.name === room.name)
-        ? { ...l, gate: gateVal }
-        : l
-    )))
+    if (setListings) {
+      setListings((list) => list.map((l) => (
+        (room.listingId && l.id === room.listingId) || (l.name && room.name && l.name === room.name)
+          ? { ...l, gate: gateVal }
+          : l
+      )))
+    }
+    try {
+      const saved = JSON.parse(localStorage.getItem('crebuilder_hub') || 'null')
+      if (saved && Array.isArray(saved.items)) {
+        saved.items = saved.items.map((it) => (
+          (room.listingId && it.id === room.listingId) || (it.name && room.name && it.name === room.name)
+            ? { ...it, gate: gateVal }
+            : it
+        ))
+        localStorage.setItem('crebuilder_hub', JSON.stringify(saved))
+        putPublicHub('vaziamts', saved).catch(() => {})
+      }
+    } catch { /* ignore — the listing sync + next My Deals publish will still apply it */ }
   }
   const [hubOpen, setHubOpen] = useState(false)
   // OM/Flyer + confidential files are stored in the cloud (per account) so they sync
