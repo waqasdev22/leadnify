@@ -11496,7 +11496,29 @@ function DealRoomsPage({ dealRooms, setDealRooms, setListings, onEditDocument, o
   if (openRoom) {
     return (
       <div className="mx-auto max-w-[1600px] p-6">
-        <DealRoomDetail room={openRoom} onBack={() => setOpenRoom(null)} notify={notify} onEditDocument={onEditDocument} role={role} setListings={setListings} onUpdateRoom={(id, data) => { updateRoom(id, data); setOpenRoom((r) => (r ? { ...r, ...data } : r)) }} />
+        <DealRoomDetail room={openRoom} onBack={() => setOpenRoom(null)} notify={notify} onEditDocument={onEditDocument} role={role} setListings={setListings} onUpdateRoom={(id, data) => {
+          updateRoom(id, data)
+          setOpenRoom((r) => (r ? { ...r, ...data } : r))
+          // Push the same edits onto the linked public Listing so the buyer-facing property
+          // page + microsite hub reflect the change (the hub-publish effect republishes on this).
+          if (setListings) {
+            const rm = openRoom
+            const lname = (rm?.name || '').trim().toLowerCase()
+            setListings((list) => list.map((l) => {
+              const match = (rm?.listingId && l.id === rm.listingId) || (rm?.id && l.id === rm.id) || ((l.name || '').trim().toLowerCase() === lname)
+              if (!match) return l
+              const patch = {}
+              if (data.name != null && data.name !== '') patch.name = data.name
+              if (data.address != null && data.address !== '') patch.address = data.address
+              if (data.price != null && data.price !== '') patch.price = Number(data.price) || 0
+              if (data.capRate != null) patch.capRate = data.capRate
+              if (data.noi != null) patch.noi = data.noi
+              if (data.image != null && data.image !== '') patch.image = data.image
+              if (data.access && DEAL_ROOM_ACCESS.includes(data.access)) patch.gate = data.access
+              return { ...l, ...patch }
+            }))
+          }
+        }} />
       </div>
     )
   }
