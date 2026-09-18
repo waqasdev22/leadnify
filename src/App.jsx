@@ -9279,26 +9279,28 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
   useEffect(() => {
     // Publish the listings + branding IMMEDIATELY (no awaits before this) so Preview and the
     // public ?hub= link always reflect the latest deals right away.
-    const baseEmail = explicitNotifyEmail || (auth.currentUser && auth.currentUser.email) || (user && user.email) || ''
-    const hubData = { items: toMicrositeItems(rows), primary, template: micrositeTpl, defaultView, ownerUid: (auth.currentUser && auth.currentUser.uid) || '', ownerEmail: baseEmail, logoUrl: micrositeLogo || '' }
+    // Lead notifications must reach ONLY the team Owner (role "Owner") — never a Manager/Admin/
+    // Member. The Owner's email is resolved below and always wins; the fields here are just a
+    // first-paint fallback used only if no Owner is found in the team.
+    const fallbackEmail = explicitNotifyEmail || (auth.currentUser && auth.currentUser.email) || (user && user.email) || ''
+    const hubData = { items: toMicrositeItems(rows), primary, template: micrositeTpl, defaultView, ownerUid: (auth.currentUser && auth.currentUser.uid) || '', ownerEmail: fallbackEmail, logoUrl: micrositeLogo || '' }
     try { localStorage.setItem('crebuilder_hub', JSON.stringify(hubData)) } catch { /* ignore */ }
     putPublicHub(slug, hubData).catch(() => {})
-    // Then, without blocking, refine the download-notification email to the team Owner's and
-    // re-publish just that (only when no explicit notification email is set).
-    if (!explicitNotifyEmail) {
-      let cancelled = false
-      ;(async () => {
-        let ownerEmail = ''
-        try {
-          const usersSnap = await dbGet(dbRef(db, 'users'))
-          const users = usersSnap.val() || {}
-          const ownerEntry = Object.values(users).find((u) => u && u.role === 'Owner' && u.email)
-          if (ownerEntry) ownerEmail = ownerEntry.email
-        } catch { /* ignore */ }
-        if (!cancelled && ownerEmail && ownerEmail !== baseEmail) putPublicHub(slug, { ...hubData, ownerEmail }).catch(() => {})
-      })()
-      return () => { cancelled = true }
-    }
+    // Always resolve the team Owner's email and re-publish the hub with it, so the notification
+    // recipient is the Owner regardless of who is signed in or what the notification field says.
+    let cancelled = false
+    ;(async () => {
+      let ownerEmail = ''
+      try {
+        const usersSnap = await dbGet(dbRef(db, 'users'))
+        const users = usersSnap.val() || {}
+        const ownerEntry = Object.values(users).find((u) => u && u.role === 'Owner' && u.email)
+        if (ownerEntry) ownerEmail = ownerEntry.email
+      } catch { /* ignore */ }
+      const finalEmail = ownerEmail || fallbackEmail
+      if (!cancelled && finalEmail && finalEmail !== fallbackEmail) putPublicHub(slug, { ...hubData, ownerEmail: finalEmail }).catch(() => {})
+    })()
+    return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listings, primary, micrositeTpl, defaultView, slug, explicitNotifyEmail, micrositeLogo])
 
@@ -9511,7 +9513,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
               <Mail className="h-4 w-4 text-brand" /> Download notification email
             </p>
             <p className="mt-1 text-xs text-slate-500">
-              When someone downloads a property's marketing package, only this email is notified (who downloaded + which property) — never the signed-in admin/member. Leave empty to automatically use the <span className="font-medium text-slate-600">Owner</span> account's email.
+              Every new lead (an inquiry or a package download) notifies the team <span className="font-medium text-slate-600">Owner</span> by email only — never a Manager, Admin, or Member. This field is a fallback used only if the team has no Owner set.
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <input
@@ -11919,15 +11921,17 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
       // Email the OWNER about the new activity — goes only to the Owner account, never to
       // whichever admin/member is signed in. Priority: the configured notification address
       // (My Deals field), then the team member whose role is "Owner", then the login email.
-      let ownerEmail = (readLS(nsKey('cre_notify_email'), '') || '').trim()
-      if (!ownerEmail) {
-        try {
-          const usersSnap = await dbGet(dbRef(db, 'users'))
-          const users = usersSnap.val() || {}
-          const ownerEntry = Object.values(users).find((u) => u && u.role === 'Owner' && u.email)
-          if (ownerEntry) ownerEmail = ownerEntry.email
-        } catch { /* users not readable — fall through */ }
-      }
+      // Notify ONLY the team Owner (role "Owner") — never a Manager/Admin/Member. The Owner's
+      // email always wins; the notification field / login email are just fallbacks when there's
+      // no Owner in the team.
+      let ownerEmail = ''
+      try {
+        const usersSnap = await dbGet(dbRef(db, 'users'))
+        const users = usersSnap.val() || {}
+        const ownerEntry = Object.values(users).find((u) => u && u.role === 'Owner' && u.email)
+        if (ownerEntry) ownerEmail = ownerEntry.email
+      } catch { /* users not readable — fall through */ }
+      if (!ownerEmail) ownerEmail = (readLS(nsKey('cre_notify_email'), '') || '').trim()
       if (!ownerEmail) ownerEmail = (user && user.email) || ''
       if (ownerEmail) {
         const lines = mapped.map((m) => `• ${m.name} (${m.email})${m.property ? ' — ' + m.property : ''} [${m.source}]`).join('\n')
