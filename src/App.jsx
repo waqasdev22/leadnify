@@ -10425,10 +10425,20 @@ function DocumentHubView({ room, onBack, notify, onEditDocument }) {
   )
 }
 
-function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member' }) {
+function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member', setListings }) {
   // Client permissions matrix: a Member can view a deal room but can't edit its
   // Deal Contacts or Broker of Record (Owner / Admin / Manager can).
   const canEditDealParties = role !== 'Member'
+  // Keep the linked listing's download gate in sync with this room's Access gate, so the public
+  // microsite (Preview / visitor link) enforces exactly the access type set here.
+  const syncListingGate = (gateVal) => {
+    if (!setListings) return
+    setListings((list) => list.map((l) => (
+      (room.listingId && l.id === room.listingId) || (l.name && room.name && l.name === room.name)
+        ? { ...l, gate: gateVal }
+        : l
+    )))
+  }
   const [hubOpen, setHubOpen] = useState(false)
   // OM/Flyer + confidential files are stored in the cloud (per account) so they sync
   // across devices — loaded on open, saved on every change.
@@ -11074,7 +11084,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member' 
             <p className="text-sm font-bold text-slate-900">Access gate</p>
             <p className="text-xs text-slate-400">Who can view the OM & these files</p>
             <div className="mt-3">
-              <SelectInput value={access} onChange={(e) => { setAccess(e.target.value); notify('Access gate updated') }} options={DEAL_ROOM_ACCESS} />
+              <SelectInput value={access} onChange={(e) => { setAccess(e.target.value); syncListingGate(e.target.value); notify('Access gate updated — applied to the public page') }} options={DEAL_ROOM_ACCESS} />
             </div>
             <p className="mt-2 text-xs text-slate-400">
               {access === 'Free Access'
@@ -11346,7 +11356,7 @@ function DealRoomTransferModal({ room, user, onClose, onTransfer }) {
   )
 }
 
-function DealRoomsPage({ dealRooms, setDealRooms, onEditDocument, openTarget, onOpenHandled, user, role = 'Member' }) {
+function DealRoomsPage({ dealRooms, setDealRooms, setListings, onEditDocument, openTarget, onOpenHandled, user, role = 'Member' }) {
   const notify = useToast()
   const [modalOpen, setModalOpen] = useState(false)
   const [confirm, setConfirm] = useState(null)
@@ -11389,7 +11399,7 @@ function DealRoomsPage({ dealRooms, setDealRooms, onEditDocument, openTarget, on
   if (openRoom) {
     return (
       <div className="mx-auto max-w-[1600px] p-6">
-        <DealRoomDetail room={openRoom} onBack={() => setOpenRoom(null)} notify={notify} onEditDocument={onEditDocument} role={role} />
+        <DealRoomDetail room={openRoom} onBack={() => setOpenRoom(null)} notify={notify} onEditDocument={onEditDocument} role={role} setListings={setListings} />
       </div>
     )
   }
@@ -15914,7 +15924,7 @@ export default function App() {
       case 'listings':
         return <ListingHubPage listings={listings} setListings={setListings} setPackages={setPackages} globalQuery={query} onCreateNew={startCreate} onResumeDraft={resumeDraft} onOpenDealRoom={openDealRoomFor} dealRooms={dealRooms} setDealRooms={setDealRooms} onOpenRoom={(room) => { setDealRoomTarget(room); setActive('deals'); setMobileNav(false) }} user={user} role={role} can={can} />
       case 'deals':
-        return <DealRoomsPage dealRooms={dealRooms} setDealRooms={setDealRooms} onEditDocument={resumeDraft} openTarget={dealRoomTarget} onOpenHandled={() => setDealRoomTarget(null)} user={user} role={role} />
+        return <DealRoomsPage dealRooms={dealRooms} setDealRooms={setDealRooms} setListings={setListings} onEditDocument={resumeDraft} openTarget={dealRoomTarget} onOpenHandled={() => setDealRoomTarget(null)} user={user} role={role} />
       case 'team':
         // Role-based (not override-based): Owner/Admin/Manager may open this page. A Manager can
         // only add members; changing roles/permissions is locked to Owner/Admin inside the page.
