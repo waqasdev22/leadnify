@@ -8537,79 +8537,59 @@ html{scroll-behavior:smooth}
 .detail{display:none}
 body.detail-open .hero,body.detail-open .toolbar,body.detail-open #content,body.detail-open .list-footer{display:none}
 body.detail-open .detail{display:block}
-/* Premium single-listing (OM) detail — centered hero, numbered serif sections */
-.dhero{position:relative;min-height:560px;display:flex;align-items:center;justify-content:center;text-align:center;overflow:hidden;color:#fff}
+/* Modern single-listing detail — compact banner + two-column sticky sidebar (Exhibit C) */
+.dhero{position:relative;height:320px;overflow:hidden;color:#fff}
 .dhero>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.dhero .ov{position:absolute;inset:0;background:linear-gradient(155deg,${primary}f2,${primary}cc 55%,rgba(0,0,0,.5))}
+.dhero .ov{position:absolute;inset:0;background:linear-gradient(90deg,rgba(15,23,42,.9),rgba(15,23,42,.5) 62%,rgba(15,23,42,.32))}
 .dtop{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;padding:16px 22px;z-index:3}
 .dbtn{background:rgba(0,0,0,.35);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer}
-.dhin{position:relative;z-index:2;max-width:900px;padding:60px 24px}
-.deyebrow{font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.92)}
-.dhtitle{font-family:${serif};font-size:56px;font-weight:700;line-height:1.05;margin:14px 0 8px}
-.dhsub{font-size:13px;font-weight:600;letter-spacing:5px;text-transform:uppercase;opacity:.92}
-.dhrule{width:70px;height:2px;background:rgba(255,255,255,.6);margin:20px auto}
-.dhaddr{font-size:12px;letter-spacing:2px;text-transform:uppercase;opacity:.92}
-.dhprice{font-family:${serif};font-size:36px;font-weight:700;margin-top:20px}
-.dhpl{font-size:11px;letter-spacing:2px;text-transform:uppercase;opacity:.8;margin-top:2px}
-.dhbtns{display:flex;gap:14px;justify-content:center;margin-top:26px;flex-wrap:wrap}
-.dhbtn1{background:#fff;color:${primary};border:0;border-radius:6px;padding:13px 26px;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer}
-.dhbtn2{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.65);border-radius:6px;padding:13px 26px;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer}
+.dhin{position:absolute;left:0;right:0;bottom:30px;z-index:2;max-width:1160px;margin:0 auto;padding:0 40px}
+.dbadge{display:inline-block;color:#fff;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:5px 12px;border-radius:6px}
+.dhtitle{font-family:${serif};font-size:44px;font-weight:800;line-height:1.05;margin:12px 0 8px}
+.dhaddr{display:flex;align-items:center;gap:7px;font-size:15px;opacity:.92}
+.dhpl{font-size:11px;letter-spacing:2px;text-transform:uppercase;opacity:.8;margin-top:16px}
+.dhprice{font-family:${serif};font-size:30px;font-weight:800;margin-top:2px}
 .dtabs{position:sticky;top:0;background:#fff;border-bottom:1px solid #e2e8f0;z-index:900}
-.dtabsin{max-width:1160px;margin:0 auto;padding:12px 40px;display:flex;gap:8px;justify-content:center;overflow-x:auto}
-.dtabs a{font-size:14px;font-weight:600;color:#64748b;text-decoration:none;padding:6px 10px;white-space:nowrap;border-bottom:2px solid transparent}
+.dtabsin{max-width:1160px;margin:0 auto;padding:0 40px;display:flex;gap:24px;overflow-x:auto}
+.dtabs a{font-size:14px;font-weight:600;color:#64748b;text-decoration:none;padding:15px 2px;white-space:nowrap;border-bottom:2px solid transparent}
 .dtabs a:hover,.dtabs a.active{color:${primary};border-bottom-color:${primary}}
-.sec{padding:58px 0;scroll-margin-top:60px}
-.sec.alt{background:#faf7f2}
-.secin{max-width:1160px;margin:0 auto;padding:0 40px}
-.snum{font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:${primary};margin-bottom:8px}
-.stitle{font-family:${serif};font-size:38px;font-weight:700;color:#1a1a1a;line-height:1.1}
-.opp{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:30px}
-.oppc{background:${primary};color:#fff;border-radius:10px;padding:20px;min-height:96px}
-.oppc b{font-family:${serif};font-size:21px;font-weight:700;display:block;line-height:1.2}
-.oppc span{font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;opacity:.85;margin-top:10px;display:block}
-.oppdesc{margin-top:30px;font-size:15px;line-height:1.7;color:#475569;max-width:840px}
-.band{background:${primary};color:#fff}
-.band .stitle{color:#fff}.band .snum{color:rgba(255,255,255,.85)}
-.hlist{display:grid;grid-template-columns:1fr 1fr;gap:14px 40px;margin-top:26px}
-.hlist>div{display:flex;gap:12px;font-size:15px;align-items:flex-start;line-height:1.5}
-.hlist i{width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.22);flex:none;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;font-style:normal;margin-top:1px}
-#dmap{height:420px;border-radius:12px;border:1px solid #e2e8f0;z-index:0;margin-top:22px}
-.subhd{font-family:${serif};font-size:22px;font-weight:700;margin:44px 0 16px;display:flex;align-items:center}
-.radbtns{display:inline-flex;gap:4px;margin-left:auto}
-.radbtns button{border:1px solid #e2e8f0;background:#fff;border-radius:6px;padding:4px 12px;font-size:12px;font-weight:600;color:#64748b;cursor:pointer}
-.radbtns button.active{background:${primary};color:#fff;border-color:${primary}}
-.demo{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
-.dc{border:1px solid #e2e8f0;border-radius:12px;padding:16px;background:#fff}
-.dc .t{font-size:11px;font-weight:700;text-transform:uppercase;color:#94a3b8;margin-bottom:10px;text-align:center}
-.donut{position:relative;width:130px;height:130px;margin:0 auto}
-.donut .ctr{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.donut .ctr b{font-size:17px;font-weight:800}
-.donut .ctr span{font-size:10px;color:#94a3b8}
-.leg{margin-top:12px;font-size:11px}
-.leg div{display:flex;align-items:center;gap:6px;margin-top:4px}
-.leg i{width:8px;height:8px;border-radius:2px;display:inline-block}
-.leg b{margin-left:auto}
-.areatbl{border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;background:#fff;margin-top:16px}
-.areatbl .fh{background:${primary};color:#fff;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:9px 16px}
-.frow{display:flex;justify-content:space-between;gap:10px;padding:11px 16px;border-top:1px solid #eef2f7;font-size:14px}
-.areatbl .frow:first-of-type{border-top:0}
+.dwrap{max-width:1160px;margin:0 auto;padding:32px 40px 10px;display:grid;grid-template-columns:1fr 330px;gap:32px;align-items:start}
+.dmain{min-width:0}
+.dblock{margin-bottom:34px;scroll-margin-top:64px}
+.dblock .bl{display:flex;align-items:center;gap:12px;font-family:${serif};font-size:22px;font-weight:700;color:#0f172a;margin-bottom:14px}
+.dblock .bl:before{content:'';width:4px;height:22px;background:${primary};border-radius:2px}
+.dh0 .nm{font-family:${serif};font-size:30px;font-weight:800;color:#0f172a}
+.dh0 .ad{color:#64748b;font-size:15px;margin-top:8px;display:flex;align-items:center;gap:7px}
+.dh0 .pr{font-size:24px;font-weight:800;margin-top:10px;color:#0f172a}
+.badge2{display:inline-block;color:#fff;font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:4px 10px;border-radius:5px;vertical-align:middle;margin-left:10px}
+.facts{border:1px solid #e2e8f0;border-left:3px solid ${primary};border-radius:10px;overflow:hidden;background:#fff;margin-top:20px}
+.facts .fh{background:#eef2fb;color:#334155;font-size:12px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;padding:11px 18px}
+.frow{display:flex;justify-content:space-between;gap:10px;padding:12px 18px;border-top:1px solid #eef2f7;font-size:14px}
+.facts .frow:first-of-type{border-top:0}
 .frow .k{color:#64748b}.frow .v{color:#0f172a;font-weight:700;text-align:right}
-.gal{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:24px}
-.gal img{width:100%;height:200px;object-fit:cover;border-radius:8px}
-.contact{background:${primary};color:#fff}
-.contact .stitle{color:#fff}.contact .snum{color:rgba(255,255,255,.85)}
-.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:30px;align-items:start}
-.ccard{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);border-radius:12px;padding:22px}
-.ccard .cl{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;opacity:.85}
-.agent{display:flex;align-items:center;gap:12px;margin-top:12px}
-.agent .av{width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.9);color:${primary};display:flex;align-items:center;justify-content:center;font-weight:700}
-.agent .nm{font-weight:700}.agent .rl{font-size:12px;opacity:.85}
-.aemail{display:block;margin-top:14px;font-size:14px;color:#fff;text-decoration:underline;opacity:.95}
-.btnp{width:100%;background:#fff;color:${primary};border:0;border-radius:8px;padding:12px;font-weight:700;font-size:14px;cursor:pointer;margin-top:16px}
-.btno{width:100%;border:1px solid rgba(255,255,255,.5);background:transparent;color:#fff;border-radius:8px;padding:10px;font-weight:600;font-size:13px;cursor:pointer;margin-top:10px}
-.finput{width:100%;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.12);color:#fff;border-radius:8px;padding:11px 13px;font-size:14px;margin-top:10px;outline:none;font-family:inherit}
-.finput::placeholder{color:rgba(255,255,255,.7)}
-@media(max-width:900px){.opp{grid-template-columns:repeat(2,1fr)}.demo,.hlist,.cgrid{grid-template-columns:1fr}.gal{grid-template-columns:repeat(2,1fr)}.dhtitle{font-size:40px}.stitle{font-size:28px}}
+.dtext{font-size:14px;color:#475569;line-height:1.7}
+.bullets{list-style:none}
+.bullets li{position:relative;padding-left:26px;margin-bottom:11px;font-size:14px;color:#475569;line-height:1.5}
+.bullets li:before{content:'\\2713';position:absolute;left:0;top:0;color:${primary};font-weight:800}
+.gal{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.gal img{width:100%;height:180px;object-fit:cover;border-radius:8px}
+#dmap{height:340px;border-radius:12px;border:1px solid #e2e8f0;z-index:0}
+.dside{position:sticky;top:72px;display:flex;flex-direction:column;gap:18px}
+.card2{background:#fff;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.06)}
+.c2h{background:#0f172a;color:#fff;font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;padding:13px 20px}
+.c2b{padding:20px}
+.agent{display:flex;align-items:center;gap:12px}
+.agent .av{width:48px;height:48px;border-radius:50%;background:#0f172a;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex:none}
+.agent .nm{font-weight:700;color:#0f172a}.agent .rl{font-size:12px;color:#94a3b8}
+.aemail{display:flex;align-items:center;gap:8px;margin-top:16px;font-size:13px;color:#475569;text-decoration:none;word-break:break-all}
+.btnp{width:100%;background:#0f172a;color:#fff;border:0;border-radius:8px;padding:12px;font-weight:700;font-size:13px;cursor:pointer;margin-top:16px}
+.btnp:hover{background:#1e293b}
+.sharerow{display:flex;justify-content:center;gap:24px;margin-top:16px;color:#94a3b8;font-size:13px}
+.sharerow span{cursor:pointer}
+.finput{width:100%;border:1px solid #e2e8f0;background:#fff;color:#0f172a;border-radius:8px;padding:11px 13px;font-size:14px;margin-top:10px;outline:none;font-family:inherit}
+.finput:focus{border-color:${primary}}
+.finput::placeholder{color:#94a3b8}
+@media(max-width:900px){.dwrap{grid-template-columns:1fr}.dside{position:static}.gal{grid-template-columns:repeat(2,1fr)}.dhtitle{font-size:32px}}
 </style></head><body>
 <header class="hero"><div class="cut"></div><div class="inner"><div class="logo"></div><div class="count" id="count"></div></div></header>
 <div class="toolbar"><div class="tbin">
@@ -8667,14 +8647,17 @@ var highlights='<ul class="bullets"><li>Prime signalized hard-corner location</l
 var area='<div class="areatbl">'+frow('Population','281,707')+frow('Area','66.8 sq mi')+frow('Elevation','184 ft')+frow('Time Zone','Pacific Time Zone')+frow('County','Orange County')+frow('Incorporated','1971')+frow('State','California')+'</div><p style="font-size:14px;color:#475569;line-height:1.6;margin-top:12px">The surrounding area is a thriving master-planned community known for its strong economy, top-rated schools, and affluent household base, anchoring durable demand for commercial real estate.</p>';
 var sidebar='<div class="side"><div class="card2"><div class="c2h">Listing Agent</div><div class="c2b"><div class="agent"><div class="av">'+AGENT.initials+'</div><div><div class="nm">'+AGENT.name+'</div><div class="rl">'+AGENT.role+'</div></div></div><a class="aemail" href="mailto:'+AGENT.email+'">'+AGENT.email+'</a><button class="btnp" onclick="dlPkg()">Download Marketing Package</button><button class="btno">Share</button></div></div><div class="card2"><div class="c2h">Request Information</div><div class="c2b"><form onsubmit="return submitInquiry(event)"><input class="finput" placeholder="Your Name *" required/><input class="finput" type="email" placeholder="Email *" required/><input class="finput" placeholder="Phone (optional)"/><textarea class="finput" rows="3">I\\'m interested in '+esc(l.name)+'. Please send me more information.</textarea><button class="btnp" type="submit">Send Inquiry</button></form></div></div></div>';
 var cta='<div class="cta dsec" id="sec-Contact"><div class="k">Get in Touch</div><h2>Interested in '+esc(l.name)+'?</h2><div class="sub">Send a message and we\\'ll respond within one business day.</div><form onsubmit="return submitInquiry(event)"><input class="finput" placeholder="Full Name *" required/><input class="finput" type="email" placeholder="Email *" required/><input class="finput" placeholder="Phone (optional)"/><textarea class="finput" rows="3">I\\'m interested in '+esc(l.name)+'. Please send me more information.</textarea><button class="btnp" type="submit">Send Inquiry</button></form></div>';
-return '<div class="dhero"><img src="'+esc(l.image)+'"/><div class="ov"></div><div class="dtop"><button class="dbtn" onclick="backToList()">&larr; Back to Listings</button><button class="dbtn" onclick="backToList()">&times;</button></div><div class="dhin"><div class="deyebrow">Exclusive Offering &bull; '+esc(l.saleType)+'</div><div class="dhtitle">'+esc(l.name)+'</div><div class="dhsub">'+esc(l.subheader||l.leaseType)+'</div><div class="dhrule"></div><div class="dhaddr">'+esc(l.address)+'</div><div class="dhprice">'+(l.unpriced?'Contact for Price':fullPrice(l.price))+'</div><div class="dhpl">Asking Price</div><div class="dhbtns"><button class="dhbtn1" onclick="goContact()">Request Information</button><button class="dhbtn2" onclick="dlPkg()">Download Package</button></div></div></div>'
-+'<div class="dtabs"><div class="dtabsin">'+['Overview','Location','Gallery','Contact'].map(function(t){return '<a href="#sec-'+t.replace(/ /g,'')+'">'+t+'</a>';}).join('')+'</div></div>'
-+'<div class="sec" id="sec-Overview"><div class="secin"><div class="snum">#1 &mdash; Overview</div><div class="stitle">The Opportunity</div><div class="opp">'+[['Price',fullPrice(l.price)],['Property Type',esc(l.type)||'&mdash;'],['Sale Type',esc(l.saleType)||'&mdash;']].concat(l.leaseType?[['Lease Type',esc(l.leaseType)]]:[]).map(function(p){return '<div class="oppc"><b>'+p[1]+'</b><span>'+p[0]+'</span></div>';}).join('')+'</div><p class="oppdesc">'+(l.description?esc(l.description):(esc(l.name)+' is a '+esc(l.type)+' investment opportunity located at '+esc(l.address)+'.'))+'</p></div></div>'
-+((l.highlights&&l.highlights.length)?'<div class="sec band" id="sec-Highlights"><div class="secin"><div class="snum">#2 &mdash; Highlights</div><div class="stitle">Investment Highlights</div><div class="hlist">'+l.highlights.map(function(h){return '<div><i>&#10003;</i><span>'+esc(h)+'</span></div>';}).join('')+'</div></div></div>':'')
-+((l.details&&l.details.length)?'<div class="sec" id="sec-Details"><div class="secin"><div class="snum">#3 &mdash; Details</div><div class="stitle">Property Details</div><div class="areatbl"><div class="fh">Property Facts</div>'+l.details.map(function(r){return frow(r[0],r[1]);}).join('')+'</div></div></div>':'')
-+'<div class="sec band" id="sec-Location"><div class="secin"><div class="snum">#4 &mdash; Location</div><div class="stitle">Location</div><div id="dmap"></div></div></div>'
-+'<div class="sec alt" id="sec-Gallery"><div class="secin"><div class="snum">Gallery</div><div class="stitle">'+esc(l.name)+'</div><div class="gal">'+galInner+'</div></div></div>'
-+'<div class="sec contact" id="sec-Contact"><div class="secin"><div class="snum">#5 &mdash; Contact</div><div class="stitle">Contact Us</div><div class="cgrid"><div class="ccard"><div class="cl">Listing Agent</div><div class="agent"><div class="av">'+AGENT.initials+'</div><div><div class="nm">'+AGENT.name+'</div><div class="rl">'+AGENT.role+'</div></div></div><a class="aemail" href="mailto:'+AGENT.email+'">'+AGENT.email+'</a><button class="btnp" onclick="dlPkg()">Download Marketing Package</button><button class="btno">Share</button></div><div class="ccard"><div class="cl">Request Information</div><form onsubmit="return submitInquiry(event)"><input class="finput" placeholder="Your Name *" required/><input class="finput" type="email" placeholder="Email *" required/><input class="finput" placeholder="Phone (optional)"/><textarea class="finput" rows="3">I\\'m interested in '+esc(l.name)+'. Please send me more information.</textarea><button class="btnp" type="submit">Send Inquiry</button></form></div></div></div></div>'
+return '<div class="dhero"><img src="'+esc(l.image)+'"/><div class="ov"></div><div class="dtop"><button class="dbtn" onclick="backToList()">&larr; Back to Listings</button><button class="dbtn" onclick="backToList()">&times;</button></div><div class="dhin"><span class="dbadge" style="background:'+bc+'">'+esc(l.saleType)+'</span><div class="dhtitle">'+esc(l.name)+'</div><div class="dhaddr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> '+esc(l.address)+'</div><div class="dhpl">Asking Price</div><div class="dhprice">'+(l.unpriced?'Contact for Price':fullPrice(l.price))+'</div></div></div>'
++'<div class="dtabs"><div class="dtabsin">'+['Overview','Gallery','Location','Contact'].map(function(t){return '<a href="#sec-'+t.replace(/ /g,'')+'">'+t+'</a>';}).join('')+'</div></div>'
++'<div class="dwrap"><div class="dmain">'
++'<div class="dblock dh0" id="sec-Overview"><div class="nm">'+esc(l.name)+'<span class="badge2" style="background:'+bc+'">'+esc(l.saleType)+'</span></div><div class="ad"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> '+esc(l.address)+'</div><div class="pr">'+(l.unpriced?'Contact for Price':fullPrice(l.price))+'</div><div class="facts"><div class="fh">Property Facts</div>'+((l.details&&l.details.length)?l.details:[['Price',(l.unpriced?'Contact for Price':fullPrice(l.price))],['Property Type',esc(l.type)||'&mdash;'],['Sale Type',esc(l.saleType)||'&mdash;']]).map(function(r){return frow(r[0],r[1]);}).join('')+'</div></div>'
++'<div class="dblock" id="sec-Description"><div class="bl">Description</div><p class="dtext">'+(l.description?esc(l.description):(esc(l.name)+' is a premier '+esc(l.type)+' investment opportunity located at '+esc(l.address)+'. This asset offers a corporate-guaranteed net lease with scheduled rental increases in a dense, high-traffic trade area.'))+'</p></div>'
++((l.highlights&&l.highlights.length)?'<div class="dblock" id="sec-Highlights"><div class="bl">Investment Highlights</div><ul class="bullets">'+l.highlights.map(function(h){return '<li>'+esc(h)+'</li>';}).join('')+'</ul></div>':'')
++'<div class="dblock" id="sec-Gallery"><div class="bl">Gallery</div><div class="gal">'+galInner+'</div></div>'
++'<div class="dblock" id="sec-Location"><div class="bl">Location</div><div id="dmap"></div></div>'
++'</div>'
++'<div class="dside"><div class="card2"><div class="c2h">Listing Agent</div><div class="c2b"><div class="agent"><div class="av">'+AGENT.initials+'</div><div><div class="nm">'+AGENT.name+'</div><div class="rl">'+AGENT.role+'</div></div></div><a class="aemail" href="mailto:'+AGENT.email+'">&#9993; '+AGENT.email+'</a><button class="btnp" onclick="dlPkg()">&#8681;&nbsp; Download Marketing Package</button><div class="sharerow"><span>Share</span><span>Email</span><span>Link</span></div></div></div>'
++'<div class="card2" id="sec-Contact"><div class="c2h">Request Information</div><div class="c2b"><form onsubmit="return submitInquiry(event)"><input class="finput" placeholder="Your Name *" required/><input class="finput" type="email" placeholder="Email *" required/><input class="finput" placeholder="Phone (optional)"/><textarea class="finput" rows="3">I\\'m interested in '+esc(l.name)+'. Please send me more information.</textarea><button class="btnp" type="submit">&#9993;&nbsp; Send Inquiry</button></form></div></div></div></div>'
 +'<footer><div class="line"></div><p>Powered by <b>Leadflow.io</b></p></footer>';}
 function goContact(){var el=document.getElementById('sec-Contact');if(el)el.scrollIntoView({behavior:'smooth'});}
 var CUR=null;
@@ -8954,7 +8937,7 @@ export const toMicrositeItems = (listings) =>
 // persisted so the microsite publish (My Deals) reads the same choices. Lives in Team Settings.
 function AppearanceSettings() {
   const [micrositeTpl, setMicrositeTpl] = usePersistentState('appr_microsite', 'Modern')
-  const [propertyTpl, setPropertyTpl] = usePersistentState('appr_property', 'Match Listings')
+  const [propertyTpl, setPropertyTpl] = usePersistentState('appr_property', 'Modern')
   const [defaultView, setDefaultView] = usePersistentState('appr_view', 'mapgrid')
   const [sameAsMicrosite, setSameAsMicrosite] = usePersistentState('appr_same', true)
   const [primary, setPrimary] = usePersistentState('appr_primary', '#0f172a')
