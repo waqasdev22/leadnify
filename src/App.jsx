@@ -10522,17 +10522,25 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
   const [openLeadId, setOpenLeadId] = useState(null)
   // Per-lead access gate for this room: Authorize (grant) or Revoke (block) — persisted per room.
   const [gateStatus, setGateStatus] = usePersistentState(`room_${room.id}_gate`, {})
-  const setGate = (e, lead, val) => {
+  const setGate = async (e, lead, val) => {
     e.stopPropagation()
     const leadId = lead && lead.id
     setGateStatus((g) => ({ ...g, [leadId]: val }))
     // Flip the public approval record so an "NDA - Approval Required" visitor can (or can't)
-    // download from the public microsite. Keyed by the signer's email, matching the microsite.
+    // download from the public microsite. It MUST be written under the SAME ownerUid the public
+    // visitor reads from (the hub's ownerUid) — not the signed-in admin's uid — keyed by the
+    // signer's email exactly as the microsite encodes it.
     const em = lead && lead.email && lead.email !== '—' ? String(lead.email).toLowerCase() : ''
-    const uid = (auth.currentUser && auth.currentUser.uid) || ''
-    if (em && uid) {
+    if (em) {
       const key = em.replace(/[.$#\[\]\/]/g, '_')
-      dbSet(dbRef(db, `public/approvals/${uid}/${key}`), { status: val === 'Authorized' ? 'approved' : 'revoked', email: em, property: room.name || '', ts: Date.now() }).catch(() => {})
+      let ownerUid = (auth.currentUser && auth.currentUser.uid) || ''
+      try { const saved = JSON.parse(localStorage.getItem('crebuilder_hub') || 'null'); if (saved && saved.ownerUid) ownerUid = saved.ownerUid } catch { /* ignore */ }
+      try {
+        const r = await fetch('https://cre-dashboard-ba596-default-rtdb.firebaseio.com/public/hub/vaziamts.json')
+        const cloud = await r.json()
+        if (cloud && cloud.ownerUid) ownerUid = cloud.ownerUid
+      } catch { /* keep the local/auth uid */ }
+      if (ownerUid) dbSet(dbRef(db, `public/approvals/${ownerUid}/${key}`), { status: val === 'Authorized' ? 'approved' : 'revoked', email: em, property: room.name || '', ts: Date.now() }).catch(() => {})
     }
     notify(val === 'Authorized' ? 'Access authorized — the visitor can now download' : 'Access revoked')
   }
