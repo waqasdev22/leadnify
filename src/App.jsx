@@ -8695,7 +8695,11 @@ function showEnroll(){var ov=document.createElement('div');ov.id='enrollOv';ov.s
 function enStep1(){var srcOpts='<option value="" disabled selected>Source \\u2014 how did you hear about us? *</option><option>Social Media (Instagram, Facebook, LinkedIn)</option><option>Listing Service (Crexi, Loopnet, etc.)</option><option>Email Blast (BigBoyBlast, Internal Email)</option><option>Print Publication</option><option>Online Article</option><option>Text Message</option><option>Referral</option><option>Other</option>';var CBL='display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:#475569;margin-bottom:10px;cursor:pointer;line-height:1.35';return '<div style="font-size:20px;font-weight:800;color:#0f172a">Register to download</div><div style="font-size:14px;color:#64748b;margin:6px 0 16px">Enter your details to download the marketing package.</div><form onsubmit="return submitEnroll(event)"><div style="display:flex;gap:10px"><input id="enFirst" required placeholder="First Name *" style="'+ENIS+'"><input id="enLast" required placeholder="Last Name *" style="'+ENIS+'"></div><select id="enType" required style="'+ENIS+'background:#fff;color:#334155"><option value="" disabled selected>Profile Type (Broker or Principal) *</option><option value="Broker">Broker</option><option value="Principal">Principal</option></select><input id="enCompany" placeholder="Company (optional)" style="'+ENIS+'"><input id="enEmail" type="email" required placeholder="Email *" style="'+ENIS+'"><input id="enPhone" required placeholder="Mobile Phone *" style="'+ENIS+'"><input id="enAddr1" placeholder="Address 1" style="'+ENIS+'"><input id="enAddr2" placeholder="Address 2" style="'+ENIS+'"><div style="display:flex;gap:10px"><input id="enCity" placeholder="City" style="'+ENIS+'"><input id="enState" placeholder="State" style="'+ENIS+'"></div><select id="enSource" required style="'+ENIS+'background:#fff;color:#334155">'+srcOpts+'</select><label style="'+CBL+'"><input type="checkbox" id="enAgree1" required style="margin-top:2px"><span>I agree to the Terms of Service, Privacy Policy, and Marketing Agreement.</span></label><label style="'+CBL+'"><input type="checkbox" id="enAgree2" required style="margin-top:2px"><span>I agree to receive messages and emails at the number and email provided. Consent is not a condition of purchase.</span></label><div style="display:flex;gap:10px;margin-top:6px"><button type="button" onclick="closeEnroll()" style="flex:1;border:1px solid #e2e8f0;background:#fff;border-radius:10px;padding:12px;font-weight:700;color:#475569;cursor:pointer">Cancel</button><button type="submit" style="flex:2;border:0;background:'+PRIMARY+';border-radius:10px;padding:12px;font-weight:700;color:#fff;cursor:pointer">Register &amp; Download</button></div></form>';}
 function enVal(id){var el=document.getElementById(id);return el?el.value:'';}
 function submitEnroll(e){e.preventDefault();EN.first=enVal('enFirst');EN.last=enVal('enLast');EN.name=(EN.first+' '+EN.last).trim();EN.type=enVal('enType');EN.company=enVal('enCompany');EN.email=enVal('enEmail');EN.phone=enVal('enPhone');EN.addr1=enVal('enAddr1');EN.addr2=enVal('enAddr2');EN.city=enVal('enCity');EN.state=enVal('enState');EN.source=enVal('enSource');var t=document.querySelector('.dhtitle');EN.prop=t?t.textContent:'';var addr=[EN.addr1,EN.addr2,EN.city,EN.state].filter(Boolean).join(', ');var lead={name:EN.name,firstName:EN.first,lastName:EN.last,profile:EN.type,type:EN.type,company:EN.company,email:EN.email,phone:EN.phone,address:addr,city:EN.city,state:EN.state,message:'Registered to download the marketing package'+(EN.type?' ('+EN.type+')':''),property:EN.prop,source:EN.source||'Package Download',ts:Date.now()};if(OWNER_UID){fetch(RTDB+'/public/leads/'+OWNER_UID+'.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(lead)}).catch(function(){});}else{fetch(CAPTURE_API+'/lead-capture',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(lead)}).catch(function(){});}try{localStorage.setItem('cre_enrolled','1');localStorage.setItem('cre_enrolled_info',JSON.stringify({name:EN.name,email:EN.email,type:EN.type}));}catch(e2){}closeEnroll();doDownloadPkg();return false;}
-function dlPkg(){if(!CUR){return;}if(isEnrolled()){doDownloadPkg();}else{showEnroll();}}
+function dlPkg(){if(!CUR){return;}
+  // Free Access: no form, no NDA — download the package straight away.
+  if(CUR.gate==='Free Access'){doDownloadPkg();return;}
+  // Everything else (Contact Required / NDA) collects details via the register form first.
+  if(isEnrolled()){doDownloadPkg();}else{showEnroll();}}
 function submitInquiry(e){e.preventDefault();var f=e.target;var v={name:'',email:'',phone:'',msg:''};f.querySelectorAll('input,textarea').forEach(function(i){var p=(i.placeholder||'').toLowerCase();if(i.type==='email'||p.indexOf('email')>=0)v.email=i.value;else if(p.indexOf('phone')>=0)v.phone=i.value;else if(i.tagName==='TEXTAREA')v.msg=i.value;else if(p.indexOf('name')>=0)v.name=i.value;});var t=document.querySelector('.dhtitle');var lead={name:v.name,email:v.email,phone:v.phone,message:v.msg,property:t?t.textContent:'',source:'Listing Website',ts:Date.now()};sendLeadNotice(lead);if(OWNER_UID){fetch(RTDB+'/public/leads/'+OWNER_UID+'.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(lead)}).catch(function(){});}else{fetch(CAPTURE_API+'/lead-capture',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(lead)}).catch(function(){});}e.target.innerHTML='<div style="padding:18px;text-align:center;color:#fff;font-weight:600">Thank you! We\\'ll respond within one business day.</div>';return false;}
 function initDetailMap(l){var el=document.getElementById('dmap');if(!el||l.lat==null||l.lng==null)return;var pos={lat:Number(l.lat),lng:Number(l.lng)};if(MAP_ENGINE==='leaflet'){var go=function(){el.innerHTML='';dmap=L.map(el).setView([pos.lat,pos.lng],14);L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20,attribution:'&copy; OpenStreetMap contributors &copy; CARTO'}).addTo(dmap);L.marker([pos.lat,pos.lng],{icon:lPin()}).addTo(dmap);setTimeout(function(){dmap.invalidateSize();},100);};window.L?go():loadLeaflet(go);return;}if(!gReady()){setTimeout(function(){initDetailMap(l);},300);return;}dmap=new google.maps.Map(el,{center:pos,zoom:14,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,styles:gStyle()});new google.maps.Marker({position:pos,map:dmap,icon:gPin()});setTimeout(function(){if(!el.querySelector('.gm-style')){MAP_ENGINE='leaflet';dmap=null;initDetailMap(l);}},2000);}
 function creUrl(id){var p=new URLSearchParams(location.search);if(id!=null&&id!=='')p.set('p',id);else p.delete('p');return location.pathname+'?'+p.toString();}
@@ -8876,6 +8880,12 @@ export const toMicrositeItems = (listings) =>
         saleType: m.saleType,
         leaseType: m.leaseType,
         noi: m.noi,
+        // Download gate: how a visitor gets the marketing package —
+        //   'Free Access'          → download immediately, no form
+        //   'Contact Required'     → register (name/email/phone) then download  (default)
+        //   'NDA - Auto Access'    → sign the NDA, then download immediately
+        //   'NDA - Approval Required' → sign the NDA, owner approves, then download
+        gate: DEAL_ROOM_ACCESS.includes(l.gate) ? l.gate : 'Contact Required',
         lat,
         lng,
         // Marketing package (PDF) for the public "Download Package" button — fetched by
@@ -8986,7 +8996,7 @@ const NEW_DEAL_STEPS = ['Property Information', 'Media & Description', 'Property
 function NewDealModal({ onClose, onCreate }) {
   const notify = useToast()
   const [step, setStep] = useState(0)
-  const [f, setF] = useState({ name: '', propertyType: 'Retail', saleType: 'For Sale', street: '', city: '', state: '', zip: '', status: 'Active', access: 'Public', cover: '', description: '', photos: [], price: '', capRate: '', noi: '', size: '', om: null, confidential: [], contacts: [], bor: { name: '', company: '', license: '' } })
+  const [f, setF] = useState({ name: '', propertyType: 'Retail', saleType: 'For Sale', gate: 'Contact Required', street: '', city: '', state: '', zip: '', status: 'Active', access: 'Public', cover: '', description: '', photos: [], price: '', capRate: '', noi: '', size: '', om: null, confidential: [], contacts: [], bor: { name: '', company: '', license: '' } })
   const set = (k, v) => setF((s) => ({ ...s, [k]: v }))
   const coverRef = useRef(null), photoRef = useRef(null), omRef = useRef(null), confRef = useRef(null)
   const fsize = (file) => { const mb = file.size / (1024 * 1024); return mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.max(1, Math.round(file.size / 1024))} KB` }
@@ -9030,6 +9040,7 @@ function NewDealModal({ onClose, onCreate }) {
                 <div><label className={lbl}>Property Type</label><select className={inp} value={f.propertyType} onChange={(e) => set('propertyType', e.target.value)}>{PROPERTY_TYPE_CARDS.map((c) => <option key={c.key} value={c.key}>{c.key}</option>)}</select></div>
                 <div><label className={lbl}>Offering</label><select className={inp} value={f.saleType} onChange={(e) => set('saleType', e.target.value)}><option value="For Sale">For Sale</option><option value="For Lease">For Lease</option></select></div>
                 <div><label className={lbl}>Access</label><select className={inp} value={f.access} onChange={(e) => set('access', e.target.value)}>{ACCESS_OPTIONS.map((o) => <option key={o}>{o}</option>)}</select></div>
+                <div className="sm:col-span-2"><label className={lbl}>Download Access — how buyers get the package</label><select className={inp} value={f.gate} onChange={(e) => set('gate', e.target.value)}>{DEAL_ROOM_ACCESS.map((o) => <option key={o}>{o}</option>)}</select></div>
                 <div className="sm:col-span-2"><label className={lbl}>Street Address</label><input className={inp} value={f.street} onChange={(e) => set('street', e.target.value)} placeholder="123 Main St" /></div>
                 <div><label className={lbl}>City</label><input className={inp} value={f.city} onChange={(e) => set('city', e.target.value)} /></div>
                 <div><label className={lbl}>State</label><input className={inp} value={f.state} onChange={(e) => set('state', e.target.value)} /></div>
@@ -9243,7 +9254,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
     const address = [d.street, d.city, d.state, d.zip].filter(Boolean).join(', ') || '—'
     const cover = d.cover || (d.photos && d.photos[0] && d.photos[0].url) || ''
     const price = Number(d.price) || 0
-    setListings((list) => [{ id, dealId, name: d.name, address, city: d.city || '', state: d.state || '', ts: Date.now(), price, type: d.propertyType || 'Retail', saleType: d.saleType || 'For Sale', size: d.size || '—', status: d.status || 'Active', image: cover || propertyImage('1497366216548-37526070297c'), featured: false, listed: true, access: d.access || 'Public', description: d.description || '' }, ...list])
+    setListings((list) => [{ id, dealId, name: d.name, address, city: d.city || '', state: d.state || '', ts: Date.now(), price, type: d.propertyType || 'Retail', saleType: d.saleType || 'For Sale', gate: d.gate || 'Contact Required', size: d.size || '—', status: d.status || 'Active', image: cover || propertyImage('1497366216548-37526070297c'), featured: false, listed: true, access: d.access || 'Public', description: d.description || '' }, ...list])
     setDealRooms && setDealRooms((list) => [{ id: roomId, listingId: id, dealId, name: d.name, address, image: cover, price, capRate: d.capRate || '', noi: d.noi || '', status: d.status || 'Active', access: d.access === 'Public' ? 'Free Access' : (d.access || 'Free Access'), files: (d.confidential || []).length, members: 0, updated: 'just now', ts: Date.now() }, ...list])
     if (d.om && d.om.url) {
       putPublicPackage(id, { name: d.om.name, url: d.om.url }).catch(() => {})
@@ -9627,6 +9638,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                     <th className="py-2 pr-3 font-semibold">Last Updated</th>
                     <th className="py-2 pr-3 font-semibold">Type</th>
                     <th className="py-2 pr-3 font-semibold">Offering</th>
+                    <th className="py-2 pr-3 font-semibold">Download Access</th>
                     <th className="py-2 pr-3 font-semibold">Status</th>
                     <th className="py-2 pr-3 text-center font-semibold">Featured</th>
                     <th className="py-2 pr-3 text-center font-semibold">Listed</th>
@@ -9687,6 +9699,21 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                             <option value="For Lease" className="bg-white text-slate-700">For Lease</option>
                           </select>
                           <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-current opacity-60" />
+                        </div>
+                      </td>
+                      <td className="py-2.5 pr-3">
+                        <div className="relative">
+                          <select
+                            value={l.gate || 'Contact Required'}
+                            onChange={(e) => patch(l.id, { gate: e.target.value })}
+                            className="w-full appearance-none rounded-lg border border-slate-200 bg-white py-1.5 pl-2.5 pr-7 text-xs font-medium text-slate-700 outline-none focus:border-orange-400"
+                            title="How a buyer gets this property's marketing package on the public site"
+                          >
+                            {DEAL_ROOM_ACCESS.map((o) => (
+                              <option key={o} value={o}>{o}</option>
+                            ))}
+                          </select>
+                          <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
                         </div>
                       </td>
                       <td className="py-2.5 pr-3">
