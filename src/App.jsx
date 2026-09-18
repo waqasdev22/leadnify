@@ -9312,7 +9312,11 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
     // Member. The Owner's email is resolved below and always wins; the fields here are just a
     // first-paint fallback used only if no Owner is found in the team.
     const fallbackEmail = explicitNotifyEmail || (auth.currentUser && auth.currentUser.email) || (user && user.email) || ''
-    const hubData = { items: toMicrositeItems(rows), primary, template: micrositeTpl, defaultView, ownerUid: (auth.currentUser && auth.currentUser.uid) || '', ownerEmail: fallbackEmail, logoUrl: micrositeLogo || '' }
+    const micrositeItems = toMicrositeItems(rows)
+    // The public hub slug is shared. Never overwrite it with an empty list — an account that has
+    // no listings (or hasn't loaded them yet) must not wipe another account's published hub.
+    if (!micrositeItems.length) return
+    const hubData = { items: micrositeItems, primary, template: micrositeTpl, defaultView, ownerUid: (auth.currentUser && auth.currentUser.uid) || '', ownerEmail: fallbackEmail, logoUrl: micrositeLogo || '' }
     try { localStorage.setItem('crebuilder_hub', JSON.stringify(hubData)) } catch { /* ignore */ }
     putPublicHub(slug, hubData).catch(() => {})
     // Always resolve the team Owner's email and re-publish the hub with it, so the notification
@@ -10460,7 +10464,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
     }
     try {
       const saved = JSON.parse(localStorage.getItem('crebuilder_hub') || 'null')
-      if (saved && Array.isArray(saved.items)) {
+      if (saved && Array.isArray(saved.items) && saved.items.length) {
         saved.items = saved.items.map((it) => (
           (room.listingId && it.id === room.listingId) || (it.name && room.name && it.name === room.name)
             ? { ...it, gate: gateVal }
