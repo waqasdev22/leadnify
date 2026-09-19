@@ -10512,7 +10512,7 @@ function DocumentHubView({ room, onBack, notify, onEditDocument }) {
   )
 }
 
-function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member', setListings, onUpdateRoom }) {
+function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member', listings, setListings, onUpdateRoom }) {
   const [editOpen, setEditOpen] = useState(false)
   // Client permissions matrix: a Member can view a deal room but can't edit its
   // Deal Contacts or Broker of Record (Owner / Admin / Manager can).
@@ -10831,6 +10831,16 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
 
   if (hubOpen) return <DocumentHubView room={room} onBack={() => setHubOpen(false)} notify={notify} onEditDocument={onEditDocument} />
 
+  // Facts line under the title (non-hyperlink): Address | Price | CAP Rate | NOI, plus
+  // Price / Unit for Multifamily & Hospitality. Property type + unit count come from the
+  // linked public listing (fallback to the room's own fields).
+  const linkedListing = (listings || []).find((l) => (room.listingId && l.id === room.listingId) || l.id === room.id || ((l.name || '').trim().toLowerCase() === (room.name || '').trim().toLowerCase())) || null
+  const dealType = (linkedListing && linkedListing.type) || room.type || ''
+  const showPerUnit = ['multifamily', 'multi family', 'multi-family', 'hospitality'].includes(String(dealType).trim().toLowerCase())
+  const unitCount = Number((linkedListing && linkedListing.numUnits) || room.numUnits || 0)
+  const priceNum = Number(room.price || (linkedListing && linkedListing.price) || 0)
+  const pricePerUnit = showPerUnit && unitCount > 0 && priceNum > 0 ? currency(Math.round(priceNum / unitCount)) : '—'
+
   return (
     <div>
       <button onClick={onBack} className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 transition hover:text-slate-800">
@@ -10856,9 +10866,8 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
                   <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">Free Access</span>
                 )}
               </div>
-              <button onClick={() => setHubOpen(true)} className="text-left text-sm text-slate-500 transition hover:text-brand hover:underline" title="Open property overview">{room.address || '—'}</button>
-              {/* Key deal facts under the title (non-hyperlink) — pulled from the deal's fields. */}
-              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-600">
+              {/* Key deal facts under the title (non-hyperlink): Address | Price | CAP Rate | NOI [| Price / Unit for Multifamily & Hospitality] */}
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-600">
                 <span>{room.address || '—'}</span>
                 <span className="text-slate-300">|</span>
                 <span><span className="text-slate-400">Price</span> {room.price ? currency(room.price) : '—'}</span>
@@ -10866,6 +10875,12 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
                 <span><span className="text-slate-400">CAP Rate</span> {room.capRate ? room.capRate + '%' : '—'}</span>
                 <span className="text-slate-300">|</span>
                 <span><span className="text-slate-400">NOI</span> {room.noi ? currency(room.noi) : '—'}</span>
+                {showPerUnit && (
+                  <>
+                    <span className="text-slate-300">|</span>
+                    <span><span className="text-slate-400">Price / Unit</span> {pricePerUnit}</span>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -11487,7 +11502,7 @@ function DealRoomTransferModal({ room, user, onClose, onTransfer }) {
   )
 }
 
-function DealRoomsPage({ dealRooms, setDealRooms, setListings, onEditDocument, openTarget, onOpenHandled, user, role = 'Member' }) {
+function DealRoomsPage({ dealRooms, setDealRooms, listings, setListings, onEditDocument, openTarget, onOpenHandled, user, role = 'Member' }) {
   const notify = useToast()
   const [modalOpen, setModalOpen] = useState(false)
   const [confirm, setConfirm] = useState(null)
@@ -11530,7 +11545,7 @@ function DealRoomsPage({ dealRooms, setDealRooms, setListings, onEditDocument, o
   if (openRoom) {
     return (
       <div className="mx-auto max-w-[1600px] p-6">
-        <DealRoomDetail room={openRoom} onBack={() => setOpenRoom(null)} notify={notify} onEditDocument={onEditDocument} role={role} setListings={setListings} onUpdateRoom={(id, data) => {
+        <DealRoomDetail room={openRoom} onBack={() => setOpenRoom(null)} notify={notify} onEditDocument={onEditDocument} role={role} listings={listings} setListings={setListings} onUpdateRoom={(id, data) => {
           updateRoom(id, data)
           setOpenRoom((r) => (r ? { ...r, ...data } : r))
           // Push the same edits onto the linked public Listing so the buyer-facing property
@@ -16077,7 +16092,7 @@ export default function App() {
       case 'listings':
         return <ListingHubPage listings={listings} setListings={setListings} setPackages={setPackages} globalQuery={query} onCreateNew={startCreate} onResumeDraft={resumeDraft} onOpenDealRoom={openDealRoomFor} dealRooms={dealRooms} setDealRooms={setDealRooms} onOpenRoom={(room) => { setDealRoomTarget(room); setActive('deals'); setMobileNav(false) }} user={user} role={role} can={can} />
       case 'deals':
-        return <DealRoomsPage dealRooms={dealRooms} setDealRooms={setDealRooms} setListings={setListings} onEditDocument={resumeDraft} openTarget={dealRoomTarget} onOpenHandled={() => setDealRoomTarget(null)} user={user} role={role} />
+        return <DealRoomsPage dealRooms={dealRooms} setDealRooms={setDealRooms} listings={listings} setListings={setListings} onEditDocument={resumeDraft} openTarget={dealRoomTarget} onOpenHandled={() => setDealRoomTarget(null)} user={user} role={role} />
       case 'team':
         // Role-based (not override-based): Owner/Admin/Manager may open this page. A Manager can
         // only add members; changing roles/permissions is locked to Owner/Admin inside the page.
