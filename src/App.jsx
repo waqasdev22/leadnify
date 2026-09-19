@@ -475,6 +475,12 @@ const NAV_ITEMS = [
   { key: 'email', label: 'Distribution', icon: Send, soon: true, adminOnly: true },
 ]
 
+// The team Owner's fixed notification address. Because the public hub uses one shared slug, any
+// account that opens the app could otherwise overwrite the owner email. Locking it here guarantees
+// EVERY lead/download notification goes to this Owner, no matter which account last published.
+// The per-account "Download notification email" field still overrides this if it is filled in.
+const LOCKED_OWNER_EMAIL = 'testwebloop@gmail.com'
+
 /* -------------------------------------------------------------------------- */
 /*  Toast system                                                              */
 /* -------------------------------------------------------------------------- */
@@ -9387,11 +9393,10 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
   useEffect(() => {
     // Publish the listings + branding IMMEDIATELY (no awaits before this) so Preview and the
     // public ?hub= link always reflect the latest deals right away.
-    // Lead notifications must reach ONLY the team Owner (role "Owner") — never a Manager/Admin/
-    // Member. Recipient priority: the owner's chosen "Download notification email" field, else the
-    // Owner from THIS account's team list, else the Owner resolved from the users table. We NEVER
-    // fall back to the signed-in user (could be admin/manager/member).
-    const fallbackEmail = explicitNotifyEmail || teamOwnerEmail || ''
+    // Lead notifications go to ONE fixed address: the "Download notification email" field if the
+    // owner set one, otherwise the locked team Owner (LOCKED_OWNER_EMAIL). This never changes based
+    // on which account published the shared hub, so notifications can't drift to another account.
+    const fallbackEmail = explicitNotifyEmail || LOCKED_OWNER_EMAIL
     const micrositeItems = toMicrositeItems(rows)
     // The public hub slug is shared. Never overwrite it with an empty list — an account that has
     // no listings (or hasn't loaded them yet) must not wipe another account's published hub.
@@ -9410,7 +9415,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
         const ownerEntry = Object.values(users).find((u) => u && u.role === 'Owner' && u.email)
         if (ownerEntry) ownerEmail = ownerEntry.email
       } catch { /* ignore */ }
-      const finalEmail = explicitNotifyEmail || teamOwnerEmail || ownerEmail || ''
+      const finalEmail = explicitNotifyEmail || LOCKED_OWNER_EMAIL
       if (!cancelled && finalEmail && finalEmail !== fallbackEmail) putPublicHub(slug, { ...hubData, ownerEmail: finalEmail }).catch(() => {})
     })()
     return () => { cancelled = true }
@@ -10595,6 +10600,9 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
             ? { ...it, gate: gateVal }
             : it
         ))
+        // Keep the notification recipient locked to the team Owner on this republish too, so a
+        // gate change can never leave a stale/other-account owner email on the hub.
+        saved.ownerEmail = LOCKED_OWNER_EMAIL
         localStorage.setItem('crebuilder_hub', JSON.stringify(saved))
         putPublicHub('vaziamts', saved).catch(() => {})
       }
