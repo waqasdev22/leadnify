@@ -9285,6 +9285,11 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
   // decides the recipient — the logged-in email (admin/member) is a last resort used only
   // when nobody has ever configured one, and it never overwrites an already-set owner email.
   const explicitNotifyEmail = (notifyEmail && notifyEmail.trim()) || ''
+  // The team's selected Owner (role "Owner" in Team & Permissions) — this is who lead/download
+  // notifications must go to. Read from THIS account's team member list, so we never pick another
+  // team's owner out of the shared global users table.
+  const [teamMembersForOwner] = usePersistentState('team_members', TEAM_SETTINGS_MEMBERS)
+  const teamOwnerEmail = (((teamMembersForOwner || []).find((m) => m && m.role === 'Owner' && m.email) || {}).email || '').trim()
 
   // Embed URL carries the theme in the URL (?t=&c=) so it renders correctly on
   // any external site / visitor browser, where localStorage isn't available.
@@ -9384,8 +9389,9 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
     // public ?hub= link always reflect the latest deals right away.
     // Lead notifications must reach ONLY the team Owner (role "Owner") — never a Manager/Admin/
     // Member. Recipient priority: the owner's chosen "Download notification email" field, else the
-    // team Owner account's email. We NEVER fall back to the signed-in user (could be admin/manager).
-    const fallbackEmail = explicitNotifyEmail || ''
+    // Owner from THIS account's team list, else the Owner resolved from the users table. We NEVER
+    // fall back to the signed-in user (could be admin/manager/member).
+    const fallbackEmail = explicitNotifyEmail || teamOwnerEmail || ''
     const micrositeItems = toMicrositeItems(rows)
     // The public hub slug is shared. Never overwrite it with an empty list — an account that has
     // no listings (or hasn't loaded them yet) must not wipe another account's published hub.
@@ -9404,12 +9410,12 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
         const ownerEntry = Object.values(users).find((u) => u && u.role === 'Owner' && u.email)
         if (ownerEntry) ownerEmail = ownerEntry.email
       } catch { /* ignore */ }
-      const finalEmail = explicitNotifyEmail || ownerEmail || ''
+      const finalEmail = explicitNotifyEmail || teamOwnerEmail || ownerEmail || ''
       if (!cancelled && finalEmail && finalEmail !== fallbackEmail) putPublicHub(slug, { ...hubData, ownerEmail: finalEmail }).catch(() => {})
     })()
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [listings, primary, micrositeTpl, defaultView, slug, explicitNotifyEmail, micrositeLogo])
+  }, [listings, primary, micrositeTpl, defaultView, slug, explicitNotifyEmail, teamOwnerEmail, micrositeLogo])
 
   const listedCount = tableRows.filter((l) => l.listed).length
   const unlistedCount = tableRows.length - listedCount
