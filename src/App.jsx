@@ -11654,13 +11654,6 @@ function DealRoomsPage({ dealRooms, setDealRooms, listings, setListings, onEditD
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => notify('Guided tour coming soon')}
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
-          >
-            <HelpCircle className="h-4 w-4" />
-            Show me around
-          </button>
           <PrimaryButton icon={Plus} onClick={() => setModalOpen(true)}>
             New deal room
           </PrimaryButton>
@@ -13054,7 +13047,6 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
                 <p className="max-w-2xl text-sm text-slate-500">Every prospect who inquired, signed an NDA, or downloaded from a deal room — captured automatically and unified by email.</p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <button onClick={() => notify('Guided tour coming soon')} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50"><HelpCircle className="h-4 w-4" /> Show me around</button>
                 <button onClick={autoMerge} title="Merge duplicates by email or phone" className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-100"><Copy className="h-4 w-4" /> {dupes} possible duplicate{dupes === 1 ? '' : 's'} · Merge</button>
                 <button onClick={exportContacts} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"><Download className="h-4 w-4" /> Export</button>
                 <input ref={contactFileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={(e) => { importContacts(e.target.files[0]); e.target.value = '' }} />
@@ -14875,7 +14867,6 @@ function EmailBlastPage({ user, onNavigate, role = 'Member' }) {
           <p className="text-sm text-brand">Turn any completed property into a polished email — drafts save automatically as you work.</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setTourStep(0)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"><HelpCircle className="h-4 w-4" /> Show me around</button>
           <span data-tour-target="1" className={`inline-block ${tourHi(1)}`}><PrimaryButton icon={Plus} onClick={startBlast}>New email blast</PrimaryButton></span>
         </div>
       </div>
