@@ -7498,8 +7498,7 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
     if (finished && pdfDataUrl) {
       if (pdfDataUrl.length < 12_000_000) {
         const pdf = { name: `${title}.pdf`, url: pdfDataUrl }
-        putPublicPackage(id, pdf).catch(() => {})               // by listing id (exact) — visitor download
-        putPublicPackage(pkgNameKey(title), pdf).catch(() => {}) // by property name (same-name deal room)
+        putPublicPackage(id, pdf).catch(() => {})               // by listing id (exact) — visitor download (id-based only, no name linking)
         // Put the generated OM into the property's deal room Confidential files (create the
         // room if it doesn't exist yet) so it shows in the deal room and downloads after the NDA.
         const kb = Math.max(1, Math.round((pdfDataUrl.length * 0.75) / 1024))
@@ -8676,8 +8675,9 @@ function doDownloadPkg(){if(!CUR){return;}
   else{var info={};try{info=JSON.parse(localStorage.getItem('cre_enrolled_info')||'{}');}catch(e2){}lead={name:info.name||'Anonymous visitor',email:info.email||'',type:info.type||'Download',profile:info.type||'',property:pn,source:'Package Download',message:'Downloaded the marketing package.',ts:Date.now()};}
   sendLeadNotice(lead);if(OWNER_UID){fetch(RTDB+'/public/leads/'+OWNER_UID+'.json',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(lead)}).catch(function(){});}
   var w=window.open('','_blank');
-  // 1) the listing's own uploaded package, then 2) a deal room OM with the same property name
-  fetchPkg(CUR.pkgId,function(p1){if(p1){openPkgBlob(w,p1);return;}fetchPkg(CUR.pkgNameKey,function(p2){if(p2){openPkgBlob(w,p2);return;}if(w)w.close();alert('The marketing package is not available for download yet.');});});}
+  // Serve ONLY this deal's own package (by its unique id) — no name-based fallback, so one
+  // deal's OM can never link to or show up on another deal.
+  fetchPkg(CUR.pkgId,function(p1){if(p1){openPkgBlob(w,p1);return;}if(w)w.close();alert('The marketing package is not available for download yet.');});}
 function isEnrolled(){try{return !!localStorage.getItem('cre_enrolled');}catch(e){return false;}}
 function closeEnroll(){var o=document.getElementById('enrollOv');if(o)o.remove();}
 var EN={};
@@ -9348,7 +9348,6 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
     setDealRooms && setDealRooms((list) => [{ id: roomId, listingId: id, dealId, name: d.name, address, image: cover, price, capRate: d.capRate || '', noi: d.noi || '', status: d.status || 'Active', access: d.access === 'Public' ? 'Free Access' : (d.access || 'Free Access'), files: (d.confidential || []).length, members: 0, updated: 'just now', ts: Date.now() }, ...list])
     if (d.om && d.om.url) {
       putPublicPackage(id, { name: d.om.name, url: d.om.url }).catch(() => {})
-      putPublicPackage(pkgNameKey(d.name), { name: d.om.name, url: d.om.url }).catch(() => {})
       putFile(`om_${roomId}`, d.om).catch(() => {})
     }
     if (d.photos && d.photos.length) {
@@ -10779,11 +10778,9 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
         const url = await readFileAsDataUrl(f) // store the actual PDF in the cloud (syncs everywhere)
         const om = { name: f.name, size: fileSize(f), date: new Date().toLocaleDateString('en-GB'), url }
         await putFile(`om_${room.id}`, om)
-        // Expose it publicly so the microsite "Download Package" serves this OM:
-        //  • by the linked listing's id (exact, id-based) and
-        //  • by property name (fallback for standalone rooms).
-        if (room.listingId) putPublicPackage(room.listingId, { name: f.name, url }).catch(() => {})
-        putPublicPackage(pkgNameKey(room.name), { name: f.name, url }).catch(() => {})
+        // Expose it publicly under THIS deal's unique id only (id-based) — never by name, so
+        // one deal's OM can't link to another deal.
+        putPublicPackage(room.listingId || room.id, { name: f.name, url }).catch(() => {})
         setUploadPct(100); setTimeout(() => setUploadPct(null), 400)
         setOmFlyer(om)
         notify('OM / Flyer uploaded — it will show on the listing’s Download Package too')
@@ -11563,7 +11560,6 @@ function DealRoomsPage({ dealRooms, setDealRooms, listings, setListings, onEditD
     setDealRooms((list) => [{ id: roomId, listingId: id, dealId, name: d.name, address, image: cover, price, capRate: d.capRate || '', noi: d.noi || '', status: d.status || 'Active', access: d.access === 'Public' ? 'Free Access' : (d.access || 'Free Access'), files: (d.confidential || []).length, members: 0, updated: 'just now', ts: Date.now() }, ...list])
     if (d.om && d.om.url) {
       putPublicPackage(id, { name: d.om.name, url: d.om.url }).catch(() => {})
-      putPublicPackage(pkgNameKey(d.name), { name: d.om.name, url: d.om.url }).catch(() => {})
       putFile(`om_${roomId}`, d.om).catch(() => {})
     }
     if (d.photos && d.photos.length) {
