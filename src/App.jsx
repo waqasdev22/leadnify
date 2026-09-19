@@ -9383,9 +9383,9 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
     // Publish the listings + branding IMMEDIATELY (no awaits before this) so Preview and the
     // public ?hub= link always reflect the latest deals right away.
     // Lead notifications must reach ONLY the team Owner (role "Owner") — never a Manager/Admin/
-    // Member. The Owner's email is resolved below and always wins; the fields here are just a
-    // first-paint fallback used only if no Owner is found in the team.
-    const fallbackEmail = explicitNotifyEmail || (auth.currentUser && auth.currentUser.email) || (user && user.email) || ''
+    // Member. Recipient priority: the owner's chosen "Download notification email" field, else the
+    // team Owner account's email. We NEVER fall back to the signed-in user (could be admin/manager).
+    const fallbackEmail = explicitNotifyEmail || ''
     const micrositeItems = toMicrositeItems(rows)
     // The public hub slug is shared. Never overwrite it with an empty list — an account that has
     // no listings (or hasn't loaded them yet) must not wipe another account's published hub.
@@ -9404,7 +9404,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
         const ownerEntry = Object.values(users).find((u) => u && u.role === 'Owner' && u.email)
         if (ownerEntry) ownerEmail = ownerEntry.email
       } catch { /* ignore */ }
-      const finalEmail = ownerEmail || fallbackEmail
+      const finalEmail = explicitNotifyEmail || ownerEmail || ''
       if (!cancelled && finalEmail && finalEmail !== fallbackEmail) putPublicHub(slug, { ...hubData, ownerEmail: finalEmail }).catch(() => {})
     })()
     return () => { cancelled = true }
@@ -12183,12 +12183,9 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
         })
       setInbox((list) => [...mapped, ...list])
       notify(`${mapped.length} new lead${mapped.length === 1 ? '' : 's'} captured from your listing`)
-      // Email the OWNER about the new activity — goes only to the Owner account, never to
-      // whichever admin/member is signed in. Priority: the configured notification address
-      // (My Deals field), then the team member whose role is "Owner", then the login email.
-      // Notify ONLY the team Owner (role "Owner") — never a Manager/Admin/Member. The Owner's
-      // email always wins; the notification field / login email are just fallbacks when there's
-      // no Owner in the team.
+      // Notify ONLY the team Owner (role "Owner") — never a Manager/Admin/Member. Recipient
+      // priority: the configured "Download notification email" field, else the team Owner account's
+      // email. We NEVER fall back to the signed-in user's email (could be admin/manager/member).
       let ownerEmail = ''
       try {
         const usersSnap = await dbGet(dbRef(db, 'users'))
@@ -12196,8 +12193,9 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
         const ownerEntry = Object.values(users).find((u) => u && u.role === 'Owner' && u.email)
         if (ownerEntry) ownerEmail = ownerEntry.email
       } catch { /* users not readable — fall through */ }
-      if (!ownerEmail) ownerEmail = (readLS(nsKey('cre_notify_email'), '') || '').trim()
-      if (!ownerEmail) ownerEmail = (user && user.email) || ''
+      const configuredNotify = (readLS(nsKey('cre_notify_email'), '') || '').trim()
+      if (configuredNotify) ownerEmail = configuredNotify
+      // No signed-in-user fallback: if no Owner and no configured email, send nothing.
       if (ownerEmail) {
         const lines = mapped.map((m) => `• ${m.name} (${m.email})${m.property ? ' — ' + m.property : ''} [${m.source}]`).join('\n')
         sendEmail({
