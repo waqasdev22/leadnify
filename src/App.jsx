@@ -10829,7 +10829,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
         putPublicPackage(room.listingId || room.id, { name: f.name, url }).catch(() => {})
         // Reflect this OM on the matching My Deals listing row too, so its dropdown box shows
         // the marketing package (keeps Deal Room + My Deals in sync).
-        if (setListings) setListings((list) => list.map((l) => (((room.listingId && l.id === room.listingId) || l.id === room.id || ((l.name || '').trim().toLowerCase() === (room.name || '').trim().toLowerCase())) ? { ...l, pkgName: f.name } : l)))
+        if (setListings) setListings((list) => list.map((l) => ((l.id === (room.listingId || room.id)) ? { ...l, pkgName: f.name } : l)))
         setUploadPct(100); setTimeout(() => setUploadPct(null), 400)
         setOmFlyer(om)
         notify('OM / Flyer uploaded — it will show on the listing’s Download Package too')
@@ -10902,7 +10902,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
   // Facts line under the title (non-hyperlink): Address | Price | CAP Rate | NOI, plus
   // Price / Unit for Multifamily & Hospitality. Property type + unit count come from the
   // linked public listing (fallback to the room's own fields).
-  const linkedListing = (listings || []).find((l) => (room.listingId && l.id === room.listingId) || l.id === room.id || ((l.name || '').trim().toLowerCase() === (room.name || '').trim().toLowerCase())) || null
+  const linkedListing = (listings || []).find((l) => l.id === (room.listingId || room.id)) || null
   const dealType = (linkedListing && linkedListing.type) || room.type || ''
   const showPerUnit = ['multifamily', 'multi family', 'multi-family', 'hospitality'].includes(String(dealType).trim().toLowerCase())
   const unitCount = Number((linkedListing && linkedListing.numUnits) || room.numUnits || 0)
@@ -10999,7 +10999,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
                 <IconButton icon={Eye} label="Open / preview" onClick={() => openOm(omFlyer)} />
                 <IconButton icon={Download} label="Download" onClick={() => downloadFile(omFlyer)} />
                 <IconButton icon={Upload} label="Replace" onClick={() => omRef.current && omRef.current.click()} />
-                <IconButton icon={Trash2} label="Remove" tone="danger" onClick={() => { delFile(`om_${room.id}`); delPublicPackage(room.listingId || room.id); if (setListings) setListings((list) => list.map((l) => (((room.listingId && l.id === room.listingId) || l.id === room.id || ((l.name || '').trim().toLowerCase() === (room.name || '').trim().toLowerCase())) ? { ...l, pkgName: '' } : l))); setOmFlyer(null); notify('OM / Flyer removed', 'error') }} />
+                <IconButton icon={Trash2} label="Remove" tone="danger" onClick={() => { delFile(`om_${room.id}`); delPublicPackage(room.listingId || room.id); if (setListings) setListings((list) => list.map((l) => ((l.id === (room.listingId || room.id)) ? { ...l, pkgName: '' } : l))); setOmFlyer(null); notify('OM / Flyer removed', 'error') }} />
               </div>
             ) : (
               <button onClick={() => omRef.current && omRef.current.click()} className="mt-3 flex w-full flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-slate-200 py-6 text-center transition hover:border-orange-300 hover:bg-orange-50/30">
@@ -16083,7 +16083,9 @@ export default function App() {
     if (!pkg) return
     const addr = (pkg.address || '').trim().toLowerCase()
     const name = (pkg.title || pkg.name || '').trim().toLowerCase()
-    let room = dealRooms.find(
+    // Prefer the room linked to THIS exact listing (by id) so two deals that share an address or
+    // name never resolve to — and get re-linked to — the same room (which cross-links their OMs).
+    let room = dealRooms.find((r) => r.listingId && r.listingId === pkg.id) || dealRooms.find(
       (r) =>
         (addr && (r.address || '').trim().toLowerCase() === addr) ||
         (name && (r.name || '').trim().toLowerCase() === name),
