@@ -10844,7 +10844,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
   return (
     <div>
       <button onClick={onBack} className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 transition hover:text-slate-800">
-        <ArrowLeft className="h-4 w-4" /> Deal Rooms
+        <ArrowLeft className="h-4 w-4" /> My Deals
       </button>
 
       {/* Header card */}
@@ -11502,7 +11502,7 @@ function DealRoomTransferModal({ room, user, onClose, onTransfer }) {
   )
 }
 
-function DealRoomsPage({ dealRooms, setDealRooms, listings, setListings, onEditDocument, openTarget, onOpenHandled, user, role = 'Member' }) {
+function DealRoomsPage({ dealRooms, setDealRooms, listings, setListings, onEditDocument, openTarget, onOpenHandled, onExit, user, role = 'Member' }) {
   const notify = useToast()
   const [modalOpen, setModalOpen] = useState(false)
   const [confirm, setConfirm] = useState(null)
@@ -11545,7 +11545,7 @@ function DealRoomsPage({ dealRooms, setDealRooms, listings, setListings, onEditD
   if (openRoom) {
     return (
       <div className="mx-auto max-w-[1600px] p-6">
-        <DealRoomDetail room={openRoom} onBack={() => setOpenRoom(null)} notify={notify} onEditDocument={onEditDocument} role={role} listings={listings} setListings={setListings} onUpdateRoom={(id, data) => {
+        <DealRoomDetail room={openRoom} onBack={() => { setOpenRoom(null); onExit && onExit() }} notify={notify} onEditDocument={onEditDocument} role={role} listings={listings} setListings={setListings} onUpdateRoom={(id, data) => {
           updateRoom(id, data)
           setOpenRoom((r) => (r ? { ...r, ...data } : r))
           // Push the same edits onto the linked public Listing so the buyer-facing property
@@ -12381,7 +12381,7 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
               <CrmAttentionCard icon={Inbox} label="Unread inquiries" count={inquiries.length} onViewAll={() => setTab('leads')}>
                 <div className="space-y-1.5">{inquiries.map((i) => <div key={i.id} className="flex justify-between text-sm"><span className="truncate text-slate-700">{i.name}</span><span className="shrink-0 text-xs text-slate-400">{i.property}</span></div>)}</div>
               </CrmAttentionCard>
-              <CrmAttentionCard icon={KeyRound} label="Access expiring (7d)" count={0} onViewAll={() => onNavigate && onNavigate('deals')} />
+              <CrmAttentionCard icon={KeyRound} label="Access expiring (7d)" count={0} onViewAll={() => onNavigate && onNavigate('listings')} />
             </div>
 
             {/* Pipeline summary */}
@@ -16092,7 +16092,7 @@ export default function App() {
       case 'listings':
         return <ListingHubPage listings={listings} setListings={setListings} setPackages={setPackages} globalQuery={query} onCreateNew={startCreate} onResumeDraft={resumeDraft} onOpenDealRoom={openDealRoomFor} dealRooms={dealRooms} setDealRooms={setDealRooms} onOpenRoom={(room) => { setDealRoomTarget(room); setActive('deals'); setMobileNav(false) }} user={user} role={role} can={can} />
       case 'deals':
-        return <DealRoomsPage dealRooms={dealRooms} setDealRooms={setDealRooms} listings={listings} setListings={setListings} onEditDocument={resumeDraft} openTarget={dealRoomTarget} onOpenHandled={() => setDealRoomTarget(null)} user={user} role={role} />
+        return <DealRoomsPage dealRooms={dealRooms} setDealRooms={setDealRooms} listings={listings} setListings={setListings} onEditDocument={resumeDraft} openTarget={dealRoomTarget} onOpenHandled={() => setDealRoomTarget(null)} onExit={() => { setDealRoomTarget(null); navigate('listings') }} user={user} role={role} />
       case 'team':
         // Role-based (not override-based): Owner/Admin/Manager may open this page. A Manager can
         // only add members; changing roles/permissions is locked to Owner/Admin inside the page.
