@@ -9028,6 +9028,8 @@ function AppearanceSettings() {
 // Crexi-style New Deal wizard — captures a deal through input fields across seven steps,
 // then hands the assembled deal to onCreate (which builds the listing + deal room).
 const NEW_DEAL_STEPS = ['Property Information', 'Media & Description', 'Property Details', 'OM', 'Confidential Documents', 'Listing Team', 'Save & Exit']
+// Crexi-style sort options for My Deals.
+const DEAL_SORT_OPTIONS = ['Recently Updated', 'Oldest Updated', 'Recently Created', 'Offers – Most', 'Offers – Least', 'Executed NDA – Most', 'Executed NDA – Least', 'Open OM/Flyer – Most', 'Open OM/Flyer – Least', 'Visitors – Most', 'Visitors – Least', 'Price – Most', 'Price – Least', 'CAP Rate – Most', 'CAP Rate – Least', 'Product']
 function NewDealModal({ onClose, onCreate }) {
   const notify = useToast()
   const [step, setStep] = useState(0)
@@ -9327,6 +9329,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
   const [confirm, setConfirm] = useState(null)
   const [expandedId, setExpandedId] = useState(null) // row whose expanded detail is open
   const [newDealOpen, setNewDealOpen] = useState(false) // crexi-style New Deal field wizard
+  const [sortBy, setSortBy] = useState('Recently Updated') // My Deals sort order (Crexi-style)
   const [transferItem, setTransferItem] = useState(null) // deal being transferred from the My Deals row actions
   // Row actions (moved here from the Deal Rooms cards): duplicate + transfer a deal from My Deals.
   const duplicateListing = (l) => { setListings((list) => [{ ...l, id: uid(), dealId: newDealId(), name: `${l.name} (Copy)`, ts: Date.now() }, ...list]); notify('Deal duplicated') }
@@ -9417,6 +9420,31 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
     if (filter === 'unlisted' && l.listed) return false
     if (q.trim() && !((l.name || '').toLowerCase().includes(q) || (l.address || '').toLowerCase().includes(q))) return false
     return true
+  })
+
+  // Sort the filtered deals per the selected Crexi-style sort option.
+  const _n = (v) => Number(v) || 0
+  const _cap = (v) => parseFloat(String(v).replace(/[^0-9.]/g, '')) || 0
+  const sorted = [...filtered].sort((a, b) => {
+    switch (sortBy) {
+      case 'Oldest Updated': return _n(a.ts) - _n(b.ts)
+      case 'Recently Created':
+      case 'Recently Updated': return _n(b.ts) - _n(a.ts)
+      case 'Offers – Most': return _n(b.offers) - _n(a.offers)
+      case 'Offers – Least': return _n(a.offers) - _n(b.offers)
+      case 'Executed NDA – Most': return _n(b.ndaCount ?? b.executedNda) - _n(a.ndaCount ?? a.executedNda)
+      case 'Executed NDA – Least': return _n(a.ndaCount ?? a.executedNda) - _n(b.ndaCount ?? b.executedNda)
+      case 'Open OM/Flyer – Most': return _n(b.omOpens ?? b.openOm) - _n(a.omOpens ?? a.openOm)
+      case 'Open OM/Flyer – Least': return _n(a.omOpens ?? a.openOm) - _n(b.omOpens ?? b.openOm)
+      case 'Visitors – Most': return _n(b.visitors) - _n(a.visitors)
+      case 'Visitors – Least': return _n(a.visitors) - _n(b.visitors)
+      case 'Price – Most': return _n(b.price) - _n(a.price)
+      case 'Price – Least': return _n(a.price) - _n(b.price)
+      case 'CAP Rate – Most': return _cap(b.capRate) - _cap(a.capRate)
+      case 'CAP Rate – Least': return _cap(a.capRate) - _cap(b.capRate)
+      case 'Product': return String(a.type || '').localeCompare(String(b.type || ''))
+      default: return 0
+    }
   })
 
   const patch = (id, changes) =>
@@ -9695,6 +9723,14 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                     className="w-full rounded-lg border border-slate-200 bg-white py-1.5 pl-8 pr-2 text-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100 sm:w-40"
                   />
                 </div>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  title="Sort deals"
+                  className="rounded-lg border border-slate-200 bg-white py-1.5 pl-2 pr-7 text-sm font-medium text-slate-600 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                >
+                  {DEAL_SORT_OPTIONS.map((o) => <option key={o} value={o}>{`Sort: ${o}`}</option>)}
+                </select>
                 <button
                   onClick={exportCsv}
                   className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
@@ -9740,7 +9776,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filtered.map((l, i) => {
+                  {sorted.map((l, i) => {
                     const isOpen = expandedId === l.id
                     return (
                     <React.Fragment key={(l.id ?? 'row') + '-' + i}>
