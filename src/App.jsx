@@ -11528,13 +11528,29 @@ function DealRoomsPage({ dealRooms, setDealRooms, listings, setListings, onEditD
     }
   }, [openTarget]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const create = (data) => {
-    setDealRooms((list) => [
-      { id: uid(), dealId: newDealId(), files: 0, members: 0, updated: 'just now', ts: Date.now(), image: '', ...data },
-      ...list,
-    ])
-    notify('Deal room created')
+  // Same detailed Crexi-style create as My Deals: "+ New deal room" now opens the full
+  // NewDealModal wizard and creates a listing + linked deal room (not the old simple form).
+  const create = (d) => {
+    const id = uid()
+    const roomId = uid()
+    const dealId = newDealId()
+    const address = [d.street, d.city, d.state, d.zip].filter(Boolean).join(', ') || '—'
+    const cover = d.cover || (d.photos && d.photos[0] && d.photos[0].url) || ''
+    const price = Number(d.price) || 0
+    if (setListings) setListings((list) => [{ id, dealId, name: d.name, address, city: d.city || '', state: d.state || '', ts: Date.now(), price, type: d.propertyType || 'Retail', saleType: d.saleType || 'For Sale', gate: d.gate || 'Contact Required', size: d.size || '—', status: d.status || 'Active', image: cover || propertyImage('1497366216548-37526070297c'), featured: false, listed: true, access: d.access || 'Public', subheader: d.subheader || '', highlights: d.highlights || '', description: d.description || '', capRate: d.capRate || '', noi: d.noi || '', pricePerSf: d.pricePerSf || '', lotSize: d.lotSize || '', yearBuilt: d.yearBuilt || '', occupancy: d.occupancy || '', tenants: d.tenants || '', tenancy: d.tenancy || '', leaseTypeDetail: d.leaseTypeDetail || '', subtype: d.subtype || '', zoning: d.zoning || '', parking: d.parking || '', unpriced: !!d.unpriced, expiration: d.expiration || '', saleCondition: d.saleCondition || '', propertyClass: d.propertyClass || '', yearsRenovated: d.yearsRenovated || '', numUnits: d.numUnits || '', tenantBrand: d.tenantBrand || '', parkingType: d.parkingType || '', groundLease: !!d.groundLease, tenantCredit: d.tenantCredit || '', leaseCommence: d.leaseCommence || '', leaseExpiration: d.leaseExpiration || '', leaseTerm: d.leaseTerm || '', remainingTerm: d.remainingTerm || '', leaseOptions: d.leaseOptions || '', rentBumps: d.rentBumps || '', investmentType: d.investmentType || '', proformaNoi: d.proformaNoi || '', proformaCap: d.proformaCap || '' }, ...list])
+    setDealRooms((list) => [{ id: roomId, listingId: id, dealId, name: d.name, address, image: cover, price, capRate: d.capRate || '', noi: d.noi || '', status: d.status || 'Active', access: d.access === 'Public' ? 'Free Access' : (d.access || 'Free Access'), files: (d.confidential || []).length, members: 0, updated: 'just now', ts: Date.now() }, ...list])
+    if (d.om && d.om.url) {
+      putPublicPackage(id, { name: d.om.name, url: d.om.url }).catch(() => {})
+      putPublicPackage(pkgNameKey(d.name), { name: d.om.name, url: d.om.url }).catch(() => {})
+      putFile(`om_${roomId}`, d.om).catch(() => {})
+    }
+    if (d.photos && d.photos.length) {
+      putFile(`photos_${roomId}`, { list: d.photos }).catch(() => {})
+      putGallery(id, d.photos.map((p) => p.url).filter(Boolean).slice(0, 12))
+    }
+    if (d.confidential && d.confidential.length) putFile(`roomfiles_${roomId}`, { list: d.confidential }).catch(() => {})
     setModalOpen(false)
+    notify(`Deal created — ${dealId}`)
   }
   const doDelete = () => {
     setDealRooms((list) => list.filter((r) => r.id !== confirm.id))
@@ -11616,9 +11632,7 @@ function DealRoomsPage({ dealRooms, setDealRooms, listings, setListings, onEditD
         <EmptyState title="No deal rooms yet" subtitle="Create a secure deal room to share confidential files with buyers." />
       )}
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="New Deal Room">
-        <DealRoomForm onSubmit={create} onCancel={() => setModalOpen(false)} />
-      </Modal>
+      {modalOpen && <NewDealModal onClose={() => setModalOpen(false)} onCreate={create} />}
 
       {/* Edit a deal room */}
       <Modal open={!!editRoom} onClose={() => setEditRoom(null)} title="Edit Deal Room">
