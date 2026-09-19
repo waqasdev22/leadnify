@@ -9876,19 +9876,15 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                             <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Access gate</p><p className="mt-0.5 text-sm font-semibold text-slate-800">{l.access}</p></div>
                             <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Public visibility</p><p className="mt-0.5 text-sm font-semibold text-slate-800">{l.listed && PUBLIC_STATUSES.includes(l.status) ? 'Visible on microsite' : 'Hidden'}</p></div>
                             <div className="col-span-2 sm:col-span-4">
-                              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Marketing package (PDF)</p>
-                              <input ref={pkgRef} type="file" accept="application/pdf,.pdf" className="hidden" onChange={(e) => onPkgUpload(l, e)} />
+                              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Marketing package (OM)</p>
                               {l.pkgName ? (
-                                <div className="mt-1 flex flex-wrap items-center gap-2">
-                                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-orange-100 bg-orange-50/50 px-2.5 py-1 text-xs font-semibold text-slate-700"><FileText className="h-3.5 w-3.5 text-brand" /> {l.pkgName}</span>
-                                  <button onClick={() => openPkg(l)} className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">Preview</button>
-                                  <button onClick={() => pkgRef.current && pkgRef.current.click()} className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">Replace</button>
-                                  <button onClick={() => removePkg(l)} className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-rose-600 transition hover:bg-rose-50">Remove</button>
-                                </div>
+                                <button onClick={() => openPkg(l)} title="Click to open the OM" className="mt-1 inline-flex items-center gap-1.5 rounded-lg border border-orange-100 bg-orange-50/50 px-2.5 py-1 text-xs font-semibold text-slate-700 transition hover:bg-orange-50 hover:text-brand">
+                                  <FileText className="h-3.5 w-3.5 text-brand" /> {l.pkgName}
+                                </button>
                               ) : (
-                                <button onClick={() => pkgRef.current && pkgRef.current.click()} className="mt-1 inline-flex items-center gap-1.5 rounded-lg border border-dashed border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-brand hover:text-brand"><Upload className="h-3.5 w-3.5" /> Upload package PDF</button>
+                                <p className="mt-1 text-xs text-slate-400">No OM yet — upload it from the Deal Room.</p>
                               )}
-                              <p className="mt-1 text-[11px] text-slate-400">Shown on the public listing’s “Download Package” button.</p>
+                              <p className="mt-1 text-[11px] text-slate-400">Click to open. Upload or replace the OM from the Deal Room.</p>
                             </div>
                             <div className="col-span-2 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-100 pt-3 sm:col-span-4">
                               <CardAction icon={Pencil} label="Edit" onClick={() => (setEditing(l), setModalOpen(true))} />
