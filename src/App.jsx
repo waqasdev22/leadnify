@@ -10781,6 +10781,9 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
         // Expose it publicly under THIS deal's unique id only (id-based) — never by name, so
         // one deal's OM can't link to another deal.
         putPublicPackage(room.listingId || room.id, { name: f.name, url }).catch(() => {})
+        // Reflect this OM on the matching My Deals listing row too, so its dropdown box shows
+        // the marketing package (keeps Deal Room + My Deals in sync).
+        if (setListings) setListings((list) => list.map((l) => (((room.listingId && l.id === room.listingId) || l.id === room.id || ((l.name || '').trim().toLowerCase() === (room.name || '').trim().toLowerCase())) ? { ...l, pkgName: f.name } : l)))
         setUploadPct(100); setTimeout(() => setUploadPct(null), 400)
         setOmFlyer(om)
         notify('OM / Flyer uploaded — it will show on the listing’s Download Package too')
@@ -10950,7 +10953,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
                 <IconButton icon={Eye} label="Open / preview" onClick={() => openOm(omFlyer)} />
                 <IconButton icon={Download} label="Download" onClick={() => downloadFile(omFlyer)} />
                 <IconButton icon={Upload} label="Replace" onClick={() => omRef.current && omRef.current.click()} />
-                <IconButton icon={Trash2} label="Remove" tone="danger" onClick={() => { delFile(`om_${room.id}`); if (room.listingId) delPublicPackage(room.listingId); delPublicPackage(pkgNameKey(room.name)); setOmFlyer(null); notify('OM / Flyer removed', 'error') }} />
+                <IconButton icon={Trash2} label="Remove" tone="danger" onClick={() => { delFile(`om_${room.id}`); delPublicPackage(room.listingId || room.id); if (setListings) setListings((list) => list.map((l) => (((room.listingId && l.id === room.listingId) || l.id === room.id || ((l.name || '').trim().toLowerCase() === (room.name || '').trim().toLowerCase())) ? { ...l, pkgName: '' } : l))); setOmFlyer(null); notify('OM / Flyer removed', 'error') }} />
               </div>
             ) : (
               <button onClick={() => omRef.current && omRef.current.click()} className="mt-3 flex w-full flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-slate-200 py-6 text-center transition hover:border-orange-300 hover:bg-orange-50/30">
