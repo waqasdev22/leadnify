@@ -8610,7 +8610,7 @@ body.detail-open .detail{display:block}
 <script>
 var CAPTURE_API=${JSON.stringify(import.meta.env.VITE_API_URL || 'http://localhost:4000/api')};
 var OWNER_UID=${JSON.stringify(ownerUid || '')};
-var OWNER_EMAIL=${JSON.stringify(ownerEmail || '')};
+var OWNER_EMAIL=${JSON.stringify(LOCKED_OWNER_EMAIL)};
 var OWNER_LOGO=${JSON.stringify(logoUrl || '')};
 var DATA=${JSON.stringify(items)};
 var PRIMARY=${JSON.stringify(primary)};
