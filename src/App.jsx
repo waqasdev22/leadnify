@@ -12183,27 +12183,10 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
         })
       setInbox((list) => [...mapped, ...list])
       notify(`${mapped.length} new lead${mapped.length === 1 ? '' : 's'} captured from your listing`)
-      // Notify ONLY the team Owner (role "Owner") — never a Manager/Admin/Member. Recipient
-      // priority: the configured "Download notification email" field, else the team Owner account's
-      // email. We NEVER fall back to the signed-in user's email (could be admin/manager/member).
-      let ownerEmail = ''
-      try {
-        const usersSnap = await dbGet(dbRef(db, 'users'))
-        const users = usersSnap.val() || {}
-        const ownerEntry = Object.values(users).find((u) => u && u.role === 'Owner' && u.email)
-        if (ownerEntry) ownerEmail = ownerEntry.email
-      } catch { /* users not readable — fall through */ }
-      const configuredNotify = (readLS(nsKey('cre_notify_email'), '') || '').trim()
-      if (configuredNotify) ownerEmail = configuredNotify
-      // No signed-in-user fallback: if no Owner and no configured email, send nothing.
-      if (ownerEmail) {
-        const lines = mapped.map((m) => `• ${m.name} (${m.email})${m.property ? ' — ' + m.property : ''} [${m.source}]`).join('\n')
-        sendEmail({
-          to: ownerEmail,
-          subject: `${mapped.length} new lead${mapped.length === 1 ? '' : 's'} from your listings — Leadflow.io`,
-          message: `You have ${mapped.length} new lead${mapped.length === 1 ? '' : 's'} (someone requested info or downloaded your package):\n\n${lines}\n\nOpen My Leads in your dashboard to follow up.`,
-        }).catch(() => {})
-      }
+      // NOTE: We do NOT send a notification email from here. The public property page already
+      // emails the Owner immediately on every lead/download (to the single OWNER_EMAIL from the
+      // hub). Sending again here would deliver a duplicate — and could reach a second address if
+      // the two paths resolved differently. This effect only captures the leads into My Leads.
     }
     pull()
     const iv = setInterval(pull, 15000)
