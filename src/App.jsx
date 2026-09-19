@@ -9327,6 +9327,13 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
   const [confirm, setConfirm] = useState(null)
   const [expandedId, setExpandedId] = useState(null) // row whose expanded detail is open
   const [newDealOpen, setNewDealOpen] = useState(false) // crexi-style New Deal field wizard
+  const [transferItem, setTransferItem] = useState(null) // deal being transferred from the My Deals row actions
+  // Row actions (moved here from the Deal Rooms cards): duplicate + transfer a deal from My Deals.
+  const duplicateListing = (l) => { setListings((list) => [{ ...l, id: uid(), dealId: newDealId(), name: `${l.name} (Copy)`, ts: Date.now() }, ...list]); notify('Deal duplicated') }
+  const transferListing = (l) => {
+    const room = (dealRooms || []).find((r) => r.id === l.id || r.listingId === l.id || ((r.name || '').trim().toLowerCase() === (l.name || '').trim().toLowerCase()))
+    setTransferItem(room || { id: l.id, name: l.name, address: l.address })
+  }
 
   // Create a deal from the New Deal wizard: one shared Deal ID across the listing + deal room,
   // with the OM, photos and confidential docs published so the property page/download work.
@@ -9884,9 +9891,15 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                               )}
                               <p className="mt-1 text-[11px] text-slate-400">Shown on the public listing’s “Download Package” button.</p>
                             </div>
-                            <div className="col-span-2 flex items-end gap-2 sm:col-span-4">
-                              <button onClick={() => (setEditing(l), setModalOpen(true))} className="rounded-lg bg-brand px-3 py-1.5 text-xs font-bold text-white transition hover:bg-brand-hover">Edit listing</button>
-                              <button onClick={() => { const w = window.open(`${hubUrl}&p=${l.id}`, '_blank'); if (!w) notify('Please allow pop-ups to open the preview', 'error') }} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">Preview</button>
+                            <div className="col-span-2 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-100 pt-3 sm:col-span-4">
+                              <CardAction icon={Pencil} label="Edit" onClick={() => (setEditing(l), setModalOpen(true))} />
+                              <CardAction icon={FileDown} label="PDF" onClick={() => downloadPdf(l, notify)} />
+                              <CardAction icon={Send} label="Transfer" onClick={() => transferListing(l)} />
+                              <CardAction icon={Copy} label="Duplicate" onClick={() => duplicateListing(l)} />
+                              <CardAction icon={Share2} label="Share" onClick={() => shareItem(l, notify)} />
+                              <CardAction icon={AtSign} label="Email" onClick={() => emailItem(l, notify)} />
+                              <CardAction icon={Share} label="Social" onClick={() => socialShare(l, notify)} />
+                              <button onClick={() => { const w = window.open(`${hubUrl}&p=${l.id}`, '_blank'); if (!w) notify('Please allow pop-ups to open the preview', 'error') }} className="ml-auto rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">Preview</button>
                             </div>
                           </div>
                         </td>
@@ -9912,6 +9925,15 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
       {/* Deal Rooms section removed from My Deals (still shown on the Dashboard & Deal Rooms page). */}
 
       {newDealOpen && <NewDealModal onClose={() => setNewDealOpen(false)} onCreate={createDeal} />}
+
+      <Modal open={!!transferItem} onClose={() => setTransferItem(null)} title="Transfer Deal">
+        <DealRoomTransferModal
+          room={transferItem}
+          user={user}
+          onClose={() => setTransferItem(null)}
+          onTransfer={(id, name) => { setDealRooms && setDealRooms((list) => list.map((r) => (r.id === id ? { ...r, assignee: name, owner_name: name } : r))); notify(name ? `Transferred to ${name}` : 'Kept in your account') }}
+        />
+      </Modal>
 
       <Modal open={!!editRoom} onClose={() => setEditRoom(null)} title="Edit Deal Room">
         {editRoom && (
