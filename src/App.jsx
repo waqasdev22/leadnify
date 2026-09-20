@@ -8598,6 +8598,7 @@ body.detail-open .detail{display:block}
 </style></head><body>
 <header class="hero"><div class="cut"></div><div class="inner"><div class="logo"></div><div class="count" id="count"></div></div></header>
 <div class="toolbar"><div class="tbin">
+  <button onclick="if(history.length>1){history.back()}else{try{window.close()}catch(e){}}" style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:700;color:#334155;cursor:pointer;white-space:nowrap">&larr; Back</button>
   <div class="seg" id="filterSeg"><button data-f="All" class="active">All</button><button data-f="For Sale">For Sale</button><button data-f="For Lease">For Lease</button></div>
   <input id="search" placeholder="Search..."/>
   <select id="sort"><option value="Newest">Sort: Newest First</option><option value="PriceHigh">Sort: Price High to Low</option><option value="PriceLow">Sort: Price Low to High</option></select>
