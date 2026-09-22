@@ -10694,7 +10694,42 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
   }
   // Read the SAME live leads list the central My Leads writes to, so a lead created there
   // (with this property selected) shows up here automatically.
-  const [allLeads] = usePersistentState('crm_inbox', CRM_INBOX_SEED)
+  const [allLeads, setAllLeads] = usePersistentState('crm_inbox', CRM_INBOX_SEED)
+  // Pull public leads (Request Info / downloads / NDA requests) into My Leads while a deal is open
+  // too — not only on the central My Leads page — so an NDA-approval request appears here without
+  // navigating away. De-dupes on the shared, persisted key set so nothing is added twice.
+  const [dealDrainedKeys, setDealDrainedKeys] = usePersistentState('crm_drained_keys', [])
+  const dealDrainRef = useRef(null)
+  useEffect(() => {
+    let alive = true
+    const pull = async () => {
+      const captured = await drainPublicLeads()
+      if (!alive || !captured.length) return
+      if (!dealDrainRef.current) dealDrainRef.current = new Set(dealDrainedKeys)
+      const known = dealDrainRef.current
+      const fresh = captured.filter((c) => c._key && !known.has(c._key))
+      if (!fresh.length) return
+      fresh.forEach((c) => known.add(c._key))
+      setDealDrainedKeys(Array.from(known))
+      const mapped = fresh.sort((a, b) => (a.ts || 0) - (b.ts || 0)).map((c) => {
+        const t = c.ts || Date.now()
+        return {
+          id: uid(), name: c.name || 'New Inquiry', email: c.email || '—', phone: c.phone || '',
+          company: c.company || '—', property: c.property || '', listing: c.property || 'Unknown',
+          type: 'Inquiry', profile: c.profile || 'Principal', pipeline: 'Active', active: 'Active',
+          source: c.source || 'Listing Website', status: 'New', unread: true, value: 0,
+          owner: ME, last: 'just now',
+          date: new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          ts: t, message: c.message || '',
+        }
+      })
+      setAllLeads((list) => [...mapped, ...list])
+    }
+    pull()
+    const iv = setInterval(pull, 15000)
+    return () => { alive = false; clearInterval(iv) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const roomLeads = allLeads
     .filter((l) => l.property === room.name)
     .filter((l) => (leadScope === 'mine' ? l.owner === ME : true))
