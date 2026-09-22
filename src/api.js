@@ -202,20 +202,26 @@ export const putGallery = async (id, images) => {
 }
 
 // ---- Auto-captured leads (from the public microsite "Request Information" form) ----
-// Visitors POST leads to /public/leads/<ownerUid>; the owner drains them into My Leads.
+// Visitors POST leads to a shared team bucket (public/leads/vaziamts) AND to the hub owner's uid
+// bucket. Any signed-in team member drains BOTH into My Leads, so a lead is never missed just
+// because a different account happened to publish the shared hub. Buckets are consumed on drain.
+const SHARED_LEADS_KEY = 'vaziamts'
 export const drainPublicLeads = async () => {
   const uid = currentUid()
   if (!uid) return []
-  try {
-    const snap = await dbGet(dbRef(db, `public/leads/${uid}`))
-    const val = snap.val()
-    if (!val || typeof val !== 'object') return []
-    const leads = Object.keys(val).map((k) => ({ _key: k, ...val[k] }))
-    await dbSet(dbRef(db, `public/leads/${uid}`), null) // consume them so they aren't re-added
-    return leads
-  } catch {
-    return []
+  const buckets = [uid, SHARED_LEADS_KEY]
+  const out = []
+  for (const key of buckets) {
+    try {
+      const snap = await dbGet(dbRef(db, `public/leads/${key}`))
+      const val = snap.val()
+      if (val && typeof val === 'object') {
+        Object.keys(val).forEach((k) => out.push({ _key: k, ...val[k] }))
+        await dbSet(dbRef(db, `public/leads/${key}`), null) // consume so they aren't re-added
+      }
+    } catch { /* ignore this bucket */ }
   }
+  return out
 }
 
 // Send a real email. Uses EmailJS (no server needed) once the 3 IDs are set in

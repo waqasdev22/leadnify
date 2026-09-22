@@ -21,7 +21,7 @@
       },
       "leads": {
         "$uid": {
-          ".read": "auth != null && auth.uid === $uid",
+          ".read": "auth != null && (auth.uid === $uid || $uid === 'vaziamts')",
           ".write": true
         }
       },
