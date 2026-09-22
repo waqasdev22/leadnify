@@ -8509,6 +8509,7 @@ input,select{border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;font-si
 .content.grid #map,.content.list #map,.content.card #map{display:none}
 .content.map #cards{display:none}
 #map{height:560px;border-radius:12px;border:1px solid #e2e8f0;z-index:0}
+@media(max-width:640px){.tbin{padding:10px 14px;gap:8px}#search{flex:1 1 100%;min-width:0}#sort{flex:1 1 100%}.spacer{margin-left:0;flex:1 1 100%;justify-content:space-between;gap:8px}#viewSeg{overflow-x:auto;-webkit-overflow-scrolling:touch}.seg button{padding:8px 11px;font-size:13px;white-space:nowrap}.content{padding:14px}#map{height:360px}}
 #cards{display:grid;gap:20px}
 .content.mapgrid #cards{grid-template-columns:1fr 1fr;align-content:start}
 .content.grid #cards{grid-template-columns:repeat(3,1fr)}
