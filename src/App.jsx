@@ -12117,6 +12117,10 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
   const [autoLog, setAutoLog] = usePersistentState('crm_auto_log', []) // 3.10 — activity log
   const [leadSources, setLeadSources] = usePersistentState('crm_lead_sources', {}) // Milestone III — connected platforms
   const [inbox, setInbox] = usePersistentState('crm_inbox', CRM_INBOX_SEED)
+  // Stable keys of public leads already pulled into My Leads — so re-polling never adds duplicates
+  // and every team member can read the (never-deleted) shared bucket independently.
+  const [drainedLeadKeys, setDrainedLeadKeys] = usePersistentState('crm_drained_keys', [])
+  const drainedKeysRef = useRef(null)
   // One-time backfill: older saved inboxes predate the per-lead `property` tag, so the seed
   // demo leads had no property and wouldn't show in their Deal Room. Restore it from the seed.
   useEffect(() => {
@@ -12183,7 +12187,15 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
     const pull = async () => {
       const captured = await drainPublicLeads()
       if (!alive || !captured.length) return
-      const mapped = captured
+      // De-dupe: only add leads whose stable key we haven't pulled before (the shared bucket is
+      // never deleted, so we rely on this instead of consuming it).
+      if (!drainedKeysRef.current) drainedKeysRef.current = new Set(drainedLeadKeys)
+      const known = drainedKeysRef.current
+      const fresh = captured.filter((c) => c._key && !known.has(c._key))
+      if (!fresh.length) return
+      fresh.forEach((c) => known.add(c._key))
+      setDrainedLeadKeys(Array.from(known))
+      const mapped = fresh
         .sort((a, b) => (a.ts || 0) - (b.ts || 0))
         .map((c) => {
           const t = c.ts || Date.now()
