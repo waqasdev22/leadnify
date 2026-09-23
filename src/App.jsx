@@ -7524,7 +7524,7 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
           putFile(`roomfiles_${roomId}`, { list: [omFile, ...cur.filter((f) => f.name !== omFile.name)] }).catch(() => {})
         }).catch(() => {})
       } else {
-        notify('OM saved, but the PDF is too large (over ~9 MB) to attach for download', 'error')
+        notify('OM saved, but the PDF is too large (over ~25 MB) to attach for download', 'error')
       }
     }
     const address = [bf.street, bf.city, bf.state, bf.zip].filter(Boolean).join(', ') || '—'
@@ -8981,7 +8981,7 @@ function AppearanceSettings() {
     const file = e.target.files?.[0]; e.target.value = ''
     if (!file) return
     if (!file.type.startsWith('image/')) { notify('Please choose an image (PNG or JPG)', 'error'); return }
-    if (file.size > MAX_CLOUD_FILE) { notify('Logo too large (max 9 MB)', 'error'); return }
+    if (file.size > MAX_CLOUD_FILE) { notify('Logo too large (max 25 MB)', 'error'); return }
     setLogo(await readFileAsDataUrl(file)); notify('Company logo saved — it replaces the property count on your microsite')
   }
   return (
@@ -9205,9 +9205,9 @@ function NewDealModal({ onClose, onCreate }) {
   const lbl = 'mb-1 block text-xs font-semibold text-slate-500'
 
   const onCover = async (e) => { const file = e.target.files?.[0]; e.target.value = ''; if (!file) return; if (!file.type.startsWith('image/')) { notify('Choose an image', 'error'); return } set('cover', await readFileAsDataUrl(file)) }
-  const onPhotos = async (e) => { const files = Array.from(e.target.files || []).filter((x) => x.type.startsWith('image/')); e.target.value = ''; const added = []; for (const file of files) { if (file.size > MAX_CLOUD_FILE) { notify(`"${file.name}" too large (max 9 MB) — skipped`, 'error'); continue } added.push({ id: uid(), name: file.name, url: await readFileAsDataUrl(file) }) } set('photos', [...f.photos, ...added].slice(0, 12)) }
-  const onOm = async (e) => { const file = e.target.files?.[0]; e.target.value = ''; if (!file) return; if (file.type !== 'application/pdf') { notify('OM must be a PDF', 'error'); return } if (file.size > MAX_CLOUD_FILE) { notify('PDF too large (max 9 MB)', 'error'); return } set('om', { name: file.name, size: fsize(file), date: today(), url: await readFileAsDataUrl(file) }) }
-  const onConf = async (e) => { const files = Array.from(e.target.files || []); e.target.value = ''; const added = []; for (const file of files) { if (file.size > MAX_CLOUD_FILE) { notify(`"${file.name}" too large (max 9 MB) — skipped`, 'error'); continue } added.push({ id: uid(), name: file.name, size: fsize(file), date: today(), url: await readFileAsDataUrl(file) }) } set('confidential', [...f.confidential, ...added]) }
+  const onPhotos = async (e) => { const files = Array.from(e.target.files || []).filter((x) => x.type.startsWith('image/')); e.target.value = ''; const added = []; for (const file of files) { if (file.size > MAX_CLOUD_FILE) { notify(`"${file.name}" too large (max 25 MB) — skipped`, 'error'); continue } added.push({ id: uid(), name: file.name, url: await readFileAsDataUrl(file) }) } set('photos', [...f.photos, ...added].slice(0, 12)) }
+  const onOm = async (e) => { const file = e.target.files?.[0]; e.target.value = ''; if (!file) return; if (file.type !== 'application/pdf') { notify('OM must be a PDF', 'error'); return } if (file.size > MAX_CLOUD_FILE) { notify('PDF too large (max 25 MB)', 'error'); return } set('om', { name: file.name, size: fsize(file), date: today(), url: await readFileAsDataUrl(file) }) }
+  const onConf = async (e) => { const files = Array.from(e.target.files || []); e.target.value = ''; const added = []; for (const file of files) { if (file.size > MAX_CLOUD_FILE) { notify(`"${file.name}" too large (max 25 MB) — skipped`, 'error'); continue } added.push({ id: uid(), name: file.name, size: fsize(file), date: today(), url: await readFileAsDataUrl(file) }) } set('confidential', [...f.confidential, ...added]) }
   const addContact = () => set('contacts', [...f.contacts, { id: uid(), name: '', company: '', email: '', phone: '' }])
   const setContact = (id, k, v) => set('contacts', f.contacts.map((c) => (c.id === id ? { ...c, [k]: v } : c)))
   const save = () => { if (!f.name.trim()) { setStep(0); notify('Deal name is required', 'error'); return } onCreate(f) }
@@ -9658,7 +9658,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
     sniff.onload = () => {
       const header = String.fromCharCode(...new Uint8Array(sniff.result))
       if (header !== '%PDF-') { notify('Only a PDF can be used as the marketing package', 'error'); return }
-      if (f.size > MAX_CLOUD_FILE) { notify('This PDF is too large to sync (max 9 MB) — please use a smaller file', 'error'); return }
+      if (f.size > MAX_CLOUD_FILE) { notify('This PDF is too large to sync (max 25 MB) — please use a smaller file', 'error'); return }
       readFileAsDataUrl(f)
         .then((url) => putPublicPackage(l.id, { name: f.name, url }))
         .then(() => { patch(l.id, { pkgName: f.name }); notify('Package attached — the “Download Package” button now works') })
@@ -11028,7 +11028,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
     const f = e.target.files && e.target.files[0]
     if (!f) return
     e.target.value = ''
-    if (f.size > MAX_CLOUD_FILE) { notify('This file is too large to sync across devices (max 9 MB)', 'error'); return }
+    if (f.size > MAX_CLOUD_FILE) { notify('This file is too large to sync across devices (max 25 MB)', 'error'); return }
     setUploadPct(20)
     ;(async () => {
       const url = await readFileAsDataUrl(f) // store in the cloud so it syncs to all devices
@@ -11051,7 +11051,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
     sniff.onload = () => {
       const header = String.fromCharCode(...new Uint8Array(sniff.result))
       if (header !== '%PDF-') { notify('That file is not a PDF — only PDF files can be uploaded here', 'error'); return }
-      if (f.size > MAX_CLOUD_FILE) { notify('This PDF is too large to sync across devices (max 9 MB)', 'error'); return }
+      if (f.size > MAX_CLOUD_FILE) { notify('This PDF is too large to sync across devices (max 25 MB)', 'error'); return }
       setUploadPct(20)
       ;(async () => {
         const url = await readFileAsDataUrl(f) // store the actual PDF in the cloud (syncs everywhere)
@@ -11087,7 +11087,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
     try {
       const added = []
       for (const f of imgs) {
-        if (f.size > MAX_CLOUD_FILE) { notify(`"${f.name}" is too large (max 9 MB) — skipped`, 'error'); continue }
+        if (f.size > MAX_CLOUD_FILE) { notify(`"${f.name}" is too large (max 25 MB) — skipped`, 'error'); continue }
         const url = await readFileAsDataUrl(f)
         added.push({ id: uid(), name: f.name, url })
       }

@@ -149,7 +149,7 @@ export const kvSet = async (key, value) => {
 // Small/medium files (OM/Flyer, confidential docs) are stored as a data URL under
 // /data/<uid>/files/<key> so the SAME account can open them on any device. Large
 // files stay device-local (IndexedDB) — see MAX_CLOUD_FILE.
-export const MAX_CLOUD_FILE = 9 * 1024 * 1024 // 9 MB original file (~12 MB base64)
+export const MAX_CLOUD_FILE = 25 * 1024 * 1024 // 25 MB original file (~33 MB base64) — OMs run 15 MB+
 export const getFile = async (key) => {
   const uid = currentUid()
   if (!uid) return null
