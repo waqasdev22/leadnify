@@ -8647,7 +8647,10 @@ function renderDemo(mult){var wrap=document.getElementById('demoWrap');if(!wrap)
 function setRadius(btn,mult){var bs=btn.parentElement.children,i;for(i=0;i<bs.length;i++)bs[i].classList.remove('active');btn.classList.add('active');renderDemo(mult);}
 function frow(k,v){return '<div class="frow"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>';}
 function detailHtml(l){var bc=l.saleType==='For Lease'?'#0d9488':'#e11d48';
-var ag=l.agentName?{name:l.agentName,role:l.agentLicense?('Lic '+l.agentLicense):'Listing Agent',email:l.agentEmail||AGENT.email,phone:l.agentPhone||'',initials:(String(l.agentName).split(/\\s+/).map(function(w){return w[0]||'';}).join('').slice(0,2).toUpperCase()||'NN')}:AGENT;
+var __ini=function(n){return String(n||'').split(/\\s+/).map(function(w){return w[0]||'';}).join('').slice(0,2).toUpperCase()||'NN';};
+var ag=l.agentName?{name:l.agentName,role:l.agentLicense?('Lic '+l.agentLicense):'Listing Agent',email:l.agentEmail||AGENT.email,phone:l.agentPhone||'',initials:__ini(l.agentName)}:AGENT;
+var ag2=l.agent2Name?{name:l.agent2Name,role:l.agent2License?('Lic '+l.agent2License):'Co-Agent',email:l.agent2Email||'',phone:l.agent2Phone||'',initials:__ini(l.agent2Name)}:null;
+var ag2Html=ag2?('<div class="agent" style="margin-top:14px;padding-top:14px;border-top:1px solid #e2e8f0"><div class="av">'+ag2.initials+'</div><div><div class="nm">'+ag2.name+'</div><div class="rl">'+ag2.role+'</div></div></div>'+(ag2.email?'<a class="aemail" href="mailto:'+ag2.email+'">&#9993; '+ag2.email+'</a>':'')+(ag2.phone?'<a class="aemail" href="tel:'+String(ag2.phone).replace(/[^0-9+]/g,'')+'">&#9742; '+ag2.phone+'</a>':'')):'';
 var __g=(Array.isArray(l.gallery)?l.gallery:[]).filter(function(x){return x;});
 var galInner=__g.length?[l.image].concat(__g).map(function(im){return '<img src="'+esc(im)+'" style="width:100%;height:260px;object-fit:cover;border-radius:0;display:block"/>';}).join(''):'<img src="'+esc(l.image)+'" style="grid-column:1/-1;width:540px;max-width:100%;height:400px;object-fit:cover;border-radius:0;display:block"/>';
 var facts='<div class="facts"><div class="fh">Property Facts</div><div class="fg"><div>'+frow('Price',fullPrice(l.price))+frow('Lease Type','Ground Lease')+frow('Rent Increases','10% every 5 Years')+frow('Guarantor','Corporate')+'</div><div>'+frow('Tenant','Quick Quack Car Wash')+frow('Lease Term','20 Years')+frow('Renewal Options','Four (4), Five (5) Yr')+frow('Cap Rate','5.50%')+'</div></div></div>';
@@ -8666,7 +8669,7 @@ return '<div class="dhero"><img src="'+esc(l.image)+'"/><div class="ov"></div><d
 +'<div class="dblock" id="sec-Gallery"><div class="bl">Gallery</div><div class="gal">'+galInner+'</div></div>'
 +'<div class="dblock" id="sec-Location"><div class="bl">Location</div><div id="dmap"></div></div>'
 +'</div>'
-+'<div class="dside"><div class="card2"><div class="c2h">Listing Agent</div><div class="c2b"><div class="agent"><div class="av">'+ag.initials+'</div><div><div class="nm">'+ag.name+'</div><div class="rl">'+ag.role+'</div></div></div><a class="aemail" href="mailto:'+ag.email+'">&#9993; '+ag.email+'</a>'+(ag.phone?'<a class="aemail" href="tel:'+String(ag.phone).replace(/[^0-9+]/g,'')+'">&#9742; '+ag.phone+'</a>':'')+'<button class="btnp" onclick="dlPkg()">&#8681;&nbsp; Download Marketing Package</button><div class="sharerow"><span>Share</span><span>Email</span><span>Link</span></div></div></div>'
++'<div class="dside"><div class="card2"><div class="c2h">Listing Agent</div><div class="c2b"><div class="agent"><div class="av">'+ag.initials+'</div><div><div class="nm">'+ag.name+'</div><div class="rl">'+ag.role+'</div></div></div><a class="aemail" href="mailto:'+ag.email+'">&#9993; '+ag.email+'</a>'+(ag.phone?'<a class="aemail" href="tel:'+String(ag.phone).replace(/[^0-9+]/g,'')+'">&#9742; '+ag.phone+'</a>':'')+ag2Html+'<button class="btnp" onclick="dlPkg()">&#8681;&nbsp; Download Marketing Package</button><div class="sharerow"><span>Share</span><span>Email</span><span>Link</span></div></div></div>'
 +'<div class="card2" id="sec-Contact"><div class="c2h">Request Information</div><div class="c2b"><form onsubmit="return submitInquiry(event)"><input class="finput" placeholder="Your Name *" required/><input class="finput" type="email" placeholder="Email *" required/><input class="finput" placeholder="Phone (optional)"/><textarea class="finput" rows="3">I\\'m interested in '+esc(l.name)+'. Please send me more information.</textarea><button class="btnp" type="submit">&#9993;&nbsp; Send Inquiry</button></form></div></div></div></div>'
 +'<footer><div class="line"></div><p>Powered by <b>Leadflow.io</b></p></footer>';}
 function goContact(){var el=document.getElementById('sec-Contact');if(el)el.scrollIntoView({behavior:'smooth'});}
@@ -8931,6 +8934,12 @@ export const toMicrositeItems = (listings) =>
           ['Sub-type', l.subtype || ''],
           ['Zoning', l.zoning || ''],
           ['Parking', l.parking ? l.parking + (l.parkingType && l.parkingType !== 'spaces' ? ' (' + l.parkingType + ')' : ' spaces') : ''],
+          // Hospitality metrics (only filled for hotel deals)
+          ['Number of Rooms', l.numRooms || ''],
+          ['Price / Room', l.pricePerRoom ? compactPrice(l.pricePerRoom) : ''],
+          ['ADR', l.adr ? '$' + l.adr : ''],
+          ['RevPAR', l.revpar ? '$' + l.revpar : ''],
+          ['Broker of Record', l.bor || ''],
         ].filter((r) => r[1]),
         lat,
         lng,
@@ -8941,11 +8950,17 @@ export const toMicrositeItems = (listings) =>
         pkgId: l.id,
         pkgName: l.pkgName || '',
         pkgNameKey: pkgNameKey(l.name),
-        // Per-property listing agent (from the spreadsheet import) — shown on the property page.
+        // Per-property listing agent(s) + Broker of Record (from the spreadsheet import).
         agentName: l.agentName || '',
         agentLicense: l.agentLicense || '',
         agentEmail: l.agentEmail || '',
         agentPhone: l.agentPhone || '',
+        agent2Name: l.agent2Name || '',
+        agent2License: l.agent2License || '',
+        agent2Email: l.agent2Email || '',
+        agent2Phone: l.agent2Phone || '',
+        bor: l.bor || '',
+        borDisclaimer: l.borDisclaimer || '',
       }
     })
 
@@ -9080,6 +9095,10 @@ function ImportDealsModal({ onClose, onImport }) {
       agentName: header.findIndex((h) => h.replace(/\s/g, '') === 'agent1'),
       agentRe: header.findIndex((h) => h.includes('agent 1') && h.includes('#')),
       agentContact: header.findIndex((h) => h.includes('agent 1') && h.includes('contact')),
+      agent2Name: header.findIndex((h) => h.replace(/\s/g, '') === 'agent2'),
+      agent2Re: header.findIndex((h) => h.includes('agent 2') && h.includes('#')),
+      agent2Contact: header.findIndex((h) => h.includes('agent 2') && h.includes('contact')),
+      borDisc: col('disclam'),
     }
     if (idx.tenant < 0) { notify('Could not find a "Tenant" column in the header row', 'error'); return }
     const out = []
@@ -9089,12 +9108,13 @@ function ImportDealsModal({ onClose, onImport }) {
       const name = get('tenant')
       if (!name) continue
       const service = get('service')
+      const emailOf = (s) => { const m = String(s || '').match(/E:\s*([^\s|]+@[^\s|]+)/i); return m ? m[1] : '' }
+      const phoneOf = (s) => { const m = String(s || '').match(/D:\s*([0-9()+.\-\s]+)/i); return m ? m[1].trim() : '' }
       const contact = get('agentContact')
-      const em = contact.match(/E:\s*([^\s|]+@[^\s|]+)/i)
-      const ph = contact.match(/D:\s*([0-9()+.\-\s]+)/i)
-      out.push({
-        name,
-        propertyType: typeMap(get('division')),
+      const type = typeMap(get('division'))
+      const isHotel = type === 'Hospitality'
+      const row = {
+        name, propertyType: type,
         saleType: /landlord|lease/i.test(service) && !/sale/i.test(service) ? 'For Lease' : 'For Sale',
         street: get('address'), city: get('city'), state: get('state'),
         price: num(get('price')),
@@ -9103,11 +9123,25 @@ function ImportDealsModal({ onClose, onImport }) {
         leaseTypeDetail: get('leaseType'), leaseCommence: get('leaseComm'), leaseExpiration: get('leaseExp'),
         remainingTerm: get('leaseTerm'),
         highlights: [get('invHigh'), get('mktHigh')].filter(Boolean).join('\n'),
-        subheader: service, bor: get('bor'),
+        subheader: service, bor: get('bor'), borDisclaimer: get('borDisc'),
         agentName: get('agentName'), agentLicense: get('agentRe'),
-        agentEmail: em ? em[1] : '', agentPhone: ph ? ph[1].trim() : '',
+        agentEmail: emailOf(contact), agentPhone: phoneOf(contact),
+        agent2Name: get('agent2Name'), agent2License: get('agent2Re'),
+        agent2Email: emailOf(get('agent2Contact')), agent2Phone: phoneOf(get('agent2Contact')),
         listed: !/off\s*market/i.test(get('market')),
-      })
+      }
+      // Hospitality rows use a different column layout (# Rooms, Price/Room, Rev Multiplier, PIP,
+      // ADR, Occupancy, RevPAR) sitting where Price/NOI/CAP/Lease normally are — remap them.
+      if (isHotel) {
+        row.numRooms = String(num(get('price')) || '')
+        row.pricePerRoom = get('noi') ? String(num(get('noi'))) : ''
+        row.adr = get('leaseType') ? String(num(get('leaseType'))) : ''
+        row.occupancy = get('leaseComm') ? String(parseFloat(String(get('leaseComm')).replace('%', '').trim()) || '') : ''
+        row.revpar = get('leaseExp') ? String(num(get('leaseExp'))) : ''
+        row.price = (num(get('price')) && num(get('noi'))) ? Math.round(num(get('price')) * num(get('noi'))) : 0
+        row.noi = ''; row.capRate = ''; row.leaseTypeDetail = ''; row.leaseCommence = ''; row.leaseExpiration = ''; row.remainingTerm = ''
+      }
+      out.push(row)
     }
     if (!out.length) { notify('No property rows found', 'error'); return }
     setRows(out)
@@ -9482,8 +9516,10 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
         saleCondition: '', propertyClass: '', yearsRenovated: '', numUnits: '', tenantBrand: d.name || '', parkingType: '',
         groundLease: false, tenantCredit: '', leaseCommence: d.leaseCommence || '', leaseExpiration: d.leaseExpiration || '',
         leaseTerm: '', remainingTerm: d.remainingTerm || '', leaseOptions: '', rentBumps: '', investmentType: '',
-        proformaNoi: '', proformaCap: '', bor: d.bor || '',
+        proformaNoi: '', proformaCap: '', bor: d.bor || '', borDisclaimer: d.borDisclaimer || '',
         agentName: d.agentName || '', agentLicense: d.agentLicense || '', agentEmail: d.agentEmail || '', agentPhone: d.agentPhone || '',
+        agent2Name: d.agent2Name || '', agent2License: d.agent2License || '', agent2Email: d.agent2Email || '', agent2Phone: d.agent2Phone || '',
+        numRooms: d.numRooms || '', pricePerRoom: d.pricePerRoom || '', adr: d.adr || '', occupancy: d.occupancy || '', revpar: d.revpar || '',
       }
     })
     setListings((list) => [...made, ...list])
