@@ -8647,6 +8647,7 @@ function renderDemo(mult){var wrap=document.getElementById('demoWrap');if(!wrap)
 function setRadius(btn,mult){var bs=btn.parentElement.children,i;for(i=0;i<bs.length;i++)bs[i].classList.remove('active');btn.classList.add('active');renderDemo(mult);}
 function frow(k,v){return '<div class="frow"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>';}
 function detailHtml(l){var bc=l.saleType==='For Lease'?'#0d9488':'#e11d48';
+var ag=l.agentName?{name:l.agentName,role:l.agentLicense?('Lic '+l.agentLicense):'Listing Agent',email:l.agentEmail||AGENT.email,phone:l.agentPhone||'',initials:(String(l.agentName).split(/\\s+/).map(function(w){return w[0]||'';}).join('').slice(0,2).toUpperCase()||'NN')}:AGENT;
 var __g=(Array.isArray(l.gallery)?l.gallery:[]).filter(function(x){return x;});
 var galInner=__g.length?[l.image].concat(__g).map(function(im){return '<img src="'+esc(im)+'" style="width:100%;height:260px;object-fit:cover;border-radius:0;display:block"/>';}).join(''):'<img src="'+esc(l.image)+'" style="grid-column:1/-1;width:540px;max-width:100%;height:400px;object-fit:cover;border-radius:0;display:block"/>';
 var facts='<div class="facts"><div class="fh">Property Facts</div><div class="fg"><div>'+frow('Price',fullPrice(l.price))+frow('Lease Type','Ground Lease')+frow('Rent Increases','10% every 5 Years')+frow('Guarantor','Corporate')+'</div><div>'+frow('Tenant','Quick Quack Car Wash')+frow('Lease Term','20 Years')+frow('Renewal Options','Four (4), Five (5) Yr')+frow('Cap Rate','5.50%')+'</div></div></div>';
@@ -8665,7 +8666,7 @@ return '<div class="dhero"><img src="'+esc(l.image)+'"/><div class="ov"></div><d
 +'<div class="dblock" id="sec-Gallery"><div class="bl">Gallery</div><div class="gal">'+galInner+'</div></div>'
 +'<div class="dblock" id="sec-Location"><div class="bl">Location</div><div id="dmap"></div></div>'
 +'</div>'
-+'<div class="dside"><div class="card2"><div class="c2h">Listing Agent</div><div class="c2b"><div class="agent"><div class="av">'+AGENT.initials+'</div><div><div class="nm">'+AGENT.name+'</div><div class="rl">'+AGENT.role+'</div></div></div><a class="aemail" href="mailto:'+AGENT.email+'">&#9993; '+AGENT.email+'</a><button class="btnp" onclick="dlPkg()">&#8681;&nbsp; Download Marketing Package</button><div class="sharerow"><span>Share</span><span>Email</span><span>Link</span></div></div></div>'
++'<div class="dside"><div class="card2"><div class="c2h">Listing Agent</div><div class="c2b"><div class="agent"><div class="av">'+ag.initials+'</div><div><div class="nm">'+ag.name+'</div><div class="rl">'+ag.role+'</div></div></div><a class="aemail" href="mailto:'+ag.email+'">&#9993; '+ag.email+'</a>'+(ag.phone?'<a class="aemail" href="tel:'+String(ag.phone).replace(/[^0-9+]/g,'')+'">&#9742; '+ag.phone+'</a>':'')+'<button class="btnp" onclick="dlPkg()">&#8681;&nbsp; Download Marketing Package</button><div class="sharerow"><span>Share</span><span>Email</span><span>Link</span></div></div></div>'
 +'<div class="card2" id="sec-Contact"><div class="c2h">Request Information</div><div class="c2b"><form onsubmit="return submitInquiry(event)"><input class="finput" placeholder="Your Name *" required/><input class="finput" type="email" placeholder="Email *" required/><input class="finput" placeholder="Phone (optional)"/><textarea class="finput" rows="3">I\\'m interested in '+esc(l.name)+'. Please send me more information.</textarea><button class="btnp" type="submit">&#9993;&nbsp; Send Inquiry</button></form></div></div></div></div>'
 +'<footer><div class="line"></div><p>Powered by <b>Leadflow.io</b></p></footer>';}
 function goContact(){var el=document.getElementById('sec-Contact');if(el)el.scrollIntoView({behavior:'smooth'});}
@@ -8940,6 +8941,11 @@ export const toMicrositeItems = (listings) =>
         pkgId: l.id,
         pkgName: l.pkgName || '',
         pkgNameKey: pkgNameKey(l.name),
+        // Per-property listing agent (from the spreadsheet import) — shown on the property page.
+        agentName: l.agentName || '',
+        agentLicense: l.agentLicense || '',
+        agentEmail: l.agentEmail || '',
+        agentPhone: l.agentPhone || '',
       }
     })
 
@@ -9071,6 +9077,9 @@ function ImportDealsModal({ onClose, onImport }) {
       address: col('address'), city: col('city'), state: col('state'), price: col('price'), noi: col('noi'),
       cap: col('cap'), leaseTerm: col('lease term'), leaseType: col('lease type'), leaseComm: col('commencement'),
       leaseExp: col('expri'), invHigh: col('investment highlight'), mktHigh: col('market highlight'), bor: col('bor info'),
+      agentName: header.findIndex((h) => h.replace(/\s/g, '') === 'agent1'),
+      agentRe: header.findIndex((h) => h.includes('agent 1') && h.includes('#')),
+      agentContact: header.findIndex((h) => h.includes('agent 1') && h.includes('contact')),
     }
     if (idx.tenant < 0) { notify('Could not find a "Tenant" column in the header row', 'error'); return }
     const out = []
@@ -9080,6 +9089,9 @@ function ImportDealsModal({ onClose, onImport }) {
       const name = get('tenant')
       if (!name) continue
       const service = get('service')
+      const contact = get('agentContact')
+      const em = contact.match(/E:\s*([^\s|]+@[^\s|]+)/i)
+      const ph = contact.match(/D:\s*([0-9()+.\-\s]+)/i)
       out.push({
         name,
         propertyType: typeMap(get('division')),
@@ -9092,6 +9104,8 @@ function ImportDealsModal({ onClose, onImport }) {
         remainingTerm: get('leaseTerm'),
         highlights: [get('invHigh'), get('mktHigh')].filter(Boolean).join('\n'),
         subheader: service, bor: get('bor'),
+        agentName: get('agentName'), agentLicense: get('agentRe'),
+        agentEmail: em ? em[1] : '', agentPhone: ph ? ph[1].trim() : '',
         listed: !/off\s*market/i.test(get('market')),
       })
     }
@@ -9469,6 +9483,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
         groundLease: false, tenantCredit: '', leaseCommence: d.leaseCommence || '', leaseExpiration: d.leaseExpiration || '',
         leaseTerm: '', remainingTerm: d.remainingTerm || '', leaseOptions: '', rentBumps: '', investmentType: '',
         proformaNoi: '', proformaCap: '', bor: d.bor || '',
+        agentName: d.agentName || '', agentLicense: d.agentLicense || '', agentEmail: d.agentEmail || '', agentPhone: d.agentPhone || '',
       }
     })
     setListings((list) => [...made, ...list])
