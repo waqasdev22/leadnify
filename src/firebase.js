@@ -43,9 +43,18 @@ export async function setMemberPassword({ uid, password }) {
 // Upload a file to Firebase Storage and return its public download URL.
 // Images live in the cloud; only the small URL is stored in the document —
 // so large photos never blow the browser's localStorage quota.
-export async function uploadToStorage(file) {
+// `folder` groups a property's files together, e.g. uploads/<property>/<file>, so the Storage
+// console shows one folder per property instead of everything dumped in a single uploads/ folder.
+export async function uploadToStorage(file, folder = "") {
   const safe = (file.name || "file").replace(/[^a-zA-Z0-9._-]/g, "_");
-  const path = `uploads/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safe}`;
+  const dir = String(folder || "")
+    .replace(/[^a-zA-Z0-9._ -]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+  const base = dir ? `uploads/${dir}` : "uploads";
+  const path = `${base}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safe}`;
   const r = storageRef(storage, path);
   await uploadBytes(r, file);
   return await getDownloadURL(r);

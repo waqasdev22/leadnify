@@ -9220,9 +9220,9 @@ function NewDealModal({ onClose, onCreate }) {
   const lbl = 'mb-1 block text-xs font-semibold text-slate-500'
 
   const onCover = async (e) => { const file = e.target.files?.[0]; e.target.value = ''; if (!file) return; if (!file.type.startsWith('image/')) { notify('Choose an image', 'error'); return } set('cover', await readFileAsDataUrl(file)) }
-  const onPhotos = async (e) => { const files = Array.from(e.target.files || []).filter((x) => x.type.startsWith('image/')); e.target.value = ''; const added = []; for (const file of files) { if (file.size > 150 * 1024 * 1024) { notify(`"${file.name}" too large (max 150 MB) — skipped`, 'error'); continue } added.push({ id: uid(), name: file.name, url: await uploadToStorage(file) }) } set('photos', [...f.photos, ...added].slice(0, 12)) }
-  const onOm = async (e) => { const file = e.target.files?.[0]; e.target.value = ''; if (!file) return; if (file.type !== 'application/pdf') { notify('OM must be a PDF', 'error'); return } if (file.size > 150 * 1024 * 1024) { notify('PDF too large (max 150 MB)', 'error'); return } set('om', { name: file.name, size: fsize(file), date: today(), url: await uploadToStorage(file) }) }
-  const onConf = async (e) => { const files = Array.from(e.target.files || []); e.target.value = ''; const added = []; for (const file of files) { if (file.size > 150 * 1024 * 1024) { notify(`"${file.name}" too large (max 150 MB) — skipped`, 'error'); continue } added.push({ id: uid(), name: file.name, size: fsize(file), date: today(), url: await uploadToStorage(file) }) } set('confidential', [...f.confidential, ...added]) }
+  const onPhotos = async (e) => { const files = Array.from(e.target.files || []).filter((x) => x.type.startsWith('image/')); e.target.value = ''; const added = []; for (const file of files) { if (file.size > 150 * 1024 * 1024) { notify(`"${file.name}" too large (max 150 MB) — skipped`, 'error'); continue } added.push({ id: uid(), name: file.name, url: await uploadToStorage(file, f.name) }) } set('photos', [...f.photos, ...added].slice(0, 12)) }
+  const onOm = async (e) => { const file = e.target.files?.[0]; e.target.value = ''; if (!file) return; if (file.type !== 'application/pdf') { notify('OM must be a PDF', 'error'); return } if (file.size > 150 * 1024 * 1024) { notify('PDF too large (max 150 MB)', 'error'); return } set('om', { name: file.name, size: fsize(file), date: today(), url: await uploadToStorage(file, f.name) }) }
+  const onConf = async (e) => { const files = Array.from(e.target.files || []); e.target.value = ''; const added = []; for (const file of files) { if (file.size > 150 * 1024 * 1024) { notify(`"${file.name}" too large (max 150 MB) — skipped`, 'error'); continue } added.push({ id: uid(), name: file.name, size: fsize(file), date: today(), url: await uploadToStorage(file, f.name) }) } set('confidential', [...f.confidential, ...added]) }
   const addContact = () => set('contacts', [...f.contacts, { id: uid(), name: '', company: '', email: '', phone: '' }])
   const setContact = (id, k, v) => set('contacts', f.contacts.map((c) => (c.id === id ? { ...c, [k]: v } : c)))
   const save = () => { if (!f.name.trim()) { setStep(0); notify('Deal name is required', 'error'); return } onCreate(f) }
@@ -9677,7 +9677,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
       const header = String.fromCharCode(...new Uint8Array(sniff.result))
       if (header !== '%PDF-') { notify('Only a PDF can be used as the marketing package', 'error'); return }
       if (f.size > 150 * 1024 * 1024) { notify('This PDF is too large (max 150 MB)', 'error'); return }
-      uploadToStorage(f) // Firebase Storage → https URL (15 MB+ OMs work)
+      uploadToStorage(f, l.name) // Firebase Storage → per-property folder → https URL (15 MB+ OMs work)
         .then((url) => putPublicPackage(l.id, { name: f.name, url }))
         .then(() => { patch(l.id, { pkgName: f.name }); notify('Package attached — the “Download Package” button now works') })
         .catch(() => notify('Upload failed — please try again', 'error'))
@@ -11052,7 +11052,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
     if (f.size > 150 * 1024 * 1024) { notify('This file is too large (max 150 MB)', 'error'); return }
     setUploadPct(20)
     ;(async () => {
-      const url = await uploadToStorage(f) // Firebase Storage → https URL (handles large files, no RTDB size cap)
+      const url = await uploadToStorage(f, room.name) // per-property folder in Storage; https URL (no RTDB size cap)
       const item = { name: f.name, size: fileSize(f), date: new Date().toLocaleDateString('en-GB'), url }
       const next = [item, ...files]
       await putFile(`roomfiles_${room.id}`, { list: next })
@@ -11075,7 +11075,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
       if (f.size > 150 * 1024 * 1024) { notify('This PDF is too large (max 150 MB)', 'error'); return }
       setUploadPct(20)
       ;(async () => {
-        const url = await uploadToStorage(f) // Firebase Storage → https URL (15 MB+ OMs work; no RTDB size cap)
+        const url = await uploadToStorage(f, room.name) // per-property folder in Storage; https URL (15 MB+ OMs work)
         const om = { name: f.name, size: fileSize(f), date: new Date().toLocaleDateString('en-GB'), url }
         await putFile(`om_${room.id}`, om)
         // Expose it publicly under THIS deal's unique id only (id-based) — never by name, so
@@ -11109,7 +11109,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
       const added = []
       for (const f of imgs) {
         if (f.size > 150 * 1024 * 1024) { notify(`"${f.name}" is too large (max 150 MB) — skipped`, 'error'); continue }
-        const url = await uploadToStorage(f) // Firebase Storage → https URL
+        const url = await uploadToStorage(f, room.name) // per-property folder in Storage; https URL
         added.push({ id: uid(), name: f.name, url })
       }
       const next = [...photos, ...added].slice(0, 12)
