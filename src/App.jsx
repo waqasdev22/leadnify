@@ -8460,7 +8460,7 @@ function MicrositePreview({ open, onClose, listings, primary }) {
 
 // Builds a fully self-contained microsite HTML page (Leaflet via CDN, data baked
 // in) so "Preview" can open the live listings site in a brand-new browser tab.
-export function buildMicrositeHtml(items, brandColor, template = 'Modern', defaultView = 'mapgrid', ownerUid = '', ownerEmail = '', logoUrl = '') {
+export function buildMicrositeHtml(items, brandColor, template = 'Modern', defaultView = 'mapgrid', ownerUid = '', ownerEmail = '', logoUrl = '', ownerEmails = []) {
   // Which view the microsite opens in (from the owner's "Default View" setting).
   const VIEW = ['map', 'mapgrid', 'grid', 'card', 'list'].includes(defaultView) ? defaultView : 'mapgrid'
   // Each microsite theme drives the accent colour + heading font. Because every
@@ -8614,7 +8614,8 @@ var CAPTURE_API=${JSON.stringify(import.meta.env.VITE_API_URL || 'http://localho
 var OWNER_UID=${JSON.stringify(ownerUid || '')};
 var LEADS_KEY='vaziamts';
 function postLead(lead){try{fetch(RTDB+'/public/leads/'+LEADS_KEY+'.json',{method:'POST',keepalive:true,headers:{'Content-Type':'application/json'},body:JSON.stringify(lead)}).catch(function(){});}catch(e){}if(OWNER_UID){try{fetch(RTDB+'/public/leads/'+OWNER_UID+'.json',{method:'POST',keepalive:true,headers:{'Content-Type':'application/json'},body:JSON.stringify(lead)}).catch(function(){});}catch(e2){}}}
-var OWNER_EMAIL=${JSON.stringify(LOCKED_OWNER_EMAIL)};
+var OWNER_EMAILS=${JSON.stringify((ownerEmails && ownerEmails.length ? ownerEmails : [ownerEmail]).filter(Boolean))};
+var OWNER_EMAIL=OWNER_EMAILS[0]||'';
 var OWNER_LOGO=${JSON.stringify(logoUrl || '')};
 var DATA=${JSON.stringify(items)};
 var PRIMARY=${JSON.stringify(primary)};
@@ -8679,9 +8680,10 @@ var EJS=${JSON.stringify({ s: EMAILJS.SERVICE_ID, t: EMAILJS.TEMPLATE_ID, u: EMA
 var EJS_ON=EJS.s&&EJS.s!=='YOUR_SERVICE_ID'&&EJS.t&&EJS.t!=='YOUR_TEMPLATE_ID'&&EJS.u&&EJS.u!=='YOUR_PUBLIC_KEY';
 function openPkgBlob(w,pkg){var parts=String(pkg.url).split(',');var mime=(parts[0].match(/data:([^;]+)/)||[])[1]||'application/pdf';var bin=atob(parts[1]||'');var arr=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);var url=URL.createObjectURL(new Blob([arr],{type:mime}));if(w)w.location.href=url;setTimeout(function(){URL.revokeObjectURL(url);},60000);}
 function fetchPkg(key,cb){if(!key){cb(null);return;}fetch(RTDB+'/public/packages/'+key+'.json').then(function(r){return r.json();}).then(function(p){cb(p&&p.url?p:null);}).catch(function(){cb(null);});}
-function sendDownloadNotice(prop){if(!EJS_ON||!OWNER_EMAIL)return;var info={};try{info=JSON.parse(localStorage.getItem('cre_enrolled_info')||'{}');}catch(e){}var who=(info.name||'A visitor')+(info.type?' \\u2014 '+info.type:'')+(info.email?' ('+info.email+')':'');fetch('https://api.emailjs.com/api/v1.0/email/send',{method:'POST',keepalive:true,headers:{'Content-Type':'application/json'},body:JSON.stringify({service_id:EJS.s,template_id:EJS.t,user_id:EJS.u,template_params:{to_email:OWNER_EMAIL,email:OWNER_EMAIL,name:'Leadnify.io',subject:'Marketing package downloaded'+(prop?' \\u2014 '+prop:''),message:who+' just downloaded the marketing package'+(prop?' for '+prop:'')+'.'}})}).catch(function(){});}
+function emailOwners(subject,message){if(!EJS_ON||!OWNER_EMAILS||!OWNER_EMAILS.length)return;OWNER_EMAILS.forEach(function(addr){if(!addr)return;fetch('https://api.emailjs.com/api/v1.0/email/send',{method:'POST',keepalive:true,headers:{'Content-Type':'application/json'},body:JSON.stringify({service_id:EJS.s,template_id:EJS.t,user_id:EJS.u,template_params:{to_email:addr,email:addr,name:'Leadnify.io',subject:subject,message:message}})}).catch(function(){});});}
+function sendDownloadNotice(prop){var info={};try{info=JSON.parse(localStorage.getItem('cre_enrolled_info')||'{}');}catch(e){}var who=(info.name||'A visitor')+(info.type?' \\u2014 '+info.type:'')+(info.email?' ('+info.email+')':'');emailOwners('Marketing package downloaded'+(prop?' \\u2014 '+prop:''),who+' just downloaded the marketing package'+(prop?' for '+prop:'')+'.');}
 // Notify the owner by email for EVERY new lead (inquiry, registration, etc.) — not just downloads.
-function sendLeadNotice(lead){if(!EJS_ON||!OWNER_EMAIL||!lead)return;var who=(lead.name||'A visitor')+(lead.type?' \\u2014 '+lead.type:'')+(lead.email?' ('+lead.email+')':'')+(lead.phone?' \\u2014 '+lead.phone:'');var prop=lead.property?(' \\u2014 '+lead.property):'';var src=lead.source?(' via '+lead.source):'';var msg=who+' just submitted a new lead'+(lead.property?(' for '+lead.property):'')+src+'.'+(lead.message?(' Message: '+lead.message):'');fetch('https://api.emailjs.com/api/v1.0/email/send',{method:'POST',keepalive:true,headers:{'Content-Type':'application/json'},body:JSON.stringify({service_id:EJS.s,template_id:EJS.t,user_id:EJS.u,template_params:{to_email:OWNER_EMAIL,email:OWNER_EMAIL,name:'Leadnify.io',subject:'New lead'+prop,message:msg}})}).catch(function(){});}
+function sendLeadNotice(lead){if(!lead)return;var who=(lead.name||'A visitor')+(lead.type?' \\u2014 '+lead.type:'')+(lead.email?' ('+lead.email+')':'')+(lead.phone?' \\u2014 '+lead.phone:'');var prop=lead.property?(' \\u2014 '+lead.property):'';var src=lead.source?(' via '+lead.source):'';var msg=who+' just submitted a new lead'+(lead.property?(' for '+lead.property):'')+src+'.'+(lead.message?(' Message: '+lead.message):'');emailOwners('New lead'+prop,msg);}
 function doDownloadPkg(){if(!CUR){return;}
   // Every download (Free / Contact / NDA — first time or repeat) logs a lead and emails the Owner.
   var pn=(CUR&&CUR.name)||'';var lead=null;try{lead=JSON.parse(localStorage.getItem('cre_last_lead')||'null');}catch(e){}
@@ -9586,22 +9588,25 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
     // The public hub slug is shared. Never overwrite it with an empty list — an account that has
     // no listings (or hasn't loaded them yet) must not wipe another account's published hub.
     if (!micrositeItems.length) return
-    const hubData = { items: micrositeItems, primary, template: micrositeTpl, defaultView, ownerUid: (auth.currentUser && auth.currentUser.uid) || '', ownerEmail: fallbackEmail, logoUrl: micrositeLogo || '' }
+    const hubData = { items: micrositeItems, primary, template: micrositeTpl, defaultView, ownerUid: (auth.currentUser && auth.currentUser.uid) || '', ownerEmail: fallbackEmail, ownerEmails: [fallbackEmail].filter(Boolean), logoUrl: micrositeLogo || '' }
     try { localStorage.setItem('crebuilder_hub', JSON.stringify(hubData)) } catch { /* ignore */ }
     putPublicHub(slug, hubData).catch(() => {})
-    // Always resolve the team Owner's email and re-publish the hub with it, so the notification
-    // recipient is the Owner regardless of who is signed in or what the notification field says.
+    // Resolve the CURRENT Owner-role email(s) and re-publish the hub with them, so download/lead
+    // notifications go to EVERY Owner — and only Owners (never Admin/Manager/Member), regardless of
+    // who is signed in. Supports one Owner or many; if none is found, keeps the safe fallback.
     let cancelled = false
     ;(async () => {
-      let ownerEmail = ''
+      let ownerEmails = []
       try {
         const usersSnap = await dbGet(dbRef(db, 'users'))
         const users = usersSnap.val() || {}
-        const ownerEntry = Object.values(users).find((u) => u && u.role === 'Owner' && u.email)
-        if (ownerEntry) ownerEmail = ownerEntry.email
+        ownerEmails = Object.values(users)
+          .filter((u) => u && u.role === 'Owner' && u.email)
+          .map((u) => String(u.email).trim())
+          .filter(Boolean)
       } catch { /* ignore */ }
-      const finalEmail = explicitNotifyEmail || LOCKED_OWNER_EMAIL
-      if (!cancelled && finalEmail && finalEmail !== fallbackEmail) putPublicHub(slug, { ...hubData, ownerEmail: finalEmail }).catch(() => {})
+      const recipients = ownerEmails.length ? Array.from(new Set(ownerEmails)) : [fallbackEmail].filter(Boolean)
+      if (!cancelled && recipients.length) putPublicHub(slug, { ...hubData, ownerEmail: recipients[0], ownerEmails: recipients }).catch(() => {})
     })()
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -10798,9 +10803,12 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
             ? { ...it, gate: gateVal }
             : it
         ))
-        // Keep the notification recipient locked to the team Owner on this republish too, so a
-        // gate change can never leave a stale/other-account owner email on the hub.
-        saved.ownerEmail = LOCKED_OWNER_EMAIL
+        // Preserve the current Owner-role notification recipients on this republish; only fall back
+        // if the hub was never published with them (so a gate change never wipes the recipients).
+        if (!saved.ownerEmails || !saved.ownerEmails.length) {
+          saved.ownerEmail = saved.ownerEmail || LOCKED_OWNER_EMAIL
+          saved.ownerEmails = [saved.ownerEmail].filter(Boolean)
+        }
         localStorage.setItem('crebuilder_hub', JSON.stringify(saved))
         putPublicHub('vaziamts', saved).catch(() => {})
       }

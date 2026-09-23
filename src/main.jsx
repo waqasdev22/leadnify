@@ -47,9 +47,10 @@ if (params.get('code') !== null && params.get('state') !== null && window.opener
     try { savedUid = localStorage.getItem('crebuilder_owner_uid') || '' } catch { savedUid = '' }
     const ownerUid = (saved && saved.ownerUid) || savedUid || ''
     const ownerEmail = (saved && saved.ownerEmail) || ''
+    const ownerEmails = (saved && Array.isArray(saved.ownerEmails) && saved.ownerEmails.length) ? saved.ownerEmails : (ownerEmail ? [ownerEmail] : [])
     const logoUrl = (saved && saved.logoUrl) || ''
     document.open()
-    document.write(buildMicrositeHtml(items, primary, template, defaultView, ownerUid, ownerEmail, logoUrl))
+    document.write(buildMicrositeHtml(items, primary, template, defaultView, ownerUid, ownerEmail, logoUrl, ownerEmails))
     document.close()
   }
   const fromLocal = () => {
