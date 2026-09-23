@@ -228,7 +228,12 @@ const currency = (n) =>
     maximumFractionDigits: 0,
   }).format(Number(n) || 0)
 
-const uid = () => Date.now() + Math.floor(Math.random() * 1000)
+// Collision-free unique id: Date.now()*1000 gives each millisecond 1000 slots, and a per-call
+// sequence fills them — so a tight loop (e.g. importing 23 rows in the same millisecond) can never
+// hand two records the same id. (The old `Date.now()+random(1000)` collided ~23% of the time for
+// 23 rows, which made one listing's card open a different listing.)
+let __uidSeq = 0
+const uid = () => Date.now() * 1000 + (__uidSeq = (__uidSeq + 1) % 1000)
 
 // A human-friendly Deal ID in the format ##-###### (e.g. 21-123456). The first two digits
 // are the current year (YY), the last six are random — used to match deals on import/export.
@@ -8185,8 +8190,12 @@ const lighten = (hex, amt) => {
 const micrositeFields = (l) => ({
   ...l,
   saleType: l.saleType || (l.status === 'Pending' ? 'For Lease' : 'For Sale'),
-  leaseType: l.leaseType || 'Net Lease',
-  noi: Math.round((Number(l.price) || 0) * 0.055),
+  // Card pill: show the ACTUAL property type (Retail/Industrial/Hospitality/…), not a blanket
+  // "Net Lease" label that was wrong for hotels and lease listings.
+  leaseType: l.leaseType || l.type || 'Commercial',
+  // Use the REAL saved NOI — never a fabricated price×0.055, which made every card show the same
+  // fake figure and disagree with the detail page.
+  noi: Number(l.noi) || 0,
 })
 
 // Rough coordinates so listings drop real pins on the map.
@@ -8629,7 +8638,7 @@ var MAP_ENGINE='',mapTries=0;
 function loadLeaflet(cb){if(window.L){cb();return;}var css=document.createElement('link');css.rel='stylesheet';css.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';document.head.appendChild(css);var s=document.createElement('script');s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';s.onload=cb;s.onerror=cb;document.body.appendChild(s);}
 function lPin(){return L.divIcon({className:'',html:'<svg width="30" height="30" viewBox="0 0 24 24" fill="'+PRIMARY+'" stroke="white" stroke-width="1.5"><path d="M12 2C8 2 5 5 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-4-3-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="white" stroke="none"/></svg>',iconSize:[30,30],iconAnchor:[15,30]});}
 function filtered(){var a=DATA.slice();if(state.filter!=='All')a=a.filter(function(l){return l.saleType===state.filter;});if(state.search){var q=state.search.toLowerCase();a=a.filter(function(l){return (l.name+' '+l.address).toLowerCase().indexOf(q)>-1;});}if(state.sort==='PriceHigh')a.sort(function(x,y){return y.price-x.price;});else if(state.sort==='PriceLow')a.sort(function(x,y){return x.price-y.price;});else a.sort(function(x,y){return y.id-x.id;});return a;}
-function cardHtml(l){var bc=l.saleType==='For Lease'?'#0d9488':'#e11d48';return '<div class="card" onclick="openDetail('+l.id+')"><div class="imgwrap"><img src="'+esc(l.image)+'"/><span class="badge" style="background:'+bc+'">'+esc(l.saleType)+'</span><span class="price">'+esc(l.priceLabel)+'</span></div><div class="inner2"><div class="body"><div class="lease">'+esc(l.leaseType)+'</div><div class="name">'+esc(l.name)+'</div><div class="addr">'+esc(l.address)+'</div><div class="metrics"><div><div class="lab">CAP</div><div class="val">5.50%</div></div><div style="text-align:right"><div class="lab">NOI</div><div class="val">$'+l.noi+'</div></div></div></div><div class="accent"></div></div></div>';}
+function cardHtml(l){var bc=l.saleType==='For Lease'?'#0d9488':'#e11d48';return '<div class="card" onclick="openDetail('+l.id+')"><div class="imgwrap"><img src="'+esc(l.image)+'"/><span class="badge" style="background:'+bc+'">'+esc(l.saleType)+'</span><span class="price">'+esc(l.priceLabel)+'</span></div><div class="inner2"><div class="body"><div class="lease">'+esc(l.leaseType)+'</div><div class="name">'+esc(l.name)+'</div><div class="addr">'+esc(l.address)+'</div><div class="metrics"><div><div class="lab">CAP</div><div class="val">'+esc(l.capLabel||'\\u2014')+'</div></div><div style="text-align:right"><div class="lab">NOI</div><div class="val">'+esc(l.noiLabel||'\\u2014')+'</div></div></div></div><div class="accent"></div></div></div>';}
 function drawMapGoogle(items){if(!map){map=new google.maps.Map(document.getElementById('map'),{center:{lat:33.68,lng:-117.79},zoom:11,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,styles:gStyle()});}markers.forEach(function(m){if(m.setMap)m.setMap(null);});markers=[];var iw=new google.maps.InfoWindow();var bounds=new google.maps.LatLngBounds();items.forEach(function(l){if(l.lat==null||l.lng==null)return;var pos={lat:Number(l.lat),lng:Number(l.lng)};var m=new google.maps.Marker({position:pos,map:map,icon:gPin()});m.addListener('click',function(){iw.setContent('<div style="font-size:13px"><b>'+esc(l.name)+'</b><br>'+esc(l.address)+'<br><b>'+esc(l.priceLabel)+'</b></div>');iw.open(map,m);});markers.push(m);bounds.extend(pos);});if(markers.length){map.fitBounds(bounds,60);google.maps.event.addListenerOnce(map,'idle',function(){if(map.getZoom()>14)map.setZoom(14);});}}
 function drawMapLeaflet(items){var el=document.getElementById('map');if(!map||MAP_ENGINE!=='leaflet'){el.innerHTML='';map=L.map(el).setView([33.68,-117.79],11);L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20,attribution:'&copy; OpenStreetMap contributors &copy; CARTO'}).addTo(map);MAP_ENGINE='leaflet';}else{markers.forEach(function(m){map.removeLayer(m);});}markers=[];items.forEach(function(l){if(l.lat==null||l.lng==null)return;var m=L.marker([l.lat,l.lng],{icon:lPin()}).addTo(map).bindPopup('<b>'+esc(l.name)+'</b><br>'+esc(l.address)+'<br><b>'+esc(l.priceLabel)+'</b>');markers.push(m);});if(markers.length){map.fitBounds(L.featureGroup(markers).getBounds().pad(0.4),{maxZoom:14});}setTimeout(function(){map.invalidateSize();},80);}
 function drawMap(items){if(MAP_ENGINE==='leaflet'){window.L?drawMapLeaflet(items):loadLeaflet(function(){drawMapLeaflet(items);});return;}if(gReady()){MAP_ENGINE='google';drawMapGoogle(items);setTimeout(function(){var el=document.getElementById('map');if(el&&!el.querySelector('.gm-style')){MAP_ENGINE='leaflet';map=null;markers=[];loadLeaflet(function(){drawMapLeaflet(items);});}},2200);creHeight();return;}mapTries++;if(mapTries>6){MAP_ENGINE='leaflet';map=null;markers=[];loadLeaflet(function(){drawMapLeaflet(items);});return;}setTimeout(function(){drawMap(items);},300);}
@@ -8889,6 +8898,9 @@ export const toMicrositeItems = (listings) =>
         address: l.address,
         price: Number(l.price) || 0,
         priceLabel: compactPrice(l.price),
+        // Real financial labels for the card (fall back to a dash, never a fabricated number).
+        capLabel: l.capRate ? String(l.capRate).replace('%', '').trim() + '%' : '—',
+        noiLabel: l.noi ? compactPrice(l.noi) : '—',
         type: l.type,
         image: l.image || FALLBACK_IMG,
         saleType: m.saleType,
@@ -8929,8 +8941,8 @@ export const toMicrositeItems = (listings) =>
           ['Ground Lease', l.groundLease ? 'Yes' : ''],
           ['Lease Commencement', l.leaseCommence || ''],
           ['Lease Expiration', l.leaseExpiration || ''],
-          ['Lease Term', l.leaseTerm ? l.leaseTerm + ' yrs' : ''],
-          ['Remaining Term', l.remainingTerm ? l.remainingTerm + ' yrs' : ''],
+          ['Lease Term', l.leaseTerm ? (/[a-z]/i.test(String(l.leaseTerm)) ? String(l.leaseTerm) : l.leaseTerm + ' yrs') : ''],
+          ['Remaining Term', l.remainingTerm ? (/[a-z]/i.test(String(l.remainingTerm)) ? String(l.remainingTerm) : l.remainingTerm + ' yrs') : ''],
           ['Lease Options', l.leaseOptions || ''],
           ['Rent Bumps', l.rentBumps || ''],
           ['Sub-type', l.subtype || ''],
@@ -15656,7 +15668,7 @@ function ProfileSettingsPage({ user }) {
 }
 
 const TEAM_SETTINGS_MEMBERS = [
-  { id: 'u1', name: 'Neil Naran', email: 'Nel@valuereis.com', role: 'Admin', docs: 16, active: 'Aug 11', you: true, initials: 'N' },
+  { id: 'u1', name: 'Neil Naran', email: 'Neil@valuereis.com', role: 'Admin', docs: 16, active: 'Aug 11', you: true, initials: 'N' },
 ]
 const TEAM_ROLES = ['Member', 'Admin', 'Coordinator']
 const TEAM_ROLE_LEGEND = [
