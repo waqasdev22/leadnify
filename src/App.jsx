@@ -11,7 +11,7 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { getCol, putCol, saveUser, sendEmail, setApiNamespace, getFile, putFile, delFile, MAX_CLOUD_FILE, putPublicPackage, getPublicPackage, delPublicPackage, drainPublicLeads, putPublicHub, putGallery, kvGet, kvSet } from './api'
 import { EMAILJS } from './emailConfig'
-import { auth, googleProvider, db, createMemberAccount, connectSocialAccount, setMemberPassword } from './firebase'
+import { auth, googleProvider, db, createMemberAccount, connectSocialAccount, setMemberPassword, uploadToStorage } from './firebase'
 import { ref as dbRef, get as dbGet, set as dbSet, update as dbUpdate, remove as dbRemove, onValue } from 'firebase/database'
 import { PERMISSION_GROUPS, ROLE_PRESETS, ROLES, ROLE_INFO, resolvePerms, decodeOverrides, encodeOverrides } from './permissions'
 import * as XLSX from 'xlsx'
@@ -8687,7 +8687,7 @@ var CUR=null;
 var RTDB='https://cre-dashboard-ba596-default-rtdb.firebaseio.com';
 var EJS=${JSON.stringify({ s: EMAILJS.SERVICE_ID, t: EMAILJS.TEMPLATE_ID, u: EMAILJS.PUBLIC_KEY })};
 var EJS_ON=EJS.s&&EJS.s!=='YOUR_SERVICE_ID'&&EJS.t&&EJS.t!=='YOUR_TEMPLATE_ID'&&EJS.u&&EJS.u!=='YOUR_PUBLIC_KEY';
-function openPkgBlob(w,pkg){var parts=String(pkg.url).split(',');var mime=(parts[0].match(/data:([^;]+)/)||[])[1]||'application/pdf';var bin=atob(parts[1]||'');var arr=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);var url=URL.createObjectURL(new Blob([arr],{type:mime}));if(w)w.location.href=url;setTimeout(function(){URL.revokeObjectURL(url);},60000);}
+function openPkgBlob(w,pkg){var u=String(pkg.url||'');if(/^https?:/i.test(u)){if(w)w.location.href=u;return;}var parts=u.split(',');var mime=(parts[0].match(/data:([^;]+)/)||[])[1]||'application/pdf';var bin=atob(parts[1]||'');var arr=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);var url=URL.createObjectURL(new Blob([arr],{type:mime}));if(w)w.location.href=url;setTimeout(function(){URL.revokeObjectURL(url);},60000);}
 function fetchPkg(key,cb){if(!key){cb(null);return;}fetch(RTDB+'/public/packages/'+key+'.json').then(function(r){return r.json();}).then(function(p){cb(p&&p.url?p:null);}).catch(function(){cb(null);});}
 function emailOwners(subject,message){if(!EJS_ON||!OWNER_EMAILS||!OWNER_EMAILS.length)return;OWNER_EMAILS.forEach(function(addr){if(!addr)return;fetch('https://api.emailjs.com/api/v1.0/email/send',{method:'POST',keepalive:true,headers:{'Content-Type':'application/json'},body:JSON.stringify({service_id:EJS.s,template_id:EJS.t,user_id:EJS.u,template_params:{to_email:addr,email:addr,name:'Leadnify.io',subject:subject,message:message}})}).catch(function(){});});}
 function sendDownloadNotice(prop){var info={};try{info=JSON.parse(localStorage.getItem('cre_enrolled_info')||'{}');}catch(e){}var who=(info.name||'A visitor')+(info.type?' \\u2014 '+info.type:'')+(info.email?' ('+info.email+')':'');emailOwners('Marketing package downloaded'+(prop?' \\u2014 '+prop:''),who+' just downloaded the marketing package'+(prop?' for '+prop:'')+'.');}
@@ -9220,9 +9220,9 @@ function NewDealModal({ onClose, onCreate }) {
   const lbl = 'mb-1 block text-xs font-semibold text-slate-500'
 
   const onCover = async (e) => { const file = e.target.files?.[0]; e.target.value = ''; if (!file) return; if (!file.type.startsWith('image/')) { notify('Choose an image', 'error'); return } set('cover', await readFileAsDataUrl(file)) }
-  const onPhotos = async (e) => { const files = Array.from(e.target.files || []).filter((x) => x.type.startsWith('image/')); e.target.value = ''; const added = []; for (const file of files) { if (file.size > MAX_CLOUD_FILE) { notify(`"${file.name}" too large (max 25 MB) — skipped`, 'error'); continue } added.push({ id: uid(), name: file.name, url: await readFileAsDataUrl(file) }) } set('photos', [...f.photos, ...added].slice(0, 12)) }
-  const onOm = async (e) => { const file = e.target.files?.[0]; e.target.value = ''; if (!file) return; if (file.type !== 'application/pdf') { notify('OM must be a PDF', 'error'); return } if (file.size > MAX_CLOUD_FILE) { notify('PDF too large (max 25 MB)', 'error'); return } set('om', { name: file.name, size: fsize(file), date: today(), url: await readFileAsDataUrl(file) }) }
-  const onConf = async (e) => { const files = Array.from(e.target.files || []); e.target.value = ''; const added = []; for (const file of files) { if (file.size > MAX_CLOUD_FILE) { notify(`"${file.name}" too large (max 25 MB) — skipped`, 'error'); continue } added.push({ id: uid(), name: file.name, size: fsize(file), date: today(), url: await readFileAsDataUrl(file) }) } set('confidential', [...f.confidential, ...added]) }
+  const onPhotos = async (e) => { const files = Array.from(e.target.files || []).filter((x) => x.type.startsWith('image/')); e.target.value = ''; const added = []; for (const file of files) { if (file.size > 50 * 1024 * 1024) { notify(`"${file.name}" too large (max 50 MB) — skipped`, 'error'); continue } added.push({ id: uid(), name: file.name, url: await uploadToStorage(file) }) } set('photos', [...f.photos, ...added].slice(0, 12)) }
+  const onOm = async (e) => { const file = e.target.files?.[0]; e.target.value = ''; if (!file) return; if (file.type !== 'application/pdf') { notify('OM must be a PDF', 'error'); return } if (file.size > 50 * 1024 * 1024) { notify('PDF too large (max 50 MB)', 'error'); return } set('om', { name: file.name, size: fsize(file), date: today(), url: await uploadToStorage(file) }) }
+  const onConf = async (e) => { const files = Array.from(e.target.files || []); e.target.value = ''; const added = []; for (const file of files) { if (file.size > 50 * 1024 * 1024) { notify(`"${file.name}" too large (max 50 MB) — skipped`, 'error'); continue } added.push({ id: uid(), name: file.name, size: fsize(file), date: today(), url: await uploadToStorage(file) }) } set('confidential', [...f.confidential, ...added]) }
   const addContact = () => set('contacts', [...f.contacts, { id: uid(), name: '', company: '', email: '', phone: '' }])
   const setContact = (id, k, v) => set('contacts', f.contacts.map((c) => (c.id === id ? { ...c, [k]: v } : c)))
   const save = () => { if (!f.name.trim()) { setStep(0); notify('Deal name is required', 'error'); return } onCreate(f) }
@@ -9676,8 +9676,8 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
     sniff.onload = () => {
       const header = String.fromCharCode(...new Uint8Array(sniff.result))
       if (header !== '%PDF-') { notify('Only a PDF can be used as the marketing package', 'error'); return }
-      if (f.size > MAX_CLOUD_FILE) { notify('This PDF is too large to sync (max 25 MB) — please use a smaller file', 'error'); return }
-      readFileAsDataUrl(f)
+      if (f.size > 50 * 1024 * 1024) { notify('This PDF is too large (max 50 MB)', 'error'); return }
+      uploadToStorage(f) // Firebase Storage → https URL (15 MB+ OMs work)
         .then((url) => putPublicPackage(l.id, { name: f.name, url }))
         .then(() => { patch(l.id, { pkgName: f.name }); notify('Package attached — the “Download Package” button now works') })
         .catch(() => notify('Upload failed — please try again', 'error'))
@@ -11049,10 +11049,10 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
     const f = e.target.files && e.target.files[0]
     if (!f) return
     e.target.value = ''
-    if (f.size > MAX_CLOUD_FILE) { notify('This file is too large to sync across devices (max 25 MB)', 'error'); return }
+    if (f.size > 50 * 1024 * 1024) { notify('This file is too large (max 50 MB)', 'error'); return }
     setUploadPct(20)
     ;(async () => {
-      const url = await readFileAsDataUrl(f) // store in the cloud so it syncs to all devices
+      const url = await uploadToStorage(f) // Firebase Storage → https URL (handles large files, no RTDB size cap)
       const item = { name: f.name, size: fileSize(f), date: new Date().toLocaleDateString('en-GB'), url }
       const next = [item, ...files]
       await putFile(`roomfiles_${room.id}`, { list: next })
@@ -11072,10 +11072,10 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
     sniff.onload = () => {
       const header = String.fromCharCode(...new Uint8Array(sniff.result))
       if (header !== '%PDF-') { notify('That file is not a PDF — only PDF files can be uploaded here', 'error'); return }
-      if (f.size > MAX_CLOUD_FILE) { notify('This PDF is too large to sync across devices (max 25 MB)', 'error'); return }
+      if (f.size > 50 * 1024 * 1024) { notify('This PDF is too large (max 50 MB)', 'error'); return }
       setUploadPct(20)
       ;(async () => {
-        const url = await readFileAsDataUrl(f) // store the actual PDF in the cloud (syncs everywhere)
+        const url = await uploadToStorage(f) // Firebase Storage → https URL (15 MB+ OMs work; no RTDB size cap)
         const om = { name: f.name, size: fileSize(f), date: new Date().toLocaleDateString('en-GB'), url }
         await putFile(`om_${room.id}`, om)
         // Expose it publicly under THIS deal's unique id only (id-based) — never by name, so
@@ -11108,8 +11108,8 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
     try {
       const added = []
       for (const f of imgs) {
-        if (f.size > MAX_CLOUD_FILE) { notify(`"${f.name}" is too large (max 25 MB) — skipped`, 'error'); continue }
-        const url = await readFileAsDataUrl(f)
+        if (f.size > 50 * 1024 * 1024) { notify(`"${f.name}" is too large (max 50 MB) — skipped`, 'error'); continue }
+        const url = await uploadToStorage(f) // Firebase Storage → https URL
         added.push({ id: uid(), name: f.name, url })
       }
       const next = [...photos, ...added].slice(0, 12)
