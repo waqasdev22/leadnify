@@ -160,10 +160,26 @@ export const getFile = async (key) => {
     return null
   }
 }
+// Big files (15 MB+ OMs) are written via the RTDB REST API, which allows up to 256 MB per write.
+// The JS SDK caps a single write at ~16 MB, which fails once a 15 MB PDF is base64-encoded (~20 MB)
+// — that was the "Upload failed" on large OMs. REST needs the signed-in user's ID token.
+const RTDB_REST = 'https://cre-dashboard-ba596-default-rtdb.firebaseio.com'
+const restSet = async (path, value) => {
+  const u = auth.currentUser
+  const token = u ? await u.getIdToken() : ''
+  const res = await fetch(`${RTDB_REST}/${path}.json${token ? `?auth=${token}` : ''}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(value === undefined ? null : value),
+  })
+  if (!res.ok) throw new Error(`RTDB REST ${res.status}`)
+  return res.json()
+}
+
 export const putFile = async (key, obj) => {
   const uid = currentUid()
   if (!uid) throw new Error('not signed in')
-  await dbSet(dbRef(db, `data/${uid}/files/${key}`), clean(obj))
+  await restSet(`data/${uid}/files/${key}`, clean(obj))
 }
 export const delFile = async (key) => {
   const uid = currentUid()
@@ -177,7 +193,7 @@ export const delFile = async (key) => {
 export const putPublicPackage = async (id, obj) => {
   const uid = currentUid()
   if (!uid) throw new Error('not signed in')
-  await dbSet(dbRef(db, `public/packages/${id}`), clean(obj))
+  await restSet(`public/packages/${id}`, clean(obj)) // REST → supports 15 MB+ OMs (SDK caps at ~16 MB/write)
 }
 export const getPublicPackage = async (id) => {
   try { const snap = await dbGet(dbRef(db, `public/packages/${id}`)); return snap.val() || null } catch { return null }
