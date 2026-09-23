@@ -32,6 +32,14 @@ export async function connectSocialAccount({ provider, code, redirectUri }) {
   return res.data;
 }
 
+// Owner/Admin sets a team member's password directly (server-side via the Admin SDK, since
+// the browser can't change another user's password). The member can then sign in with it.
+export async function setMemberPassword({ uid, password }) {
+  const call = httpsCallable(functions, "adminSetPassword");
+  const res = await call({ uid, password });
+  return res.data;
+}
+
 // Upload a file to Firebase Storage and return its public download URL.
 // Images live in the cloud; only the small URL is stored in the document —
 // so large photos never blow the browser's localStorage quota.

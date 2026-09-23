@@ -11,7 +11,7 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { getCol, putCol, saveUser, sendEmail, setApiNamespace, getFile, putFile, delFile, MAX_CLOUD_FILE, putPublicPackage, getPublicPackage, delPublicPackage, drainPublicLeads, putPublicHub, putGallery, kvGet, kvSet } from './api'
 import { EMAILJS } from './emailConfig'
-import { auth, googleProvider, db, createMemberAccount, connectSocialAccount } from './firebase'
+import { auth, googleProvider, db, createMemberAccount, connectSocialAccount, setMemberPassword } from './firebase'
 import { ref as dbRef, get as dbGet, set as dbSet, update as dbUpdate, remove as dbRemove, onValue } from 'firebase/database'
 import { PERMISSION_GROUPS, ROLE_PRESETS, ROLES, ROLE_INFO, resolvePerms, decodeOverrides, encodeOverrides } from './permissions'
 import * as XLSX from 'xlsx'
@@ -15995,6 +15995,26 @@ function TeamPermissionsPage({ myUid, role = 'Member', can = () => true }) {
     dbRemove(dbRef(db, `users/${u.uid}`)).then(() => notify(`Removed ${u.name || u.email}`, 'error')).catch(() => notify('Remove failed — check DB rules', 'error'))
     setConfirmDelUser(null)
   }
+  // Owner/Admin sets a member's password directly (server-side; the member then signs in with it).
+  const [pwUser, setPwUser] = useState(null) // member whose password is being set
+  const [pwVal, setPwVal] = useState('')
+  const [pwShow, setPwShow] = useState(false)
+  const [pwBusy, setPwBusy] = useState(false)
+  const savePw = async () => {
+    if (!pwUser) return
+    if (pwVal.length < 6) { notify('Password must be at least 6 characters', 'error'); return }
+    setPwBusy(true)
+    try {
+      await setMemberPassword({ uid: pwUser.uid, password: pwVal })
+      notify(`Password updated for ${pwUser.name || pwUser.email}`)
+      setPwUser(null); setPwVal(''); setPwShow(false)
+    } catch (e) {
+      const msg = e && e.code === 'functions/permission-denied' ? 'Only an Owner or Admin can set a member’s password'
+        : e && e.code === 'functions/unavailable' ? 'Backend not deployed yet — deploy Cloud Functions first'
+        : 'Could not set the password — try again'
+      notify(msg, 'error')
+    } finally { setPwBusy(false) }
+  }
   const togglePerm = (uid, key) => {
     const u = users[uid]; if (!u) return
     const overrides = decodeOverrides(u.overrides) // dotted keys
@@ -16096,6 +16116,9 @@ function TeamPermissionsPage({ myUid, role = 'Member', can = () => true }) {
                   <button onClick={() => setOpenUid(open ? null : u.uid)} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
                     Permissions <ChevronDown className={`h-4 w-4 transition ${open ? 'rotate-180' : ''}`} />
                   </button>
+                  {canManage && !isMe && (
+                    <button onClick={() => { setPwUser(u); setPwVal(''); setPwShow(false) }} title="Set this member's password" className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-amber-200 hover:bg-amber-50 hover:text-amber-600"><Lock className="h-4 w-4" /></button>
+                  )}
                   {canManage && (isMe ? (
                     <span className="inline-flex h-8 w-8 items-center justify-center text-slate-300" title="You can't remove yourself"><Trash2 className="h-4 w-4" /></span>
                   ) : (
@@ -16139,6 +16162,24 @@ function TeamPermissionsPage({ myUid, role = 'Member', can = () => true }) {
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
             <div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-full bg-rose-50 text-rose-500"><Trash2 className="h-5 w-5" /></span><div><p className="text-base font-bold text-slate-900">Remove from team?</p><p className="text-sm text-slate-500">{confirmDelUser.name || confirmDelUser.email} will lose all access.</p></div></div>
             <div className="mt-5 flex justify-end gap-2"><button onClick={() => setConfirmDelUser(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button><button onClick={removeUser} className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-bold text-white hover:bg-rose-700">Remove</button></div>
+          </div>
+        </div>
+      )}
+
+      {/* Set-member-password (Owner/Admin only) */}
+      {pwUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+            <div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-50 text-amber-500"><Lock className="h-5 w-5" /></span><div><p className="text-base font-bold text-slate-900">Set password</p><p className="text-sm text-slate-500">for {pwUser.name || pwUser.email}</p></div></div>
+            <div className="mt-4">
+              <label className="mb-1 block text-xs font-semibold text-slate-500">New password</label>
+              <div className="relative">
+                <input type={pwShow ? 'text' : 'password'} value={pwVal} onChange={(e) => setPwVal(e.target.value)} placeholder="At least 6 characters" autoFocus className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 pr-10 text-sm outline-none focus:border-amber-400" />
+                <button type="button" onClick={() => setPwShow((s) => !s)} className="absolute inset-y-0 right-0 flex items-center px-3 text-slate-400 hover:text-slate-600">{pwShow ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button>
+              </div>
+              <p className="mt-2 text-xs text-slate-400">The member can sign in with this password right away. Share it with them securely.</p>
+            </div>
+            <div className="mt-5 flex justify-end gap-2"><button onClick={() => { setPwUser(null); setPwVal(''); setPwShow(false) }} disabled={pwBusy} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button><button onClick={savePw} disabled={pwBusy} className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-white hover:bg-amber-600 disabled:opacity-60">{pwBusy ? 'Saving…' : 'Set Password'}</button></div>
           </div>
         </div>
       )}
