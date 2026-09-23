@@ -9040,6 +9040,111 @@ function AppearanceSettings() {
 const NEW_DEAL_STEPS = ['Property Information', 'Media & Description', 'Property Details', 'OM', 'Confidential Documents', 'Listing Team', 'Save & Exit']
 // Crexi-style sort options for My Deals.
 const DEAL_SORT_OPTIONS = ['Recently Updated', 'Oldest Updated', 'Recently Created', 'Offers – Most', 'Offers – Least', 'Executed NDA – Most', 'Executed NDA – Least', 'Open OM/Flyer – Most', 'Open OM/Flyer – Least', 'Visitors – Most', 'Visitors – Least', 'Price – Most', 'Price – Least', 'CAP Rate – Most', 'CAP Rate – Least', 'Product']
+// Bulk import: paste rows copied from the client's spreadsheet (tab-separated) and create a deal
+// per row. Columns are matched by header name, so column order can vary.
+function ImportDealsModal({ onClose, onImport }) {
+  const notify = useToast()
+  const [text, setText] = useState('')
+  const [rows, setRows] = useState(null)
+  const inp = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-brand focus:ring-2 focus:ring-blue-100'
+  const num = (v) => { const n = parseFloat(String(v || '').replace(/[^0-9.]/g, '')); return isFinite(n) ? n : 0 }
+  const typeMap = (v) => {
+    const x = String(v || '').toLowerCase()
+    if (x.includes('office') || x.includes('medical')) return 'Office / Medical'
+    if (x.includes('multi')) return 'Multifamily'
+    if (x.includes('industrial')) return 'Industrial'
+    if (x.includes('hospitality') || x.includes('hotel')) return 'Hospitality'
+    if (x.includes('storage')) return 'Self-Storage'
+    if (x.includes('mobile')) return 'Mobile Home Parks'
+    if (x.includes('mixed')) return 'Mixed-Use'
+    if (x.includes('land')) return 'Land'
+    if (x.includes('retail')) return 'Retail'
+    return 'Retail'
+  }
+  const parse = () => {
+    const lines = text.split(/\r?\n/).filter((l) => l.trim())
+    if (lines.length < 2) { notify('Paste the header row plus at least one property row', 'error'); return }
+    const header = lines[0].split('\t').map((h) => h.trim().toLowerCase())
+    const col = (needle) => header.findIndex((h) => h.includes(needle))
+    const idx = {
+      service: col('service type'), division: col('division'), market: col('market'), tenant: col('tenant'),
+      address: col('address'), city: col('city'), state: col('state'), price: col('price'), noi: col('noi'),
+      cap: col('cap'), leaseTerm: col('lease term'), leaseType: col('lease type'), leaseComm: col('commencement'),
+      leaseExp: col('expri'), invHigh: col('investment highlight'), mktHigh: col('market highlight'), bor: col('bor info'),
+    }
+    if (idx.tenant < 0) { notify('Could not find a "Tenant" column in the header row', 'error'); return }
+    const out = []
+    for (let i = 1; i < lines.length; i++) {
+      const c = lines[i].split('\t')
+      const get = (k) => (idx[k] >= 0 ? (c[idx[k]] || '').trim() : '')
+      const name = get('tenant')
+      if (!name) continue
+      const service = get('service')
+      out.push({
+        name,
+        propertyType: typeMap(get('division')),
+        saleType: /landlord|lease/i.test(service) && !/sale/i.test(service) ? 'For Lease' : 'For Sale',
+        street: get('address'), city: get('city'), state: get('state'),
+        price: num(get('price')),
+        noi: get('noi') ? String(num(get('noi'))) : '',
+        capRate: get('cap') ? String(parseFloat(String(get('cap')).replace('%', '').trim()) || '') : '',
+        leaseTypeDetail: get('leaseType'), leaseCommence: get('leaseComm'), leaseExpiration: get('leaseExp'),
+        remainingTerm: get('leaseTerm'),
+        highlights: [get('invHigh'), get('mktHigh')].filter(Boolean).join('\n'),
+        subheader: service, bor: get('bor'),
+        listed: !/off\s*market/i.test(get('market')),
+      })
+    }
+    if (!out.length) { notify('No property rows found', 'error'); return }
+    setRows(out)
+  }
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/50 p-4" onClick={onClose}>
+      <div className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+          <div>
+            <p className="text-base font-extrabold text-slate-900">Import Properties</p>
+            <p className="text-xs text-slate-500">Paste rows copied from your spreadsheet (with the header row). One deal is created per row.</p>
+          </div>
+          <button onClick={onClose} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100"><X className="h-5 w-5" /></button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-5">
+          <textarea
+            value={text}
+            onChange={(e) => { setText(e.target.value); setRows(null) }}
+            rows={10}
+            className={inp + ' font-mono text-xs'}
+            placeholder={'Service Type\tDivision Type\tOn/ Off Market\tTenant\t...\tAddress\tCity\tState\tPrice\tNOI\tCAP Rate\t...\nInvestment Sale\tRetail\tListed\tZiggi’s Coffee - Huntington\t...\t201 S Jefferson Street\tHuntington\tIN\t$1,484,481\t$103,285\t6.50%'}
+          />
+          <p className="mt-2 text-xs text-slate-400">Tip: In Excel/Google Sheets, select the rows (including the header) and copy — then paste here. Photos &amp; OM PDFs are added later per deal.</p>
+          {rows && (
+            <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50/50 p-3">
+              <p className="text-sm font-bold text-emerald-800">{rows.length} propert{rows.length === 1 ? 'y' : 'ies'} detected:</p>
+              <ul className="mt-2 max-h-48 space-y-1 overflow-y-auto text-xs text-slate-600">
+                {rows.map((r, i) => (
+                  <li key={i} className="flex flex-wrap gap-x-2">
+                    <span className="font-semibold text-slate-800">{r.name}</span>
+                    <span className="text-slate-400">·</span><span>{r.propertyType}</span>
+                    <span className="text-slate-400">·</span><span>{[r.city, r.state].filter(Boolean).join(', ') || '—'}</span>
+                    <span className="text-slate-400">·</span><span>{r.price ? '$' + r.price.toLocaleString() : '—'}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+        <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-5 py-4">
+          <button onClick={onClose} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50">Cancel</button>
+          {!rows ? (
+            <button onClick={parse} className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-900">Preview</button>
+          ) : (
+            <button onClick={() => onImport(rows)} className="rounded-lg bg-brand px-4 py-2 text-sm font-bold text-white transition hover:bg-brand-hover">Import {rows.length} properties</button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
 function NewDealModal({ onClose, onCreate }) {
   const notify = useToast()
   const [step, setStep] = useState(0)
@@ -9344,7 +9449,32 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
   const [confirm, setConfirm] = useState(null)
   const [expandedId, setExpandedId] = useState(null) // row whose expanded detail is open
   const [newDealOpen, setNewDealOpen] = useState(false) // crexi-style New Deal field wizard
+  const [importOpen, setImportOpen] = useState(false) // bulk import from a spreadsheet
   const [sortBy, setSortBy] = useState('Recently Updated') // My Deals sort order (Crexi-style)
+  // Bulk-create listings from spreadsheet rows parsed in ImportDealsModal.
+  const importDeals = (rows) => {
+    if (!rows || !rows.length) return
+    const made = rows.map((d) => {
+      const id = uid()
+      const address = [d.street, d.city, d.state].filter(Boolean).join(', ') || '—'
+      return {
+        id, dealId: newDealId(), name: d.name, address, city: d.city || '', state: d.state || '', ts: Date.now(),
+        price: Number(d.price) || 0, type: d.propertyType || 'Retail', saleType: d.saleType || 'For Sale',
+        gate: 'Contact Required', size: '—', status: 'Active', image: propertyImage('1497366216548-37526070297c'),
+        featured: false, listed: d.listed !== false, access: 'Public', subheader: d.subheader || '',
+        highlights: d.highlights || '', description: '', capRate: d.capRate || '', noi: d.noi || '',
+        pricePerSf: '', lotSize: '', yearBuilt: '', occupancy: '', tenants: '', tenancy: '',
+        leaseTypeDetail: d.leaseTypeDetail || '', subtype: '', zoning: '', parking: '', unpriced: false, expiration: '',
+        saleCondition: '', propertyClass: '', yearsRenovated: '', numUnits: '', tenantBrand: d.name || '', parkingType: '',
+        groundLease: false, tenantCredit: '', leaseCommence: d.leaseCommence || '', leaseExpiration: d.leaseExpiration || '',
+        leaseTerm: '', remainingTerm: d.remainingTerm || '', leaseOptions: '', rentBumps: '', investmentType: '',
+        proformaNoi: '', proformaCap: '', bor: d.bor || '',
+      }
+    })
+    setListings((list) => [...made, ...list])
+    notify(`${made.length} propert${made.length === 1 ? 'y' : 'ies'} imported`)
+    setImportOpen(false)
+  }
   const [transferItem, setTransferItem] = useState(null) // deal being transferred from the My Deals row actions
   // Row actions (moved here from the Deal Rooms cards): duplicate + transfer a deal from My Deals.
   const duplicateListing = (l) => { setListings((list) => [{ ...l, id: uid(), dealId: newDealId(), name: `${l.name} (Copy)`, ts: Date.now() }, ...list]); notify('Deal duplicated') }
@@ -9762,6 +9892,15 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                 )}
                 {can('document.create') && (
                   <button
+                    onClick={() => setImportOpen(true)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                    title="Bulk import properties from a spreadsheet"
+                  >
+                    <Upload className="h-3.5 w-3.5" /> Import
+                  </button>
+                )}
+                {can('document.create') && (
+                  <button
                     onClick={() => setNewDealOpen(true)}
                     className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-hover"
                   >
@@ -9971,6 +10110,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
       {/* Deal Rooms section removed from My Deals (still shown on the Dashboard & Deal Rooms page). */}
 
       {newDealOpen && <NewDealModal onClose={() => setNewDealOpen(false)} onCreate={createDeal} />}
+      {importOpen && <ImportDealsModal onClose={() => setImportOpen(false)} onImport={importDeals} />}
 
       <Modal open={!!transferItem} onClose={() => setTransferItem(null)} title="Transfer Deal">
         <DealRoomTransferModal
