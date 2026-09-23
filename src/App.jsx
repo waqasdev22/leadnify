@@ -8897,7 +8897,8 @@ export const toMicrositeItems = (listings) =>
         name: l.name,
         address: l.address,
         price: Number(l.price) || 0,
-        priceLabel: compactPrice(l.price),
+        // No positive price (e.g. lease listings) shows "Contact for Price", never a misleading "$0".
+        priceLabel: (l.unpriced || !(Number(l.price) > 0)) ? 'Contact for Price' : compactPrice(l.price),
         // Real financial labels for the card (fall back to a dash, never a fabricated number).
         capLabel: l.capRate ? String(l.capRate).replace('%', '').trim() + '%' : '—',
         noiLabel: l.noi ? compactPrice(l.noi) : '—',
@@ -8913,7 +8914,7 @@ export const toMicrositeItems = (listings) =>
         //   'NDA - Approval Required' → sign the NDA, owner approves, then download
         gate: DEAL_ROOM_ACCESS.includes(l.gate) ? l.gate : 'Contact Required',
         subheader: l.subheader || '',
-        unpriced: !!l.unpriced,
+        unpriced: !!l.unpriced || !(Number(l.price) > 0),
         highlights: (l.highlights || '').split('\n').map((h) => h.trim()).filter(Boolean),
         description: l.description || '',
         // Crexi-style property detail facts (only the ones that are filled in are shown).
