@@ -1,5 +1,5 @@
 /**
- * Leadflow.io — social connect backend.
+ * Leadnify.io — social connect backend.
  *
  * A signed-in dashboard user connects LinkedIn / Instagram from the browser. The browser only
  * ever handles the public client id and the short-lived OAuth `code`; this Cloud Function does

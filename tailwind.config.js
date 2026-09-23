@@ -5,7 +5,7 @@ export default {
     extend: {
       colors: {
         brand: {
-          DEFAULT: '#0A63CB', // Leadflow blue (R:10 G:99 B:203)
+          DEFAULT: '#0A63CB', // Leadnify blue (R:10 G:99 B:203)
           hover: '#084FA3',   // darker blue for hover/active
         },
       },

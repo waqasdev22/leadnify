@@ -1,6 +1,6 @@
 {
   "name": "functions",
-  "description": "Cloud Functions for Leadflow.io — social OAuth token exchange & profile fetch",
+  "description": "Cloud Functions for Leadnify.io — social OAuth token exchange & profile fetch",
   "engines": {
     "node": "20"
   },
