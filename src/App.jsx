@@ -9683,6 +9683,9 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
     setListings((list) => list.filter((l) => l.id !== id))
     // Remove the matching document from the Dashboard too (a listing and its package share an id).
     if (setPackages) setPackages((list) => list.filter((p) => p.id !== id))
+    // Also remove the linked/standalone deal room — a row like "Deal D" is surfaced from a deal
+    // room (not a listing), so filtering listings alone would leave it on the page.
+    if (setDealRooms) setDealRooms((list) => list.filter((r) => r.id !== id && r.listingId !== id))
     notify('Listing deleted', 'error')
     setConfirm(null)
   }
