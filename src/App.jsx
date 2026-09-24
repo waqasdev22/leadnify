@@ -9129,9 +9129,9 @@ function AppearanceSettings() {
         <p className={sectionLabel}>Company Logo</p>
         <p className="-mt-1 mb-2 text-xs text-slate-400">Shown on your microsite header instead of the property count.</p>
         <input ref={logoRef} type="file" accept="image/*" className="hidden" onChange={onLogo} />
-        <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+        <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-center">
           {logo ? (
-            <div className="flex h-14 items-center justify-center rounded-lg border border-slate-200 bg-white px-3"><img src={logo} alt="Company logo" className="max-h-10 max-w-[140px] object-contain" /></div>
+            <div className="flex h-16 w-full items-center justify-center rounded-lg border border-slate-200 bg-white px-3 sm:h-14 sm:w-auto"><img src={logo} alt="Company logo" className="max-h-12 max-w-[180px] object-contain sm:max-h-10 sm:max-w-[140px]" /></div>
           ) : (
             <div className="flex h-14 w-24 items-center justify-center rounded-lg border border-dashed border-slate-300 text-slate-300"><ImageIcon className="h-5 w-5" /></div>
           )}
