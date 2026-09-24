@@ -11736,10 +11736,10 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
       </div>
       <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Edit Deal">
         <DealRoomForm
-          initial={{ name: room.name || '', address: room.address || '', price: room.price ?? '', capRate: room.capRate ?? '', noi: room.noi ?? '', status: DEAL_ROOM_STATUSES.includes(room.status) ? room.status : 'Active', access: room.access || 'Free Access', image: room.image || '' }}
+          initial={{ name: room.name || '', address: room.address || '', price: room.price ?? '', capRate: room.capRate ?? '', noi: room.noi ?? '', status: DEAL_ROOM_STATUSES.includes(room.status) ? room.status : 'Active', access: access || gateListing?.gate || room.access || 'Free Access', image: room.image || '' }}
           submitLabel="Save changes"
           onCancel={() => setEditOpen(false)}
-          onSubmit={(data) => { onUpdateRoom && onUpdateRoom(room.id, data); setEditOpen(false); notify('Deal updated') }}
+          onSubmit={(data) => { onUpdateRoom && onUpdateRoom(room.id, data); if (data.access) { setAccess(data.access); syncListingGate(data.access) } setEditOpen(false); notify('Deal updated') }}
         />
       </Modal>
     </div>
