@@ -12673,11 +12673,12 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
   const [siteHits, setSiteHits] = useState({ pageViews: 0, impressions: 0, byProp: {} })
   useEffect(() => {
     let alive = true
-    const R = 'https://cre-dashboard-ba596-default-rtdb.firebaseio.com'
+    // Read through the authenticated Firebase SDK (public/hits requires auth to read), not a plain
+    // unauthenticated fetch, so the counts are real instead of a permission-denied artifact.
     const load = () => {
       Promise.all([
-        fetch(R + '/public/hits/pageViews.json').then((r) => r.json()).catch(() => null),
-        fetch(R + '/public/hits/impr.json').then((r) => r.json()).catch(() => null),
+        dbGet(dbRef(db, 'public/hits/pageViews')).then((s) => s.val()).catch(() => null),
+        dbGet(dbRef(db, 'public/hits/impr')).then((s) => s.val()).catch(() => null),
       ]).then(([pv, im]) => {
         if (!alive) return
         const pvArr = pv ? Object.values(pv) : []
