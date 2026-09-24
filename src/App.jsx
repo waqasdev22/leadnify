@@ -9888,7 +9888,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
   const sectionLabel = 'mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400'
 
   return (
-    <div className="mx-auto max-w-[1600px] p-6">
+    <div className="mx-auto max-w-[1600px] overflow-x-hidden p-3 sm:p-6">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
