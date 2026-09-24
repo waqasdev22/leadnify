@@ -24,14 +24,18 @@ const mirrorToFirestore = async (uid, col, arr) => {
 
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 
-// ---- Firebase Realtime Database (cloud sync, per user) ----------------------
-// Primary store: each signed-in user's data lives under /data/<uid>/<col> in the
-// cloud, so the SAME account sees the SAME data on every device (PC, phone, ...).
-// localStorage stays as an offline cache. Firebase is already wired (Auth + Hosting).
+// ---- Firebase Realtime Database (cloud sync, SHARED team workspace) ----------
+// The whole team (Owner + Admins + Managers + Members) works off ONE shared data store at
+// /data/<TEAM_KEY>/<col>, so everyone sees and manages the SAME listings/deals — like one company.
+// (Previously each account had its own /data/<uid> workspace, so a teammate saw an empty dashboard.)
+// localStorage stays as an offline cache. The old per-account data is migrated up automatically
+// the first time an account whose old workspace has data signs in (see getCol).
+const TEAM_KEY = 'vaziamts'
 const currentUid = () => {
   try { return auth.currentUser ? auth.currentUser.uid : '' } catch { return '' }
 }
-const dataPath = (uid, col) => `data/${uid}/${col}`
+const dataPath = (uid, col) => `data/${TEAM_KEY}/${col}`
+const oldUserPath = (uid, col) => `data/${uid}/${col}`
 // RTDB rejects `undefined` values — strip them (and normalise) via a JSON round-trip.
 const clean = (arr) => JSON.parse(JSON.stringify(arr ?? []))
 // RTDB returns a contiguous array as an array, but a sparse/keyed one as an object.
@@ -86,12 +90,25 @@ export const getCol = async (col) => {
   if (uid) {
     try {
       const snap = await dbGet(dbRef(db, dataPath(uid, col)))
-      const arr = toArray(snap.val())
+      let arr = toArray(snap.val())
+      if (arr == null) {
+        // The shared team store is empty for this collection. One-time migration: if THIS account
+        // still has data under its old per-account path (/data/<uid>/<col>), copy it up to the team
+        // store so the team keeps its existing listings without a manual re-import.
+        try {
+          const oldSnap = await dbGet(dbRef(db, oldUserPath(uid, col)))
+          const old = toArray(oldSnap.val())
+          if (old != null && old.length) {
+            await dbSet(dbRef(db, dataPath(uid, col)), clean(old))
+            arr = old
+          }
+        } catch { /* ignore — migration is best-effort */ }
+      }
       if (arr != null) {
         lsSet(col, arr) // refresh the offline cache
         return arr
       }
-      // No cloud data yet for this account — use the local cache if any (first sync).
+      // No cloud data yet for the team — use the local cache if any (first sync).
       return lsGet(col)
     } catch {
       return lsGet(col) // cloud unreachable — serve the local cache
