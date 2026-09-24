@@ -9572,7 +9572,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
   const siteUrl = hubCleanUrl
   // Preview opens the clean per-property URL (leadnify.io/<slug>) when a slug is set; otherwise the
   // draft-preview deep-link (?p=<id>&pv=1) so unlisted/edited deals still render.
-  const previewUrlFor = (l) => (l.slug ? `${window.location.origin}/${encodeURIComponent(l.slug)}` : `${hubUrl}&p=${l.id}&pv=1`)
+  const previewUrlFor = (l) => (l.slug ? `${window.location.origin}/${encodeURIComponent(slug)}/${encodeURIComponent(l.slug)}` : `${hubUrl}&p=${l.id}&pv=1`)
 
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
@@ -11029,6 +11029,8 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
   // room and its linked listing so the microsite (built from listings) can resolve it.
   const slugify = (s) => String(s || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60)
   const [urlSlug, setUrlSlug] = useState(gateListing?.slug || room.slug || '')
+  // The shared public hub slug, so a property's share link nests as /<hub>/<property>.
+  const [hubSlug] = usePersistentState('hub_slug', 'vaziamts', true)
   const [slugDraft, setSlugDraft] = useState(gateListing?.slug || room.slug || '')
   const saveSlug = () => {
     const clean = slugify(slugDraft)
@@ -11211,7 +11213,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
   // matching the property's listing URL — not the internal deal-room gate page.
   // With a custom slug the link is the clean leadnify.io/<slug>; otherwise the query deep-link.
   const visitorUrl = urlSlug
-    ? `${window.location.origin}/${encodeURIComponent(urlSlug)}`
+    ? `${window.location.origin}/${encodeURIComponent(hubSlug || 'vaziamts')}/${encodeURIComponent(urlSlug)}`
     : `${window.location.origin}${window.location.pathname}?hub=vaziamts&p=${encodeURIComponent(room.listingId || room.id)}&t=Modern`
 
   // Save this room so the public "?room=" gate page (opened in a new tab) can render it.
