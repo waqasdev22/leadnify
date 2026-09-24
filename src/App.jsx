@@ -11382,10 +11382,27 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
   const roomLeads = allLeads
     .filter((l) => l.property === room.name)
     .filter((l) => (leadScope === 'mine' ? l.owner === ME : true))
+  // Deal contacts here also drive the public Listing Agent(s): the first two map to the listing's
+  // agent fields and re-publish the hub, so editing agents from the deal room shows on the page.
+  const syncAgents = (contacts) => {
+    if (!gateListing || !setListings) return
+    const fields = contactsToAgents(contacts)
+    setListings((list) => list.map((l) => (l.id === gateListing.id ? { ...l, ...fields } : l)))
+    try {
+      const saved = JSON.parse(localStorage.getItem('crebuilder_hub') || 'null')
+      if (saved && Array.isArray(saved.items) && saved.items.length) {
+        const item = toMicrositeItem({ ...gateListing, ...fields })
+        saved.items = saved.items.map((it) => (String(it.id) === String(gateListing.id) ? item : it))
+        localStorage.setItem('crebuilder_hub', JSON.stringify(saved))
+        putPublicHub('vaziamts', saved).catch(() => {})
+      }
+    } catch { /* next My Deals publish carries it */ }
+  }
   const saveContact = () => {
     if (!contactDraft.name.trim()) { notify('Add a contact name', 'error'); return }
     if (dealContacts.length >= 4) { notify('A deal can have at most 4 contacts', 'error'); return }
-    setDealContacts((l) => [...l, { ...contactDraft, id: uid() }])
+    const next = [...dealContacts, { ...contactDraft, id: uid() }]
+    setDealContacts(next); syncAgents(next)
     setContactDraft(emptyContact)
     setAddingContact(false)
     notify('Contact added')
@@ -11892,7 +11909,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
                     <p className="mt-0.5 text-xs text-slate-500">{[c.email, c.phone, c.license && `Lic# ${c.license}`].filter(Boolean).join(' · ') || '—'}</p>
                   </div>
                   {canEditDealParties && (
-                    <button onClick={() => { setDealContacts((l) => l.filter((x) => x.id !== c.id)); notify('Contact removed', 'error') }} className="shrink-0 text-slate-400 hover:text-rose-500" title="Remove contact"><Trash2 className="h-4 w-4" /></button>
+                    <button onClick={() => { const next = dealContacts.filter((x) => x.id !== c.id); setDealContacts(next); syncAgents(next); notify('Contact removed', 'error') }} className="shrink-0 text-slate-400 hover:text-rose-500" title="Remove contact"><Trash2 className="h-4 w-4" /></button>
                   )}
                 </div>
               ))}
@@ -11909,7 +11926,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
                     <option value="">Add an invited member…</option>
                     {availableMembers.map((m) => <option key={m.id} value={m.id}>{m.name}{m.email ? ` — ${m.email}` : ''}</option>)}
                   </select>
-                  <button onClick={() => { const m = availableMembers.find((x) => String(x.id) === String(pickMember)); if (!m) { notify('Choose a member', 'error'); return } setDealContacts((l) => [...l, { id: uid(), name: m.name, company: m.company || '—', email: m.email || '', phone: m.phone || '—', license: '', member: true }]); setPickMember(''); notify('Contact added') }} className="rounded-lg bg-brand px-3 py-2 text-xs font-bold text-white transition hover:bg-brand-hover">Add</button>
+                  <button onClick={() => { const m = availableMembers.find((x) => String(x.id) === String(pickMember)); if (!m) { notify('Choose a member', 'error'); return } const next = [...dealContacts, { id: uid(), name: m.name, company: m.company || '—', email: fixNel(m.email) || '', phone: m.phone || '—', license: m.license || '', member: true }]; setDealContacts(next); syncAgents(next); setPickMember(''); notify('Contact added') }} className="rounded-lg bg-brand px-3 py-2 text-xs font-bold text-white transition hover:bg-brand-hover">Add</button>
                 </div>
               ) : (
                 <p className="mt-3 border-t border-slate-100 pt-3 text-center text-xs text-slate-400">All invited members are already added. Invite more from <span className="font-semibold text-slate-500">Team &amp; Permissions</span>.</p>
