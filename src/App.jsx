@@ -441,14 +441,19 @@ const downloadPdf = (item, notify) => {
   doc.setTextColor(100, 116, 139)
   doc.text(item.address || '', M, 172)
 
-  // Detail rows
+  // Detail rows — financials included so the PDF matches the cards and detail pages (#2).
+  const money = (v) => '$' + Number(v).toLocaleString('en-US')
   const rows = [
     ['Document Type', item.docType || '—'],
     ['Property Type', item.propertyType || item.type || '—'],
     ['Status', item.status || '—'],
-    ['Tags', Array.isArray(item.tags) ? item.tags.join(', ') : '—'],
-    ['Reference', shareUrlFor(item)],
   ]
+  if (item.price && Number(item.price) > 0) rows.push(['Price', money(item.price)])
+  else if (item.unpriced) rows.push(['Price', 'Contact for Price'])
+  if (item.capRate) rows.push(['CAP Rate', String(item.capRate).replace('%', '').trim() + '%'])
+  if (item.noi && Number(item.noi) > 0) rows.push(['NOI', money(item.noi)])
+  rows.push(['Tags', Array.isArray(item.tags) ? item.tags.join(', ') : '—'])
+  rows.push(['Reference', shareUrlFor(item)])
   let y = 220
   doc.setFontSize(11)
   rows.forEach(([label, value]) => {
