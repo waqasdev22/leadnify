@@ -10977,7 +10977,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dealContacts])
   // Members available to add (invited, not already a deal contact).
-  const availableMembers = teamMembers.filter((m) => !dealContacts.some((c) => (c.email || '').toLowerCase() === (m.email || '').toLowerCase()))
+  const availableMembers = (teamMembers || []).map((m) => ({ ...m, email: fixNel(m.email) })).filter((m) => !dealContacts.some((c) => (c.email || '').toLowerCase() === (m.email || '').toLowerCase()))
   const [pickMember, setPickMember] = useState('')
   const emptyContact = { name: '', company: '', email: '', phone: '', license: '' }
   const [contactDraft, setContactDraft] = useState(emptyContact)
