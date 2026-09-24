@@ -42,6 +42,13 @@
           ".read": true,
           ".write": "auth != null"
         }
+      },
+      "hits": {
+        ".read": "auth != null",
+        "$kind": {
+          ".read": "auth != null",
+          ".write": true
+        }
       }
     }
   }

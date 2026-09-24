@@ -8777,6 +8777,9 @@ function ownerEmailHtml(o){o=o||{};var accent='${primary}';
 function sendDownloadNotice(prop){var info={};try{info=JSON.parse(localStorage.getItem('cre_enrolled_info')||'{}');}catch(e){}emailOwners('Marketing package downloaded'+(prop?' \\u2014 '+prop:''),ownerEmailHtml({title:'Marketing Package Downloaded',body:'A visitor just downloaded the marketing package from your Leadnify.io property page.',name:info.name,email:info.email,type:info.type||'Download',property:prop||'',source:'Package Download'}));}
 // Notify the owner by email for EVERY new lead (inquiry, registration, etc.) — not just downloads.
 function sendLeadNotice(lead){if(!lead)return;emailOwners('New lead'+(lead.property?(' \\u2014 '+lead.property):''),ownerEmailHtml({title:'New Lead',body:'You received a new lead through your Leadnify.io property page.',name:lead.name,email:lead.email,phone:lead.phone,type:lead.type,property:lead.property||'',source:lead.source||'',message:lead.message||''}));}
+// Lightweight own analytics: record a property-page view or a listings impression under /public/hits
+// so the dashboard shows real Page Views & Impressions without any external analytics service.
+function trackHit(kind,extra){try{var b=extra||{};b.t=Date.now();fetch(RTDB+'/public/hits/'+kind+'.json',{method:'POST',keepalive:true,headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).catch(function(){});}catch(e){}}
 function doDownloadPkg(){if(!CUR){return;}
   // Every download (Free / Contact / NDA — first time or repeat) logs a lead and emails the Owner.
   var pn=(CUR&&CUR.name)||'';var lead=null;try{lead=JSON.parse(localStorage.getItem('cre_last_lead')||'null');}catch(e){}
@@ -8843,7 +8846,7 @@ function creUrl(id){var qs=new URLSearchParams(location.search);
   if(id!=null&&id!=='')return base+'/'+encodeURIComponent(id);
   return base||'/';}
 function loadGallery(l){fetch(RTDB+'/public/gallery/'+l.id+'.json').then(function(r){return r.json();}).then(function(g){if(!g||!Array.isArray(g.images)||!g.images.length)return;var gal=document.querySelector('#sec-Gallery .gal');if(!gal)return;var imgs=[l.image].concat(g.images).filter(function(x){return x;});gal.innerHTML=imgs.map(function(im){return '<img src="'+im+'" style="width:100%;height:260px;object-fit:cover;border-radius:0;display:block"/>';}).join('');creHeight();}).catch(function(){});}
-function openDetail(id,skipUrl){var l=null,i;for(i=0;i<DATA.length;i++){if(DATA[i].id==id||(DATA[i].slug&&DATA[i].slug===String(id))){l=DATA[i];break;}}if(!l)return;CUR=l;document.getElementById('detailView').innerHTML=detailHtml(l);document.body.classList.add('detail-open');window.scrollTo(0,0);renderDemo(1);initDetailMap(l);loadGallery(l);creNav(l.id);creHeight();if(!skipUrl){var pv=l.slug||l.id;try{history.pushState({p:pv},'',creUrl(pv));}catch(e){}}}
+function openDetail(id,skipUrl){var l=null,i;for(i=0;i<DATA.length;i++){if(DATA[i].id==id||(DATA[i].slug&&DATA[i].slug===String(id))){l=DATA[i];break;}}if(!l)return;CUR=l;trackHit('pageViews',{id:l.id});document.getElementById('detailView').innerHTML=detailHtml(l);document.body.classList.add('detail-open');window.scrollTo(0,0);renderDemo(1);initDetailMap(l);loadGallery(l);creNav(l.id);creHeight();if(!skipUrl){var pv=l.slug||l.id;try{history.pushState({p:pv},'',creUrl(pv));}catch(e){}}}
 function backToList(skipUrl){document.body.classList.remove('detail-open');if(dmap&&dmap.remove){try{dmap.remove();}catch(e){}}dmap=null;window.scrollTo(0,0);creNav(null);creHeight();if(!skipUrl){try{history.pushState({},'',creUrl(null));}catch(e){}}}
 document.addEventListener('click',function(e){var a=e.target.closest?e.target.closest('.dtabs a'):null;if(a){var tb=a.parentElement.querySelectorAll('a'),i;for(i=0;i<tb.length;i++)tb[i].classList.remove('active');a.classList.add('active');}});
 /* --- Embed messaging: talk to the parent page when used as an <iframe> --- */
@@ -8855,6 +8858,7 @@ window.addEventListener('message',function(e){if(e.data&&e.data.type==='cre-init
 setTimeout(creHeight,700);
 window.addEventListener('popstate',function(){var pid=new URLSearchParams(location.search).get('p');if(!pid){var segs=pathSegs();if(segs.length){var last=segs[segs.length-1];if(isPropSlug(last))pid=last;}}if(pid)openDetail(pid,true);else backToList(true);});
 render();creHeight();
+trackHit('impr',{n:(DATA&&DATA.length)||0});
 (function(){var pid=new URLSearchParams(location.search).get('p')||${JSON.stringify(openSlug || '')};if(pid)openDetail(pid,true);})();
 </script></body></html>`
 }
@@ -12664,6 +12668,29 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
   const [scopeChoice, setScopeChoice] = useState('team')
   const scope = teamWide ? scopeChoice : 'mine'
   const [search, setSearch] = useState('')
+  // Live Page Views + Impressions from the public site's own hit log (no Google Analytics needed):
+  // every property-page open and listings-page load is recorded under /public/hits and counted here.
+  const [siteHits, setSiteHits] = useState({ pageViews: 0, impressions: 0, byProp: {} })
+  useEffect(() => {
+    let alive = true
+    const R = 'https://cre-dashboard-ba596-default-rtdb.firebaseio.com'
+    const load = () => {
+      Promise.all([
+        fetch(R + '/public/hits/pageViews.json').then((r) => r.json()).catch(() => null),
+        fetch(R + '/public/hits/impr.json').then((r) => r.json()).catch(() => null),
+      ]).then(([pv, im]) => {
+        if (!alive) return
+        const pvArr = pv ? Object.values(pv) : []
+        const byProp = {}
+        pvArr.forEach((h) => { const id = h && h.id != null ? String(h.id) : ''; if (id) byProp[id] = (byProp[id] || 0) + 1 })
+        const imSum = im ? Object.values(im).reduce((a, x) => a + (Number(x && x.n) || 1), 0) : 0
+        setSiteHits({ pageViews: pvArr.length, impressions: imSum, byProp })
+      }).catch(() => {})
+    }
+    load()
+    const iv = setInterval(load, 30000)
+    return () => { alive = false; clearInterval(iv) }
+  }, [])
   const [tasks, setTasks] = usePersistentState('crm_tasks', CRM_TASKS_SEED)
   const [autos, setAutos] = usePersistentState('crm_autos', CRM_AUTOMATIONS_SEED)
   const [autoLog, setAutoLog] = usePersistentState('crm_auto_log', []) // 3.10 — activity log
@@ -13309,8 +13336,8 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
               const maxWeek = Math.max(1, ...weeks)
               const mtiles = [
                 { label: 'Leads Captured', v: leadsCaptured, icon: UserPlus, tone: 'bg-orange-50 text-brand' },
-                { label: 'Total Impressions', v: psum('impressions'), icon: Eye, tone: 'bg-blue-50 text-blue-500' },
-                { label: 'Page Views', v: psum('pageViews'), icon: BarChart3, tone: 'bg-violet-50 text-violet-500' },
+                { label: 'Total Impressions', v: psum('impressions') + siteHits.impressions, icon: Eye, tone: 'bg-blue-50 text-blue-500' },
+                { label: 'Page Views', v: psum('pageViews') + siteHits.pageViews, icon: BarChart3, tone: 'bg-violet-50 text-violet-500' },
                 { label: 'Visitors', v: visitors, icon: Users, tone: 'bg-emerald-50 text-emerald-500' },
                 { label: 'Open OMs', v: openOms, icon: FileText, tone: 'bg-amber-50 text-amber-500' },
                 { label: 'Executed CAs', v: executedCas, icon: CheckSquare, tone: 'bg-rose-50 text-rose-500' },
@@ -13336,7 +13363,7 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
                     ))}
                   </div>
                   <p className="mt-1 text-[11px] text-slate-400">Weekly page views — last 12 weeks</p>
-                  <p className="mt-2 text-[11px] text-slate-400"><b>Leads Captured, Visitors, Open OMs &amp; Executed CAs</b> are live from your lead activity. <b>Impressions &amp; Page Views</b> come from a connected analytics source (Google Analytics) and stay 0 until it's connected.</p>
+                  <p className="mt-2 text-[11px] text-slate-400"><b>All metrics are live.</b> Leads Captured, Visitors, Open OMs &amp; Executed CAs come from your lead activity; <b>Page Views &amp; Impressions</b> are tracked on your public listings site (each property-page open and listings view).</p>
                 </div>
               )
             })()}
@@ -14714,7 +14741,7 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
               const liveVisitors = new Set(reportLeads.map((l) => (l.email || '').toLowerCase()).filter((e) => e && e !== '—')).size || reportLeads.length
               const liveOpenOms = reportLeads.filter((l) => /download|package|\bom\b/i.test(l.source || '') || /download/i.test(l.message || '')).length
               const liveExecutedCa = reportLeads.filter((l) => l.type === 'NDA Signer').length
-              const totals = { impressions: sum('impressions'), pageViews: sum('pageViews'), visitors: liveVisitors, openOms: liveOpenOms, executedCa: liveExecutedCa, leads: liveLeads }
+              const totals = { impressions: sum('impressions') + siteHits.impressions, pageViews: sum('pageViews') + siteHits.pageViews, visitors: liveVisitors, openOms: liveOpenOms, executedCa: liveExecutedCa, leads: liveLeads }
               const tiles = [
                 { label: 'Leads captured', v: liveLeads, icon: UserPlus, tone: 'bg-orange-50 text-brand', live: true },
                 { label: 'Total Impressions', v: totals.impressions, icon: Eye, tone: 'bg-blue-50 text-blue-500' },
