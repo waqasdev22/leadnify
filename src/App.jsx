@@ -10083,7 +10083,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                     <th className="py-2 pr-3 text-center font-semibold">Featured</th>
                     <th className="py-2 pr-3 text-center font-semibold">Listed</th>
                     <th className="py-2 pr-3 font-semibold">Access</th>
-                    <th className="py-2 pr-3 text-center font-semibold">Deal Room</th>
+                    <th className="py-2 pr-3 text-center font-semibold">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -10107,7 +10107,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                           <button
                             onClick={() => (onOpenDealRoom ? onOpenDealRoom(l) : (setEditing(l), setModalOpen(true)))}
                             className="font-semibold text-slate-800 hover:text-brand"
-                            title="Open Deal Room"
+                            title="Open deal"
                           >
                             {l.name}
                           </button>
@@ -10232,9 +10232,9 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                                   <FileText className="h-3.5 w-3.5 text-brand" /> {l.pkgName}
                                 </button>
                               ) : (
-                                <p className="mt-1 text-xs text-slate-400">No OM yet — upload it from the Deal Room.</p>
+                                <p className="mt-1 text-xs text-slate-400">No OM yet — open this deal to upload it.</p>
                               )}
-                              <p className="mt-1 text-[11px] text-slate-400">Click to open. Upload or replace the OM from the Deal Room.</p>
+                              <p className="mt-1 text-[11px] text-slate-400">Click to open. Upload or replace the OM on the deal page.</p>
                             </div>
                             <div className="col-span-2 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-100 pt-3 sm:col-span-4">
                               <CardAction icon={Pencil} label="Edit" onClick={() => (setEditing(l), setNewDealOpen(true))} />
@@ -16543,6 +16543,11 @@ export default function App() {
   // Clicking a property on the Dashboard opens that property's Deal Room —
   // matching an existing room by address/name, or creating one on the fly.
   const [dealRoomTarget, setDealRoomTarget] = useState(null)
+  // Deal Rooms is fully merged into My Deals — there is no standalone Deal Rooms screen. The 'deals'
+  // route only exists to show a single deal room's detail (opened from My Deals). If it's reached with
+  // no target (e.g. after a refresh, since the persisted view was 'deals'), send the user to My Deals
+  // instead of the old Deal Rooms list (#14).
+  useEffect(() => { if (active === 'deals' && !dealRoomTarget) setActive('listings') }, [active, dealRoomTarget])
   const openDealRoomFor = (pkg) => {
     if (!pkg) return
     const addr = (pkg.address || '').trim().toLowerCase()
