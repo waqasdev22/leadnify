@@ -13098,7 +13098,7 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
                 <h2 className="mt-1 text-xl font-extrabold text-slate-900">Leads</h2>
                 <p className="text-sm text-slate-500">{unreadCount} unread inquiry · {ndaCount} active NDA signers</p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
                 <input ref={leadFileRef} type="file" accept=".xlsx,.xls,.csv,text/csv" className="hidden" onChange={(e) => { onLeadFile(e.target.files[0]); e.target.value = '' }} />
                 <button onClick={downloadTemplate} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50" title="Download a ready-to-fill import template"><Download className="h-4 w-4" /> Template</button>
                 <button onClick={() => leadFileRef.current && leadFileRef.current.click()} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50" title="Import leads from a CSV (Crexi, LoopNet, etc.)"><Upload className="h-4 w-4" /> Import</button>
