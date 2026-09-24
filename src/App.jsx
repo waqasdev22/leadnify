@@ -8499,7 +8499,7 @@ function MicrositePreview({ open, onClose, listings, primary }) {
 
 // Builds a fully self-contained microsite HTML page (Leaflet via CDN, data baked
 // in) so "Preview" can open the live listings site in a brand-new browser tab.
-export function buildMicrositeHtml(items, brandColor, template = 'Modern', defaultView = 'mapgrid', ownerUid = '', ownerEmail = '', logoUrl = '', ownerEmails = []) {
+export function buildMicrositeHtml(items, brandColor, template = 'Modern', defaultView = 'mapgrid', ownerUid = '', ownerEmail = '', logoUrl = '', ownerEmails = [], openSlug = '') {
   // Which view the microsite opens in (from the owner's "Default View" setting).
   const VIEW = ['map', 'mapgrid', 'grid', 'card', 'list'].includes(defaultView) ? defaultView : 'mapgrid'
   // Each microsite theme drives the accent colour + heading font. Because every
@@ -8823,7 +8823,7 @@ window.addEventListener('message',function(e){if(e.data&&e.data.type==='cre-init
 setTimeout(creHeight,700);
 window.addEventListener('popstate',function(){var pid=new URLSearchParams(location.search).get('p');if(pid)openDetail(pid,true);else backToList(true);});
 render();creHeight();
-(function(){var pid=new URLSearchParams(location.search).get('p');if(pid)openDetail(pid,true);})();
+(function(){var pid=new URLSearchParams(location.search).get('p')||${JSON.stringify(openSlug || '')};if(pid)openDetail(pid,true);})();
 </script></body></html>`
 }
 
@@ -11166,7 +11166,10 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
   const downloadedOm = downloads
   // Preview / Copy link / Share all point to the public PROPERTY PAGE (Modern theme by default),
   // matching the property's listing URL — not the internal deal-room gate page.
-  const visitorUrl = `${window.location.origin}${window.location.pathname}?hub=vaziamts&p=${encodeURIComponent(urlSlug || room.listingId || room.id)}&t=Modern`
+  // With a custom slug the link is the clean leadnify.io/<slug>; otherwise the query deep-link.
+  const visitorUrl = urlSlug
+    ? `${window.location.origin}/${encodeURIComponent(urlSlug)}`
+    : `${window.location.origin}${window.location.pathname}?hub=vaziamts&p=${encodeURIComponent(room.listingId || room.id)}&t=Modern`
 
   // Save this room so the public "?room=" gate page (opened in a new tab) can render it.
   useEffect(() => {

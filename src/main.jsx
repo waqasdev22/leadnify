@@ -13,6 +13,11 @@ import './index.css'
 // work in any new tab.
 const params = new URLSearchParams(window.location.search)
 
+// Clean per-property URL: leadnify.io/<slug> (no query string). There's one shared team hub, so a
+// single path segment that isn't a real file is treated as a property slug to open inside that hub.
+const rawPath = window.location.pathname.replace(/^\/+|\/+$/g, '')
+const cleanSlug = rawPath && !rawPath.includes('/') && !rawPath.includes('.') ? decodeURIComponent(rawPath) : ''
+
 // OAuth popup callback: when a "Connect" popup returns here with ?code&state and it was
 // opened by the dashboard, hand the code back to the opener and close — the main window
 // never reloads. (Only runs inside the popup, i.e. when window.opener exists.)
@@ -28,7 +33,7 @@ if (params.get('code') !== null && params.get('state') !== null && window.opener
   document.body.style.cssText = 'display:flex;align-items:center;justify-content:center;font-family:Inter,sans-serif;color:#64748b'
   document.body.textContent = 'Connected — you can close this window.'
   window.close()
-} else if (params.get('hub') !== null) {
+} else if (params.get('hub') !== null || cleanSlug) {
   const slug = params.get('hub') || 'vaziamts'
   const RTDB = 'https://cre-dashboard-ba596-default-rtdb.firebaseio.com'
   const renderHub = (saved) => {
@@ -61,7 +66,7 @@ if (params.get('code') !== null && params.get('state') !== null && window.opener
     const ownerEmails = (saved && Array.isArray(saved.ownerEmails) && saved.ownerEmails.length) ? saved.ownerEmails : (ownerEmail ? [ownerEmail] : [])
     const logoUrl = (saved && saved.logoUrl) || ''
     document.open()
-    document.write(buildMicrositeHtml(items, primary, template, defaultView, ownerUid, ownerEmail, logoUrl, ownerEmails))
+    document.write(buildMicrositeHtml(items, primary, template, defaultView, ownerUid, ownerEmail, logoUrl, ownerEmails, cleanSlug))
     document.close()
   }
   const fromLocal = () => {
