@@ -10018,8 +10018,9 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
             )}
           </div>
 
-          {/* Download notification email — only this address is emailed when a visitor
-              downloads a marketing package. The visitor never receives an email. */}
+          {/* Download notification email — Owner only (the address that receives lead/download
+              alerts). Managers/Admins/Members never see or set it. The visitor never gets an email. */}
+          {role === 'Owner' && (
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <p className="flex items-center gap-2 text-sm font-bold text-slate-900">
               <Mail className="h-4 w-4 text-brand" /> Download notification email
@@ -10050,6 +10051,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
               <p className="mt-2 text-xs font-medium text-emerald-600">Notifications go to {notifyEmail.trim()}</p>
             )}
           </div>
+          )}
 
           {/* Your own domain card — hidden per request */}
           {false && (
