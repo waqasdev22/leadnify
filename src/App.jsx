@@ -8244,6 +8244,9 @@ const STATE_COORDS = {
 }
 
 const coordsFor = (l) => {
+  // An exact pin set on the deal's Location step wins over any city/state guess.
+  const exLat = Number(l.lat), exLng = Number(l.lng)
+  if (l.lat != null && l.lng != null && !Number.isNaN(exLat) && !Number.isNaN(exLng) && (exLat || exLng)) return [exLat, exLng]
   let base = null
   const addr = l.address || ''
   for (const city in CITY_COORDS) {
@@ -8838,8 +8841,10 @@ function geocodeAddr(addr,cb,tries){if(!addr){cb(null);return;}tries=tries||0;
   if(tries<4){setTimeout(function(){geocodeAddr(addr,cb,tries+1);},400);return;}
   geoNominatim(addr,cb);}
 function initDetailMap(l){var el=document.getElementById('dmap');if(!el)return;var fb=(l.lat!=null&&l.lng!=null)?{lat:Number(l.lat),lng:Number(l.lng)}:null;
-  // Geocode the REAL street address so the pin sits on the actual property (not just the city centre).
-  // Fall back to the stored city/state coordinates if geocoding is unavailable.
+  // An exact pin set on the deal's Location step wins — use it as-is, don't geocode over it.
+  if(l.exact&&fb){drawDetailMap(el,l,fb);return;}
+  // Otherwise geocode the REAL street address so the pin sits on the actual property (not just the
+  // city centre). Fall back to the stored city/state coordinates if geocoding is unavailable.
   geocodeAddr(l.address,function(geo){var pos=geo||fb;if(!pos||!document.getElementById('dmap'))return;drawDetailMap(el,l,pos);});}
 function isPropSlug(s){for(var i=0;i<DATA.length;i++){if(DATA[i].slug===s||String(DATA[i].id)===String(s))return true;}return false;}
 function pathSegs(){return location.pathname.split('/').filter(Boolean).map(function(x){try{return decodeURIComponent(x);}catch(e){return x;}});}
@@ -9079,6 +9084,9 @@ export const toMicrositeItem = (l) => {
         ].filter((r) => r[1]),
         lat,
         lng,
+        // True when the owner dropped an exact pin on the Location step — the detail map then uses it
+        // as-is instead of geocoding the address (which could land a few doors off).
+        exact: !!(l.lat != null && l.lng != null && !Number.isNaN(Number(l.lat)) && (Number(l.lat) || Number(l.lng))),
         // Marketing package (PDF) for the public "Download Package" button — fetched by
         // the listing's id from /public/packages/<id>. A linked deal room's OM is published
         // under this same id, so uploading the OM in the deal room is enough. pkgNameKey is
@@ -9199,7 +9207,7 @@ function AppearanceSettings() {
 
 // Crexi-style New Deal wizard — captures a deal through input fields across seven steps,
 // then hands the assembled deal to onCreate (which builds the listing + deal room).
-const NEW_DEAL_STEPS = ['Property Information', 'Media & Description', 'Property Details', 'OM', 'Confidential Documents', 'Listing Team', 'Save & Exit']
+const NEW_DEAL_STEPS = ['Property Information', 'Media & Description', 'Property Details', 'Location', 'OM', 'Confidential Documents', 'Listing Team', 'Save & Exit']
 // Crexi-style sort options for My Deals.
 const DEAL_SORT_OPTIONS = ['Recently Updated', 'Oldest Updated', 'Recently Created', 'Offers – Most', 'Offers – Least', 'Executed NDA – Most', 'Executed NDA – Least', 'Open OM/Flyer – Most', 'Open OM/Flyer – Least', 'Visitors – Most', 'Visitors – Least', 'Price – Most', 'Price – Least', 'CAP Rate – Most', 'CAP Rate – Least', 'Product']
 // Bulk import: paste rows copied from the client's spreadsheet (tab-separated) and create a deal
@@ -9334,12 +9342,62 @@ function ImportDealsModal({ onClose, onImport }) {
     </div>
   )
 }
+// Inline map for the deal wizard's Location step: a draggable pin the owner drops on the exact
+// property location; "Locate from address" geocodes the typed address. Reports [lat,lng] via onPick.
+function InlineLocationMap({ lat, lng, query, onPick }) {
+  const elRef = useRef(null)
+  const mapRef = useRef(null)
+  const markerRef = useRef(null)
+  const onPickRef = useRef(onPick)
+  onPickRef.current = onPick
+  useEffect(() => {
+    if (!elRef.current || mapRef.current) return
+    const hasInit = lat != null && lng != null && !Number.isNaN(Number(lat)) && (Number(lat) || Number(lng))
+    const start = hasInit ? [Number(lat), Number(lng)] : [39.8283, -98.5795]
+    const map = L.map(elRef.current, { scrollWheelZoom: true }).setView(start, hasInit ? 15 : 4)
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 20, attribution: '&copy; OpenStreetMap contributors &copy; CARTO' }).addTo(map)
+    const pinIcon = L.divIcon({ className: '', html: '<svg width="34" height="34" viewBox="0 0 24 24" fill="#F97316" stroke="white" stroke-width="1.5"><path d="M12 2C8 2 5 5 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-4-3-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="white" stroke="none"/></svg>', iconSize: [34, 34], iconAnchor: [17, 34] })
+    const marker = L.marker(start, { draggable: true, icon: pinIcon }).addTo(map)
+    marker.on('dragend', () => { const p = marker.getLatLng(); onPickRef.current(+p.lat.toFixed(6), +p.lng.toFixed(6)) })
+    map.on('click', (e) => { marker.setLatLng(e.latlng); onPickRef.current(+e.latlng.lat.toFixed(6), +e.latlng.lng.toFixed(6)) })
+    mapRef.current = map; markerRef.current = marker
+    const t = setTimeout(() => map.invalidateSize(), 150)
+    return () => { clearTimeout(t); try { map.remove() } catch { /* ignore */ } mapRef.current = null }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  const locate = () => {
+    const q = String(query || '').trim()
+    if (!q) { return }
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        const hit = Array.isArray(data) && data[0]
+        if (!hit) return
+        const p = [+parseFloat(hit.lat).toFixed(6), +parseFloat(hit.lon).toFixed(6)]
+        if (markerRef.current) markerRef.current.setLatLng(p)
+        if (mapRef.current) mapRef.current.setView(p, 15)
+        onPickRef.current(p[0], p[1])
+      })
+      .catch(() => {})
+  }
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm text-slate-500">Drag the pin (or click the map) to set the exact property location. This is the pin shown on the public property page map.</p>
+        <button type="button" onClick={locate} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"><MapPin className="h-4 w-4 text-brand" /> Locate from address</button>
+      </div>
+      <div ref={elRef} className="h-[340px] w-full overflow-hidden rounded-xl border border-slate-200" />
+      <p className="text-xs text-slate-400">{(lat != null && lng != null && (Number(lat) || Number(lng))) ? `Pinned at ${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)}` : 'No exact pin set yet — the map falls back to the city/state until you drop a pin.'}</p>
+    </div>
+  )
+}
+
 function NewDealModal({ onClose, onCreate, initial }) {
   const notify = useToast()
   const isEdit = !!initial
   const [step, setStep] = useState(0)
   const [f, setF] = useState(() => {
-    const base = { name: '', propertyType: 'Retail', saleType: 'For Sale', gate: 'Contact Required', street: '', city: '', state: '', zip: '', status: 'Active', access: 'Public', cover: '', subheader: '', highlights: '', description: '', photos: [], price: '', unpriced: false, expiration: '', capRate: '', noi: '', size: '', lotSize: '', yearBuilt: '', occupancy: '', tenants: '', leaseTypeDetail: '', tenancy: '', zoning: '', parking: '', subtype: '', pricePerSf: '', saleCondition: '', propertyClass: '', yearsRenovated: '', numUnits: '', tenantBrand: '', parkingType: '', groundLease: false, tenantCredit: '', leaseCommence: '', leaseExpiration: '', leaseTerm: '', remainingTerm: '', leaseOptions: '', rentBumps: '', investmentType: '', proformaNoi: '', proformaCap: '', om: null, confidential: [], contacts: [], bor: { name: '', company: '', license: '' } }
+    const base = { name: '', propertyType: 'Retail', saleType: 'For Sale', gate: 'Contact Required', street: '', city: '', state: '', zip: '', status: 'Active', access: 'Public', lat: '', lng: '', cover: '', subheader: '', highlights: '', description: '', photos: [], price: '', unpriced: false, expiration: '', capRate: '', noi: '', size: '', lotSize: '', yearBuilt: '', occupancy: '', tenants: '', leaseTypeDetail: '', tenancy: '', zoning: '', parking: '', subtype: '', pricePerSf: '', saleCondition: '', propertyClass: '', yearsRenovated: '', numUnits: '', tenantBrand: '', parkingType: '', groundLease: false, tenantCredit: '', leaseCommence: '', leaseExpiration: '', leaseTerm: '', remainingTerm: '', leaseOptions: '', rentBumps: '', investmentType: '', proformaNoi: '', proformaCap: '', om: null, confidential: [], contacts: [], bor: { name: '', company: '', license: '' } }
     // Editing: pre-fill EVERY field from the existing listing so the full form reopens with all the
     // values entered at creation (highlights, description, lease, media, etc.) — not a blank/short form (#6).
     if (!initial) return base
@@ -9481,6 +9539,23 @@ function NewDealModal({ onClose, onCreate, initial }) {
               </div>
             )}
             {step === 3 && (
+              <div className="space-y-3">
+                <div className="rounded-lg bg-slate-50 p-3 text-xs text-slate-500">
+                  Set where this property sits on the map. The address from Step 1 is used for “Locate from address”; drag the pin for the exact spot.
+                </div>
+                <InlineLocationMap
+                  lat={f.lat}
+                  lng={f.lng}
+                  query={[f.street, f.city, f.state, f.zip].filter(Boolean).join(', ') || f.name}
+                  onPick={(la, ln) => setF((s) => ({ ...s, lat: la, lng: ln }))}
+                />
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div><label className={lbl}>Latitude</label><input className={inp} value={f.lat} onChange={(e) => set('lat', e.target.value)} placeholder="e.g. 40.8831" /></div>
+                  <div><label className={lbl}>Longitude</label><input className={inp} value={f.lng} onChange={(e) => set('lng', e.target.value)} placeholder="e.g. -85.4975" /></div>
+                </div>
+              </div>
+            )}
+            {step === 4 && (
               <div>
                 <label className={lbl}>Offering Memorandum (PDF)</label>
                 <input ref={omRef} type="file" accept="application/pdf" className="hidden" onChange={onOm} />
@@ -9492,7 +9567,7 @@ function NewDealModal({ onClose, onCreate, initial }) {
                 <p className="mt-2 text-xs text-slate-400">This is what visitors download from the property page “Download Package”.</p>
               </div>
             )}
-            {step === 4 && (
+            {step === 5 && (
               <div>
                 <label className={lbl}>Confidential Documents (behind the access gate)</label>
                 <input ref={confRef} type="file" multiple className="hidden" onChange={onConf} />
@@ -9500,7 +9575,7 @@ function NewDealModal({ onClose, onCreate, initial }) {
                 <button onClick={() => confRef.current?.click()} className="flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-slate-300 py-3 text-sm font-medium text-slate-500 hover:border-brand hover:text-brand"><Upload className="h-4 w-4" /> Add confidential files</button>
               </div>
             )}
-            {step === 5 && (
+            {step === 6 && (
               <div className="space-y-4">
                 <div>
                   <div className="mb-2 flex items-center justify-between"><label className={lbl + ' mb-0'}>Deal Contacts</label><button onClick={addContact} className="text-xs font-semibold text-brand hover:underline">+ Add contact</button></div>
@@ -9524,7 +9599,7 @@ function NewDealModal({ onClose, onCreate, initial }) {
                 </div>
               </div>
             )}
-            {step === 6 && (
+            {step === 7 && (
               <div className="space-y-3">
                 <p className="text-sm text-slate-500">Review the deal, then save. It’s added to My Deals with a Deal ID and its own deal room.</p>
                 <div className="grid grid-cols-2 gap-x-6 gap-y-2 rounded-lg border border-slate-200 p-4 text-sm">
@@ -9725,6 +9800,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
         groundLease: !!d.groundLease, tenantCredit: d.tenantCredit || '', leaseCommence: d.leaseCommence || '', leaseExpiration: d.leaseExpiration || '',
         leaseTerm: d.leaseTerm || '', remainingTerm: d.remainingTerm || '', leaseOptions: d.leaseOptions || '', rentBumps: d.rentBumps || '',
         investmentType: d.investmentType || '', proformaNoi: d.proformaNoi || '', proformaCap: d.proformaCap || '',
+        lat: (d.lat === '' || d.lat == null) ? (l.lat ?? '') : Number(d.lat), lng: (d.lng === '' || d.lng == null) ? (l.lng ?? '') : Number(d.lng),
       } : l)))
       if (setDealRooms) setDealRooms((list) => list.map((r) => ((r.listingId === editing.id || r.id === editing.id) ? { ...r, name: d.name, address, image: cover, price: priceN, capRate: d.capRate || '', noi: d.noi || '', access: d.gate || r.access, status: d.status || r.status } : r)))
       if (d.om && d.om.url) putPublicPackage(editing.id, { name: d.om.name, url: d.om.url }).catch(() => {})
@@ -9738,7 +9814,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
     const address = [d.street, d.city, d.state, d.zip].filter(Boolean).join(', ') || '—'
     const cover = d.cover || (d.photos && d.photos[0] && d.photos[0].url) || ''
     const price = Number(d.price) || 0
-    setListings((list) => [{ id, dealId, name: d.name, address, city: d.city || '', state: d.state || '', ts: Date.now(), price, type: d.propertyType || 'Retail', saleType: d.saleType || 'For Sale', gate: d.gate || 'Contact Required', size: d.size || '—', status: d.status || 'Active', image: cover || '', featured: false, listed: d.status !== 'Draft', access: d.access || 'Public', subheader: d.subheader || '', highlights: d.highlights || '', description: d.description || '', capRate: d.capRate || '', noi: d.noi || '', pricePerSf: d.pricePerSf || '', lotSize: d.lotSize || '', yearBuilt: d.yearBuilt || '', occupancy: d.occupancy || '', tenants: d.tenants || '', tenancy: d.tenancy || '', leaseTypeDetail: d.leaseTypeDetail || '', subtype: d.subtype || '', zoning: d.zoning || '', parking: d.parking || '', unpriced: !!d.unpriced, expiration: d.expiration || '', saleCondition: d.saleCondition || '', propertyClass: d.propertyClass || '', yearsRenovated: d.yearsRenovated || '', numUnits: d.numUnits || '', tenantBrand: d.tenantBrand || '', parkingType: d.parkingType || '', groundLease: !!d.groundLease, tenantCredit: d.tenantCredit || '', leaseCommence: d.leaseCommence || '', leaseExpiration: d.leaseExpiration || '', leaseTerm: d.leaseTerm || '', remainingTerm: d.remainingTerm || '', leaseOptions: d.leaseOptions || '', rentBumps: d.rentBumps || '', investmentType: d.investmentType || '', proformaNoi: d.proformaNoi || '', proformaCap: d.proformaCap || '' }, ...list])
+    setListings((list) => [{ id, dealId, name: d.name, address, city: d.city || '', state: d.state || '', ts: Date.now(), price, type: d.propertyType || 'Retail', saleType: d.saleType || 'For Sale', gate: d.gate || 'Contact Required', size: d.size || '—', status: d.status || 'Active', image: cover || '', featured: false, listed: d.status !== 'Draft', access: d.access || 'Public', subheader: d.subheader || '', highlights: d.highlights || '', description: d.description || '', capRate: d.capRate || '', noi: d.noi || '', pricePerSf: d.pricePerSf || '', lotSize: d.lotSize || '', yearBuilt: d.yearBuilt || '', occupancy: d.occupancy || '', tenants: d.tenants || '', tenancy: d.tenancy || '', leaseTypeDetail: d.leaseTypeDetail || '', subtype: d.subtype || '', zoning: d.zoning || '', parking: d.parking || '', unpriced: !!d.unpriced, expiration: d.expiration || '', saleCondition: d.saleCondition || '', propertyClass: d.propertyClass || '', yearsRenovated: d.yearsRenovated || '', numUnits: d.numUnits || '', tenantBrand: d.tenantBrand || '', parkingType: d.parkingType || '', groundLease: !!d.groundLease, tenantCredit: d.tenantCredit || '', leaseCommence: d.leaseCommence || '', leaseExpiration: d.leaseExpiration || '', leaseTerm: d.leaseTerm || '', remainingTerm: d.remainingTerm || '', leaseOptions: d.leaseOptions || '', rentBumps: d.rentBumps || '', investmentType: d.investmentType || '', proformaNoi: d.proformaNoi || '', proformaCap: d.proformaCap || '', lat: d.lat === '' || d.lat == null ? '' : Number(d.lat), lng: d.lng === '' || d.lng == null ? '' : Number(d.lng) }, ...list])
     setDealRooms && setDealRooms((list) => [{ id: roomId, listingId: id, dealId, name: d.name, address, image: cover, price, capRate: d.capRate || '', noi: d.noi || '', status: d.status || 'Active', access: d.gate || 'Contact Required', files: (d.confidential || []).length, members: 0, updated: 'just now', ts: Date.now() }, ...list])
     if (d.om && d.om.url) {
       putPublicPackage(id, { name: d.om.name, url: d.om.url }).catch(() => {})
