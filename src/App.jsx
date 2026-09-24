@@ -9129,15 +9129,15 @@ function AppearanceSettings() {
         <p className={sectionLabel}>Company Logo</p>
         <p className="-mt-1 mb-2 text-xs text-slate-400">Shown on your microsite header instead of the property count.</p>
         <input ref={logoRef} type="file" accept="image/*" className="hidden" onChange={onLogo} />
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
           {logo ? (
             <div className="flex h-14 items-center justify-center rounded-lg border border-slate-200 bg-white px-3"><img src={logo} alt="Company logo" className="max-h-10 max-w-[140px] object-contain" /></div>
           ) : (
             <div className="flex h-14 w-24 items-center justify-center rounded-lg border border-dashed border-slate-300 text-slate-300"><ImageIcon className="h-5 w-5" /></div>
           )}
-          <div className="flex gap-2">
-            <button onClick={() => logoRef.current?.click()} className="rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-hover">{logo ? 'Change logo' : 'Upload logo'}</button>
-            {logo && <button onClick={() => { setLogo(''); notify('Logo removed — property count will show again') }} className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-rose-600 transition hover:bg-white">Remove</button>}
+          <div className="flex w-full gap-2 sm:w-auto">
+            <button onClick={() => logoRef.current?.click()} className="flex-1 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand-hover sm:flex-none">{logo ? 'Change logo' : 'Upload logo'}</button>
+            {logo && <button onClick={() => { setLogo(''); notify('Logo removed — property count will show again') }} className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-rose-600 transition hover:bg-white sm:flex-none">Remove</button>}
           </div>
         </div>
       </div>
