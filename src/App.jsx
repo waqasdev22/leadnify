@@ -8829,7 +8829,17 @@ function initDetailMap(l){var el=document.getElementById('dmap');if(!el)return;v
   // Geocode the REAL street address so the pin sits on the actual property (not just the city centre).
   // Fall back to the stored city/state coordinates if geocoding is unavailable.
   geocodeAddr(l.address,function(geo){var pos=geo||fb;if(!pos||!document.getElementById('dmap'))return;drawDetailMap(el,l,pos);});}
-function creUrl(id){var p=new URLSearchParams(location.search);if(id!=null&&id!=='')p.set('p',id);else p.delete('p');return location.pathname+'?'+p.toString();}
+function isPropSlug(s){for(var i=0;i<DATA.length;i++){if(DATA[i].slug===s||String(DATA[i].id)===String(s))return true;}return false;}
+function pathSegs(){return location.pathname.split('/').filter(Boolean).map(function(x){try{return decodeURIComponent(x);}catch(e){return x;}});}
+function creUrl(id){var qs=new URLSearchParams(location.search);
+  // Query-form hub (?hub=): keep the ?p= deep-link for backward compatibility.
+  if(qs.get('hub')!==null){if(id!=null&&id!=='')qs.set('p',id);else qs.delete('p');return location.pathname+'?'+qs.toString();}
+  // Clean path: nest the property slug under the hub segment, e.g. /property/ziggi.
+  var segs=pathSegs();var base='';
+  if(segs.length>=2){base='/'+encodeURIComponent(segs[0]);}
+  else if(segs.length===1){base=isPropSlug(segs[0])?'':('/'+encodeURIComponent(segs[0]));}
+  if(id!=null&&id!=='')return base+'/'+encodeURIComponent(id);
+  return base||'/';}
 function loadGallery(l){fetch(RTDB+'/public/gallery/'+l.id+'.json').then(function(r){return r.json();}).then(function(g){if(!g||!Array.isArray(g.images)||!g.images.length)return;var gal=document.querySelector('#sec-Gallery .gal');if(!gal)return;var imgs=[l.image].concat(g.images).filter(function(x){return x;});gal.innerHTML=imgs.map(function(im){return '<img src="'+im+'" style="width:100%;height:260px;object-fit:cover;border-radius:0;display:block"/>';}).join('');creHeight();}).catch(function(){});}
 function openDetail(id,skipUrl){var l=null,i;for(i=0;i<DATA.length;i++){if(DATA[i].id==id||(DATA[i].slug&&DATA[i].slug===String(id))){l=DATA[i];break;}}if(!l)return;CUR=l;document.getElementById('detailView').innerHTML=detailHtml(l);document.body.classList.add('detail-open');window.scrollTo(0,0);renderDemo(1);initDetailMap(l);loadGallery(l);creNav(l.id);creHeight();if(!skipUrl){var pv=l.slug||l.id;try{history.pushState({p:pv},'',creUrl(pv));}catch(e){}}}
 function backToList(skipUrl){document.body.classList.remove('detail-open');if(dmap&&dmap.remove){try{dmap.remove();}catch(e){}}dmap=null;window.scrollTo(0,0);creNav(null);creHeight();if(!skipUrl){try{history.pushState({},'',creUrl(null));}catch(e){}}}
@@ -8841,7 +8851,7 @@ window.addEventListener('load',creHeight);
 window.addEventListener('resize',creHeight);
 window.addEventListener('message',function(e){if(e.data&&e.data.type==='cre-init'){if(e.data.propertyId)openDetail(e.data.propertyId);else creHeight();}});
 setTimeout(creHeight,700);
-window.addEventListener('popstate',function(){var pid=new URLSearchParams(location.search).get('p');if(pid)openDetail(pid,true);else backToList(true);});
+window.addEventListener('popstate',function(){var pid=new URLSearchParams(location.search).get('p');if(!pid){var segs=pathSegs();if(segs.length){var last=segs[segs.length-1];if(isPropSlug(last))pid=last;}}if(pid)openDetail(pid,true);else backToList(true);});
 render();creHeight();
 (function(){var pid=new URLSearchParams(location.search).get('p')||${JSON.stringify(openSlug || '')};if(pid)openDetail(pid,true);})();
 </script></body></html>`

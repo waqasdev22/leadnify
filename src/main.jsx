@@ -13,10 +13,12 @@ import './index.css'
 // work in any new tab.
 const params = new URLSearchParams(window.location.search)
 
-// Clean per-property URL: leadnify.io/<slug> (no query string). There's one shared team hub, so a
-// single path segment that isn't a real file is treated as a property slug to open inside that hub.
+// Clean per-property URL: leadnify.io/<slug> or leadnify.io/<hub>/<slug> (no query string). There's
+// one shared team hub, so the LAST path segment (that isn't a real file) is treated as a property
+// slug to open inside that hub; a segment matching no property simply shows the full listings.
 const rawPath = window.location.pathname.replace(/^\/+|\/+$/g, '')
-const cleanSlug = rawPath && !rawPath.includes('/') && !rawPath.includes('.') ? decodeURIComponent(rawPath) : ''
+const pathSegs = rawPath && !rawPath.includes('.') ? rawPath.split('/').filter(Boolean) : []
+const cleanSlug = pathSegs.length ? decodeURIComponent(pathSegs[pathSegs.length - 1]) : ''
 
 // OAuth popup callback: when a "Connect" popup returns here with ?code&state and it was
 // opened by the dashboard, hand the code back to the opener and close — the main window
