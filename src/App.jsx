@@ -11598,7 +11598,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
                     <option value="">Add an invited member…</option>
                     {availableMembers.map((m) => <option key={m.id} value={m.id}>{m.name}{m.email ? ` — ${m.email}` : ''}</option>)}
                   </select>
-                  <button onClick={() => { const m = teamMembers.find((x) => x.id === pickMember); if (!m) { notify('Choose a member', 'error'); return } setDealContacts((l) => [...l, { id: uid(), name: m.name, company: m.company || '—', email: m.email || '', phone: m.phone || '—', license: '', member: true }]); setPickMember(''); notify('Contact added') }} className="rounded-lg bg-brand px-3 py-2 text-xs font-bold text-white transition hover:bg-brand-hover">Add</button>
+                  <button onClick={() => { const m = availableMembers.find((x) => String(x.id) === String(pickMember)); if (!m) { notify('Choose a member', 'error'); return } setDealContacts((l) => [...l, { id: uid(), name: m.name, company: m.company || '—', email: m.email || '', phone: m.phone || '—', license: '', member: true }]); setPickMember(''); notify('Contact added') }} className="rounded-lg bg-brand px-3 py-2 text-xs font-bold text-white transition hover:bg-brand-hover">Add</button>
                 </div>
               ) : (
                 <p className="mt-3 border-t border-slate-100 pt-3 text-center text-xs text-slate-400">All invited members are already added. Invite more from <span className="font-semibold text-slate-500">Team &amp; Permissions</span>.</p>
