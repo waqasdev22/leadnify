@@ -7524,7 +7524,7 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
         const roomId = existing ? existing.id : uid()
         if (setDealRooms) {
           if (!existing) {
-            setDealRooms((list) => [{ id: roomId, listingId: id, dealId, name: title, address, image: coverUrl, status: 'Active', access: 'Free Access', files: 1, members: 0, updated: 'just now', ts: Date.now() }, ...list])
+            setDealRooms((list) => [{ id: roomId, listingId: id, dealId, name: title, address, image: coverUrl, status: 'Active', access: 'Contact Required', files: 1, members: 0, updated: 'just now', ts: Date.now() }, ...list])
           } else if (existing.listingId !== id) {
             setDealRooms((list) => list.map((r) => (r.id === roomId ? { ...r, listingId: id } : r)))
           }
@@ -9564,7 +9564,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
     const cover = d.cover || (d.photos && d.photos[0] && d.photos[0].url) || ''
     const price = Number(d.price) || 0
     setListings((list) => [{ id, dealId, name: d.name, address, city: d.city || '', state: d.state || '', ts: Date.now(), price, type: d.propertyType || 'Retail', saleType: d.saleType || 'For Sale', gate: d.gate || 'Contact Required', size: d.size || '—', status: d.status || 'Active', image: cover || propertyImage('1497366216548-37526070297c'), featured: false, listed: true, access: d.access || 'Public', subheader: d.subheader || '', highlights: d.highlights || '', description: d.description || '', capRate: d.capRate || '', noi: d.noi || '', pricePerSf: d.pricePerSf || '', lotSize: d.lotSize || '', yearBuilt: d.yearBuilt || '', occupancy: d.occupancy || '', tenants: d.tenants || '', tenancy: d.tenancy || '', leaseTypeDetail: d.leaseTypeDetail || '', subtype: d.subtype || '', zoning: d.zoning || '', parking: d.parking || '', unpriced: !!d.unpriced, expiration: d.expiration || '', saleCondition: d.saleCondition || '', propertyClass: d.propertyClass || '', yearsRenovated: d.yearsRenovated || '', numUnits: d.numUnits || '', tenantBrand: d.tenantBrand || '', parkingType: d.parkingType || '', groundLease: !!d.groundLease, tenantCredit: d.tenantCredit || '', leaseCommence: d.leaseCommence || '', leaseExpiration: d.leaseExpiration || '', leaseTerm: d.leaseTerm || '', remainingTerm: d.remainingTerm || '', leaseOptions: d.leaseOptions || '', rentBumps: d.rentBumps || '', investmentType: d.investmentType || '', proformaNoi: d.proformaNoi || '', proformaCap: d.proformaCap || '' }, ...list])
-    setDealRooms && setDealRooms((list) => [{ id: roomId, listingId: id, dealId, name: d.name, address, image: cover, price, capRate: d.capRate || '', noi: d.noi || '', status: d.status || 'Active', access: d.access === 'Public' ? 'Free Access' : (d.access || 'Free Access'), files: (d.confidential || []).length, members: 0, updated: 'just now', ts: Date.now() }, ...list])
+    setDealRooms && setDealRooms((list) => [{ id: roomId, listingId: id, dealId, name: d.name, address, image: cover, price, capRate: d.capRate || '', noi: d.noi || '', status: d.status || 'Active', access: d.gate || 'Contact Required', files: (d.confidential || []).length, members: 0, updated: 'just now', ts: Date.now() }, ...list])
     if (d.om && d.om.url) {
       putPublicPackage(id, { name: d.om.name, url: d.om.url }).catch(() => {})
       putFile(`om_${roomId}`, d.om).catch(() => {})
@@ -10837,7 +10837,19 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
   // across devices — loaded on open, saved on every change.
   const [files, setFiles] = useState([])
   const [prospects, setProspects] = useState(DEFAULT_ROOM_PROSPECTS)
-  const [access, setAccess] = useState(room.access || 'Free Access')
+  // The linked listing's `gate` is the single source of truth for download access. Initialise the
+  // Access gate from it (falling back to the room's own value) so the deal page and Edit Deal show
+  // the SAME setting as My Deals — no more "Contact Required" here but "Free Access" there (#5).
+  const linkedListing = (listings || []).find((l) => (room.listingId && l.id === room.listingId) || (l.name && room.name && l.name === room.name))
+  const [access, setAccess] = useState(linkedListing?.gate || room.access || 'Free Access')
+  useEffect(() => {
+    if (linkedListing?.gate && linkedListing.gate !== access) {
+      setAccess(linkedListing.gate)
+      // Persist onto the room too, so the Edit Deal dialog (which reads room.access) matches (#5).
+      if (onUpdateRoom && linkedListing.gate !== room.access) onUpdateRoom(room.id, { access: linkedListing.gate })
+    }
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, [linkedListing?.gate])
   const [status, setStatus] = useState(room.status === 'Archived' ? 'Archived (visitors blocked)' : 'Active')
   const [duration, setDuration] = useState(30)
   const [notifyNda, setNotifyNda] = useState(true)
@@ -11549,7 +11561,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
             <p className="text-sm font-bold text-slate-900">Access gate</p>
             <p className="text-xs text-slate-400">Who can view the OM & these files</p>
             <div className="mt-3">
-              <SelectInput value={access} onChange={(e) => { setAccess(e.target.value); syncListingGate(e.target.value); notify('Access gate updated — applied to the public page') }} options={DEAL_ROOM_ACCESS} />
+              <SelectInput value={access} onChange={(e) => { setAccess(e.target.value); syncListingGate(e.target.value); if (onUpdateRoom) onUpdateRoom(room.id, { access: e.target.value }); notify('Access gate updated — applied to the public page') }} options={DEAL_ROOM_ACCESS} />
             </div>
             <p className="mt-2 text-xs text-slate-400">
               {access === 'Free Access'
@@ -11865,7 +11877,7 @@ function DealRoomsPage({ dealRooms, setDealRooms, listings, setListings, onEditD
     const cover = d.cover || (d.photos && d.photos[0] && d.photos[0].url) || ''
     const price = Number(d.price) || 0
     if (setListings) setListings((list) => [{ id, dealId, name: d.name, address, city: d.city || '', state: d.state || '', ts: Date.now(), price, type: d.propertyType || 'Retail', saleType: d.saleType || 'For Sale', gate: d.gate || 'Contact Required', size: d.size || '—', status: d.status || 'Active', image: cover || propertyImage('1497366216548-37526070297c'), featured: false, listed: true, access: d.access || 'Public', subheader: d.subheader || '', highlights: d.highlights || '', description: d.description || '', capRate: d.capRate || '', noi: d.noi || '', pricePerSf: d.pricePerSf || '', lotSize: d.lotSize || '', yearBuilt: d.yearBuilt || '', occupancy: d.occupancy || '', tenants: d.tenants || '', tenancy: d.tenancy || '', leaseTypeDetail: d.leaseTypeDetail || '', subtype: d.subtype || '', zoning: d.zoning || '', parking: d.parking || '', unpriced: !!d.unpriced, expiration: d.expiration || '', saleCondition: d.saleCondition || '', propertyClass: d.propertyClass || '', yearsRenovated: d.yearsRenovated || '', numUnits: d.numUnits || '', tenantBrand: d.tenantBrand || '', parkingType: d.parkingType || '', groundLease: !!d.groundLease, tenantCredit: d.tenantCredit || '', leaseCommence: d.leaseCommence || '', leaseExpiration: d.leaseExpiration || '', leaseTerm: d.leaseTerm || '', remainingTerm: d.remainingTerm || '', leaseOptions: d.leaseOptions || '', rentBumps: d.rentBumps || '', investmentType: d.investmentType || '', proformaNoi: d.proformaNoi || '', proformaCap: d.proformaCap || '' }, ...list])
-    setDealRooms((list) => [{ id: roomId, listingId: id, dealId, name: d.name, address, image: cover, price, capRate: d.capRate || '', noi: d.noi || '', status: d.status || 'Active', access: d.access === 'Public' ? 'Free Access' : (d.access || 'Free Access'), files: (d.confidential || []).length, members: 0, updated: 'just now', ts: Date.now() }, ...list])
+    setDealRooms((list) => [{ id: roomId, listingId: id, dealId, name: d.name, address, image: cover, price, capRate: d.capRate || '', noi: d.noi || '', status: d.status || 'Active', access: d.gate || 'Contact Required', files: (d.confidential || []).length, members: 0, updated: 'just now', ts: Date.now() }, ...list])
     if (d.om && d.om.url) {
       putPublicPackage(id, { name: d.om.name, url: d.om.url }).catch(() => {})
       putFile(`om_${roomId}`, d.om).catch(() => {})
