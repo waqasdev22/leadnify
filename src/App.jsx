@@ -12835,7 +12835,7 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
   const td = 'px-4 py-3 text-sm text-slate-700'
 
   return (
-    <div className="mx-auto max-w-[1600px] p-6">
+    <div className="mx-auto max-w-[1600px] overflow-x-hidden p-3 sm:p-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
@@ -14625,12 +14625,12 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
                       <p className="text-sm font-bold text-slate-900">Property marketing</p>
                       <p className="text-xs text-slate-400">Reach & engagement per property{scope === 'mine' ? ' — your listings' : ' — whole team'}.</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <select value={reportProperty} onChange={(e) => setReportProperty(e.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-orange-400">
+                    <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+                      <select value={reportProperty} onChange={(e) => setReportProperty(e.target.value)} className="w-full min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-orange-400 sm:w-auto sm:max-w-[220px]">
                         <option value="all">All properties</option>
                         {Array.from(new Set([...importDeals.map((d) => d.name), ...scoped.map((p) => p.name), ...inbox.map((l) => l.property || l.listing)].filter(Boolean))).map((n) => <option key={n} value={n}>{n}</option>)}
                       </select>
-                      <button onClick={() => { if (!openPropertyReportPrint(sel, totals, weeks, reach, reportProperty)) notify('Allow pop-ups to open the report', 'error') }} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"><Printer className="h-4 w-4" /> Print / Export</button>
+                      <button onClick={() => { if (!openPropertyReportPrint(sel, totals, weeks, reach, reportProperty)) notify('Allow pop-ups to open the report', 'error') }} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"><Printer className="h-4 w-4" /> Print / Export</button>
                     </div>
                   </div>
                   <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
