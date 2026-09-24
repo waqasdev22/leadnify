@@ -257,6 +257,15 @@ const nsKey = (key) => (DATA_NS ? `${DATA_NS}::${key}` : key)
 // Turn a property name into a URL slug — used so EVERY property gets a clean public URL
 // (leadnify.io/<hub>/<slug>) automatically, even when no custom slug was set by hand.
 const slugifyName = (s) => String(s || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60)
+// The first two Deal Contacts become the public Listing Agent(s) — map them to the listing's agent fields.
+const contactsToAgents = (contacts) => {
+  const c0 = (contacts && contacts[0]) || {}
+  const c1 = (contacts && contacts[1]) || {}
+  return {
+    agentName: c0.name || '', agentLicense: c0.license || '', agentEmail: c0.email || '', agentPhone: c0.phone || '',
+    agent2Name: c1.name || '', agent2License: c1.license || '', agent2Email: c1.email || '', agent2Phone: c1.phone || '',
+  }
+}
 
 const readLS = (k, initial) => {
   try {
@@ -9433,7 +9442,14 @@ function NewDealModal({ onClose, onCreate, initial }) {
       cover: initial.cover || initial.image || '',
       photos: Array.isArray(initial.photos) ? initial.photos : [],
       confidential: Array.isArray(initial.confidential) ? initial.confidential : [],
-      contacts: Array.isArray(initial.contacts) ? initial.contacts : [],
+      // Deal Contacts drive the public "Listing Agent(s)". Pre-fill from the listing's saved agents so
+      // editing shows the current agents (and the user can change them).
+      contacts: (Array.isArray(initial.contacts) && initial.contacts.length)
+        ? initial.contacts
+        : [
+          initial.agentName ? { id: uid(), name: initial.agentName, license: initial.agentLicense || '', email: initial.agentEmail || '', phone: initial.agentPhone || '' } : null,
+          initial.agent2Name ? { id: uid(), name: initial.agent2Name, license: initial.agent2License || '', email: initial.agent2Email || '', phone: initial.agent2Phone || '' } : null,
+        ].filter(Boolean),
       // Broker of Record is a single line on the public page. Pre-fill from the string, or flatten an
       // older {name,company,license} object into one so the field always shows the current value.
       bor: typeof initial.bor === 'string'
@@ -9473,7 +9489,7 @@ function NewDealModal({ onClose, onCreate, initial }) {
   const onPhotos = async (e) => { const files = Array.from(e.target.files || []).filter((x) => x.type.startsWith('image/')); e.target.value = ''; const added = []; for (const file of files) { if (file.size > 150 * 1024 * 1024) { notify(`"${file.name}" too large (max 150 MB) — skipped`, 'error'); continue } added.push({ id: uid(), name: file.name, url: await uploadToStorage(file, f.name) }) } set('photos', [...f.photos, ...added].slice(0, 12)) }
   const onOm = async (e) => { const file = e.target.files?.[0]; e.target.value = ''; if (!file) return; if (file.type !== 'application/pdf') { notify('OM must be a PDF', 'error'); return } if (file.size > 150 * 1024 * 1024) { notify('PDF too large (max 150 MB)', 'error'); return } set('om', { name: file.name, size: fsize(file), date: today(), url: await uploadToStorage(file, f.name) }) }
   const onConf = async (e) => { const files = Array.from(e.target.files || []); e.target.value = ''; const added = []; for (const file of files) { if (file.size > 150 * 1024 * 1024) { notify(`"${file.name}" too large (max 150 MB) — skipped`, 'error'); continue } added.push({ id: uid(), name: file.name, size: fsize(file), date: today(), url: await uploadToStorage(file, f.name) }) } set('confidential', [...f.confidential, ...added]) }
-  const addContact = () => set('contacts', [...f.contacts, { id: uid(), name: '', company: '', email: '', phone: '' }])
+  const addContact = () => set('contacts', [...f.contacts, { id: uid(), name: '', license: '', email: '', phone: '' }])
   const setContact = (id, k, v) => set('contacts', f.contacts.map((c) => (c.id === id ? { ...c, [k]: v } : c)))
   const save = () => { if (!f.name.trim()) { setStep(0); notify('Deal name is required', 'error'); return } onCreate(f) }
 
@@ -9631,13 +9647,17 @@ function NewDealModal({ onClose, onCreate, initial }) {
               <div className="space-y-4">
                 <div>
                   <div className="mb-2 flex items-center justify-between"><label className={lbl + ' mb-0'}>Deal Contacts</label><button onClick={addContact} className="text-xs font-semibold text-brand hover:underline">+ Add contact</button></div>
+                  <p className="mb-2 text-xs text-slate-400">These show as the <b>Listing Agent(s)</b> on the public property page. The first two contacts appear on the listing.</p>
                   {f.contacts.length === 0 && <p className="text-xs text-slate-400">No contacts yet — add the people on this deal.</p>}
                   <div className="space-y-2">{f.contacts.map((c) => (
-                    <div key={c.id} className="grid gap-2 rounded-lg border border-slate-200 p-2 sm:grid-cols-2">
-                      <input className={inp} placeholder="Name" value={c.name} onChange={(e) => setContact(c.id, 'name', e.target.value)} />
-                      <input className={inp} placeholder="Company" value={c.company} onChange={(e) => setContact(c.id, 'company', e.target.value)} />
-                      <input className={inp} placeholder="Email" value={c.email} onChange={(e) => setContact(c.id, 'email', e.target.value)} />
-                      <input className={inp} placeholder="Phone" value={c.phone} onChange={(e) => setContact(c.id, 'phone', e.target.value)} />
+                    <div key={c.id} className="rounded-lg border border-slate-200 p-2">
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <input className={inp} placeholder="Name" value={c.name} onChange={(e) => setContact(c.id, 'name', e.target.value)} />
+                        <input className={inp} placeholder="License #" value={c.license || ''} onChange={(e) => setContact(c.id, 'license', e.target.value)} />
+                        <input className={inp} placeholder="Email" value={c.email} onChange={(e) => setContact(c.id, 'email', e.target.value)} />
+                        <input className={inp} placeholder="Phone" value={c.phone} onChange={(e) => setContact(c.id, 'phone', e.target.value)} />
+                      </div>
+                      <button onClick={() => set('contacts', f.contacts.filter((x) => x.id !== c.id))} className="mt-1 text-xs font-semibold text-rose-500 hover:underline">Remove</button>
                     </div>
                   ))}</div>
                 </div>
@@ -9827,6 +9847,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
 
   // Create a deal from the New Deal wizard: one shared Deal ID across the listing + deal room,
   // with the OM, photos and confidential docs published so the property page/download work.
+  const agentFieldsFrom = contactsToAgents
   const createDeal = (d) => {
     // EDIT mode: update the existing listing (and its linked deal room) with the FULL field set from
     // the wizard, so highlights/description/lease/media entered here are retained (#6). Agent/BOR and
@@ -9850,6 +9871,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
         investmentType: d.investmentType || '', proformaNoi: d.proformaNoi || '', proformaCap: d.proformaCap || '',
         lat: (d.lat === '' || d.lat == null) ? (l.lat ?? '') : Number(d.lat), lng: (d.lng === '' || d.lng == null) ? (l.lng ?? '') : Number(d.lng),
         bor: (typeof d.bor === 'string' && d.bor.trim()) ? d.bor.trim() : (l.bor || ''),
+        ...agentFieldsFrom(d.contacts),
       } : l)))
       if (setDealRooms) setDealRooms((list) => list.map((r) => ((r.listingId === editing.id || r.id === editing.id) ? { ...r, name: d.name, address, image: cover, price: priceN, capRate: d.capRate || '', noi: d.noi || '', access: d.gate || r.access, status: d.status || r.status } : r)))
       if (d.om && d.om.url) putPublicPackage(editing.id, { name: d.om.name, url: d.om.url }).catch(() => {})
@@ -9863,7 +9885,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
     const address = [d.street, d.city, d.state, d.zip].filter(Boolean).join(', ') || '—'
     const cover = d.cover || (d.photos && d.photos[0] && d.photos[0].url) || ''
     const price = Number(d.price) || 0
-    setListings((list) => [{ id, dealId, name: d.name, address, city: d.city || '', state: d.state || '', ts: Date.now(), price, type: d.propertyType || 'Retail', saleType: d.saleType || 'For Sale', gate: d.gate || 'Contact Required', size: d.size || '—', status: d.status || 'Active', image: cover || '', featured: false, listed: d.status !== 'Draft', access: d.access || 'Public', subheader: d.subheader || '', highlights: d.highlights || '', description: d.description || '', areaText: d.areaText || '', capRate: d.capRate || '', noi: d.noi || '', pricePerSf: d.pricePerSf || '', lotSize: d.lotSize || '', yearBuilt: d.yearBuilt || '', occupancy: d.occupancy || '', tenants: d.tenants || '', tenancy: d.tenancy || '', leaseTypeDetail: d.leaseTypeDetail || '', subtype: d.subtype || '', zoning: d.zoning || '', parking: d.parking || '', unpriced: !!d.unpriced, expiration: d.expiration || '', saleCondition: d.saleCondition || '', propertyClass: d.propertyClass || '', yearsRenovated: d.yearsRenovated || '', numUnits: d.numUnits || '', tenantBrand: d.tenantBrand || '', parkingType: d.parkingType || '', groundLease: !!d.groundLease, tenantCredit: d.tenantCredit || '', leaseCommence: d.leaseCommence || '', leaseExpiration: d.leaseExpiration || '', leaseTerm: d.leaseTerm || '', remainingTerm: d.remainingTerm || '', leaseOptions: d.leaseOptions || '', rentBumps: d.rentBumps || '', investmentType: d.investmentType || '', proformaNoi: d.proformaNoi || '', proformaCap: d.proformaCap || '', lat: d.lat === '' || d.lat == null ? '' : Number(d.lat), lng: d.lng === '' || d.lng == null ? '' : Number(d.lng), bor: (typeof d.bor === 'string' ? d.bor.trim() : '') }, ...list])
+    setListings((list) => [{ id, dealId, name: d.name, address, city: d.city || '', state: d.state || '', ts: Date.now(), price, type: d.propertyType || 'Retail', saleType: d.saleType || 'For Sale', gate: d.gate || 'Contact Required', size: d.size || '—', status: d.status || 'Active', image: cover || '', featured: false, listed: d.status !== 'Draft', access: d.access || 'Public', subheader: d.subheader || '', highlights: d.highlights || '', description: d.description || '', areaText: d.areaText || '', capRate: d.capRate || '', noi: d.noi || '', pricePerSf: d.pricePerSf || '', lotSize: d.lotSize || '', yearBuilt: d.yearBuilt || '', occupancy: d.occupancy || '', tenants: d.tenants || '', tenancy: d.tenancy || '', leaseTypeDetail: d.leaseTypeDetail || '', subtype: d.subtype || '', zoning: d.zoning || '', parking: d.parking || '', unpriced: !!d.unpriced, expiration: d.expiration || '', saleCondition: d.saleCondition || '', propertyClass: d.propertyClass || '', yearsRenovated: d.yearsRenovated || '', numUnits: d.numUnits || '', tenantBrand: d.tenantBrand || '', parkingType: d.parkingType || '', groundLease: !!d.groundLease, tenantCredit: d.tenantCredit || '', leaseCommence: d.leaseCommence || '', leaseExpiration: d.leaseExpiration || '', leaseTerm: d.leaseTerm || '', remainingTerm: d.remainingTerm || '', leaseOptions: d.leaseOptions || '', rentBumps: d.rentBumps || '', investmentType: d.investmentType || '', proformaNoi: d.proformaNoi || '', proformaCap: d.proformaCap || '', lat: d.lat === '' || d.lat == null ? '' : Number(d.lat), lng: d.lng === '' || d.lng == null ? '' : Number(d.lng), bor: (typeof d.bor === 'string' ? d.bor.trim() : ''), ...agentFieldsFrom(d.contacts) }, ...list])
     setDealRooms && setDealRooms((list) => [{ id: roomId, listingId: id, dealId, name: d.name, address, image: cover, price, capRate: d.capRate || '', noi: d.noi || '', status: d.status || 'Active', access: d.gate || 'Contact Required', files: (d.confidential || []).length, members: 0, updated: 'just now', ts: Date.now() }, ...list])
     if (d.om && d.om.url) {
       putPublicPackage(id, { name: d.om.name, url: d.om.url }).catch(() => {})
@@ -12172,6 +12194,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
               investmentType: d.investmentType || '', proformaNoi: d.proformaNoi || '', proformaCap: d.proformaCap || '',
               lat: (d.lat === '' || d.lat == null) ? (gateListing.lat ?? '') : Number(d.lat), lng: (d.lng === '' || d.lng == null) ? (gateListing.lng ?? '') : Number(d.lng),
               bor: (typeof d.bor === 'string' && d.bor.trim()) ? d.bor.trim() : (gateListing.bor || ''),
+              ...contactsToAgents(d.contacts),
             }
             if (setListings) setListings((list) => list.map((l) => (l.id === gateListing.id ? { ...l, ...patch } : l)))
             // Push the edit straight into the published hub so the public property page updates now
