@@ -12143,6 +12143,8 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
               groundLease: !!d.groundLease, tenantCredit: d.tenantCredit || '', leaseCommence: d.leaseCommence || '', leaseExpiration: d.leaseExpiration || '',
               leaseTerm: d.leaseTerm || '', remainingTerm: d.remainingTerm || '', leaseOptions: d.leaseOptions || '', rentBumps: d.rentBumps || '',
               investmentType: d.investmentType || '', proformaNoi: d.proformaNoi || '', proformaCap: d.proformaCap || '',
+              lat: (d.lat === '' || d.lat == null) ? (l.lat ?? '') : Number(d.lat), lng: (d.lng === '' || d.lng == null) ? (l.lng ?? '') : Number(d.lng),
+              bor: (typeof d.bor === 'string' && d.bor.trim()) ? d.bor.trim() : (l.bor || ''),
             } : l)))
             if (onUpdateRoom) onUpdateRoom(room.id, { name: d.name, address, image: cover, price: priceN, capRate: d.capRate || '', noi: d.noi || '', access: d.gate || access, status: d.status || room.status })
             if (d.gate) { setAccess(d.gate); syncListingGate(d.gate) }
