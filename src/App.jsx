@@ -10963,12 +10963,10 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
   const [teamMembers] = usePersistentState('team_members', TEAM_SETTINGS_MEMBERS)
   const [contactsSeeded, setContactsSeeded] = usePersistentState(`room_${room.id}_contacts_seeded`, false)
   const fixNel = (e) => String(e || '').replace(/^Nel@valuereis\.com$/i, 'Neil@valuereis.com')
+  // Deal contacts start EMPTY — no auto-populating from the team. The user adds only the contacts they
+  // want via "Add" (#11: Neil flagged contacts appearing without being entered).
   useEffect(() => {
-    if (contactsSeeded) return
-    if (dealContacts.length === 0 && teamMembers.length) {
-      setDealContacts(teamMembers.slice(0, 4).map((m) => ({ id: uid(), name: m.name, company: m.company || '—', email: fixNel(m.email), phone: m.phone || '—', license: '', member: true })))
-    }
-    setContactsSeeded(true)
+    if (!contactsSeeded) setContactsSeeded(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [room.id])
   // One-time cleanup: repair any deal contact still saved with the old 'Nel@' typo (#11).
