@@ -9552,6 +9552,9 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
   // Functional link that actually opens the microsite (works when pasted in a new tab).
   const hubUrl = `${window.location.origin}${window.location.pathname}?hub=${slug}`
   const siteUrl = hubUrl
+  // Preview opens the clean per-property URL (leadnify.io/<slug>) when a slug is set; otherwise the
+  // draft-preview deep-link (?p=<id>&pv=1) so unlisted/edited deals still render.
+  const previewUrlFor = (l) => (l.slug ? `${window.location.origin}/${encodeURIComponent(l.slug)}` : `${hubUrl}&p=${l.id}&pv=1`)
 
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
@@ -10265,7 +10268,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                             // Save this listing so the microsite can preview it even if it's a draft/unlisted
                             // property that isn't in the published hub (#13).
                             try { localStorage.setItem('cre_preview', JSON.stringify(toMicrositeItem(l))) } catch { /* ignore */ }
-                            const w = window.open(`${hubUrl}&p=${l.id}&pv=1`, '_blank')
+                            const w = window.open(previewUrlFor(l), '_blank')
                             if (!w) notify('Please allow pop-ups to open the preview', 'error')
                           }} />
                           {can('listing.delete') && (
@@ -10303,7 +10306,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                               <CardAction icon={Share2} label="Share" onClick={() => shareItem(l, notify)} />
                               <CardAction icon={AtSign} label="Email" onClick={() => emailItem(l, notify)} />
                               <CardAction icon={Share} label="Social" onClick={() => socialShare(l, notify)} />
-                              <button onClick={() => { try { localStorage.setItem('cre_preview', JSON.stringify(toMicrositeItem(l))) } catch { /* ignore */ } const w = window.open(`${hubUrl}&p=${l.id}&pv=1`, '_blank'); if (!w) notify('Please allow pop-ups to open the preview', 'error') }} className="ml-auto rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">Preview</button>
+                              <button onClick={() => { try { localStorage.setItem('cre_preview', JSON.stringify(toMicrositeItem(l))) } catch { /* ignore */ } const w = window.open(previewUrlFor(l), '_blank'); if (!w) notify('Please allow pop-ups to open the preview', 'error') }} className="ml-auto rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">Preview</button>
                             </div>
                           </div>
                         </td>
