@@ -9424,6 +9424,25 @@ function NewDealModal({ onClose, onCreate, initial }) {
     }
   })
   const set = (k, v) => setF((s) => ({ ...s, [k]: v }))
+  // Editing: pull this property's already-published gallery images into the Photos field so they're
+  // visible and manageable here (they live in /public/gallery/<id>, not on the listing record).
+  useEffect(() => {
+    if (!isEdit || !initial || initial.id == null) return
+    let alive = true
+    fetch(`https://cre-dashboard-ba596-default-rtdb.firebaseio.com/public/gallery/${initial.id}.json`)
+      .then((r) => r.json())
+      .then((g) => {
+        if (!alive || !g || !Array.isArray(g.images) || !g.images.length) return
+        setF((s) => {
+          const have = new Set((s.photos || []).map((p) => p.url))
+          const add = g.images.filter((u) => u && !have.has(u)).map((u) => ({ id: uid(), name: 'Photo', url: u }))
+          return add.length ? { ...s, photos: [...(s.photos || []), ...add].slice(0, 12) } : s
+        })
+      })
+      .catch(() => {})
+    return () => { alive = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const coverRef = useRef(null), photoRef = useRef(null), omRef = useRef(null), confRef = useRef(null)
   const fsize = (file) => { const mb = file.size / (1024 * 1024); return mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.max(1, Math.round(file.size / 1024))} KB` }
   const today = () => new Date().toLocaleDateString('en-GB')
