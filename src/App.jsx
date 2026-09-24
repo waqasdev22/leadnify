@@ -11328,15 +11328,15 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
       {/* Header card */}
       <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-start gap-3">
             {room.image ? (
-              <img src={displayImg(room.image)} onError={(e) => (e.currentTarget.src = FALLBACK_IMG)} alt="" className="h-12 w-12 rounded-lg object-cover" />
+              <img src={displayImg(room.image)} onError={(e) => (e.currentTarget.src = FALLBACK_IMG)} alt="" className="h-12 w-12 shrink-0 rounded-lg object-cover" />
             ) : (
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-slate-100"><Building2 className="h-6 w-6 text-slate-300" /></div>
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-slate-100"><Building2 className="h-6 w-6 text-slate-300" /></div>
             )}
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl font-extrabold text-slate-900">{room.name}</h1>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-lg font-extrabold text-slate-900 sm:text-xl">{room.name}</h1>
                 <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
                   {room.status}
                 </span>
@@ -11362,12 +11362,12 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => setEditOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+            <button onClick={() => setEditOpen(true)} className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:flex-none">
               <Pencil className="h-4 w-4" /> Edit Deal
             </button>
             <PrimaryButton icon={Copy} onClick={() => copy(visitorUrl, 'Visitor link copied')}>Copy visitor link</PrimaryButton>
-            <button onClick={openVisitor} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+            <button onClick={openVisitor} className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:flex-none">
               <ExternalLink className="h-4 w-4" /> Preview
             </button>
           </div>
