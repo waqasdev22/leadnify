@@ -12130,10 +12130,11 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
             const cover = d.cover || (d.photos && d.photos[0] && d.photos[0].url) || gateListing.image || ''
             const address = [d.street, d.city, d.state, d.zip].filter(Boolean).join(', ') || gateListing.address || '—'
             const priceN = Number(d.price) || 0
-            if (setListings) setListings((list) => list.map((l) => (l.id === gateListing.id ? {
-              ...l, name: d.name, address, city: d.city || '', state: d.state || '', price: priceN,
-              type: d.propertyType || l.type, saleType: d.saleType || l.saleType, gate: d.gate || l.gate,
-              size: d.size || l.size || '—', status: d.status || l.status, listed: d.status === 'Draft' ? false : l.listed, image: cover, access: d.access || l.access,
+            // All edited fields in one object so we can update the listing AND re-publish the hub with them.
+            const patch = {
+              name: d.name, address, city: d.city || '', state: d.state || '', price: priceN,
+              type: d.propertyType || gateListing.type, saleType: d.saleType || gateListing.saleType, gate: d.gate || gateListing.gate,
+              size: d.size || gateListing.size || '—', status: d.status || gateListing.status, listed: d.status === 'Draft' ? false : gateListing.listed, image: cover, access: d.access || gateListing.access,
               subheader: d.subheader || '', highlights: d.highlights || '', description: d.description || '',
               capRate: d.capRate || '', noi: d.noi || '', pricePerSf: d.pricePerSf || '', lotSize: d.lotSize || '',
               yearBuilt: d.yearBuilt || '', occupancy: d.occupancy || '', tenants: d.tenants || '', tenancy: d.tenancy || '',
@@ -12143,9 +12144,21 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
               groundLease: !!d.groundLease, tenantCredit: d.tenantCredit || '', leaseCommence: d.leaseCommence || '', leaseExpiration: d.leaseExpiration || '',
               leaseTerm: d.leaseTerm || '', remainingTerm: d.remainingTerm || '', leaseOptions: d.leaseOptions || '', rentBumps: d.rentBumps || '',
               investmentType: d.investmentType || '', proformaNoi: d.proformaNoi || '', proformaCap: d.proformaCap || '',
-              lat: (d.lat === '' || d.lat == null) ? (l.lat ?? '') : Number(d.lat), lng: (d.lng === '' || d.lng == null) ? (l.lng ?? '') : Number(d.lng),
-              bor: (typeof d.bor === 'string' && d.bor.trim()) ? d.bor.trim() : (l.bor || ''),
-            } : l)))
+              lat: (d.lat === '' || d.lat == null) ? (gateListing.lat ?? '') : Number(d.lat), lng: (d.lng === '' || d.lng == null) ? (gateListing.lng ?? '') : Number(d.lng),
+              bor: (typeof d.bor === 'string' && d.bor.trim()) ? d.bor.trim() : (gateListing.bor || ''),
+            }
+            if (setListings) setListings((list) => list.map((l) => (l.id === gateListing.id ? { ...l, ...patch } : l)))
+            // Push the edit straight into the published hub so the public property page updates now
+            // (My Deals isn't mounted here to auto-republish).
+            try {
+              const saved = JSON.parse(localStorage.getItem('crebuilder_hub') || 'null')
+              if (saved && Array.isArray(saved.items) && saved.items.length) {
+                const item = toMicrositeItem({ ...gateListing, ...patch })
+                saved.items = saved.items.map((it) => (String(it.id) === String(gateListing.id) ? item : it))
+                localStorage.setItem('crebuilder_hub', JSON.stringify(saved))
+                putPublicHub('vaziamts', saved).catch(() => {})
+              }
+            } catch { /* the next My Deals publish will still carry the edit */ }
             if (onUpdateRoom) onUpdateRoom(room.id, { name: d.name, address, image: cover, price: priceN, capRate: d.capRate || '', noi: d.noi || '', access: d.gate || access, status: d.status || room.status })
             if (d.gate) { setAccess(d.gate); syncListingGate(d.gate) }
             if (d.om && d.om.url) putPublicPackage(gateListing.id, { name: d.om.name, url: d.om.url }).catch(() => {})
