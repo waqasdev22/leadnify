@@ -11215,7 +11215,10 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
 
   // Deal contacts (up to 4 per deal) + Broker of Record (1 per listing) — persisted per room.
   const [dealContacts, setDealContacts] = usePersistentState(`room_${room.id}_contacts`, [])
-  const [bor, setBor] = usePersistentState(`room_${room.id}_bor`, null)
+  // Broker of Record is now the SAME value shown on the public page (the linked listing's `bor`
+  // string), so editing it here syncs everywhere. (Falls back to the per-room store if there's no
+  // linked listing.)
+  const [roomBor, setRoomBor] = usePersistentState(`room_${room.id}_bor`, null)
   // Deal Contacts auto-populate from invited team members only (no outsiders).
   const [teamMembers] = usePersistentState('team_members', TEAM_SETTINGS_MEMBERS)
   const [contactsSeeded, setContactsSeeded] = usePersistentState(`room_${room.id}_contacts_seeded`, false)
@@ -11254,8 +11257,31 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
   const emptyContact = { name: '', company: '', email: '', phone: '', license: '' }
   const [contactDraft, setContactDraft] = useState(emptyContact)
   const [addingContact, setAddingContact] = useState(false)
-  const [borDraft, setBorDraft] = useState({ name: '', company: '', license: '' })
+  // The BoR line: prefer the linked listing's string; fall back to an older per-room object.
+  const roomBorStr = roomBor && typeof roomBor === 'object' ? [roomBor.name, roomBor.company, roomBor.license && `License ${roomBor.license}`].filter(Boolean).join(' · ') : (roomBor || '')
+  const listingBor = (gateListing && typeof gateListing.bor === 'string' && gateListing.bor) || roomBorStr || ''
+  const [borText, setBorText] = useState(listingBor)
   const [editingBor, setEditingBor] = useState(false)
+  useEffect(() => { if (!editingBor) setBorText(listingBor) }, [listingBor]) // eslint-disable-line react-hooks/exhaustive-deps
+  const saveListingBor = (text) => {
+    const clean = String(text || '').trim()
+    if (gateListing && setListings) {
+      setListings((list) => list.map((l) => (l.id === gateListing.id ? { ...l, bor: clean } : l)))
+      try {
+        const saved = JSON.parse(localStorage.getItem('crebuilder_hub') || 'null')
+        if (saved && Array.isArray(saved.items) && saved.items.length) {
+          const item = toMicrositeItem({ ...gateListing, bor: clean })
+          saved.items = saved.items.map((it) => (String(it.id) === String(gateListing.id) ? item : it))
+          localStorage.setItem('crebuilder_hub', JSON.stringify(saved))
+          putPublicHub('vaziamts', saved).catch(() => {})
+        }
+      } catch { /* next My Deals publish will carry it */ }
+    } else {
+      setRoomBor(clean || null) // no linked listing — keep it per-room
+    }
+    setEditingBor(false)
+    notify(clean ? 'Broker of Record saved' : 'Broker of Record removed', clean ? 'success' : 'error')
+  }
   // Deal Room "My Leads": pulled from the central leads, auto-filtered to THIS property,
   // shown with the same columns as the central My Leads page (Milestone II 3.3).
   const ME = 'Waqas' // current user (demo)
@@ -11333,12 +11359,6 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
     setContactDraft(emptyContact)
     setAddingContact(false)
     notify('Contact added')
-  }
-  const saveBor = () => {
-    if (!borDraft.name.trim()) { notify('Add the Broker of Record name', 'error'); return }
-    setBor({ ...borDraft })
-    setEditingBor(false)
-    notify('Broker of Record saved')
   }
 
   const views = prospects.reduce((s, p) => s + p.views, 0)
@@ -11871,28 +11891,26 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <p className="text-sm font-bold text-slate-900">Broker of Record</p>
             <p className="text-xs text-slate-400">Legally required on the listing page — kept low-key, not prominent.</p>
-            {bor && !editingBor ? (
+            {listingBor && !editingBor ? (
               <div className="mt-3 flex items-start justify-between gap-3">
-                <p className="text-xs leading-relaxed text-slate-400">{[bor.name, bor.company, bor.license && `License ${bor.license}`].filter(Boolean).join(' · ')}</p>
+                <p className="text-xs leading-relaxed text-slate-400">{listingBor}</p>
                 {canEditDealParties && (
                   <div className="flex shrink-0 gap-3 text-xs font-semibold">
-                    <button onClick={() => { setBorDraft({ name: bor.name || '', company: bor.company || '', license: bor.license || '' }); setEditingBor(true) }} className="text-brand hover:underline">Edit</button>
-                    <button onClick={() => { setBor(null); notify('Broker of Record removed', 'error') }} className="text-slate-400 hover:text-rose-500">Remove</button>
+                    <button onClick={() => { setBorText(listingBor); setEditingBor(true) }} className="text-brand hover:underline">Edit</button>
+                    <button onClick={() => saveListingBor('')} className="text-slate-400 hover:text-rose-500">Remove</button>
                   </div>
                 )}
               </div>
             ) : editingBor ? (
               <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
-                <input value={borDraft.name} onChange={(e) => setBorDraft((d) => ({ ...d, name: e.target.value }))} placeholder="Name" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" />
-                <input value={borDraft.company} onChange={(e) => setBorDraft((d) => ({ ...d, company: e.target.value }))} placeholder="Company name" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" />
-                <input value={borDraft.license} onChange={(e) => setBorDraft((d) => ({ ...d, license: e.target.value }))} placeholder="License number" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" />
+                <textarea value={borText} onChange={(e) => setBorText(e.target.value)} rows={2} placeholder="e.g. Scott Reid: MO #2019024102 | E: broker@parasellinc.com | D: (949) 942-6578" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400" />
                 <div className="flex gap-2">
-                  <button onClick={saveBor} className="rounded-lg bg-brand px-3 py-1.5 text-xs font-bold text-white transition hover:bg-brand-hover">Save</button>
-                  <button onClick={() => setEditingBor(false)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50">Cancel</button>
+                  <button onClick={() => saveListingBor(borText)} className="rounded-lg bg-brand px-3 py-1.5 text-xs font-bold text-white transition hover:bg-brand-hover">Save</button>
+                  <button onClick={() => { setBorText(listingBor); setEditingBor(false) }} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50">Cancel</button>
                 </div>
               </div>
             ) : canEditDealParties ? (
-              <button onClick={() => { setBorDraft({ name: '', company: '', license: '' }); setEditingBor(true) }} className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-orange-50 px-3 py-1.5 text-xs font-semibold text-brand transition hover:bg-orange-100"><Plus className="h-3.5 w-3.5" /> Add Broker of Record</button>
+              <button onClick={() => { setBorText(''); setEditingBor(true) }} className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-orange-50 px-3 py-1.5 text-xs font-semibold text-brand transition hover:bg-orange-100"><Plus className="h-3.5 w-3.5" /> Add Broker of Record</button>
             ) : (
               <p className="mt-3 text-center text-xs text-slate-400">Only Manager, Admin or Owner can edit the Broker of Record.</p>
             )}
