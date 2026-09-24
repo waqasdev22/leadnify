@@ -8714,6 +8714,10 @@ document.getElementById('search').addEventListener('input',function(e){state.sea
 document.getElementById('sort').addEventListener('change',function(e){state.sort=e.target.value;render();});
 var dmap=null;
 var AGENT={name:'Neil Naran',role:'Listing Agent',email:'Neil@valuereis.com',initials:'NN'};
+// Known team agents -> correct email, so an agent whose email wasn't entered on the property still
+// shows their own address instead of falling back to the default (Neil's).
+var AGENT_EMAILS={'brandon ghilarducci':'Bghilarducci@valuereis.com','shala brown':'Sbrown@valuereis.com','shala browne':'Sbrown@valuereis.com','neil naran':'Neil@valuereis.com'};
+var __agEmail=function(name){return AGENT_EMAILS[String(name||'').trim().toLowerCase()]||'';};
 var DEMO=[{t:'Population',s:'Total',segs:[{n:'White',v:1885,c:'#3b82f6'},{n:'Hispanic',v:775,c:'#f59e0b'},{n:'Asian',v:1406,c:'#10b981'},{n:'Black',v:361,c:'#ef4444'},{n:'Other',v:612,c:'#8b5cf6'}]},{t:'Households',s:'Total',segs:[{n:'Owner',v:1478,c:'#3b82f6'},{n:'Renter',v:948,c:'#f59e0b'},{n:'Vacant',v:343,c:'#94a3b8'}]},{t:'Income',s:'Median',median:true,c:'$205,536',segs:[{n:'<$50K',v:231,c:'#ef4444'},{n:'$50-100K',v:447,c:'#f59e0b'},{n:'$100-200K',v:578,c:'#10b981'},{n:'$200K+',v:1513,c:'#3b82f6'}]}];
 function fullPrice(n){return '$'+(Number(n)||0).toLocaleString('en-US');}
 function fmt(n){return Math.round(n).toLocaleString('en-US');}
@@ -8723,8 +8727,8 @@ function setRadius(btn,mult){var bs=btn.parentElement.children,i;for(i=0;i<bs.le
 function frow(k,v){return '<div class="frow"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>';}
 function detailHtml(l){var bc=l.saleType==='For Lease'?'#0d9488':'#e11d48';
 var __ini=function(n){return String(n||'').split(/\\s+/).map(function(w){return w[0]||'';}).join('').slice(0,2).toUpperCase()||'NN';};
-var ag=l.agentName?{name:l.agentName,role:l.agentLicense?('Lic '+l.agentLicense):'Listing Agent',email:l.agentEmail||AGENT.email,phone:l.agentPhone||'',initials:__ini(l.agentName)}:AGENT;
-var ag2=l.agent2Name?{name:l.agent2Name,role:l.agent2License?('Lic '+l.agent2License):'Co-Agent',email:l.agent2Email||'',phone:l.agent2Phone||'',initials:__ini(l.agent2Name)}:null;
+var ag=l.agentName?{name:l.agentName,role:l.agentLicense?('Lic '+l.agentLicense):'Listing Agent',email:l.agentEmail||__agEmail(l.agentName)||AGENT.email,phone:l.agentPhone||'',initials:__ini(l.agentName)}:AGENT;
+var ag2=l.agent2Name?{name:l.agent2Name,role:l.agent2License?('Lic '+l.agent2License):'Co-Agent',email:l.agent2Email||__agEmail(l.agent2Name)||'',phone:l.agent2Phone||'',initials:__ini(l.agent2Name)}:null;
 var ag2Html=ag2?('<div class="agent" style="margin-top:14px;padding-top:14px;border-top:1px solid #e2e8f0"><div class="av">'+ag2.initials+'</div><div><div class="nm">'+ag2.name+'</div><div class="rl">'+ag2.role+'</div></div></div>'+(ag2.email?'<a class="aemail" href="mailto:'+ag2.email+'">&#9993; '+ag2.email+'</a>':'')+(ag2.phone?'<a class="aemail" href="tel:'+String(ag2.phone).replace(/[^0-9+]/g,'')+'">&#9742; '+ag2.phone+'</a>':'')):'';
 var __g=(Array.isArray(l.gallery)?l.gallery:[]).filter(function(x){return x;});
 var galInner=__g.length?[l.image].concat(__g).map(function(im){return '<img src="'+esc(im)+'" style="width:100%;height:260px;object-fit:cover;border-radius:0;display:block"/>';}).join(''):'<img src="'+esc(l.image)+'" style="grid-column:1/-1;width:540px;max-width:100%;height:400px;object-fit:cover;border-radius:0;display:block"/>';
