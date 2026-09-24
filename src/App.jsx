@@ -9350,6 +9350,9 @@ function InlineLocationMap({ lat, lng, query, onPick }) {
   const markerRef = useRef(null)
   const onPickRef = useRef(onPick)
   onPickRef.current = onPick
+  const [addr, setAddr] = useState(query || '')
+  const [finding, setFinding] = useState(false)
+  const [msg, setMsg] = useState('')
   useEffect(() => {
     if (!elRef.current || mapRef.current) return
     const hasInit = lat != null && lng != null && !Number.isNaN(Number(lat)) && (Number(lat) || Number(lng))
@@ -9366,28 +9369,37 @@ function InlineLocationMap({ lat, lng, query, onPick }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   const locate = () => {
-    const q = String(query || '').trim()
-    if (!q) { return }
+    const q = String(addr || '').trim()
+    if (!q) { setMsg('Type an address first'); return }
+    setFinding(true); setMsg('')
     fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`)
       .then((r) => r.json())
       .then((data) => {
         const hit = Array.isArray(data) && data[0]
-        if (!hit) return
+        if (!hit) { setMsg('Address not found — try adding city/state, or drag the pin manually'); setFinding(false); return }
         const p = [+parseFloat(hit.lat).toFixed(6), +parseFloat(hit.lon).toFixed(6)]
         if (markerRef.current) markerRef.current.setLatLng(p)
-        if (mapRef.current) mapRef.current.setView(p, 15)
+        if (mapRef.current) mapRef.current.setView(p, 16)
         onPickRef.current(p[0], p[1])
+        setMsg('Pin placed on the address ✓'); setFinding(false)
       })
-      .catch(() => {})
+      .catch(() => { setMsg('Could not look up that address — drag the pin manually'); setFinding(false) })
   }
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-slate-500">Drag the pin (or click the map) to set the exact property location. This is the pin shown on the public property page map.</p>
-        <button type="button" onClick={locate} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"><MapPin className="h-4 w-4 text-brand" /> Locate from address</button>
+      <p className="text-sm text-slate-500">Type the exact property address and press <b>Find on map</b> — the pin drops on that spot and shows there on the public property page. You can also drag the pin (or click the map) to fine-tune.</p>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <input
+          value={addr}
+          onChange={(e) => setAddr(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); locate() } }}
+          placeholder="e.g. 4153 N St Peters Pkwy, St. Peters, MO"
+          className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-brand focus:ring-2 focus:ring-blue-100"
+        />
+        <button type="button" onClick={locate} disabled={finding} className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-hover disabled:opacity-60"><MapPin className="h-4 w-4" /> {finding ? 'Finding…' : 'Find on map'}</button>
       </div>
       <div ref={elRef} className="h-[340px] w-full overflow-hidden rounded-xl border border-slate-200" />
-      <p className="text-xs text-slate-400">{(lat != null && lng != null && (Number(lat) || Number(lng))) ? `Pinned at ${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)}` : 'No exact pin set yet — the map falls back to the city/state until you drop a pin.'}</p>
+      <p className="text-xs text-slate-400">{msg || ((lat != null && lng != null && (Number(lat) || Number(lng))) ? `Pinned at ${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)}` : 'No exact pin set yet — type an address above or drag the pin.')}</p>
     </div>
   )
 }
