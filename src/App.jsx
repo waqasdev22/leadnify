@@ -8638,6 +8638,31 @@ body.detail-open .detail{display:block}
 .finput:focus{border-color:${primary}}
 .finput::placeholder{color:#94a3b8}
 @media(max-width:900px){.dwrap{grid-template-columns:1fr}.dside{position:static}.gal{grid-template-columns:repeat(2,1fr)}.dhtitle{font-size:32px}}
+/* Phone: let the hero grow to fit its content (title/price/stats) instead of overflowing a fixed
+   height, shrink type, and tighten side padding so nothing is cut off or hidden behind the buttons. */
+@media(max-width:640px){
+  .dhero{height:auto}
+  .dhin{position:relative;left:auto;right:auto;bottom:auto;padding:66px 16px 22px}
+  .dhtitle{font-size:23px;line-height:1.15;margin:10px 0 6px}
+  .dhaddr{font-size:13.5px}
+  .dhpl{margin-top:12px}
+  .dhprice{font-size:26px}
+  .dhstats{gap:18px;margin-top:12px}
+  .dhstat .dhv{font-size:18px}
+  .dtop{padding:12px 14px}
+  .dbtn{padding:7px 11px;font-size:12px}
+  .dtabsin{padding:0 16px;gap:18px}
+  .dtabs a{padding:13px 2px;font-size:13px}
+  .dwrap{padding:20px 16px 10px}
+  .dblock{margin-bottom:26px}
+  .dblock .bl{font-size:19px}
+  .dh0 .nm{font-size:22px;line-height:1.2}
+  .dh0 .pr{font-size:20px}
+  .gal{grid-template-columns:1fr 1fr}
+  .gal img{height:140px}
+  #dmap{height:260px}
+  .c2b{padding:16px}
+}
 </style></head><body>
 <header class="hero"><div class="cut"></div><div class="inner"><div class="logo"></div><div class="count" id="count"></div></div></header>
 <div class="toolbar"><div class="tbin">
