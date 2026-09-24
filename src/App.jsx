@@ -8811,7 +8811,7 @@ function initDetailMap(l){var el=document.getElementById('dmap');if(!el)return;v
   geocodeAddr(l.address,function(geo){var pos=geo||fb;if(!pos||!document.getElementById('dmap'))return;drawDetailMap(el,l,pos);});}
 function creUrl(id){var p=new URLSearchParams(location.search);if(id!=null&&id!=='')p.set('p',id);else p.delete('p');return location.pathname+'?'+p.toString();}
 function loadGallery(l){fetch(RTDB+'/public/gallery/'+l.id+'.json').then(function(r){return r.json();}).then(function(g){if(!g||!Array.isArray(g.images)||!g.images.length)return;var gal=document.querySelector('#sec-Gallery .gal');if(!gal)return;var imgs=[l.image].concat(g.images).filter(function(x){return x;});gal.innerHTML=imgs.map(function(im){return '<img src="'+im+'" style="width:100%;height:260px;object-fit:cover;border-radius:0;display:block"/>';}).join('');creHeight();}).catch(function(){});}
-function openDetail(id,skipUrl){var l=null,i;for(i=0;i<DATA.length;i++){if(DATA[i].id==id){l=DATA[i];break;}}if(!l)return;CUR=l;document.getElementById('detailView').innerHTML=detailHtml(l);document.body.classList.add('detail-open');window.scrollTo(0,0);renderDemo(1);initDetailMap(l);loadGallery(l);creNav(l.id);creHeight();if(!skipUrl){try{history.pushState({p:l.id},'',creUrl(l.id));}catch(e){}}}
+function openDetail(id,skipUrl){var l=null,i;for(i=0;i<DATA.length;i++){if(DATA[i].id==id||(DATA[i].slug&&DATA[i].slug===String(id))){l=DATA[i];break;}}if(!l)return;CUR=l;document.getElementById('detailView').innerHTML=detailHtml(l);document.body.classList.add('detail-open');window.scrollTo(0,0);renderDemo(1);initDetailMap(l);loadGallery(l);creNav(l.id);creHeight();if(!skipUrl){var pv=l.slug||l.id;try{history.pushState({p:pv},'',creUrl(pv));}catch(e){}}}
 function backToList(skipUrl){document.body.classList.remove('detail-open');if(dmap&&dmap.remove){try{dmap.remove();}catch(e){}}dmap=null;window.scrollTo(0,0);creNav(null);creHeight();if(!skipUrl){try{history.pushState({},'',creUrl(null));}catch(e){}}}
 document.addEventListener('click',function(e){var a=e.target.closest?e.target.closest('.dtabs a'):null;if(a){var tb=a.parentElement.querySelectorAll('a'),i;for(i=0;i<tb.length;i++)tb[i].classList.remove('active');a.classList.add('active');}});
 /* --- Embed messaging: talk to the parent page when used as an <iframe> --- */
@@ -8963,6 +8963,8 @@ export const toMicrositeItem = (l) => {
       const [lat, lng] = coordsFor(l)
       return {
         id: l.id,
+        // Optional custom URL slug — the public deep-link (?p=) matches this OR the numeric id.
+        slug: l.slug || '',
         name: l.name,
         address: l.address,
         price: Number(l.price) || 0,
@@ -10979,6 +10981,39 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
   const [nda, setNda] = useState({ name: 'NDA Agreement.pdf' })
   const [omFlyer, setOmFlyer] = useState(null) // single OM/Flyer shown above the gate (cloud-synced)
   const [photos, setPhotos] = useState([]) // property photos → shown on the public property page slider/gallery
+  // Custom property URL: the owner picks a friendly slug that appears in the public share link
+  // (…?hub=vaziamts&p=<slug>), so each property has its own memorable URL. Persisted on both the
+  // room and its linked listing so the microsite (built from listings) can resolve it.
+  const slugify = (s) => String(s || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60)
+  const [urlSlug, setUrlSlug] = useState(gateListing?.slug || room.slug || '')
+  const [slugDraft, setSlugDraft] = useState(gateListing?.slug || room.slug || '')
+  const saveSlug = () => {
+    const clean = slugify(slugDraft)
+    if (clean && (listings || []).some((l) => l.slug === clean && l.id !== gateListing?.id)) {
+      notify('That URL is already used by another property — pick a different one', 'error'); return
+    }
+    setUrlSlug(clean); setSlugDraft(clean)
+    if (onUpdateRoom) onUpdateRoom(room.id, { slug: clean })
+    if (setListings) {
+      setListings((list) => list.map((l) => (
+        (gateListing && l.id === gateListing.id) || (room.listingId && l.id === room.listingId) || (l.name && room.name && l.name === room.name)
+          ? { ...l, slug: clean } : l
+      )))
+    }
+    // Push the slug straight into the published hub so the new URL resolves on any device now.
+    try {
+      const saved = JSON.parse(localStorage.getItem('crebuilder_hub') || 'null')
+      if (saved && Array.isArray(saved.items) && saved.items.length) {
+        saved.items = saved.items.map((it) => (
+          (gateListing && it.id === gateListing.id) || (room.listingId && it.id === room.listingId) || (it.name && room.name && it.name === room.name)
+            ? { ...it, slug: clean } : it
+        ))
+        localStorage.setItem('crebuilder_hub', JSON.stringify(saved))
+        putPublicHub('vaziamts', saved).catch(() => {})
+      }
+    } catch { /* ignore — next My Deals publish will still carry the slug */ }
+    notify(clean ? 'Property URL saved' : 'Property URL cleared')
+  }
   // Load this room's OM + confidential files + photos from the cloud whenever the room opens.
   useEffect(() => {
     let alive = true
@@ -11131,7 +11166,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
   const downloadedOm = downloads
   // Preview / Copy link / Share all point to the public PROPERTY PAGE (Modern theme by default),
   // matching the property's listing URL — not the internal deal-room gate page.
-  const visitorUrl = `${window.location.origin}${window.location.pathname}?hub=vaziamts&p=${room.listingId || room.id}&t=Modern`
+  const visitorUrl = `${window.location.origin}${window.location.pathname}?hub=vaziamts&p=${encodeURIComponent(urlSlug || room.listingId || room.id)}&t=Modern`
 
   // Save this room so the public "?room=" gate page (opened in a new tab) can render it.
   useEffect(() => {
@@ -11785,6 +11820,26 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
               </button>
             )}
             <input ref={ndaRef} type="file" className="hidden" onChange={onNdaUpload} />
+          </div>
+
+          {/* Property URL — custom slug that appears in this property's public share link */}
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-sm font-bold text-slate-900">Property URL</p>
+            <p className="text-xs text-slate-400">Set a custom web address for this property</p>
+            <div className="mt-3 flex items-stretch overflow-hidden rounded-lg border border-slate-200 focus-within:border-orange-400">
+              <span className="flex items-center whitespace-nowrap bg-slate-50 px-2.5 text-[11px] font-medium text-slate-400">{window.location.host}/…&p=</span>
+              <input
+                value={slugDraft}
+                onChange={(e) => setSlugDraft(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') saveSlug() }}
+                placeholder="ziggis-coffee-huntington"
+                className="min-w-0 flex-1 px-2 py-2 text-xs text-slate-700 outline-none"
+              />
+            </div>
+            <div className="mt-2 flex items-center justify-between">
+              <p className="truncate text-[11px] text-slate-400">{slugify(slugDraft) ? `Link ends in …&p=${slugify(slugDraft)}` : 'Letters, numbers & dashes only'}</p>
+              <button onClick={saveSlug} disabled={slugify(slugDraft) === urlSlug} className={`rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition ${slugify(slugDraft) === urlSlug ? 'cursor-not-allowed bg-slate-300' : 'bg-brand hover:bg-brand-hover'}`}>Save URL</button>
+            </div>
           </div>
 
           {/* Share */}
