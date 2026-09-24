@@ -8716,7 +8716,7 @@ var dmap=null;
 var AGENT={name:'Neil Naran',role:'Listing Agent',email:'Neil@valuereis.com',initials:'NN'};
 // Known team agents -> correct email, so an agent whose email wasn't entered on the property still
 // shows their own address instead of falling back to the default (Neil's).
-var AGENT_EMAILS={'brandon ghilarducci':'Bghilarducci@valuereis.com','shala brown':'Sbrown@valuereis.com','shala browne':'Sbrown@valuereis.com','neil naran':'Neil@valuereis.com'};
+var AGENT_EMAILS={'brandon ghilarducci':'Bghilarducci@valuereis.com','shala brown':'Sbrown@valuereis.com','shala browne':'Sbrown@valuereis.com','shawn behrouz':'Sbehrouz@valuereis.com','james andrews':'James@valuereis.com','dawn taylor':'Dtaylor@valuereis.com','jeff robertson':'Jrobertson@valuereis.com','dawn taylor & jeff robertson':'Dtaylor@valuereis.com','neil naran':'Neil@valuereis.com'};
 var __agEmail=function(name){return AGENT_EMAILS[String(name||'').trim().toLowerCase()]||'';};
 var DEMO=[{t:'Population',s:'Total',segs:[{n:'White',v:1885,c:'#3b82f6'},{n:'Hispanic',v:775,c:'#f59e0b'},{n:'Asian',v:1406,c:'#10b981'},{n:'Black',v:361,c:'#ef4444'},{n:'Other',v:612,c:'#8b5cf6'}]},{t:'Households',s:'Total',segs:[{n:'Owner',v:1478,c:'#3b82f6'},{n:'Renter',v:948,c:'#f59e0b'},{n:'Vacant',v:343,c:'#94a3b8'}]},{t:'Income',s:'Median',median:true,c:'$205,536',segs:[{n:'<$50K',v:231,c:'#ef4444'},{n:'$50-100K',v:447,c:'#f59e0b'},{n:'$100-200K',v:578,c:'#10b981'},{n:'$200K+',v:1513,c:'#3b82f6'}]}];
 function fullPrice(n){return '$'+(Number(n)||0).toLocaleString('en-US');}
