@@ -12005,6 +12005,13 @@ function DealRoomsPage({ dealRooms, setDealRooms, listings, setListings, onEditD
     }
   }, [openTarget]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Deal Rooms is merged into My Deals — there is no standalone Deal Rooms list. This page only ever
+  // shows a single deal room's detail. If there's no room to show (e.g. a refresh landed here with no
+  // target), go back to My Deals instead of rendering the old list (#14).
+  useEffect(() => {
+    if (!openRoom && !openTarget) onExit && onExit()
+  }, [openRoom, openTarget]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Same detailed Crexi-style create as My Deals: "+ New deal room" now opens the full
   // NewDealModal wizard and creates a listing + linked deal room (not the old simple form).
   const create = (d) => {
@@ -16543,11 +16550,6 @@ export default function App() {
   // Clicking a property on the Dashboard opens that property's Deal Room —
   // matching an existing room by address/name, or creating one on the fly.
   const [dealRoomTarget, setDealRoomTarget] = useState(null)
-  // Deal Rooms is fully merged into My Deals — there is no standalone Deal Rooms screen. The 'deals'
-  // route only exists to show a single deal room's detail (opened from My Deals). If it's reached with
-  // no target (e.g. after a refresh, since the persisted view was 'deals'), send the user to My Deals
-  // instead of the old Deal Rooms list (#14).
-  useEffect(() => { if (active === 'deals' && !dealRoomTarget) setActive('listings') }, [active, dealRoomTarget])
   const openDealRoomFor = (pkg) => {
     if (!pkg) return
     const addr = (pkg.address || '').trim().toLowerCase()
