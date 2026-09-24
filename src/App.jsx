@@ -11384,7 +11384,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
 
       <div className="mt-5 grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
         {/* LEFT */}
-        <div className="space-y-5">
+        <div className="min-w-0 space-y-5">
           {/* OM / Flyer — single public marketing doc, shown above the gated files */}
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex items-center justify-between gap-3">
@@ -11694,7 +11694,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
         </div>
 
         {/* RIGHT */}
-        <div className="space-y-5">
+        <div className="min-w-0 space-y-5">
           {/* Access gate */}
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <p className="text-sm font-bold text-slate-900">Access gate</p>
@@ -12078,7 +12078,7 @@ function DealRoomsPage({ dealRooms, setDealRooms, listings, setListings, onEditD
 
   if (openRoom) {
     return (
-      <div className="mx-auto max-w-[1600px] p-6">
+      <div className="mx-auto max-w-[1600px] overflow-x-hidden p-3 sm:p-6">
         <DealRoomDetail room={openRoom} onBack={() => { setOpenRoom(null); onExit && onExit() }} notify={notify} onEditDocument={onEditDocument} role={role} listings={listings} setListings={setListings} onUpdateRoom={(id, data) => {
           updateRoom(id, data)
           setOpenRoom((r) => (r ? { ...r, ...data } : r))
