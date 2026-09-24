@@ -8798,7 +8798,7 @@ render();creHeight();
 export function buildDealRoomHtml(room, agent) {
   const name = (room && room.name) || 'Listing'
   const addr = (room && room.address) || ''
-  const img = (room && room.image) || FALLBACK_IMG
+  const img = displayImg(room && room.image)
   const listingId = (room && room.listingId) || ''
   const agentName = (agent && agent.name) || 'Listing Broker'
   const agentEmail = (agent && agent.email) || 'broker@crebuilder.com'
@@ -10625,7 +10625,7 @@ function DealRoomCard({ room, onOpen, onDelete }) {
       <div className="relative h-40 overflow-hidden bg-slate-100">
         {room.image ? (
           <img
-            src={room.image}
+            src={displayImg(room.image)}
             alt={room.name}
             onError={(e) => (e.currentTarget.src = FALLBACK_IMG)}
             className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
@@ -10774,7 +10774,7 @@ function DocumentHubView({ room, onBack, notify, onEditDocument }) {
       <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-center gap-4">
-            {room.image ? <img src={room.image} onError={(e) => (e.currentTarget.src = FALLBACK_IMG)} alt="" className="h-16 w-24 rounded-lg object-cover" /> : <div className="flex h-16 w-24 items-center justify-center rounded-lg bg-slate-100"><Building2 className="h-6 w-6 text-slate-300" /></div>}
+            {room.image ? <img src={displayImg(room.image)} onError={(e) => (e.currentTarget.src = FALLBACK_IMG)} alt="" className="h-16 w-24 rounded-lg object-cover" /> : <div className="flex h-16 w-24 items-center justify-center rounded-lg bg-slate-100"><Building2 className="h-6 w-6 text-slate-300" /></div>}
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-2xl font-extrabold text-slate-900">{room.name}</h1>
@@ -11270,7 +11270,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-center gap-3">
             {room.image ? (
-              <img src={room.image} onError={(e) => (e.currentTarget.src = FALLBACK_IMG)} alt="" className="h-12 w-12 rounded-lg object-cover" />
+              <img src={displayImg(room.image)} onError={(e) => (e.currentTarget.src = FALLBACK_IMG)} alt="" className="h-12 w-12 rounded-lg object-cover" />
             ) : (
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-slate-100"><Building2 className="h-6 w-6 text-slate-300" /></div>
             )}
@@ -11778,7 +11778,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
             <p className="text-xs text-slate-400">The property in this deal room</p>
             {room.image ? (
               <img
-                src={room.image}
+                src={displayImg(room.image)}
                 alt={room.name || 'Property'}
                 onError={(e) => { e.currentTarget.style.display = 'none' }}
                 className="mt-3 h-36 w-full rounded-lg border border-slate-100 object-cover"
@@ -11866,7 +11866,7 @@ function DealRoomActionCard({ room, onOpen, onEdit, onTransfer, onDuplicate, onD
     <div className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md">
       <div className="relative h-44 cursor-pointer overflow-hidden" onClick={() => onOpen && onOpen(room)} title="Open deal room">
         {room.image ? (
-          <img src={room.image} alt={room.name} onError={(e) => (e.currentTarget.src = FALLBACK_IMG)} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" loading="lazy" />
+          <img src={displayImg(room.image)} alt={room.name} onError={(e) => (e.currentTarget.src = FALLBACK_IMG)} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" loading="lazy" />
         ) : (
           <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-b from-slate-100 to-slate-200">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-brand shadow-sm"><FolderLock className="h-6 w-6" /></div>
