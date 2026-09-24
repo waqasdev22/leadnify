@@ -625,12 +625,12 @@ function Select({ value, onChange, options, label, icon: Icon }) {
   )
 }
 
-function PrimaryButton({ children, onClick, icon: Icon, type = 'button' }) {
+function PrimaryButton({ children, onClick, icon: Icon, type = 'button', className = '' }) {
   return (
     <button
       type={type}
       onClick={onClick}
-      className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-blue-300 active:scale-[0.98]"
+      className={`inline-flex items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-blue-300 active:scale-[0.98] ${className}`}
     >
       {Icon && <Icon className="h-4 w-4" />}
       {children}
@@ -16180,9 +16180,9 @@ function TeamSettingsPage({ role = 'Member' }) {
         </div>
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <p className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500"><Lock className="h-3.5 w-3.5" /> Enforced on all team member documents</p>
-          <div className="flex items-center gap-2">
-            <button onClick={() => { setCaDraft(''); setSavedCa(''); notify('Agreement removed', 'error') }} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Remove Agreement</button>
-            <PrimaryButton icon={Check} onClick={() => { setSavedCa(caDraft); notify('Agreement saved. All team member documents updated.', 'success') }}>Save Agreement</PrimaryButton>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+            <button onClick={() => { setCaDraft(''); setSavedCa(''); notify('Agreement removed', 'error') }} className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:w-auto">Remove Agreement</button>
+            <PrimaryButton icon={Check} className="w-full sm:w-auto" onClick={() => { setSavedCa(caDraft); notify('Agreement saved. All team member documents updated.', 'success') }}>Save Agreement</PrimaryButton>
           </div>
         </div>
         <p className="mt-2 text-xs text-slate-400">This agreement will appear on all team member documents and cannot be changed by members.</p>
