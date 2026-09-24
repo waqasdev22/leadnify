@@ -9551,7 +9551,10 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
   const [slug, setSlug] = useState('vaziamts')
   // Functional link that actually opens the microsite (works when pasted in a new tab).
   const hubUrl = `${window.location.origin}${window.location.pathname}?hub=${slug}`
-  const siteUrl = hubUrl
+  // Clean public listings URL (leadnify.io/<hub-slug>) — the microsite resolves a bare path segment
+  // that matches no property by showing the full listings, so this opens the whole hub.
+  const hubCleanUrl = `${window.location.origin}/${encodeURIComponent(slug)}`
+  const siteUrl = hubCleanUrl
   // Preview opens the clean per-property URL (leadnify.io/<slug>) when a slug is set; otherwise the
   // draft-preview deep-link (?p=<id>&pv=1) so unlisted/edited deals still render.
   const previewUrlFor = (l) => (l.slug ? `${window.location.origin}/${encodeURIComponent(l.slug)}` : `${hubUrl}&p=${l.id}&pv=1`)
@@ -9846,11 +9849,11 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
   // Copy Link and Preview both use the same functional hub URL, so the copied link
   // opens exactly the microsite the Preview shows.
   const copyLink = async () => {
-    const ok = await copyToClipboard(hubUrl)
+    const ok = await copyToClipboard(hubCleanUrl)
     notify(ok ? 'Preview link copied — opens your live microsite' : 'Unable to copy link', ok ? 'success' : 'error')
   }
   const openMicrosite = () => {
-    const w = window.open(hubUrl, '_blank')
+    const w = window.open(hubCleanUrl, '_blank')
     if (!w) {
       notify('Please allow pop-ups to open the preview', 'error')
       return
@@ -9926,7 +9929,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
           </span>
         </div>
         <button
-          onClick={() => shareItem({ id: 'hub', title: 'My Deals', address: hubUrl }, notify)}
+          onClick={() => shareItem({ id: 'hub', title: 'My Deals', address: hubCleanUrl }, notify)}
           className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
         >
           <Share2 className="h-4 w-4" />
@@ -9981,7 +9984,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                   Replace the long default URL with a short, easy-to-remember link. This is the URL you share with clients or put on your business cards.
                 </p>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <span className="whitespace-nowrap text-sm text-slate-500">{window.location.origin}{window.location.pathname}?hub=</span>
+                  <span className="whitespace-nowrap text-sm text-slate-500">{window.location.origin}/</span>
                   <input
                     value={slugDraft}
                     onChange={(e) => setSlugDraft(e.target.value.replace(/[^a-z0-9-]/gi, '').toLowerCase())}
