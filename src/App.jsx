@@ -8203,27 +8203,46 @@ const micrositeFields = (l) => ({
   noi: Number(l.noi) || 0,
 })
 
-// Rough coordinates so listings drop real pins on the map.
+// City-center coordinates so a listing's pin lands on its ACTUAL city (not a blanket fallback).
 const CITY_COORDS = {
-  Austin: [30.2672, -97.7431],
-  Dallas: [32.7767, -96.797],
-  Houston: [29.7604, -95.3698],
-  'San Antonio': [29.4241, -98.4936],
-  Irvine: [33.6846, -117.8265],
-  Denver: [39.7392, -104.9903],
-  Seattle: [47.6062, -122.3321],
-  Phoenix: [33.4484, -112.074],
+  Austin: [30.2672, -97.7431], Dallas: [32.7767, -96.797], Houston: [29.7604, -95.3698],
+  'San Antonio': [29.4241, -98.4936], Irvine: [33.6846, -117.8265], Denver: [39.7392, -104.9903],
+  Seattle: [47.6062, -122.3321], Phoenix: [33.4484, -112.074],
+  // Cities from the imported portfolio
+  Huntington: [40.8831, -85.4975], Harrogate: [36.5776, -83.6544], 'Crystal River': [28.9025, -82.5926],
+  Springfield: [39.7817, -89.6501], 'Fort Oglethorpe': [34.949, -85.2547], Tampa: [27.9506, -82.4572],
+  Natchez: [31.5604, -91.4032], 'St. Peters': [38.7875, -90.6298], Coppell: [32.9546, -96.99],
+  'West Allis': [43.0167, -88.007], Tallahassee: [30.4383, -84.2807], 'Commerce City': [39.8083, -104.9339],
+  'Palm Springs': [33.8303, -116.5453], 'Laguna Beach': [33.5427, -117.7854], Pineville: [31.3224, -92.4343],
+  Corona: [33.8753, -117.5664], Hemet: [33.7476, -116.972], Jackson: [32.2988, -90.1848],
+  'New Iberia': [30.0035, -91.8187],
+}
+
+// State-center fallback (2-letter code) — when the exact city isn't known, the pin still lands in the
+// RIGHT state instead of a misleading Anaheim/Irvine pin (#8).
+const STATE_COORDS = {
+  AL: [32.8, -86.8], AK: [64.2, -149.5], AZ: [34.2, -111.7], AR: [34.9, -92.4], CA: [36.8, -119.4], CO: [39.0, -105.5],
+  CT: [41.6, -72.7], DE: [39.0, -75.5], FL: [28.6, -82.4], GA: [32.6, -83.4], HI: [20.3, -156.4], ID: [44.2, -114.5],
+  IL: [40.0, -89.2], IN: [39.9, -86.3], IA: [42.0, -93.5], KS: [38.5, -98.4], KY: [37.5, -85.3], LA: [31.0, -92.0],
+  ME: [45.4, -69.2], MD: [39.0, -76.8], MA: [42.3, -71.8], MI: [44.3, -85.4], MN: [46.3, -94.3], MS: [32.7, -89.7],
+  MO: [38.4, -92.5], MT: [46.9, -110.4], NE: [41.5, -99.8], NV: [39.3, -116.6], NH: [43.7, -71.6], NJ: [40.1, -74.7],
+  NM: [34.4, -106.1], NY: [42.9, -75.5], NC: [35.6, -79.4], ND: [47.5, -100.5], OH: [40.3, -82.8], OK: [35.6, -97.5],
+  OR: [43.9, -120.6], PA: [40.9, -77.8], RI: [41.7, -71.6], SC: [33.9, -80.9], SD: [44.4, -100.2], TN: [35.9, -86.4],
+  TX: [31.5, -99.3], UT: [39.3, -111.7], VT: [44.1, -72.7], VA: [37.5, -78.9], WA: [47.4, -120.5], WV: [38.6, -80.6],
+  WI: [44.6, -89.9], WY: [43.0, -107.6], DC: [38.9, -77.0],
 }
 
 const coordsFor = (l) => {
-  let base = [33.6846, -117.8265] // default: Irvine, CA
+  let base = null
   const addr = l.address || ''
   for (const city in CITY_COORDS) {
-    if (addr.includes(city)) {
-      base = CITY_COORDS[city]
-      break
-    }
+    if (addr.includes(city)) { base = CITY_COORDS[city]; break }
   }
+  if (!base) {
+    const st = String(l.state || '').trim().toUpperCase()
+    if (STATE_COORDS[st]) base = STATE_COORDS[st]
+  }
+  if (!base) base = [39.8283, -98.5795] // geographic centre of the US — never a misleading local pin
   const j = ((Number(l.id) || 0) % 12) / 90 // small jitter so pins don't overlap
   return [base[0] + j, base[1] - j]
 }
