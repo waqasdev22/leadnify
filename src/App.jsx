@@ -13189,6 +13189,7 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
                     ))}
                   </div>
                   <p className="mt-1 text-[11px] text-slate-400">Weekly page views — last 12 weeks</p>
+                  <p className="mt-2 text-[11px] text-slate-400"><b>Leads Captured, Visitors, Open OMs &amp; Executed CAs</b> are live from your lead activity. <b>Impressions &amp; Page Views</b> come from a connected analytics source (Google Analytics) and stay 0 until it's connected.</p>
                 </div>
               )
             })()}
@@ -14498,8 +14499,9 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
           // Reachable funnel (a deal at stage i has reached every stage <= i)
           const idxOf = (st) => CRM_STAGES.indexOf(st)
           const reached = openStages.map((s) => deals.filter((d) => idxOf(d.stage) >= idxOf(s) && idxOf(d.stage) <= idxOf('Under Contract')).length)
-          // Leads (scope-filtered contacts) by source & type
-          const repContacts = scope === 'mine' ? contactList.filter((c) => c.owner === me) : contactList
+          // Leads by source & type — use the SAME captured leads (inbox) as the "Leads Captured" tile
+          // so the totals reconcile (previously this read a separate contactList, showing 0) (#12).
+          const repContacts = scope === 'mine' ? inbox.filter((c) => c.owner === me) : inbox
           const bySource = {}; repContacts.forEach((c) => { const k = c.source || 'Other'; bySource[k] = (bySource[k] || 0) + 1 })
           const sourceRows = Object.entries(bySource).sort((a, b) => b[1] - a[1])
           const maxSrc = Math.max(1, ...sourceRows.map((r) => r[1]))
