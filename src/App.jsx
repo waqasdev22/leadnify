@@ -191,8 +191,10 @@ const TEAM_MEMBERS = [
 const propertyImage = (seed) =>
   `https://images.unsplash.com/photo-${seed}?auto=format&fit=crop&w=800&q=60`
 
+// Explicit "no photo" placeholder — shown when a property has no real photo uploaded, instead of a
+// misleading generic stock image (#9). Self-contained SVG (no network), works as an <img src>.
 const FALLBACK_IMG =
-  'https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=800&q=60'
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600'%3E%3Crect width='800' height='600' fill='%23eef2f7'/%3E%3Cg transform='translate(400 270)' fill='none' stroke='%2394a3b8' stroke-width='5'%3E%3Crect x='-72' y='-48' width='144' height='100' rx='12'/%3E%3Ccircle cx='0' cy='6' r='27'/%3E%3Cline x1='-95' y1='-80' x2='95' y2='85'/%3E%3C/g%3E%3Ctext x='400' y='410' font-family='Arial,sans-serif' font-size='30' font-weight='bold' fill='%2394a3b8' text-anchor='middle'%3ENo photo available%3C/text%3E%3C/svg%3E"
 
 const INITIAL_PACKAGES = []
 
@@ -7598,7 +7600,7 @@ function DashboardPage({ packages, setPackages, setListings, globalQuery, create
         type: builderCfg?.propertyType || 'Retail',
         size: sizePoint ? sizePoint.value : '—',
         status: finished ? 'Active' : 'Draft',
-        image: coverUrl || propertyImage('1497366216548-37526070297c'),
+        image: coverUrl || '',
         featured: false,
         listed: true,
         access: 'Public',
@@ -9573,7 +9575,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
       return {
         id, dealId: newDealId(), name: d.name, address, city: d.city || '', state: d.state || '', ts: Date.now(),
         price: Number(d.price) || 0, type: d.propertyType || 'Retail', saleType: d.saleType || 'For Sale',
-        gate: 'Contact Required', size: '—', status: 'Active', image: propertyImage('1497366216548-37526070297c'),
+        gate: 'Contact Required', size: '—', status: 'Active', image: '',
         featured: false, listed: d.listed !== false, access: 'Public', subheader: d.subheader || '',
         highlights: d.highlights || '', description: '', capRate: d.capRate || '', noi: d.noi || '',
         pricePerSf: '', lotSize: '', yearBuilt: '', occupancy: '', tenants: '', tenancy: '',
@@ -9635,7 +9637,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
     const address = [d.street, d.city, d.state, d.zip].filter(Boolean).join(', ') || '—'
     const cover = d.cover || (d.photos && d.photos[0] && d.photos[0].url) || ''
     const price = Number(d.price) || 0
-    setListings((list) => [{ id, dealId, name: d.name, address, city: d.city || '', state: d.state || '', ts: Date.now(), price, type: d.propertyType || 'Retail', saleType: d.saleType || 'For Sale', gate: d.gate || 'Contact Required', size: d.size || '—', status: d.status || 'Active', image: cover || propertyImage('1497366216548-37526070297c'), featured: false, listed: d.status !== 'Draft', access: d.access || 'Public', subheader: d.subheader || '', highlights: d.highlights || '', description: d.description || '', capRate: d.capRate || '', noi: d.noi || '', pricePerSf: d.pricePerSf || '', lotSize: d.lotSize || '', yearBuilt: d.yearBuilt || '', occupancy: d.occupancy || '', tenants: d.tenants || '', tenancy: d.tenancy || '', leaseTypeDetail: d.leaseTypeDetail || '', subtype: d.subtype || '', zoning: d.zoning || '', parking: d.parking || '', unpriced: !!d.unpriced, expiration: d.expiration || '', saleCondition: d.saleCondition || '', propertyClass: d.propertyClass || '', yearsRenovated: d.yearsRenovated || '', numUnits: d.numUnits || '', tenantBrand: d.tenantBrand || '', parkingType: d.parkingType || '', groundLease: !!d.groundLease, tenantCredit: d.tenantCredit || '', leaseCommence: d.leaseCommence || '', leaseExpiration: d.leaseExpiration || '', leaseTerm: d.leaseTerm || '', remainingTerm: d.remainingTerm || '', leaseOptions: d.leaseOptions || '', rentBumps: d.rentBumps || '', investmentType: d.investmentType || '', proformaNoi: d.proformaNoi || '', proformaCap: d.proformaCap || '' }, ...list])
+    setListings((list) => [{ id, dealId, name: d.name, address, city: d.city || '', state: d.state || '', ts: Date.now(), price, type: d.propertyType || 'Retail', saleType: d.saleType || 'For Sale', gate: d.gate || 'Contact Required', size: d.size || '—', status: d.status || 'Active', image: cover || '', featured: false, listed: d.status !== 'Draft', access: d.access || 'Public', subheader: d.subheader || '', highlights: d.highlights || '', description: d.description || '', capRate: d.capRate || '', noi: d.noi || '', pricePerSf: d.pricePerSf || '', lotSize: d.lotSize || '', yearBuilt: d.yearBuilt || '', occupancy: d.occupancy || '', tenants: d.tenants || '', tenancy: d.tenancy || '', leaseTypeDetail: d.leaseTypeDetail || '', subtype: d.subtype || '', zoning: d.zoning || '', parking: d.parking || '', unpriced: !!d.unpriced, expiration: d.expiration || '', saleCondition: d.saleCondition || '', propertyClass: d.propertyClass || '', yearsRenovated: d.yearsRenovated || '', numUnits: d.numUnits || '', tenantBrand: d.tenantBrand || '', parkingType: d.parkingType || '', groundLease: !!d.groundLease, tenantCredit: d.tenantCredit || '', leaseCommence: d.leaseCommence || '', leaseExpiration: d.leaseExpiration || '', leaseTerm: d.leaseTerm || '', remainingTerm: d.remainingTerm || '', leaseOptions: d.leaseOptions || '', rentBumps: d.rentBumps || '', investmentType: d.investmentType || '', proformaNoi: d.proformaNoi || '', proformaCap: d.proformaCap || '' }, ...list])
     setDealRooms && setDealRooms((list) => [{ id: roomId, listingId: id, dealId, name: d.name, address, image: cover, price, capRate: d.capRate || '', noi: d.noi || '', status: d.status || 'Active', access: d.gate || 'Contact Required', files: (d.confidential || []).length, members: 0, updated: 'just now', ts: Date.now() }, ...list])
     if (d.om && d.om.url) {
       putPublicPackage(id, { name: d.om.name, url: d.om.url }).catch(() => {})
@@ -9816,7 +9818,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
       notify('Listing updated')
     } else {
       setListings((list) => [
-        { id: uid(), dealId: newDealId(), image: propertyImage('1497366216548-37526070297c'), featured: false, listed: true, access: 'Public', status: 'Active', ...data },
+        { id: uid(), dealId: newDealId(), image: '', featured: false, listed: true, access: 'Public', status: 'Active', ...data },
         ...list,
       ])
       notify('Property added')
@@ -10095,7 +10097,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                           >
                             <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                           </button>
-                          <img src={l.image} onError={(e) => (e.currentTarget.src = FALLBACK_IMG)} alt="" className="h-8 w-10 rounded object-cover" />
+                          <img src={l.image || FALLBACK_IMG} onError={(e) => (e.currentTarget.src = FALLBACK_IMG)} alt="" className="h-8 w-10 rounded object-cover" />
                           <button
                             onClick={() => (onOpenDealRoom ? onOpenDealRoom(l) : (setEditing(l), setModalOpen(true)))}
                             className="font-semibold text-slate-800 hover:text-brand"
@@ -10399,7 +10401,7 @@ function ListingTable({ listings, onEdit, onDelete, onShare }) {
                 <td className="px-5 py-3">
                   <div className="flex items-center gap-3">
                     <img
-                      src={l.image}
+                      src={l.image || FALLBACK_IMG}
                       alt={l.name}
                       onError={(e) => (e.currentTarget.src = FALLBACK_IMG)}
                       className="h-10 w-14 rounded-md object-cover"
@@ -11982,7 +11984,7 @@ function DealRoomsPage({ dealRooms, setDealRooms, listings, setListings, onEditD
     const address = [d.street, d.city, d.state, d.zip].filter(Boolean).join(', ') || '—'
     const cover = d.cover || (d.photos && d.photos[0] && d.photos[0].url) || ''
     const price = Number(d.price) || 0
-    if (setListings) setListings((list) => [{ id, dealId, name: d.name, address, city: d.city || '', state: d.state || '', ts: Date.now(), price, type: d.propertyType || 'Retail', saleType: d.saleType || 'For Sale', gate: d.gate || 'Contact Required', size: d.size || '—', status: d.status || 'Active', image: cover || propertyImage('1497366216548-37526070297c'), featured: false, listed: d.status !== 'Draft', access: d.access || 'Public', subheader: d.subheader || '', highlights: d.highlights || '', description: d.description || '', capRate: d.capRate || '', noi: d.noi || '', pricePerSf: d.pricePerSf || '', lotSize: d.lotSize || '', yearBuilt: d.yearBuilt || '', occupancy: d.occupancy || '', tenants: d.tenants || '', tenancy: d.tenancy || '', leaseTypeDetail: d.leaseTypeDetail || '', subtype: d.subtype || '', zoning: d.zoning || '', parking: d.parking || '', unpriced: !!d.unpriced, expiration: d.expiration || '', saleCondition: d.saleCondition || '', propertyClass: d.propertyClass || '', yearsRenovated: d.yearsRenovated || '', numUnits: d.numUnits || '', tenantBrand: d.tenantBrand || '', parkingType: d.parkingType || '', groundLease: !!d.groundLease, tenantCredit: d.tenantCredit || '', leaseCommence: d.leaseCommence || '', leaseExpiration: d.leaseExpiration || '', leaseTerm: d.leaseTerm || '', remainingTerm: d.remainingTerm || '', leaseOptions: d.leaseOptions || '', rentBumps: d.rentBumps || '', investmentType: d.investmentType || '', proformaNoi: d.proformaNoi || '', proformaCap: d.proformaCap || '' }, ...list])
+    if (setListings) setListings((list) => [{ id, dealId, name: d.name, address, city: d.city || '', state: d.state || '', ts: Date.now(), price, type: d.propertyType || 'Retail', saleType: d.saleType || 'For Sale', gate: d.gate || 'Contact Required', size: d.size || '—', status: d.status || 'Active', image: cover || '', featured: false, listed: d.status !== 'Draft', access: d.access || 'Public', subheader: d.subheader || '', highlights: d.highlights || '', description: d.description || '', capRate: d.capRate || '', noi: d.noi || '', pricePerSf: d.pricePerSf || '', lotSize: d.lotSize || '', yearBuilt: d.yearBuilt || '', occupancy: d.occupancy || '', tenants: d.tenants || '', tenancy: d.tenancy || '', leaseTypeDetail: d.leaseTypeDetail || '', subtype: d.subtype || '', zoning: d.zoning || '', parking: d.parking || '', unpriced: !!d.unpriced, expiration: d.expiration || '', saleCondition: d.saleCondition || '', propertyClass: d.propertyClass || '', yearsRenovated: d.yearsRenovated || '', numUnits: d.numUnits || '', tenantBrand: d.tenantBrand || '', parkingType: d.parkingType || '', groundLease: !!d.groundLease, tenantCredit: d.tenantCredit || '', leaseCommence: d.leaseCommence || '', leaseExpiration: d.leaseExpiration || '', leaseTerm: d.leaseTerm || '', remainingTerm: d.remainingTerm || '', leaseOptions: d.leaseOptions || '', rentBumps: d.rentBumps || '', investmentType: d.investmentType || '', proformaNoi: d.proformaNoi || '', proformaCap: d.proformaCap || '' }, ...list])
     setDealRooms((list) => [{ id: roomId, listingId: id, dealId, name: d.name, address, image: cover, price, capRate: d.capRate || '', noi: d.noi || '', status: d.status || 'Active', access: d.gate || 'Contact Required', files: (d.confidential || []).length, members: 0, updated: 'just now', ts: Date.now() }, ...list])
     if (d.om && d.om.url) {
       putPublicPackage(id, { name: d.om.name, url: d.om.url }).catch(() => {})
