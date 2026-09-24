@@ -9576,7 +9576,11 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
   const siteUrl = hubCleanUrl
   // Preview opens the clean per-property URL (leadnify.io/<slug>) when a slug is set; otherwise the
   // draft-preview deep-link (?p=<id>&pv=1) so unlisted/edited deals still render.
-  const previewUrlFor = (l) => (l.slug ? `${window.location.origin}/${encodeURIComponent(slug)}/${encodeURIComponent(l.slug)}` : `${hubUrl}&p=${l.id}&pv=1`)
+  // A property only resolves on the clean public URL when it's actually published (listed + a public
+  // status). Draft/unlisted deals aren't in the hub, so they must use the pv=1 draft-preview flow
+  // (which merges the saved cre_preview item) — otherwise the clean link just shows the full grid.
+  const isPublicListing = (l) => l.listed !== false && PUBLIC_STATUSES.includes(l.status || 'Active')
+  const previewUrlFor = (l) => (l.slug && isPublicListing(l)) ? `${window.location.origin}/${encodeURIComponent(slug)}/${encodeURIComponent(l.slug)}` : `${hubUrl}&p=${l.id}&pv=1`
 
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
