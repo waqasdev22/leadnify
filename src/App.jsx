@@ -3301,7 +3301,7 @@ function MiniMap({ lat, lng, zoom, className }) {
     const map = L.map(elRef.current, { zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false }).setView(has ? [lat, lng] : [39.8, -98.5], has ? (zoom || 14) : 4)
     // CARTO Voyager — labeled streets/POIs with a reliable app-friendly CDN
     // (OSM's own tile server blocks bulk app usage, which leaves the map blank).
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 20 }).addTo(map)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { subdomains: 'abc', maxZoom: 19 }).addTo(map)
     if (has) {
       const pin = L.divIcon({ className: '', html: `<svg width="30" height="30" viewBox="0 0 24 24" fill="#ef4444" stroke="white" stroke-width="1.5"><path d="M12 2C8 2 5 5 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-4-3-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="white" stroke="none"/></svg>`, iconSize: [30, 30], iconAnchor: [15, 30] })
       L.marker([lat, lng], { icon: pin }).addTo(map)
@@ -3701,7 +3701,7 @@ function MapEditorModal({ open, map, onSave, onClose }) {
     const startZoom = map.zoom || (has ? 14 : 5)
     stateRef.current = { lat: start[0], lng: start[1], zoom: startZoom }
     const lm = L.map(elRef.current, { scrollWheelZoom: true }).setView(start, startZoom)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 20, attribution: '&copy; OpenStreetMap contributors &copy; CARTO' }).addTo(lm)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { subdomains: 'abc', maxZoom: 19, attribution: '&copy; OpenStreetMap contributors &copy; CARTO' }).addTo(lm)
     const pinIcon = L.divIcon({ className: '', html: `<svg width="34" height="34" viewBox="0 0 24 24" fill="#ef4444" stroke="white" stroke-width="1.5"><path d="M12 2C8 2 5 5 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-4-3-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="white" stroke="none"/></svg>`, iconSize: [34, 34], iconAnchor: [17, 34] })
     const marker = L.marker(start, { draggable: true, icon: pinIcon }).addTo(lm)
     marker.on('dragend', () => { const p = marker.getLatLng(); stateRef.current.lat = p.lat; stateRef.current.lng = p.lng })
@@ -3746,9 +3746,9 @@ function LocationPickerModal({ open, initial, address, sub, query, onConfirm, on
     posRef.current = start
     const map = L.map(elRef.current, { scrollWheelZoom: true }).setView(start, hasInit ? 15 : 4)
     // CARTO Voyager — clean tiles with English/Latin place labels, reliable CDN.
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      subdomains: 'abcd',
-      maxZoom: 20,
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      subdomains: 'abc',
+      maxZoom: 19,
       attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
     }).addTo(map)
     const pinIcon = L.divIcon({
@@ -8268,10 +8268,10 @@ function MicrositeMap({ items, primary }) {
   useEffect(() => {
     if (!elRef.current) return
     const map = L.map(elRef.current, { scrollWheelZoom: true }).setView([33.68, -117.79], 11)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      subdomains: 'abcd',
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      subdomains: 'abc',
       attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-      maxZoom: 20,
+      maxZoom: 19,
     }).addTo(map)
 
     const pinIcon = L.divIcon({
@@ -8708,7 +8708,7 @@ function lPin(){return L.divIcon({className:'',html:'<svg width="30" height="30"
 function filtered(){var a=DATA.slice();if(state.filter!=='All')a=a.filter(function(l){return l.saleType===state.filter;});if(state.search){var q=state.search.toLowerCase();a=a.filter(function(l){return (l.name+' '+l.address).toLowerCase().indexOf(q)>-1;});}if(state.sort==='PriceHigh')a.sort(function(x,y){return y.price-x.price;});else if(state.sort==='PriceLow')a.sort(function(x,y){return x.price-y.price;});else a.sort(function(x,y){return y.id-x.id;});return a;}
 function cardHtml(l){var bc=l.saleType==='For Lease'?'#0d9488':'#e11d48';return '<div class="card" onclick="openDetail('+l.id+')"><div class="imgwrap"><img src="'+esc(l.image)+'"/><span class="badge" style="background:'+bc+'">'+esc(l.saleType)+'</span><span class="price">'+esc(l.priceLabel)+'</span></div><div class="inner2"><div class="body"><div class="lease">'+esc(l.leaseType)+'</div><div class="name">'+esc(l.name)+'</div><div class="addr">'+esc(l.address)+'</div><div class="metrics"><div><div class="lab">CAP</div><div class="val">'+esc(l.capLabel||'\\u2014')+'</div></div><div style="text-align:right"><div class="lab">NOI</div><div class="val">'+esc(l.noiLabel||'\\u2014')+'</div></div></div></div><div class="accent"></div></div></div>';}
 function drawMapGoogle(items){if(!map){map=new google.maps.Map(document.getElementById('map'),{center:{lat:33.68,lng:-117.79},zoom:11,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,styles:gStyle()});}markers.forEach(function(m){if(m.setMap)m.setMap(null);});markers=[];var iw=new google.maps.InfoWindow();var bounds=new google.maps.LatLngBounds();items.forEach(function(l){if(l.lat==null||l.lng==null)return;var pos={lat:Number(l.lat),lng:Number(l.lng)};var m=new google.maps.Marker({position:pos,map:map,icon:gPin()});m.addListener('click',function(){iw.setContent('<div style="font-size:13px"><b>'+esc(l.name)+'</b><br>'+esc(l.address)+'<br><b>'+esc(l.priceLabel)+'</b></div>');iw.open(map,m);});markers.push(m);bounds.extend(pos);});if(markers.length){map.fitBounds(bounds,60);google.maps.event.addListenerOnce(map,'idle',function(){if(map.getZoom()>14)map.setZoom(14);});}}
-function drawMapLeaflet(items){var el=document.getElementById('map');if(!map||MAP_ENGINE!=='leaflet'){el.innerHTML='';map=L.map(el).setView([33.68,-117.79],11);L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20,attribution:'&copy; OpenStreetMap contributors &copy; CARTO'}).addTo(map);MAP_ENGINE='leaflet';}else{markers.forEach(function(m){map.removeLayer(m);});}markers=[];items.forEach(function(l){if(l.lat==null||l.lng==null)return;var m=L.marker([l.lat,l.lng],{icon:lPin()}).addTo(map).bindPopup('<b>'+esc(l.name)+'</b><br>'+esc(l.address)+'<br><b>'+esc(l.priceLabel)+'</b>');markers.push(m);});if(markers.length){map.fitBounds(L.featureGroup(markers).getBounds().pad(0.4),{maxZoom:14});}setTimeout(function(){map.invalidateSize();},80);}
+function drawMapLeaflet(items){var el=document.getElementById('map');if(!map||MAP_ENGINE!=='leaflet'){el.innerHTML='';map=L.map(el).setView([33.68,-117.79],11);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{subdomains:'abc',maxZoom:19,attribution:'&copy; OpenStreetMap contributors &copy; CARTO'}).addTo(map);MAP_ENGINE='leaflet';}else{markers.forEach(function(m){map.removeLayer(m);});}markers=[];items.forEach(function(l){if(l.lat==null||l.lng==null)return;var m=L.marker([l.lat,l.lng],{icon:lPin()}).addTo(map).bindPopup('<b>'+esc(l.name)+'</b><br>'+esc(l.address)+'<br><b>'+esc(l.priceLabel)+'</b>');markers.push(m);});if(markers.length){map.fitBounds(L.featureGroup(markers).getBounds().pad(0.4),{maxZoom:14});}setTimeout(function(){map.invalidateSize();},80);}
 function drawMap(items){if(MAP_ENGINE==='leaflet'){window.L?drawMapLeaflet(items):loadLeaflet(function(){drawMapLeaflet(items);});return;}if(gReady()){MAP_ENGINE='google';drawMapGoogle(items);setTimeout(function(){var el=document.getElementById('map');if(el&&!el.querySelector('.gm-style')){MAP_ENGINE='leaflet';map=null;markers=[];loadLeaflet(function(){drawMapLeaflet(items);});}},2200);creHeight();return;}mapTries++;if(mapTries>6){MAP_ENGINE='leaflet';map=null;markers=[];loadLeaflet(function(){drawMapLeaflet(items);});return;}setTimeout(function(){drawMap(items);},300);}
 function render(){var items=filtered();var c=document.getElementById('count');if(OWNER_LOGO){c.innerHTML='<img src="'+OWNER_LOGO+'" alt="Company logo" style="max-height:48px;max-width:180px;object-fit:contain"/>';}else{c.innerHTML='<b>'+items.length+'</b><span>'+(items.length===1?'Property':'Properties')+'</span>';}document.getElementById('result').innerHTML='<b>'+items.length+'</b> result'+(items.length===1?'':'s');document.getElementById('cards').innerHTML=items.map(cardHtml).join('');document.getElementById('content').className='content '+state.view;if(state.view==='map'||state.view==='mapgrid'){drawMap(items);}creHeight();}
 document.getElementById('filterSeg').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;state.filter=b.getAttribute('data-f');var ch=this.children;for(var i=0;i<ch.length;i++)ch[i].classList.toggle('active',ch[i]===b);render();});
@@ -8832,7 +8832,7 @@ function dlPkg(){if(!CUR){return;}
   // Contact Required (default): register (name/email/phone) first, then download.
   if(isEnrolled()){doDownloadPkg();}else{showEnroll();}}
 function submitInquiry(e){e.preventDefault();var f=e.target;var v={name:'',email:'',phone:'',msg:''};f.querySelectorAll('input,textarea').forEach(function(i){var p=(i.placeholder||'').toLowerCase();if(i.type==='email'||p.indexOf('email')>=0)v.email=i.value;else if(p.indexOf('phone')>=0)v.phone=i.value;else if(i.tagName==='TEXTAREA')v.msg=i.value;else if(p.indexOf('name')>=0)v.name=i.value;});var t=document.querySelector('.dhtitle');var lead={name:v.name,email:v.email,phone:v.phone,message:v.msg,property:t?t.textContent:'',source:'Listing Website',ts:Date.now()};sendLeadNotice(lead);postLead(lead);e.target.innerHTML='<div style="padding:22px 12px;text-align:center"><div style="width:52px;height:52px;border-radius:50%;background:#dcfce7;color:#16a34a;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;margin:0 auto 14px">&#10003;</div><div style="font-size:17px;font-weight:800;color:#0f172a">Thank you!</div><div style="font-size:14px;color:#475569;margin-top:6px;line-height:1.5">Your inquiry has been sent. We\\'ll respond within one business day.</div></div>';return false;}
-function drawDetailMap(el,l,pos){if(MAP_ENGINE==='leaflet'){var go=function(){el.innerHTML='';dmap=L.map(el).setView([pos.lat,pos.lng],16);L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20,attribution:'&copy; OpenStreetMap contributors &copy; CARTO'}).addTo(dmap);L.marker([pos.lat,pos.lng],{icon:lPin()}).addTo(dmap);setTimeout(function(){dmap.invalidateSize();},100);};window.L?go():loadLeaflet(go);return;}if(!gReady()){setTimeout(function(){drawDetailMap(el,l,pos);},300);return;}dmap=new google.maps.Map(el,{center:pos,zoom:16,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,styles:gStyle()});new google.maps.Marker({position:pos,map:dmap,icon:gPin()});setTimeout(function(){if(!el.querySelector('.gm-style')){MAP_ENGINE='leaflet';dmap=null;drawDetailMap(el,l,pos);}},2000);}
+function drawDetailMap(el,l,pos){if(MAP_ENGINE==='leaflet'){var go=function(){el.innerHTML='';dmap=L.map(el).setView([pos.lat,pos.lng],16);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{subdomains:'abc',maxZoom:19,attribution:'&copy; OpenStreetMap contributors &copy; CARTO'}).addTo(dmap);L.marker([pos.lat,pos.lng],{icon:lPin()}).addTo(dmap);setTimeout(function(){dmap.invalidateSize();},100);};window.L?go():loadLeaflet(go);return;}if(!gReady()){setTimeout(function(){drawDetailMap(el,l,pos);},300);return;}dmap=new google.maps.Map(el,{center:pos,zoom:16,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,styles:gStyle()});new google.maps.Marker({position:pos,map:dmap,icon:gPin()});setTimeout(function(){if(!el.querySelector('.gm-style')){MAP_ENGINE='leaflet';dmap=null;drawDetailMap(el,l,pos);}},2000);}
 function geoNominatim(addr,cb){try{fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q='+encodeURIComponent(addr)).then(function(r){return r.json();}).then(function(a){cb(a&&a[0]&&a[0].lat?{lat:Number(a[0].lat),lng:Number(a[0].lon)}:null);}).catch(function(){cb(null);});}catch(e){cb(null);}}
 function geocodeAddr(addr,cb,tries){if(!addr){cb(null);return;}tries=tries||0;
   // Prefer Google's geocoder (best building coverage). Wait briefly for the Maps script to load; then
@@ -9358,7 +9358,7 @@ function InlineLocationMap({ lat, lng, query, onPick }) {
     const hasInit = lat != null && lng != null && !Number.isNaN(Number(lat)) && (Number(lat) || Number(lng))
     const start = hasInit ? [Number(lat), Number(lng)] : [39.8283, -98.5795]
     const map = L.map(elRef.current, { scrollWheelZoom: true }).setView(start, hasInit ? 15 : 4)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 20, attribution: '&copy; OpenStreetMap contributors &copy; CARTO' }).addTo(map)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { subdomains: 'abc', maxZoom: 19, attribution: '&copy; OpenStreetMap contributors &copy; CARTO' }).addTo(map)
     const pinIcon = L.divIcon({ className: '', html: '<svg width="34" height="34" viewBox="0 0 24 24" fill="#F97316" stroke="white" stroke-width="1.5"><path d="M12 2C8 2 5 5 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-4-3-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="white" stroke="none"/></svg>', iconSize: [34, 34], iconAnchor: [17, 34] })
     const marker = L.marker(start, { draggable: true, icon: pinIcon }).addTo(map)
     marker.on('dragend', () => { const p = marker.getLatLng(); onPickRef.current(+p.lat.toFixed(6), +p.lng.toFixed(6)) })
