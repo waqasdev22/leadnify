@@ -8752,9 +8752,29 @@ var EJS_ON=EJS.s&&EJS.s!=='YOUR_SERVICE_ID'&&EJS.t&&EJS.t!=='YOUR_TEMPLATE_ID'&&
 function openPkgBlob(w,pkg){var u=String(pkg.url||'');if(/^https?:/i.test(u)){if(w)w.location.href=u;return;}var parts=u.split(',');var mime=(parts[0].match(/data:([^;]+)/)||[])[1]||'application/pdf';var bin=atob(parts[1]||'');var arr=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);var url=URL.createObjectURL(new Blob([arr],{type:mime}));if(w)w.location.href=url;setTimeout(function(){URL.revokeObjectURL(url);},60000);}
 function fetchPkg(key,cb){if(!key){cb(null);return;}fetch(RTDB+'/public/packages/'+key+'.json').then(function(r){return r.json();}).then(function(p){cb(p&&p.url?p:null);}).catch(function(){cb(null);});}
 function emailOwners(subject,message){if(!EJS_ON||!OWNER_EMAILS||!OWNER_EMAILS.length)return;OWNER_EMAILS.forEach(function(addr){if(!addr)return;fetch('https://api.emailjs.com/api/v1.0/email/send',{method:'POST',keepalive:true,headers:{'Content-Type':'application/json'},body:JSON.stringify({service_id:EJS.s,template_id:EJS.t,user_id:EJS.u,template_params:{to_email:addr,email:addr,name:'Leadnify.io',subject:subject,message:message}})}).catch(function(){});});}
-function sendDownloadNotice(prop){var info={};try{info=JSON.parse(localStorage.getItem('cre_enrolled_info')||'{}');}catch(e){}var who=(info.name||'A visitor')+(info.type?' \\u2014 '+info.type:'')+(info.email?' ('+info.email+')':'');emailOwners('Marketing package downloaded'+(prop?' \\u2014 '+prop:''),who+' just downloaded the marketing package'+(prop?' for '+prop:'')+'.');}
+// Branded HTML notification (matches the Leadnify.io look) sent to the Owner for every lead/download.
+// For this to render as a designed email, the EmailJS template body must be {{{message}}} (raw HTML).
+function ownerEmailHtml(o){o=o||{};var accent='${primary}';
+  var row=function(l,v){return v?('<tr><td style="padding:3px 12px 3px 0;color:#64748b;font-size:13px;vertical-align:top;white-space:nowrap">'+l+'</td><td style="padding:3px 0;color:#0f172a;font-size:13px;font-weight:600">'+v+'</td></tr>'):'';};
+  var mail=o.email?('<a href="mailto:'+esc(o.email)+'" style="color:'+accent+';text-decoration:none">'+esc(o.email)+'</a>'):'';
+  var h='';
+  h+='<div style="max-width:600px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:#0f172a">';
+  h+='<div style="background:'+accent+';padding:20px 24px;border-radius:10px 10px 0 0"><span style="color:#fff;font-size:22px;font-weight:800;letter-spacing:-.5px">Leadnify.io</span></div>';
+  h+='<div style="border:1px solid #e2e8f0;border-top:0;padding:24px 24px 26px">';
+  h+='<h2 style="margin:0 0 6px;font-size:20px;color:#0f172a">'+esc(o.title||'New Lead')+'</h2>';
+  h+='<p style="margin:0 0 16px;font-size:14px;color:#334155">'+esc(o.body||'You received a new lead through your Leadnify.io property page.')+'</p>';
+  h+='<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px 18px">';
+  h+='<p style="margin:0 0 6px;font-size:14px"><b style="color:#0f172a">From:</b> <span style="color:'+accent+';font-weight:700">'+esc(o.name||'A visitor')+'</span>'+(o.phone?(' &nbsp;|&nbsp; '+esc(o.phone)):'')+(mail?(' &nbsp;|&nbsp; '+mail):'')+'</p>';
+  h+='<table style="border-collapse:collapse;margin-top:2px">'+row('Property',esc(o.property||''))+row('Type',esc(o.type||''))+row('Source',esc(o.source||''))+'</table>';
+  if(o.message){h+='<p style="margin:12px 0 0;padding-top:12px;border-top:1px solid #e2e8f0;font-size:14px;color:#0f172a">'+esc(o.message)+'</p>';}
+  h+='</div>';
+  h+='<p style="margin:16px 0 0;font-size:12px;color:#94a3b8">Reply directly to the buyer at the email above. This notification was sent by your Leadnify.io listings site.</p>';
+  h+='</div>';
+  h+='<p style="text-align:center;font-size:11px;color:#cbd5e1;margin:12px 0">&copy; Leadnify.io &mdash; Commercial Real Estate Marketing</p></div>';
+  return h;}
+function sendDownloadNotice(prop){var info={};try{info=JSON.parse(localStorage.getItem('cre_enrolled_info')||'{}');}catch(e){}emailOwners('Marketing package downloaded'+(prop?' \\u2014 '+prop:''),ownerEmailHtml({title:'Marketing Package Downloaded',body:'A visitor just downloaded the marketing package from your Leadnify.io property page.',name:info.name,email:info.email,type:info.type||'Download',property:prop||'',source:'Package Download'}));}
 // Notify the owner by email for EVERY new lead (inquiry, registration, etc.) — not just downloads.
-function sendLeadNotice(lead){if(!lead)return;var who=(lead.name||'A visitor')+(lead.type?' \\u2014 '+lead.type:'')+(lead.email?' ('+lead.email+')':'')+(lead.phone?' \\u2014 '+lead.phone:'');var prop=lead.property?(' \\u2014 '+lead.property):'';var src=lead.source?(' via '+lead.source):'';var msg=who+' just submitted a new lead'+(lead.property?(' for '+lead.property):'')+src+'.'+(lead.message?(' Message: '+lead.message):'');emailOwners('New lead'+prop,msg);}
+function sendLeadNotice(lead){if(!lead)return;emailOwners('New lead'+(lead.property?(' \\u2014 '+lead.property):''),ownerEmailHtml({title:'New Lead',body:'You received a new lead through your Leadnify.io property page.',name:lead.name,email:lead.email,phone:lead.phone,type:lead.type,property:lead.property||'',source:lead.source||'',message:lead.message||''}));}
 function doDownloadPkg(){if(!CUR){return;}
   // Every download (Free / Contact / NDA — first time or repeat) logs a lead and emails the Owner.
   var pn=(CUR&&CUR.name)||'';var lead=null;try{lead=JSON.parse(localStorage.getItem('cre_last_lead')||'null');}catch(e){}
