@@ -8944,6 +8944,10 @@ export const toMicrositeItem = (l) => {
         // Real financial labels for the card (fall back to a dash, never a fabricated number).
         capLabel: l.capRate ? String(l.capRate).replace('%', '').trim() + '%' : '—',
         noiLabel: l.noi ? compactPrice(l.noi) : '—',
+        // Raw values so the detail hero can show a Price / CAP / NOI (and Price per Room/Unit) summary (#16).
+        capRate: l.capRate || '',
+        pricePerRoom: l.pricePerRoom || '',
+        numUnits: l.numUnits || '',
         type: l.type,
         // Treat the old generic stock images as "no photo" so previously-imported listings also show
         // the explicit placeholder (not a misleading office photo) without needing a re-import (#9).
