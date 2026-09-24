@@ -10963,6 +10963,20 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
   const [teamMembers] = usePersistentState('team_members', TEAM_SETTINGS_MEMBERS)
   const [contactsSeeded, setContactsSeeded] = usePersistentState(`room_${room.id}_contacts_seeded`, false)
   const fixNel = (e) => String(e || '').replace(/^Nel@valuereis\.com$/i, 'Neil@valuereis.com')
+  // Load the REAL team from Firebase /users (same source as Team & Permissions) so the "Add member"
+  // picker shows every team member (Neil, Bre, Josh, …) — not just the stale local default (#11).
+  const [liveTeam, setLiveTeam] = useState([])
+  useEffect(() => {
+    let alive = true
+    dbGet(dbRef(db, 'users')).then((snap) => {
+      if (!alive) return
+      const u = snap.val() || {}
+      const list = Object.values(u).filter((m) => m && m.email).map((m) => ({ id: m.uid || m.email, name: m.name || m.email, email: fixNel(m.email), company: '', phone: '' }))
+      if (list.length) setLiveTeam(list)
+    }).catch(() => {})
+    return () => { alive = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   // Deal contacts start EMPTY — no auto-populating from the team. The user adds only the contacts they
   // want via "Add" (#11: Neil flagged contacts appearing without being entered).
   useEffect(() => {
@@ -10977,7 +10991,8 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dealContacts])
   // Members available to add (invited, not already a deal contact).
-  const availableMembers = (teamMembers || []).map((m) => ({ ...m, email: fixNel(m.email) })).filter((m) => !dealContacts.some((c) => (c.email || '').toLowerCase() === (m.email || '').toLowerCase()))
+  const sourceTeam = liveTeam.length ? liveTeam : (teamMembers || [])
+  const availableMembers = sourceTeam.map((m) => ({ ...m, email: fixNel(m.email) })).filter((m) => !dealContacts.some((c) => (c.email || '').toLowerCase() === (m.email || '').toLowerCase()))
   const [pickMember, setPickMember] = useState('')
   const emptyContact = { name: '', company: '', email: '', phone: '', license: '' }
   const [contactDraft, setContactDraft] = useState(emptyContact)
