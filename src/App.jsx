@@ -9213,10 +9213,25 @@ function ImportDealsModal({ onClose, onImport }) {
     </div>
   )
 }
-function NewDealModal({ onClose, onCreate }) {
+function NewDealModal({ onClose, onCreate, initial }) {
   const notify = useToast()
+  const isEdit = !!initial
   const [step, setStep] = useState(0)
-  const [f, setF] = useState({ name: '', propertyType: 'Retail', saleType: 'For Sale', gate: 'Contact Required', street: '', city: '', state: '', zip: '', status: 'Active', access: 'Public', cover: '', subheader: '', highlights: '', description: '', photos: [], price: '', unpriced: false, expiration: '', capRate: '', noi: '', size: '', lotSize: '', yearBuilt: '', occupancy: '', tenants: '', leaseTypeDetail: '', tenancy: '', zoning: '', parking: '', subtype: '', pricePerSf: '', saleCondition: '', propertyClass: '', yearsRenovated: '', numUnits: '', tenantBrand: '', parkingType: '', groundLease: false, tenantCredit: '', leaseCommence: '', leaseExpiration: '', leaseTerm: '', remainingTerm: '', leaseOptions: '', rentBumps: '', investmentType: '', proformaNoi: '', proformaCap: '', om: null, confidential: [], contacts: [], bor: { name: '', company: '', license: '' } })
+  const [f, setF] = useState(() => {
+    const base = { name: '', propertyType: 'Retail', saleType: 'For Sale', gate: 'Contact Required', street: '', city: '', state: '', zip: '', status: 'Active', access: 'Public', cover: '', subheader: '', highlights: '', description: '', photos: [], price: '', unpriced: false, expiration: '', capRate: '', noi: '', size: '', lotSize: '', yearBuilt: '', occupancy: '', tenants: '', leaseTypeDetail: '', tenancy: '', zoning: '', parking: '', subtype: '', pricePerSf: '', saleCondition: '', propertyClass: '', yearsRenovated: '', numUnits: '', tenantBrand: '', parkingType: '', groundLease: false, tenantCredit: '', leaseCommence: '', leaseExpiration: '', leaseTerm: '', remainingTerm: '', leaseOptions: '', rentBumps: '', investmentType: '', proformaNoi: '', proformaCap: '', om: null, confidential: [], contacts: [], bor: { name: '', company: '', license: '' } }
+    // Editing: pre-fill EVERY field from the existing listing so the full form reopens with all the
+    // values entered at creation (highlights, description, lease, media, etc.) — not a blank/short form (#6).
+    if (!initial) return base
+    return {
+      ...base,
+      ...initial,
+      cover: initial.cover || initial.image || '',
+      photos: Array.isArray(initial.photos) ? initial.photos : [],
+      confidential: Array.isArray(initial.confidential) ? initial.confidential : [],
+      contacts: Array.isArray(initial.contacts) ? initial.contacts : [],
+      bor: initial.bor && typeof initial.bor === 'object' ? initial.bor : base.bor,
+    }
+  })
   const set = (k, v) => setF((s) => ({ ...s, [k]: v }))
   const coverRef = useRef(null), photoRef = useRef(null), omRef = useRef(null), confRef = useRef(null)
   const fsize = (file) => { const mb = file.size / (1024 * 1024); return mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.max(1, Math.round(file.size / 1024))} KB` }
@@ -9237,7 +9252,7 @@ function NewDealModal({ onClose, onCreate }) {
       <div className="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl sm:flex-row" onClick={(e) => e.stopPropagation()}>
         {/* Steps rail */}
         <div className="shrink-0 border-b border-slate-100 bg-slate-50 p-4 sm:w-56 sm:border-b-0 sm:border-r">
-          <p className="mb-3 text-base font-extrabold text-slate-900">New Deal</p>
+          <p className="mb-3 text-base font-extrabold text-slate-900">{isEdit ? 'Edit Deal' : 'New Deal'}</p>
           <div className="flex gap-1 overflow-x-auto sm:flex-col sm:gap-0.5">
             {NEW_DEAL_STEPS.map((s, i) => (
               <button key={s} onClick={() => setStep(i)} className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold transition ${step === i ? 'bg-brand text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
@@ -9413,7 +9428,7 @@ function NewDealModal({ onClose, onCreate }) {
               {step < NEW_DEAL_STEPS.length - 1 ? (
                 <button onClick={() => setStep(step + 1)} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-hover">Next</button>
               ) : (
-                <button onClick={save} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-hover">Create Deal</button>
+                <button onClick={save} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-hover">{isEdit ? 'Save Changes' : 'Create Deal'}</button>
               )}
             </div>
           </div>
@@ -9557,6 +9572,33 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
   // Create a deal from the New Deal wizard: one shared Deal ID across the listing + deal room,
   // with the OM, photos and confidential docs published so the property page/download work.
   const createDeal = (d) => {
+    // EDIT mode: update the existing listing (and its linked deal room) with the FULL field set from
+    // the wizard, so highlights/description/lease/media entered here are retained (#6). Agent/BOR and
+    // any fields not in the form are preserved via `...l`.
+    if (editing) {
+      const cover = d.cover || (d.photos && d.photos[0] && d.photos[0].url) || editing.image || ''
+      const address = [d.street, d.city, d.state, d.zip].filter(Boolean).join(', ') || editing.address || '—'
+      const priceN = Number(d.price) || 0
+      setListings((list) => list.map((l) => (l.id === editing.id ? {
+        ...l, name: d.name, address, city: d.city || '', state: d.state || '', price: priceN,
+        type: d.propertyType || l.type, saleType: d.saleType || l.saleType, gate: d.gate || l.gate,
+        size: d.size || l.size || '—', status: d.status || l.status, image: cover, access: d.access || l.access,
+        subheader: d.subheader || '', highlights: d.highlights || '', description: d.description || '',
+        capRate: d.capRate || '', noi: d.noi || '', pricePerSf: d.pricePerSf || '', lotSize: d.lotSize || '',
+        yearBuilt: d.yearBuilt || '', occupancy: d.occupancy || '', tenants: d.tenants || '', tenancy: d.tenancy || '',
+        leaseTypeDetail: d.leaseTypeDetail || '', subtype: d.subtype || '', zoning: d.zoning || '', parking: d.parking || '',
+        unpriced: !!d.unpriced, expiration: d.expiration || '', saleCondition: d.saleCondition || '', propertyClass: d.propertyClass || '',
+        yearsRenovated: d.yearsRenovated || '', numUnits: d.numUnits || '', tenantBrand: d.tenantBrand || '', parkingType: d.parkingType || '',
+        groundLease: !!d.groundLease, tenantCredit: d.tenantCredit || '', leaseCommence: d.leaseCommence || '', leaseExpiration: d.leaseExpiration || '',
+        leaseTerm: d.leaseTerm || '', remainingTerm: d.remainingTerm || '', leaseOptions: d.leaseOptions || '', rentBumps: d.rentBumps || '',
+        investmentType: d.investmentType || '', proformaNoi: d.proformaNoi || '', proformaCap: d.proformaCap || '',
+      } : l)))
+      if (setDealRooms) setDealRooms((list) => list.map((r) => ((r.listingId === editing.id || r.id === editing.id) ? { ...r, name: d.name, address, image: cover, price: priceN, capRate: d.capRate || '', noi: d.noi || '', access: d.gate || r.access } : r)))
+      if (d.om && d.om.url) putPublicPackage(editing.id, { name: d.om.name, url: d.om.url }).catch(() => {})
+      if (d.photos && d.photos.length) putGallery(editing.id, d.photos.map((p) => p.url).filter(Boolean).slice(0, 12))
+      setNewDealOpen(false); setEditing(null); notify('Deal updated')
+      return
+    }
     const id = uid()
     const roomId = uid()
     const dealId = newDealId()
@@ -10154,7 +10196,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                               <p className="mt-1 text-[11px] text-slate-400">Click to open. Upload or replace the OM from the Deal Room.</p>
                             </div>
                             <div className="col-span-2 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-100 pt-3 sm:col-span-4">
-                              <CardAction icon={Pencil} label="Edit" onClick={() => (setEditing(l), setModalOpen(true))} />
+                              <CardAction icon={Pencil} label="Edit" onClick={() => (setEditing(l), setNewDealOpen(true))} />
                               <CardAction icon={FileDown} label="PDF" onClick={() => downloadPdf(l, notify)} />
                               <CardAction icon={Send} label="Transfer" onClick={() => transferListing(l)} />
                               <CardAction icon={Copy} label="Duplicate" onClick={() => duplicateListing(l)} />
@@ -10186,7 +10228,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
 
       {/* Deal Rooms section removed from My Deals (still shown on the Dashboard & Deal Rooms page). */}
 
-      {newDealOpen && <NewDealModal onClose={() => setNewDealOpen(false)} onCreate={createDeal} />}
+      {newDealOpen && <NewDealModal initial={editing} onClose={() => { setNewDealOpen(false); setEditing(null) }} onCreate={createDeal} />}
       {importOpen && <ImportDealsModal onClose={() => setImportOpen(false)} onImport={importDeals} />}
 
       <Modal open={!!transferItem} onClose={() => setTransferItem(null)} title="Transfer Deal">
@@ -11734,14 +11776,48 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
           </div>
         </div>
       </div>
-      <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Edit Deal">
-        <DealRoomForm
-          initial={{ name: room.name || '', address: room.address || '', price: room.price ?? '', capRate: room.capRate ?? '', noi: room.noi ?? '', status: DEAL_ROOM_STATUSES.includes(room.status) ? room.status : 'Active', access: access || gateListing?.gate || room.access || 'Free Access', image: room.image || '' }}
-          submitLabel="Save changes"
-          onCancel={() => setEditOpen(false)}
-          onSubmit={(data) => { onUpdateRoom && onUpdateRoom(room.id, data); if (data.access) { setAccess(data.access); syncListingGate(data.access) } setEditOpen(false); notify('Deal updated') }}
+      {/* Edit Deal — the SAME full-field wizard as New Deal (#6), pre-filled from the linked listing so
+          highlights/description/lease/media can all be reopened and changed. Falls back to the short
+          form only when this room isn't linked to a listing. */}
+      {editOpen && (gateListing ? (
+        <NewDealModal
+          initial={gateListing}
+          onClose={() => setEditOpen(false)}
+          onCreate={(d) => {
+            const cover = d.cover || (d.photos && d.photos[0] && d.photos[0].url) || gateListing.image || ''
+            const address = [d.street, d.city, d.state, d.zip].filter(Boolean).join(', ') || gateListing.address || '—'
+            const priceN = Number(d.price) || 0
+            if (setListings) setListings((list) => list.map((l) => (l.id === gateListing.id ? {
+              ...l, name: d.name, address, city: d.city || '', state: d.state || '', price: priceN,
+              type: d.propertyType || l.type, saleType: d.saleType || l.saleType, gate: d.gate || l.gate,
+              size: d.size || l.size || '—', status: d.status || l.status, image: cover, access: d.access || l.access,
+              subheader: d.subheader || '', highlights: d.highlights || '', description: d.description || '',
+              capRate: d.capRate || '', noi: d.noi || '', pricePerSf: d.pricePerSf || '', lotSize: d.lotSize || '',
+              yearBuilt: d.yearBuilt || '', occupancy: d.occupancy || '', tenants: d.tenants || '', tenancy: d.tenancy || '',
+              leaseTypeDetail: d.leaseTypeDetail || '', subtype: d.subtype || '', zoning: d.zoning || '', parking: d.parking || '',
+              unpriced: !!d.unpriced, expiration: d.expiration || '', saleCondition: d.saleCondition || '', propertyClass: d.propertyClass || '',
+              yearsRenovated: d.yearsRenovated || '', numUnits: d.numUnits || '', tenantBrand: d.tenantBrand || '', parkingType: d.parkingType || '',
+              groundLease: !!d.groundLease, tenantCredit: d.tenantCredit || '', leaseCommence: d.leaseCommence || '', leaseExpiration: d.leaseExpiration || '',
+              leaseTerm: d.leaseTerm || '', remainingTerm: d.remainingTerm || '', leaseOptions: d.leaseOptions || '', rentBumps: d.rentBumps || '',
+              investmentType: d.investmentType || '', proformaNoi: d.proformaNoi || '', proformaCap: d.proformaCap || '',
+            } : l)))
+            if (onUpdateRoom) onUpdateRoom(room.id, { name: d.name, address, image: cover, price: priceN, capRate: d.capRate || '', noi: d.noi || '', access: d.gate || access })
+            if (d.gate) { setAccess(d.gate); syncListingGate(d.gate) }
+            if (d.om && d.om.url) putPublicPackage(gateListing.id, { name: d.om.name, url: d.om.url }).catch(() => {})
+            if (d.photos && d.photos.length) putGallery(gateListing.id, d.photos.map((p) => p.url).filter(Boolean).slice(0, 12))
+            setEditOpen(false); notify('Deal updated')
+          }}
         />
-      </Modal>
+      ) : (
+        <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Edit Deal">
+          <DealRoomForm
+            initial={{ name: room.name || '', address: room.address || '', price: room.price ?? '', capRate: room.capRate ?? '', noi: room.noi ?? '', status: DEAL_ROOM_STATUSES.includes(room.status) ? room.status : 'Active', access: access || room.access || 'Free Access', image: room.image || '' }}
+            submitLabel="Save changes"
+            onCancel={() => setEditOpen(false)}
+            onSubmit={(data) => { onUpdateRoom && onUpdateRoom(room.id, data); if (data.access) { setAccess(data.access); syncListingGate(data.access) } setEditOpen(false); notify('Deal updated') }}
+          />
+        </Modal>
+      ))}
     </div>
   )
 }
