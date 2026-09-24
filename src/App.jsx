@@ -9548,7 +9548,10 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
   const duplicateRoom = (room) => setDealRooms && setDealRooms((list) => [{ ...room, id: uid(), name: `${room.name} (Copy)`, ts: Date.now(), updated: 'just now' }, ...list])
   const deleteRoom = (room) => { if (window.confirm(`Delete deal room "${room.name}"?`)) setDealRooms && setDealRooms((list) => list.filter((r) => r.id !== room.id)) }
 
-  const [slug, setSlug] = useState('vaziamts')
+  // The vanity URL slug is persisted so a custom link survives refresh. The hub DATA always lives
+  // under the shared team key ('vaziamts') that clean paths and deal-room republishes read from — the
+  // slug is only the public-facing address, resolved to that shared hub by the microsite.
+  const [slug, setSlug] = usePersistentState('hub_slug', 'vaziamts')
   // Functional link that actually opens the microsite (works when pasted in a new tab).
   const hubUrl = `${window.location.origin}${window.location.pathname}?hub=${slug}`
   // Clean public listings URL (leadnify.io/<hub-slug>) — the microsite resolves a bare path segment
@@ -9753,7 +9756,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
     if (!micrositeItems.length) return
     const hubData = { items: micrositeItems, primary, template: micrositeTpl, defaultView, ownerUid: (auth.currentUser && auth.currentUser.uid) || '', ownerEmail: fallbackEmail, ownerEmails: [fallbackEmail].filter(Boolean), logoUrl: micrositeLogo || '' }
     try { localStorage.setItem('crebuilder_hub', JSON.stringify(hubData)) } catch { /* ignore */ }
-    putPublicHub(slug, hubData).catch(() => {})
+    putPublicHub('vaziamts', hubData).catch(() => {})
     // Resolve the CURRENT Owner-role email(s) and re-publish the hub with them, so download/lead
     // notifications go to EVERY Owner — and only Owners (never Admin/Manager/Member), regardless of
     // who is signed in. Supports one Owner or many; if none is found, keeps the safe fallback.
@@ -9769,7 +9772,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
           .filter(Boolean)
       } catch { /* ignore */ }
       const recipients = ownerEmails.length ? Array.from(new Set(ownerEmails)) : [fallbackEmail].filter(Boolean)
-      if (!cancelled && recipients.length) putPublicHub(slug, { ...hubData, ownerEmail: recipients[0], ownerEmails: recipients }).catch(() => {})
+      if (!cancelled && recipients.length) putPublicHub('vaziamts', { ...hubData, ownerEmail: recipients[0], ownerEmails: recipients }).catch(() => {})
     })()
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
