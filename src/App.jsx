@@ -8922,14 +8922,10 @@ function dl(){getPkg(LISTING_ID,function(p1){if(p1){savePdf(p1);return;}getPkg(N
 </script></body></html>`
 }
 
-// Maps raw listings into the public-microsite item shape (coords, price label, etc.)
-export const toMicrositeItems = (listings) =>
-  (listings || [])
-    // Milestone II 3.6 — public only when Listed AND the status/pipeline is a public one
-    // (Active, Call for Offers, Highest and Best, Under Contract). Inactive/Closed/On Hold/
-    // No Longer for Sale are pulled from the public map & listing feature.
-    .filter((l) => l.listed !== false && PUBLIC_STATUSES.includes(l.status || 'Active'))
-    .map((l) => {
+// Maps ONE raw listing into the public-microsite item shape. Separate from toMicrositeItems so a
+// single listing (e.g. a draft/unlisted property being previewed) can be rendered even when it is
+// not part of the published hub (#13).
+export const toMicrositeItem = (l) => {
       const m = micrositeFields(l)
       const [lat, lng] = coordsFor(l)
       return {
@@ -9019,7 +9015,12 @@ export const toMicrositeItems = (listings) =>
         bor: l.bor || '',
         borDisclaimer: l.borDisclaimer || '',
       }
-    })
+}
+// Maps raw listings into microsite items — only the ones that are Listed AND in a public status.
+export const toMicrositeItems = (listings) =>
+  (listings || [])
+    .filter((l) => l.listed !== false && PUBLIC_STATUSES.includes(l.status || 'Active'))
+    .map(toMicrositeItem)
 
 // Appearance settings (microsite/property themes, default view, brand colour). Values are
 // persisted so the microsite publish (My Deals) reads the same choices. Lives in Team Settings.
@@ -10202,7 +10203,10 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                       <td className="py-2.5 pr-3">
                         <div className="flex items-center justify-center gap-1">
                           <IconButton icon={ExternalLink} label="Preview listing" onClick={() => {
-                            const w = window.open(`${hubUrl}&p=${l.id}`, '_blank')
+                            // Save this listing so the microsite can preview it even if it's a draft/unlisted
+                            // property that isn't in the published hub (#13).
+                            try { localStorage.setItem('cre_preview', JSON.stringify(toMicrositeItem(l))) } catch { /* ignore */ }
+                            const w = window.open(`${hubUrl}&p=${l.id}&pv=1`, '_blank')
                             if (!w) notify('Please allow pop-ups to open the preview', 'error')
                           }} />
                           {can('listing.delete') && (
@@ -10240,7 +10244,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                               <CardAction icon={Share2} label="Share" onClick={() => shareItem(l, notify)} />
                               <CardAction icon={AtSign} label="Email" onClick={() => emailItem(l, notify)} />
                               <CardAction icon={Share} label="Social" onClick={() => socialShare(l, notify)} />
-                              <button onClick={() => { const w = window.open(`${hubUrl}&p=${l.id}`, '_blank'); if (!w) notify('Please allow pop-ups to open the preview', 'error') }} className="ml-auto rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">Preview</button>
+                              <button onClick={() => { try { localStorage.setItem('cre_preview', JSON.stringify(toMicrositeItem(l))) } catch { /* ignore */ } const w = window.open(`${hubUrl}&p=${l.id}&pv=1`, '_blank'); if (!w) notify('Please allow pop-ups to open the preview', 'error') }} className="ml-auto rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">Preview</button>
                             </div>
                           </div>
                         </td>

@@ -32,10 +32,21 @@ if (params.get('code') !== null && params.get('state') !== null && window.opener
   const slug = params.get('hub') || 'vaziamts'
   const RTDB = 'https://cre-dashboard-ba596-default-rtdb.firebaseio.com'
   const renderHub = (saved) => {
-    const items =
+    let items =
       saved && Array.isArray(saved.items) && saved.items.length
         ? saved.items
         : toMicrositeItems(INITIAL_LISTINGS)
+    // Draft/unlisted preview (#13): when opened with ?pv=1, merge the previewed listing (saved to
+    // localStorage by the dashboard's Preview button) so its detail page renders even though it isn't
+    // in the published hub.
+    if (params.get('pv') !== null) {
+      try {
+        const pv = JSON.parse(localStorage.getItem('cre_preview') || 'null')
+        if (pv && pv.id != null) {
+          items = [pv, ...items.filter((it) => String(it.id) !== String(pv.id))]
+        }
+      } catch { /* ignore */ }
+    }
     // Explicit URL params (?t= theme, ?c= colour) win; else the owner's saved choice, then default.
     const template = params.get('t') || (saved && saved.template) || 'Modern'
     const primary =
