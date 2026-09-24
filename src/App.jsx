@@ -9416,7 +9416,7 @@ function NewDealModal({ onClose, onCreate, initial }) {
   const isEdit = !!initial
   const [step, setStep] = useState(0)
   const [f, setF] = useState(() => {
-    const base = { name: '', propertyType: 'Retail', saleType: 'For Sale', gate: 'Contact Required', street: '', city: '', state: '', zip: '', status: 'Active', access: 'Public', lat: '', lng: '', cover: '', subheader: '', highlights: '', description: '', photos: [], price: '', unpriced: false, expiration: '', capRate: '', noi: '', size: '', lotSize: '', yearBuilt: '', occupancy: '', tenants: '', leaseTypeDetail: '', tenancy: '', zoning: '', parking: '', subtype: '', pricePerSf: '', saleCondition: '', propertyClass: '', yearsRenovated: '', numUnits: '', tenantBrand: '', parkingType: '', groundLease: false, tenantCredit: '', leaseCommence: '', leaseExpiration: '', leaseTerm: '', remainingTerm: '', leaseOptions: '', rentBumps: '', investmentType: '', proformaNoi: '', proformaCap: '', om: null, confidential: [], contacts: [], bor: { name: '', company: '', license: '' } }
+    const base = { name: '', propertyType: 'Retail', saleType: 'For Sale', gate: 'Contact Required', street: '', city: '', state: '', zip: '', status: 'Active', access: 'Public', lat: '', lng: '', cover: '', subheader: '', highlights: '', description: '', photos: [], price: '', unpriced: false, expiration: '', capRate: '', noi: '', size: '', lotSize: '', yearBuilt: '', occupancy: '', tenants: '', leaseTypeDetail: '', tenancy: '', zoning: '', parking: '', subtype: '', pricePerSf: '', saleCondition: '', propertyClass: '', yearsRenovated: '', numUnits: '', tenantBrand: '', parkingType: '', groundLease: false, tenantCredit: '', leaseCommence: '', leaseExpiration: '', leaseTerm: '', remainingTerm: '', leaseOptions: '', rentBumps: '', investmentType: '', proformaNoi: '', proformaCap: '', om: null, confidential: [], contacts: [], bor: '' }
     // Editing: pre-fill EVERY field from the existing listing so the full form reopens with all the
     // values entered at creation (highlights, description, lease, media, etc.) — not a blank/short form (#6).
     if (!initial) return base
@@ -9427,7 +9427,13 @@ function NewDealModal({ onClose, onCreate, initial }) {
       photos: Array.isArray(initial.photos) ? initial.photos : [],
       confidential: Array.isArray(initial.confidential) ? initial.confidential : [],
       contacts: Array.isArray(initial.contacts) ? initial.contacts : [],
-      bor: initial.bor && typeof initial.bor === 'object' ? initial.bor : base.bor,
+      // Broker of Record is a single line on the public page. Pre-fill from the string, or flatten an
+      // older {name,company,license} object into one so the field always shows the current value.
+      bor: typeof initial.bor === 'string'
+        ? initial.bor
+        : (initial.bor && typeof initial.bor === 'object'
+          ? [initial.bor.name, initial.bor.company, initial.bor.license && `License ${initial.bor.license}`].filter(Boolean).join(' · ')
+          : ''),
     }
   })
   const set = (k, v) => setF((s) => ({ ...s, [k]: v }))
@@ -9628,12 +9634,8 @@ function NewDealModal({ onClose, onCreate, initial }) {
                   ))}</div>
                 </div>
                 <div>
-                  <label className={lbl}>Broker of Record</label>
-                  <div className="grid gap-2 sm:grid-cols-3">
-                    <input className={inp} placeholder="Name" value={f.bor.name} onChange={(e) => set('bor', { ...f.bor, name: e.target.value })} />
-                    <input className={inp} placeholder="Company" value={f.bor.company} onChange={(e) => set('bor', { ...f.bor, company: e.target.value })} />
-                    <input className={inp} placeholder="License #" value={f.bor.license} onChange={(e) => set('bor', { ...f.bor, license: e.target.value })} />
-                  </div>
+                  <label className={lbl}>Broker of Record <span className="font-normal text-slate-400">— shown low-key on the property page</span></label>
+                  <textarea className={inp} rows={2} value={f.bor} onChange={(e) => set('bor', e.target.value)} placeholder="e.g. Scott Reid: MO #2019024102 | E: broker@parasellinc.com | D: (949) 942-6578" />
                 </div>
               </div>
             )}
@@ -9839,6 +9841,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
         leaseTerm: d.leaseTerm || '', remainingTerm: d.remainingTerm || '', leaseOptions: d.leaseOptions || '', rentBumps: d.rentBumps || '',
         investmentType: d.investmentType || '', proformaNoi: d.proformaNoi || '', proformaCap: d.proformaCap || '',
         lat: (d.lat === '' || d.lat == null) ? (l.lat ?? '') : Number(d.lat), lng: (d.lng === '' || d.lng == null) ? (l.lng ?? '') : Number(d.lng),
+        bor: (typeof d.bor === 'string' && d.bor.trim()) ? d.bor.trim() : (l.bor || ''),
       } : l)))
       if (setDealRooms) setDealRooms((list) => list.map((r) => ((r.listingId === editing.id || r.id === editing.id) ? { ...r, name: d.name, address, image: cover, price: priceN, capRate: d.capRate || '', noi: d.noi || '', access: d.gate || r.access, status: d.status || r.status } : r)))
       if (d.om && d.om.url) putPublicPackage(editing.id, { name: d.om.name, url: d.om.url }).catch(() => {})
@@ -9852,7 +9855,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
     const address = [d.street, d.city, d.state, d.zip].filter(Boolean).join(', ') || '—'
     const cover = d.cover || (d.photos && d.photos[0] && d.photos[0].url) || ''
     const price = Number(d.price) || 0
-    setListings((list) => [{ id, dealId, name: d.name, address, city: d.city || '', state: d.state || '', ts: Date.now(), price, type: d.propertyType || 'Retail', saleType: d.saleType || 'For Sale', gate: d.gate || 'Contact Required', size: d.size || '—', status: d.status || 'Active', image: cover || '', featured: false, listed: d.status !== 'Draft', access: d.access || 'Public', subheader: d.subheader || '', highlights: d.highlights || '', description: d.description || '', capRate: d.capRate || '', noi: d.noi || '', pricePerSf: d.pricePerSf || '', lotSize: d.lotSize || '', yearBuilt: d.yearBuilt || '', occupancy: d.occupancy || '', tenants: d.tenants || '', tenancy: d.tenancy || '', leaseTypeDetail: d.leaseTypeDetail || '', subtype: d.subtype || '', zoning: d.zoning || '', parking: d.parking || '', unpriced: !!d.unpriced, expiration: d.expiration || '', saleCondition: d.saleCondition || '', propertyClass: d.propertyClass || '', yearsRenovated: d.yearsRenovated || '', numUnits: d.numUnits || '', tenantBrand: d.tenantBrand || '', parkingType: d.parkingType || '', groundLease: !!d.groundLease, tenantCredit: d.tenantCredit || '', leaseCommence: d.leaseCommence || '', leaseExpiration: d.leaseExpiration || '', leaseTerm: d.leaseTerm || '', remainingTerm: d.remainingTerm || '', leaseOptions: d.leaseOptions || '', rentBumps: d.rentBumps || '', investmentType: d.investmentType || '', proformaNoi: d.proformaNoi || '', proformaCap: d.proformaCap || '', lat: d.lat === '' || d.lat == null ? '' : Number(d.lat), lng: d.lng === '' || d.lng == null ? '' : Number(d.lng) }, ...list])
+    setListings((list) => [{ id, dealId, name: d.name, address, city: d.city || '', state: d.state || '', ts: Date.now(), price, type: d.propertyType || 'Retail', saleType: d.saleType || 'For Sale', gate: d.gate || 'Contact Required', size: d.size || '—', status: d.status || 'Active', image: cover || '', featured: false, listed: d.status !== 'Draft', access: d.access || 'Public', subheader: d.subheader || '', highlights: d.highlights || '', description: d.description || '', capRate: d.capRate || '', noi: d.noi || '', pricePerSf: d.pricePerSf || '', lotSize: d.lotSize || '', yearBuilt: d.yearBuilt || '', occupancy: d.occupancy || '', tenants: d.tenants || '', tenancy: d.tenancy || '', leaseTypeDetail: d.leaseTypeDetail || '', subtype: d.subtype || '', zoning: d.zoning || '', parking: d.parking || '', unpriced: !!d.unpriced, expiration: d.expiration || '', saleCondition: d.saleCondition || '', propertyClass: d.propertyClass || '', yearsRenovated: d.yearsRenovated || '', numUnits: d.numUnits || '', tenantBrand: d.tenantBrand || '', parkingType: d.parkingType || '', groundLease: !!d.groundLease, tenantCredit: d.tenantCredit || '', leaseCommence: d.leaseCommence || '', leaseExpiration: d.leaseExpiration || '', leaseTerm: d.leaseTerm || '', remainingTerm: d.remainingTerm || '', leaseOptions: d.leaseOptions || '', rentBumps: d.rentBumps || '', investmentType: d.investmentType || '', proformaNoi: d.proformaNoi || '', proformaCap: d.proformaCap || '', lat: d.lat === '' || d.lat == null ? '' : Number(d.lat), lng: d.lng === '' || d.lng == null ? '' : Number(d.lng), bor: (typeof d.bor === 'string' ? d.bor.trim() : '') }, ...list])
     setDealRooms && setDealRooms((list) => [{ id: roomId, listingId: id, dealId, name: d.name, address, image: cover, price, capRate: d.capRate || '', noi: d.noi || '', status: d.status || 'Active', access: d.gate || 'Contact Required', files: (d.confidential || []).length, members: 0, updated: 'just now', ts: Date.now() }, ...list])
     if (d.om && d.om.url) {
       putPublicPackage(id, { name: d.om.name, url: d.om.url }).catch(() => {})
