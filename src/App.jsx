@@ -10958,14 +10958,22 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
   // Deal Contacts auto-populate from invited team members only (no outsiders).
   const [teamMembers] = usePersistentState('team_members', TEAM_SETTINGS_MEMBERS)
   const [contactsSeeded, setContactsSeeded] = usePersistentState(`room_${room.id}_contacts_seeded`, false)
+  const fixNel = (e) => String(e || '').replace(/^Nel@valuereis\.com$/i, 'Neil@valuereis.com')
   useEffect(() => {
     if (contactsSeeded) return
     if (dealContacts.length === 0 && teamMembers.length) {
-      setDealContacts(teamMembers.slice(0, 4).map((m) => ({ id: uid(), name: m.name, company: m.company || '—', email: m.email || '', phone: m.phone || '—', license: '', member: true })))
+      setDealContacts(teamMembers.slice(0, 4).map((m) => ({ id: uid(), name: m.name, company: m.company || '—', email: fixNel(m.email), phone: m.phone || '—', license: '', member: true })))
     }
     setContactsSeeded(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [room.id])
+  // One-time cleanup: repair any deal contact still saved with the old 'Nel@' typo (#11).
+  useEffect(() => {
+    if (dealContacts.some((c) => /^Nel@valuereis\.com$/i.test(c.email || ''))) {
+      setDealContacts((l) => l.map((c) => ({ ...c, email: fixNel(c.email) })))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dealContacts])
   // Members available to add (invited, not already a deal contact).
   const availableMembers = teamMembers.filter((m) => !dealContacts.some((c) => (c.email || '').toLowerCase() === (m.email || '').toLowerCase()))
   const [pickMember, setPickMember] = useState('')
