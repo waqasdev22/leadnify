@@ -8526,6 +8526,7 @@ export function buildMicrositeHtml(items, brandColor, template = 'Modern', defau
 <title>Listings — Leadnify.io</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
+html,body{max-width:100%;overflow-x:hidden}
 body{font-family:${bodyFont};background:#f8fafc;color:#0f172a}
 .hero{position:relative;height:200px;overflow:hidden;color:#fff;background:${hero}}
 .hero .cut{position:absolute;inset:0;background:linear-gradient(115deg,transparent 55%,rgba(0,0,0,.28) 55%)}
@@ -8547,7 +8548,7 @@ input,select{border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;font-si
 .content.grid #map,.content.list #map,.content.card #map{display:none}
 .content.map #cards{display:none}
 #map{height:560px;border-radius:12px;border:1px solid #e2e8f0;z-index:0}
-@media(max-width:640px){.tbin{padding:10px 14px;gap:8px}#search{flex:1 1 100%;min-width:0}#sort{flex:1 1 100%}.spacer{margin-left:0;flex:1 1 100%;justify-content:space-between;gap:8px}#viewSeg{overflow-x:auto;-webkit-overflow-scrolling:touch}.seg button{padding:8px 11px;font-size:13px;white-space:nowrap}.content{padding:14px}#map{height:360px}}
+@media(max-width:640px){.hero{height:150px}.hero .inner{padding:0 16px}.logo{height:66px;width:120px}.count b{font-size:34px}.tbin{padding:10px 14px;gap:8px}#search{flex:1 1 100%;min-width:0}#sort{flex:1 1 100%;min-width:0}.spacer{margin-left:0;flex:1 1 100%;justify-content:space-between;gap:8px;min-width:0}#viewSeg{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}.seg button{padding:8px 11px;font-size:13px;white-space:nowrap}.content{padding:14px}#map{height:360px}.content.mapgrid,.content.grid #cards,.content.mapgrid #cards{grid-template-columns:1fr}.content.list .card,.content.card .card{flex-direction:column}.content.list .imgwrap,.content.card .imgwrap{width:100%;flex:none}.content.list .card img,.content.card .card img{height:200px;min-height:0}.content.card .body{padding:16px}}
 #cards{display:grid;gap:20px}
 .content.mapgrid #cards{grid-template-columns:1fr 1fr;align-content:start}
 .content.grid #cards{grid-template-columns:repeat(3,1fr)}
