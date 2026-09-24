@@ -8734,7 +8734,7 @@ var ag=l.agentName?{name:l.agentName,role:l.agentLicense?('Lic '+l.agentLicense)
 var ag2=l.agent2Name?{name:l.agent2Name,role:l.agent2License?('Lic '+l.agent2License):'Co-Agent',email:l.agent2Email||__agEmail(l.agent2Name)||'',phone:l.agent2Phone||'',initials:__ini(l.agent2Name)}:null;
 var ag2Html=ag2?('<div class="agent" style="margin-top:14px;padding-top:14px;border-top:1px solid #e2e8f0"><div class="av">'+ag2.initials+'</div><div><div class="nm">'+ag2.name+'</div><div class="rl">'+ag2.role+'</div></div></div>'+(ag2.email?'<a class="aemail" href="mailto:'+ag2.email+'">&#9993; '+ag2.email+'</a>':'')+(ag2.phone?'<a class="aemail" href="tel:'+String(ag2.phone).replace(/[^0-9+]/g,'')+'">&#9742; '+ag2.phone+'</a>':'')):'';
 var __g=(Array.isArray(l.gallery)?l.gallery:[]).filter(function(x){return x;});
-var galInner=__g.length?[l.image].concat(__g).map(function(im){return '<img src="'+esc(im)+'" style="width:100%;height:260px;object-fit:cover;border-radius:0;display:block"/>';}).join(''):'<img src="'+esc(l.image)+'" style="grid-column:1/-1;width:540px;max-width:100%;height:400px;object-fit:cover;border-radius:0;display:block"/>';
+var galInner=__g.length?[l.image].concat(__g.filter(function(x){return x&&x!==l.image;})).map(function(im){return '<img src="'+esc(im)+'" style="width:100%;height:260px;object-fit:cover;border-radius:0;display:block"/>';}).join(''):'<img src="'+esc(l.image)+'" style="grid-column:1/-1;width:540px;max-width:100%;height:400px;object-fit:cover;border-radius:0;display:block"/>';
 var facts='<div class="facts"><div class="fh">Property Facts</div><div class="fg"><div>'+frow('Price',fullPrice(l.price))+frow('Lease Type','Ground Lease')+frow('Rent Increases','10% every 5 Years')+frow('Guarantor','Corporate')+'</div><div>'+frow('Tenant','Quick Quack Car Wash')+frow('Lease Term','20 Years')+frow('Renewal Options','Four (4), Five (5) Yr')+frow('Cap Rate','5.50%')+'</div></div></div>';
 var gallery='<div class="gal">'+galInner+'</div>';
 var desc='<p style="font-size:14px;color:#475569;line-height:1.6">'+esc(l.name)+' is a premier '+esc(l.type)+' investment opportunity located at '+esc(l.address)+'. This asset offers a corporate-guaranteed net lease with scheduled rental increases in a dense, high-traffic trade area, ideal for investors seeking stable passive income.</p>';
@@ -8857,7 +8857,7 @@ function creUrl(id){var qs=new URLSearchParams(location.search);
   else if(segs.length===1){base=isPropSlug(segs[0])?'':('/'+encodeURIComponent(segs[0]));}
   if(id!=null&&id!=='')return base+'/'+encodeURIComponent(id);
   return base||'/';}
-function loadGallery(l){fetch(RTDB+'/public/gallery/'+l.id+'.json').then(function(r){return r.json();}).then(function(g){if(!g||!Array.isArray(g.images)||!g.images.length)return;var gal=document.querySelector('#sec-Gallery .gal');if(!gal)return;var imgs=[l.image].concat(g.images).filter(function(x){return x;});gal.innerHTML=imgs.map(function(im){return '<img src="'+im+'" style="width:100%;height:260px;object-fit:cover;border-radius:0;display:block"/>';}).join('');creHeight();}).catch(function(){});}
+function loadGallery(l){fetch(RTDB+'/public/gallery/'+l.id+'.json').then(function(r){return r.json();}).then(function(g){if(!g||!Array.isArray(g.images)||!g.images.length)return;var gal=document.querySelector('#sec-Gallery .gal');if(!gal)return;var imgs=[l.image].concat(g.images.filter(function(x){return x&&x!==l.image;})).filter(function(x){return x;});gal.innerHTML=imgs.map(function(im){return '<img src="'+im+'" style="width:100%;height:260px;object-fit:cover;border-radius:0;display:block"/>';}).join('');creHeight();}).catch(function(){});}
 function openDetail(id,skipUrl){var l=null,i;for(i=0;i<DATA.length;i++){if(DATA[i].id==id||(DATA[i].slug&&DATA[i].slug===String(id))){l=DATA[i];break;}}if(!l)return;CUR=l;trackHit('pageViews',{id:l.id});document.getElementById('detailView').innerHTML=detailHtml(l);document.body.classList.add('detail-open');window.scrollTo(0,0);renderDemo(1);initDetailMap(l);loadGallery(l);creNav(l.id);creHeight();if(!skipUrl){var pv=l.slug||l.id;try{history.pushState({p:pv},'',creUrl(pv));}catch(e){}}}
 function backToList(skipUrl){document.body.classList.remove('detail-open');if(dmap&&dmap.remove){try{dmap.remove();}catch(e){}}dmap=null;window.scrollTo(0,0);creNav(null);creHeight();if(!skipUrl){try{history.pushState({},'',creUrl(null));}catch(e){}}}
 document.addEventListener('click',function(e){var a=e.target.closest?e.target.closest('.dtabs a'):null;if(a){var tb=a.parentElement.querySelectorAll('a'),i;for(i=0;i<tb.length;i++)tb[i].classList.remove('active');a.classList.add('active');}});
@@ -11186,7 +11186,15 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
     let alive = true
     getFile(`om_${room.id}`).then((o) => { if (alive) setOmFlyer(o || null) }).catch(() => {})
     getFile(`roomfiles_${room.id}`).then((v) => { if (alive) setFiles(Array.isArray(v?.list) ? v.list : []) }).catch(() => {})
-    getFile(`photos_${room.id}`).then((v) => { if (alive) setPhotos(Array.isArray(v?.list) ? v.list : []) }).catch(() => {})
+    getFile(`photos_${room.id}`).then((v) => {
+      if (!alive) return
+      const list = Array.isArray(v?.list) ? v.list : []
+      // Show the deal's cover image as the first photo too, so the cover selected in Media & Description
+      // also appears in this Photos gallery (and on the public property page slider).
+      const cover = (gateListing && gateListing.image) || room.image || ''
+      const realCover = cover && !/1497366216548-37526070297c|1613490493576-7fde63acd811/.test(cover)
+      setPhotos(realCover && !list.some((p) => p.url === cover) ? [{ id: 'cover', name: 'Cover photo', url: cover }, ...list] : list)
+    }).catch(() => {})
     return () => { alive = false }
   }, [room.id])
   const [uploadPct, setUploadPct] = useState(null) // 4.3 — upload progress (null = idle)
