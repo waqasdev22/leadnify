@@ -9575,17 +9575,11 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
   const hubCleanUrl = `${window.location.origin}/${encodeURIComponent(slug)}`
   const siteUrl = hubCleanUrl
   // Preview opens the clean per-property URL (leadnify.io/<slug>) when a slug is set; otherwise the
-  // draft-preview deep-link (?p=<id>&pv=1) so unlisted/edited deals still render.
-  // A property only resolves on the clean public URL when it's actually published (listed + a public
-  // status). Draft/unlisted deals aren't in the hub, so they must use the pv=1 draft-preview flow
-  // (which merges the saved cre_preview item) — otherwise the clean link just shows the full grid.
-  const isPublicListing = (l) => l.listed !== false && PUBLIC_STATUSES.includes(l.status || 'Active')
-  const previewUrlFor = (l) => {
-    const clean = l.slug ? `${window.location.origin}/${encodeURIComponent(slug)}/${encodeURIComponent(l.slug)}` : ''
-    if (clean && isPublicListing(l)) return clean          // published: clean nested URL
-    if (clean) return `${clean}?pv=1`                       // draft/unlisted with a slug: clean URL + preview flag
-    return `${hubUrl}&p=${l.id}&pv=1`                       // no slug yet: legacy deep-link preview
-  }
+  // Clean nested URL when the listing has a slug (published OR draft). The Preview button saves the
+  // item to cre_preview; the public page merges it when the clean path's slug matches, so a draft
+  // opens at its clean URL for the owner while a visitor (no saved preview) still can't see it.
+  // No slug yet → legacy deep-link preview.
+  const previewUrlFor = (l) => (l.slug ? `${window.location.origin}/${encodeURIComponent(slug)}/${encodeURIComponent(l.slug)}` : `${hubUrl}&p=${l.id}&pv=1`)
 
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')

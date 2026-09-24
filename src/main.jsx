@@ -43,17 +43,20 @@ if (params.get('code') !== null && params.get('state') !== null && window.opener
       saved && Array.isArray(saved.items) && saved.items.length
         ? saved.items
         : toMicrositeItems(INITIAL_LISTINGS)
-    // Draft/unlisted preview (#13): when opened with ?pv=1, merge the previewed listing (saved to
-    // localStorage by the dashboard's Preview button) so its detail page renders even though it isn't
-    // in the published hub.
-    if (params.get('pv') !== null) {
-      try {
-        const pv = JSON.parse(localStorage.getItem('cre_preview') || 'null')
-        if (pv && pv.id != null) {
+    // Draft/unlisted preview (#13): merge the previewed listing (saved to localStorage by the
+    // dashboard's Preview button) so its detail renders even though it isn't in the published hub.
+    // This happens with ?pv=1 OR when the clean path points at that exact preview (its slug/id
+    // matches) — so a draft opens at its clean URL for the owner, while a visitor (no saved preview)
+    // still can't see it. Merging only when the path matches keeps stale previews out of the grid.
+    try {
+      const pv = JSON.parse(localStorage.getItem('cre_preview') || 'null')
+      if (pv && pv.id != null) {
+        const matchesPath = cleanSlug && (String(pv.slug || '') === cleanSlug || String(pv.id) === cleanSlug)
+        if (params.get('pv') !== null || matchesPath) {
           items = [pv, ...items.filter((it) => String(it.id) !== String(pv.id))]
         }
-      } catch { /* ignore */ }
-    }
+      }
+    } catch { /* ignore */ }
     // Explicit URL params (?t= theme, ?c= colour) win; else the owner's saved choice, then default.
     const template = params.get('t') || (saved && saved.template) || 'Modern'
     const primary =
