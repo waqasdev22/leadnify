@@ -195,6 +195,9 @@ const propertyImage = (seed) =>
 // misleading generic stock image (#9). Self-contained SVG (no network), works as an <img src>.
 const FALLBACK_IMG =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600'%3E%3Crect width='800' height='600' fill='%23eef2f7'/%3E%3Cg transform='translate(400 270)' fill='none' stroke='%2394a3b8' stroke-width='5'%3E%3Crect x='-72' y='-48' width='144' height='100' rx='12'/%3E%3Ccircle cx='0' cy='6' r='27'/%3E%3Cline x1='-95' y1='-80' x2='95' y2='85'/%3E%3C/g%3E%3Ctext x='400' y='410' font-family='Arial,sans-serif' font-size='30' font-weight='bold' fill='%2394a3b8' text-anchor='middle'%3ENo photo available%3C/text%3E%3C/svg%3E"
+// A property image is "real" only if it isn't one of the old generic stock images; otherwise show the
+// explicit no-photo placeholder (#9).
+const displayImg = (u) => (u && !/1497366216548-37526070297c|1613490493576-7fde63acd811/.test(u) ? u : FALLBACK_IMG)
 
 const INITIAL_PACKAGES = []
 
@@ -8940,7 +8943,9 @@ export const toMicrositeItems = (listings) =>
         capLabel: l.capRate ? String(l.capRate).replace('%', '').trim() + '%' : '—',
         noiLabel: l.noi ? compactPrice(l.noi) : '—',
         type: l.type,
-        image: l.image || FALLBACK_IMG,
+        // Treat the old generic stock images as "no photo" so previously-imported listings also show
+        // the explicit placeholder (not a misleading office photo) without needing a re-import (#9).
+        image: (l.image && !/1497366216548-37526070297c|1613490493576-7fde63acd811/.test(l.image)) ? l.image : FALLBACK_IMG,
         saleType: m.saleType,
         leaseType: m.leaseType,
         noi: m.noi,
@@ -10097,7 +10102,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                           >
                             <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                           </button>
-                          <img src={l.image || FALLBACK_IMG} onError={(e) => (e.currentTarget.src = FALLBACK_IMG)} alt="" className="h-8 w-10 rounded object-cover" />
+                          <img src={displayImg(l.image)} onError={(e) => (e.currentTarget.src = FALLBACK_IMG)} alt="" className="h-8 w-10 rounded object-cover" />
                           <button
                             onClick={() => (onOpenDealRoom ? onOpenDealRoom(l) : (setEditing(l), setModalOpen(true)))}
                             className="font-semibold text-slate-800 hover:text-brand"
@@ -10401,7 +10406,7 @@ function ListingTable({ listings, onEdit, onDelete, onShare }) {
                 <td className="px-5 py-3">
                   <div className="flex items-center gap-3">
                     <img
-                      src={l.image || FALLBACK_IMG}
+                      src={displayImg(l.image)}
                       alt={l.name}
                       onError={(e) => (e.currentTarget.src = FALLBACK_IMG)}
                       className="h-10 w-14 rounded-md object-cover"
