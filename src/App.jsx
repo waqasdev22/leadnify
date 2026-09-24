@@ -8152,9 +8152,10 @@ const PROPERTY_TEMPLATES = ['Match Listings', 'Modern', 'Metro', 'Bold']
 const ACCESS_OPTIONS = ['Public', 'Password Protected', 'Registered Users', 'Private']
 // Listing status controls (Milestone I 2.3). Statuses that keep a listing public vs. pull it
 // from the public map/microsite are decided in PUBLIC_STATUSES (Milestone II 3.6 visibility).
-const STATUS_OPTIONS = ['Active', 'Inactive', 'Call for Offers', 'Highest and Best', 'Under Contract', 'Closed', 'On Hold', 'No Longer for Sale']
+const STATUS_OPTIONS = ['Draft', 'Active', 'Inactive', 'Call for Offers', 'Highest and Best', 'Under Contract', 'Closed', 'On Hold', 'No Longer for Sale']
 const PUBLIC_STATUSES = ['Active', 'Call for Offers', 'Highest and Best', 'Under Contract']
 const STATUS_BADGE = {
+  Draft: 'bg-amber-100 text-amber-700',
   Active: 'bg-emerald-50 text-emerald-700',
   Inactive: 'bg-slate-100 text-slate-500',
   'Call for Offers': 'bg-blue-50 text-blue-700',
