@@ -9580,7 +9580,12 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
   // status). Draft/unlisted deals aren't in the hub, so they must use the pv=1 draft-preview flow
   // (which merges the saved cre_preview item) — otherwise the clean link just shows the full grid.
   const isPublicListing = (l) => l.listed !== false && PUBLIC_STATUSES.includes(l.status || 'Active')
-  const previewUrlFor = (l) => (l.slug && isPublicListing(l)) ? `${window.location.origin}/${encodeURIComponent(slug)}/${encodeURIComponent(l.slug)}` : `${hubUrl}&p=${l.id}&pv=1`
+  const previewUrlFor = (l) => {
+    const clean = l.slug ? `${window.location.origin}/${encodeURIComponent(slug)}/${encodeURIComponent(l.slug)}` : ''
+    if (clean && isPublicListing(l)) return clean          // published: clean nested URL
+    if (clean) return `${clean}?pv=1`                       // draft/unlisted with a slug: clean URL + preview flag
+    return `${hubUrl}&p=${l.id}&pv=1`                       // no slug yet: legacy deep-link preview
+  }
 
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
