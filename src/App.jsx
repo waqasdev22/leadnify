@@ -10840,16 +10840,16 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
   // The linked listing's `gate` is the single source of truth for download access. Initialise the
   // Access gate from it (falling back to the room's own value) so the deal page and Edit Deal show
   // the SAME setting as My Deals — no more "Contact Required" here but "Free Access" there (#5).
-  const linkedListing = (listings || []).find((l) => (room.listingId && l.id === room.listingId) || (l.name && room.name && l.name === room.name))
-  const [access, setAccess] = useState(linkedListing?.gate || room.access || 'Free Access')
+  const gateListing = (listings || []).find((l) => (room.listingId && l.id === room.listingId) || (l.name && room.name && l.name === room.name))
+  const [access, setAccess] = useState(gateListing?.gate || room.access || 'Free Access')
   useEffect(() => {
-    if (linkedListing?.gate && linkedListing.gate !== access) {
-      setAccess(linkedListing.gate)
+    if (gateListing?.gate && gateListing.gate !== access) {
+      setAccess(gateListing.gate)
       // Persist onto the room too, so the Edit Deal dialog (which reads room.access) matches (#5).
-      if (onUpdateRoom && linkedListing.gate !== room.access) onUpdateRoom(room.id, { access: linkedListing.gate })
+      if (onUpdateRoom && gateListing.gate !== room.access) onUpdateRoom(room.id, { access: gateListing.gate })
     }
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
-  }, [linkedListing?.gate])
+  }, [gateListing?.gate])
   const [status, setStatus] = useState(room.status === 'Archived' ? 'Archived (visitors blocked)' : 'Active')
   const [duration, setDuration] = useState(30)
   const [notifyNda, setNotifyNda] = useState(true)
