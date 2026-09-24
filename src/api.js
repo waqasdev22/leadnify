@@ -260,22 +260,29 @@ export const drainPublicLeads = async () => {
 // emailConfig.js; otherwise falls back to the local backend (only works when it runs).
 // payload: { to, subject, message, name }
 export const sendEmail = async (payload = {}) => {
-  const to = payload.to || payload.email || ''
+  const toRaw = payload.to || payload.email || ''
+  const recipients = (Array.isArray(toRaw) ? toRaw : [toRaw]).map((e) => String(e || '').trim()).filter(Boolean)
   const subject = payload.subject || 'Leadnify.io'
   const message = payload.message || payload.body || payload.text || ''
   if (emailReady()) {
-    const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        service_id: EMAILJS.SERVICE_ID,
-        template_id: EMAILJS.TEMPLATE_ID,
-        user_id: EMAILJS.PUBLIC_KEY,
-        template_params: { to_email: to, subject, message, name: payload.name || 'Leadnify.io', email: to },
-      }),
-    })
-    if (!res.ok) throw new Error(`EmailJS ${res.status}`)
-    return true
+    if (!recipients.length) throw new Error('EmailJS: no recipient')
+    // EmailJS delivers to a single to_email per request, so a blast fans out one call per address.
+    let sent = 0
+    for (const addr of recipients) {
+      const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          service_id: EMAILJS.SERVICE_ID,
+          template_id: EMAILJS.TEMPLATE_ID,
+          user_id: EMAILJS.PUBLIC_KEY,
+          template_params: { to_email: addr, subject, message, name: payload.name || 'Leadnify.io', email: addr },
+        }),
+      })
+      if (!res.ok) throw new Error(`EmailJS ${res.status}`)
+      sent++
+    }
+    return sent
   }
   return request('/send-email', {
     method: 'POST',

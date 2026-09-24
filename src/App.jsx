@@ -487,7 +487,7 @@ const NAV_ITEMS = [
   { key: 'crm', label: 'My Leads', icon: Contact },
   // "Deal Rooms" is merged into "My Deals" — one place for every deal (its deal room opens on click).
   { key: 'listings', label: 'My Deals', icon: Globe },
-  { key: 'email', label: 'Distribution', icon: Send, soon: true, adminOnly: true },
+  { key: 'email', label: 'Distribution', icon: Send, adminOnly: true },
 ]
 
 // The team Owner's fixed notification address. Because the public hub uses one shared slug, any
@@ -15004,6 +15004,9 @@ function EmailBlastPage({ user, onNavigate, role = 'Member' }) {
   const [composeOpen, setComposeOpen] = useState(false)
   const [form, setForm] = useState({ audience: EMAIL_AUDIENCES[0], subject: '', body: '', type: 'individual', to: '' })
   const [sending, setSending] = useState(false)
+  // Real recipients come from your live leads (the same list My Leads writes to), so a blast
+  // reaches actual buyers — not a hard-coded demo count.
+  const [blastLeads] = usePersistentState('crm_inbox', [])
   const [pickerOpen, setPickerOpen] = useState(false)
   const [templates, setTemplates] = usePersistentState('email_templates', EMAIL_TEMPLATES_SEED)
   const [tplEdit, setTplEdit] = useState(null) // template being edited (Manager+)
@@ -15159,30 +15162,49 @@ function EmailBlastPage({ user, onNavigate, role = 'Member' }) {
   }, [])
   const startBlast = () => setPickerOpen(true)
   const chooseType = (type) => { setForm({ audience: EMAIL_AUDIENCES[0], subject: '', body: '', type, to: '' }); setPickerOpen(false); setComposeOpen(true) }
-  const audienceCounts = { 'All Contacts': 842, 'Qualified Leads': 214, 'New Leads': 128, 'Active Deal Room Leads': 96 }
+  // Build the real recipient list for an audience from live leads (deduped, valid emails only).
+  const validEmail = (e) => e && e !== '—' && /@/.test(e)
+  const recipientsForAudience = (aud) => {
+    const pick = (arr) => Array.from(new Set(arr.map((l) => (l.email || '').trim().toLowerCase()).filter(validEmail)))
+    const leads = blastLeads || []
+    if (aud === 'New Leads') return pick(leads.filter((l) => (l.status || 'New') === 'New'))
+    if (aud === 'Qualified Leads') return pick(leads.filter((l) => (l.status || 'New') !== 'New'))
+    if (aud === 'Active Deal Room Leads') return pick(leads.filter((l) => /nda|deal ?room|download|package/i.test(`${l.source || ''} ${l.type || ''}`)))
+    return pick(leads) // All Contacts
+  }
+  const audienceCounts = EMAIL_AUDIENCES.reduce((m, a) => { m[a] = recipientsForAudience(a).length; return m }, {})
   const saveOrSend = async (asDraft) => {
     if (!form.subject.trim()) { notify('Add a subject first', 'error'); return }
-    // Real send: if a recipient email is given, actually deliver it through the backend.
-    if (!asDraft && form.to.trim()) {
-      if (sending) return // guard against double-send
-      setSending(true)
-      try {
-        const recipients = form.to.split(',').map((s) => s.trim()).filter(Boolean)
-        await sendEmail({ to: recipients, subject: form.subject, body: (form.body || '').replace(/\n/g, '<br>'), fromName: user?.name })
-        setCampaigns((list) => [{ id: uid(), name: form.subject, audience: recipients.join(', '), recipients: recipients.length, opens: 0, clicks: 0, status: 'Sent', date: 'just now' }, ...list])
-        notify(`Email sent to ${recipients.length} recipient${recipients.length === 1 ? '' : 's'}`)
-        setComposeOpen(false)
-      } catch (e) {
-        notify(`Send failed — ${String(e.message || e).includes('not configured') ? 'add Gmail App Password in server/.env' : 'check the recipient & try again'}`, 'error')
-      } finally {
-        setSending(false)
-      }
+    // Draft: just keep the campaign record, no send.
+    if (asDraft) {
+      setCampaigns((list) => [{ id: uid(), name: form.subject, audience: form.to.trim() || form.audience, recipients: form.to.trim() ? form.to.split(',').filter((s) => s.trim()).length : audienceCounts[form.audience], opens: 0, clicks: 0, status: 'Draft', date: 'just now' }, ...list])
+      notify('Draft saved')
+      setComposeOpen(false)
       return
     }
-    // No recipient (or saving a draft): keep the campaign record only.
-    setCampaigns((list) => [{ id: uid(), name: form.subject, audience: form.audience, recipients: audienceCounts[form.audience], opens: 0, clicks: 0, status: asDraft ? 'Draft' : 'Sent', date: 'just now' }, ...list])
-    notify(asDraft ? 'Draft saved automatically' : `Blast queued for ${form.audience}`)
-    setComposeOpen(false)
+    // Real send: recipients come from the "To" field if typed, otherwise the selected audience's
+    // live leads. Each address is delivered individually through EmailJS (no server needed).
+    if (sending) return // guard against double-send
+    const typed = form.to.trim()
+    const recipients = typed
+      ? Array.from(new Set(form.to.split(',').map((s) => s.trim().toLowerCase()).filter((e) => validEmail(e))))
+      : recipientsForAudience(form.audience)
+    if (!recipients.length) {
+      notify(typed ? 'No valid recipient email — check the "To" field' : `No contacts with an email in "${form.audience}" yet`, 'error')
+      return
+    }
+    setSending(true)
+    try {
+      const sent = await sendEmail({ to: recipients, subject: form.subject, body: (form.body || '').replace(/\n/g, '<br>'), name: user?.name })
+      const n = typeof sent === 'number' ? sent : recipients.length
+      setCampaigns((list) => [{ id: uid(), name: form.subject, audience: typed ? recipients.join(', ') : form.audience, recipients: n, opens: 0, clicks: 0, status: 'Sent', date: 'just now' }, ...list])
+      notify(`Email sent to ${n} recipient${n === 1 ? '' : 's'}`)
+      setComposeOpen(false)
+    } catch (e) {
+      notify(`Send failed — ${String(e.message || e).includes('EmailJS') ? 'email service error, try again' : 'check the recipients & try again'}`, 'error')
+    } finally {
+      setSending(false)
+    }
   }
   const inputCls = 'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-orange-400'
   // When a tour step targets an element, lift it above the dim overlay with a white spotlight ring.
