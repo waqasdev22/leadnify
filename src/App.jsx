@@ -279,8 +279,10 @@ const dataUrlToBlobUrl = (dataUrl) => {
   return URL.createObjectURL(new Blob([arr], { type: mime }))
 }
 
-function usePersistentState(key, initial) {
-  const k = nsKey(key)
+function usePersistentState(key, initial, shared = false) {
+  // A `shared` key is team-wide: it uses a fixed (non-account) local key and the shared TEAM kv
+  // path, so every teammate sees the same value (e.g. the public hub's custom URL).
+  const k = shared ? `shared::${key}` : nsKey(key)
   const [state, setState] = useState(() => readLS(k, initial))
   // Which namespaced key the current in-memory state belongs to.
   const loadedKey = useRef(k)
@@ -298,14 +300,14 @@ function usePersistentState(key, initial) {
   useEffect(() => {
     let alive = true
     cloudLoaded.current = false
-    kvGet(key)
+    kvGet(key, shared)
       .then((v) => {
         if (!alive) return
         if (v !== undefined) {
           setState(v)
           try { localStorage.setItem(k, JSON.stringify(v)) } catch { /* ignore */ }
         } else {
-          kvSet(key, readLS(k, initial))
+          kvSet(key, readLS(k, initial), shared)
         }
         cloudLoaded.current = true
       })
@@ -317,7 +319,7 @@ function usePersistentState(key, initial) {
     // Only persist once the state actually belongs to the current key.
     if (loadedKey.current === k) {
       try { localStorage.setItem(k, JSON.stringify(state)) } catch { /* ignore */ }
-      if (cloudLoaded.current) kvSet(key, state) // mirror to the cloud once the initial load is done
+      if (cloudLoaded.current) kvSet(key, state, shared) // mirror to the cloud once the initial load is done
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [k, state])
@@ -9561,7 +9563,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
   // The vanity URL slug is persisted so a custom link survives refresh. The hub DATA always lives
   // under the shared team key ('vaziamts') that clean paths and deal-room republishes read from — the
   // slug is only the public-facing address, resolved to that shared hub by the microsite.
-  const [slug, setSlug] = usePersistentState('hub_slug', 'vaziamts')
+  const [slug, setSlug] = usePersistentState('hub_slug', 'vaziamts', true)
   // Functional link that actually opens the microsite (works when pasted in a new tab).
   const hubUrl = `${window.location.origin}${window.location.pathname}?hub=${slug}`
   // Clean public listings URL (leadnify.io/<hub-slug>) — the microsite resolves a bare path segment

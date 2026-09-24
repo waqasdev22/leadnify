@@ -139,24 +139,28 @@ export const putCol = async (col, arr) => {
 // mirrored to /data/<uid>/kv/<key> so the WHOLE dashboard syncs across devices.
 const KV_MAX = 700 * 1024 // skip very large values (keep them local only)
 const kvKey = (k) => String(k).replace(/[.#$/[\]]/g, '_')
-export const kvGet = async (key) => {
+// `shared: true` stores the value under the TEAM key (data/<TEAM_KEY>/kv), so it syncs to the whole
+// team (e.g. the public hub's custom URL) instead of being private to one account.
+export const kvGet = async (key, shared = false) => {
   const uid = currentUid()
   if (!uid) return undefined
+  const owner = shared ? TEAM_KEY : uid
   try {
-    const snap = await dbGet(dbRef(db, `data/${uid}/kv/${kvKey(key)}`))
+    const snap = await dbGet(dbRef(db, `data/${owner}/kv/${kvKey(key)}`))
     const v = snap.val()
     return v === null ? undefined : v
   } catch {
     return undefined
   }
 }
-export const kvSet = async (key, value) => {
+export const kvSet = async (key, value, shared = false) => {
   const uid = currentUid()
   if (!uid) return
+  const owner = shared ? TEAM_KEY : uid
   try {
     const json = JSON.stringify(value)
     if (json && json.length > KV_MAX) return // too big for the cloud — stays in localStorage
-    await dbSet(dbRef(db, `data/${uid}/kv/${kvKey(key)}`), value === undefined ? null : JSON.parse(json))
+    await dbSet(dbRef(db, `data/${owner}/kv/${kvKey(key)}`), value === undefined ? null : JSON.parse(json))
   } catch {
     /* ignore */
   }
