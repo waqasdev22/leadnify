@@ -254,6 +254,9 @@ const newDealId = () => {
 let DATA_NS = ''
 export function setDataNamespace(ns) { DATA_NS = ns || '' }
 const nsKey = (key) => (DATA_NS ? `${DATA_NS}::${key}` : key)
+// Turn a property name into a URL slug — used so EVERY property gets a clean public URL
+// (leadnify.io/<hub>/<slug>) automatically, even when no custom slug was set by hand.
+const slugifyName = (s) => String(s || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60)
 
 const readLS = (k, initial) => {
   try {
@@ -8999,8 +9002,9 @@ export const toMicrositeItem = (l) => {
       const [lat, lng] = coordsFor(l)
       return {
         id: l.id,
-        // Optional custom URL slug — the public deep-link (?p=) matches this OR the numeric id.
-        slug: l.slug || '',
+        // URL slug — a custom one if set, else auto-derived from the name, so every property has a
+        // clean public URL. The deep-link (?p= / clean path) matches this OR the numeric id.
+        slug: l.slug || slugifyName(l.name),
         name: l.name,
         address: l.address,
         price: Number(l.price) || 0,
@@ -9579,7 +9583,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
   // item to cre_preview; the public page merges it when the clean path's slug matches, so a draft
   // opens at its clean URL for the owner while a visitor (no saved preview) still can't see it.
   // No slug yet → legacy deep-link preview.
-  const previewUrlFor = (l) => (l.slug ? `${window.location.origin}/${encodeURIComponent(slug)}/${encodeURIComponent(l.slug)}` : `${hubUrl}&p=${l.id}&pv=1`)
+  const previewUrlFor = (l) => { const s = l.slug || slugifyName(l.name); return s ? `${window.location.origin}/${encodeURIComponent(slug)}/${encodeURIComponent(s)}` : `${hubUrl}&p=${l.id}&pv=1` }
 
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
@@ -11219,8 +11223,9 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
   // Preview / Copy link / Share all point to the public PROPERTY PAGE (Modern theme by default),
   // matching the property's listing URL — not the internal deal-room gate page.
   // With a custom slug the link is the clean leadnify.io/<slug>; otherwise the query deep-link.
-  const visitorUrl = urlSlug
-    ? `${window.location.origin}/${encodeURIComponent(hubSlug || 'vaziamts')}/${encodeURIComponent(urlSlug)}`
+  const shareSlug = urlSlug || slugifyName(room.name)
+  const visitorUrl = shareSlug
+    ? `${window.location.origin}/${encodeURIComponent(hubSlug || 'vaziamts')}/${encodeURIComponent(shareSlug)}`
     : `${window.location.origin}${window.location.pathname}?hub=vaziamts&p=${encodeURIComponent(room.listingId || room.id)}&t=Modern`
 
   // Save this room so the public "?room=" gate page (opened in a new tab) can render it.
