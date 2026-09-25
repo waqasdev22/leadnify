@@ -9853,7 +9853,9 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
     // the wizard, so highlights/description/lease/media entered here are retained (#6). Agent/BOR and
     // any fields not in the form are preserved via `...l`.
     if (editing) {
-      const cover = d.cover || (d.photos && d.photos[0] && d.photos[0].url) || editing.image || ''
+      // Use the cover exactly as the form has it (a cleared cover means the user removed it — don't
+      // silently fall back to the old image).
+      const cover = typeof d.cover === 'string' ? d.cover : (editing.image || '')
       const address = [d.street, d.city, d.state, d.zip].filter(Boolean).join(', ') || editing.address || '—'
       const priceN = Number(d.price) || 0
       setListings((list) => list.map((l) => (l.id === editing.id ? {
@@ -12192,7 +12194,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
           initial={gateListing}
           onClose={() => setEditOpen(false)}
           onCreate={(d) => {
-            const cover = d.cover || (d.photos && d.photos[0] && d.photos[0].url) || gateListing.image || ''
+            const cover = typeof d.cover === 'string' ? d.cover : (gateListing.image || '')
             const address = [d.street, d.city, d.state, d.zip].filter(Boolean).join(', ') || gateListing.address || '—'
             const priceN = Number(d.price) || 0
             // All edited fields in one object so we can update the listing AND re-publish the hub with them.
