@@ -257,6 +257,32 @@ const nsKey = (key) => (DATA_NS ? `${DATA_NS}::${key}` : key)
 // Turn a property name into a URL slug — used so EVERY property gets a clean public URL
 // (leadnify.io/<hub>/<slug>) automatically, even when no custom slug was set by hand.
 const slugifyName = (s) => String(s || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60)
+// Downscale/compress an image in the browser before upload, so property photos load fast on the
+// public page (raw phone/DSLR photos can be 10–50 MB; this brings them to a few hundred KB). Returns
+// the original file for non-images/SVG/GIF or if anything fails.
+const resizeImageFile = (file, maxDim = 1920, quality = 0.82) => new Promise((resolve) => {
+  try {
+    if (!file || !file.type || !file.type.startsWith('image/') || file.type === 'image/gif' || file.type === 'image/svg+xml') { resolve(file); return }
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      const { width, height } = img
+      if (width <= maxDim && height <= maxDim && file.size < 500 * 1024) { resolve(file); return }
+      const scale = Math.min(1, maxDim / Math.max(width, height))
+      const w = Math.max(1, Math.round(width * scale)), h = Math.max(1, Math.round(height * scale))
+      const canvas = document.createElement('canvas')
+      canvas.width = w; canvas.height = h
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h)
+      canvas.toBlob((blob) => {
+        if (!blob || blob.size >= file.size) { resolve(file); return }
+        resolve(new File([blob], String(file.name || 'image').replace(/\.[a-z0-9]+$/i, '') + '.jpg', { type: 'image/jpeg' }))
+      }, 'image/jpeg', quality)
+    }
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file) }
+    img.src = url
+  } catch { resolve(file) }
+})
 // The team's agent roster — the ONLY people who can be added as Listing Agents. Selecting one
 // auto-fills name, RE license, email and phone. (Edit this list to add/remove agents.)
 const AGENT_DIRECTORY = [
@@ -8775,7 +8801,7 @@ var sidebar='<div class="side"><div class="card2"><div class="c2h">Listing Agent
 var cta='<div class="cta dsec" id="sec-Contact"><div class="k">Get in Touch</div><h2>Interested in '+esc(l.name)+'?</h2><div class="sub">Send a message and we\\'ll respond within one business day.</div><form onsubmit="return submitInquiry(event)"><input class="finput" placeholder="Full Name *" required/><input class="finput" type="email" placeholder="Email *" required/><input class="finput" placeholder="Phone (optional)"/><textarea class="finput" rows="3">I\\'m interested in '+esc(l.name)+'. Please send me more information.</textarea><button class="btnp" type="submit">Send Inquiry</button></form></div>';
 var __hs=[];if(l.capRate)__hs.push(['CAP Rate',String(l.capRate).replace('%','').trim()+'%']);if(l.noi)__hs.push(['NOI',fullPrice(l.noi)]);if(l.type==='Hospitality'&&l.pricePerRoom)__hs.push(['Price / Room',fullPrice(l.pricePerRoom)]);else if(l.type==='Multifamily'&&l.numUnits&&Number(l.price)>0)__hs.push(['Price / Unit',fullPrice(Math.round(Number(l.price)/Number(l.numUnits)))]);
 var __hsHtml=__hs.length?'<div class="dhstats">'+__hs.map(function(s){return '<div class="dhstat"><span class="dhk">'+s[0]+'</span><span class="dhv">'+esc(s[1])+'</span></div>';}).join('')+'</div>':'';
-return '<div class="dhero"'+(ncov(l)?' style="background:linear-gradient(135deg,#1e293b,#0f172a)"':'')+'>'+(ncov(l)?'':'<img src="'+esc(l.image)+'"/>')+'<div class="ov"></div><div class="dtop"><button class="dbtn" onclick="backToList()">&larr; Back to Listings</button><button class="dbtn" onclick="backToList()">&times;</button></div><div class="dhin"><span class="dbadge" style="background:'+bc+'">'+esc(l.saleType)+'</span><div class="dhtitle">'+esc(l.name)+'</div><div class="dhaddr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> '+esc(l.address)+'</div><div class="dhpl">Asking Price</div><div class="dhprice">'+(l.unpriced?'Contact for Price':fullPrice(l.price))+'</div>'+__hsHtml+'</div></div>'
+return '<div class="dhero"'+(ncov(l)?' style="background:linear-gradient(135deg,#1e293b,#0f172a)"':'')+'>'+(ncov(l)?'':'<img src="'+esc(l.image)+'" fetchpriority="high" decoding="async" loading="eager"/>')+'<div class="ov"></div><div class="dtop"><button class="dbtn" onclick="backToList()">&larr; Back to Listings</button><button class="dbtn" onclick="backToList()">&times;</button></div><div class="dhin"><span class="dbadge" style="background:'+bc+'">'+esc(l.saleType)+'</span><div class="dhtitle">'+esc(l.name)+'</div><div class="dhaddr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> '+esc(l.address)+'</div><div class="dhpl">Asking Price</div><div class="dhprice">'+(l.unpriced?'Contact for Price':fullPrice(l.price))+'</div>'+__hsHtml+'</div></div>'
 +'<div class="dtabs"><div class="dtabsin">'+[['Overview','Overview'],['Gallery','Gallery'],['Location','Location'],['About the Area','Area'],['Contact','Contact']].map(function(t){return '<a href="#sec-'+t[1]+'">'+t[0]+'</a>';}).join('')+'</div></div>'
 +'<div class="dwrap"><div class="dmain">'
 +'<div class="dblock dh0" id="sec-Overview"><div class="nm">'+esc(l.name)+'<span class="badge2" style="background:'+bc+'">'+esc(l.saleType)+'</span></div><div class="ad"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> '+esc(l.address)+'</div><div class="pr">'+(l.unpriced?'Contact for Price':fullPrice(l.price))+'</div><div class="facts"><div class="fh">Property Facts</div>'+((l.details&&l.details.length)?l.details:[['Price',(l.unpriced?'Contact for Price':fullPrice(l.price))],['Property Type',esc(l.type)||'&mdash;'],['Sale Type',esc(l.saleType)||'&mdash;']]).map(function(r){return frow(r[0],r[1]);}).join('')+'</div></div>'
@@ -9498,8 +9524,8 @@ function NewDealModal({ onClose, onCreate, initial }) {
   const inp = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-brand focus:ring-2 focus:ring-blue-100'
   const lbl = 'mb-1 block text-xs font-semibold text-slate-500'
 
-  const onCover = async (e) => { const file = e.target.files?.[0]; e.target.value = ''; if (!file) return; if (!file.type.startsWith('image/')) { notify('Choose an image', 'error'); return } if (file.size > 150 * 1024 * 1024) { notify('Image too large (max 150 MB)', 'error'); return } try { set('cover', await uploadToStorage(file, f.name)) } catch { notify('Upload failed — try again', 'error') } }
-  const onPhotos = async (e) => { const files = Array.from(e.target.files || []).filter((x) => x.type.startsWith('image/')); e.target.value = ''; const added = []; for (const file of files) { if (file.size > 150 * 1024 * 1024) { notify(`"${file.name}" too large (max 150 MB) — skipped`, 'error'); continue } added.push({ id: uid(), name: file.name, url: await uploadToStorage(file, f.name) }) } set('photos', [...f.photos, ...added].slice(0, 12)) }
+  const onCover = async (e) => { const file = e.target.files?.[0]; e.target.value = ''; if (!file) return; if (!file.type.startsWith('image/')) { notify('Choose an image', 'error'); return } if (file.size > 150 * 1024 * 1024) { notify('Image too large (max 150 MB)', 'error'); return } try { set('cover', await uploadToStorage(await resizeImageFile(file), f.name)) } catch { notify('Upload failed — try again', 'error') } }
+  const onPhotos = async (e) => { const files = Array.from(e.target.files || []).filter((x) => x.type.startsWith('image/')); e.target.value = ''; const added = []; for (const file of files) { if (file.size > 150 * 1024 * 1024) { notify(`"${file.name}" too large (max 150 MB) — skipped`, 'error'); continue } added.push({ id: uid(), name: file.name, url: await uploadToStorage(await resizeImageFile(file), f.name) }) } set('photos', [...f.photos, ...added].slice(0, 12)) }
   const onOm = async (e) => { const file = e.target.files?.[0]; e.target.value = ''; if (!file) return; if (file.type !== 'application/pdf') { notify('OM must be a PDF', 'error'); return } if (file.size > 150 * 1024 * 1024) { notify('PDF too large (max 150 MB)', 'error'); return } set('om', { name: file.name, size: fsize(file), date: today(), url: await uploadToStorage(file, f.name) }) }
   const onConf = async (e) => { const files = Array.from(e.target.files || []); e.target.value = ''; const added = []; for (const file of files) { if (file.size > 150 * 1024 * 1024) { notify(`"${file.name}" too large (max 150 MB) — skipped`, 'error'); continue } added.push({ id: uid(), name: file.name, size: fsize(file), date: today(), url: await uploadToStorage(file, f.name) }) } set('confidential', [...f.confidential, ...added]) }
   const addContact = () => set('contacts', [...f.contacts, { id: uid(), name: '', license: '', email: '', phone: '' }])
@@ -11665,7 +11691,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
       const added = []
       for (const f of imgs) {
         if (f.size > 150 * 1024 * 1024) { notify(`"${f.name}" is too large (max 150 MB) — skipped`, 'error'); continue }
-        const url = await uploadToStorage(f, room.name) // per-property folder in Storage; https URL
+        const url = await uploadToStorage(await resizeImageFile(f), room.name) // resized; per-property folder; https URL
         added.push({ id: uid(), name: f.name, url })
       }
       const next = [...photos, ...added].slice(0, 12)

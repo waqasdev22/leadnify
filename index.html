@@ -4,6 +4,11 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Warm up the connections the public property page needs (hub JSON + hero image) so they start
+         faster — helps the heading/banner appear sooner. -->
+    <link rel="preconnect" href="https://cre-dashboard-ba596-default-rtdb.firebaseio.com" crossorigin />
+    <link rel="preconnect" href="https://firebasestorage.googleapis.com" crossorigin />
+    <link rel="dns-prefetch" href="https://firebasestorage.googleapis.com" />
     <title>Leadnify.io — Dashboard</title>
   </head>
   <body>
