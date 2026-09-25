@@ -9691,22 +9691,79 @@ function NewDealModal({ onClose, onCreate, initial }) {
                 </div>
               </div>
             )}
-            {step === 7 && (
-              <div className="space-y-3">
-                <p className="text-sm text-slate-500">Review the deal, then save. It’s added to My Deals with a Deal ID and its own deal room.</p>
-                <div className="grid grid-cols-2 gap-x-6 gap-y-2 rounded-lg border border-slate-200 p-4 text-sm">
-                  <div><span className="text-slate-400">Name:</span> <b className="text-slate-800">{f.name || '—'}</b></div>
-                  <div><span className="text-slate-400">Type:</span> <b className="text-slate-800">{f.propertyType}</b></div>
-                  <div className="col-span-2"><span className="text-slate-400">Address:</span> <b className="text-slate-800">{[f.street, f.city, f.state, f.zip].filter(Boolean).join(', ') || '—'}</b></div>
-                  <div><span className="text-slate-400">Price:</span> <b className="text-slate-800">{f.price ? currency(f.price) : '—'}</b></div>
-                  <div><span className="text-slate-400">CAP:</span> <b className="text-slate-800">{f.capRate ? f.capRate + '%' : '—'}</b></div>
-                  <div><span className="text-slate-400">NOI:</span> <b className="text-slate-800">{f.noi ? currency(f.noi) : '—'}</b></div>
-                  <div><span className="text-slate-400">Photos:</span> <b className="text-slate-800">{f.photos.length}</b></div>
-                  <div><span className="text-slate-400">OM:</span> <b className="text-slate-800">{f.om ? '1 file' : '—'}</b></div>
-                  <div><span className="text-slate-400">Confidential:</span> <b className="text-slate-800">{f.confidential.length}</b></div>
+            {step === 7 && (() => {
+              const Row = ({ l, v }) => (v !== '' && v != null && v !== false) ? (<div className="flex justify-between gap-4 border-t border-slate-50 py-1.5 text-sm first:border-0"><span className="shrink-0 text-slate-400">{l}</span><span className="text-right font-semibold text-slate-800">{v}</span></div>) : null
+              const Section = ({ title, children }) => (<div className="rounded-lg border border-slate-200 p-4"><p className="mb-1 text-xs font-bold uppercase tracking-wide text-brand">{title}</p>{children}</div>)
+              const addr = [f.street, f.city, f.state, f.zip].filter(Boolean).join(', ')
+              return (
+                <div className="space-y-3">
+                  <p className="text-sm text-slate-500">Review everything you entered below, then save. It’s added to My Deals with a Deal ID and its own deal room.</p>
+                  <Section title="Property Information">
+                    <Row l="Name" v={f.name} />
+                    <Row l="Property Type" v={f.propertyType} />
+                    <Row l="Offering" v={f.saleType} />
+                    <Row l="Public Access" v={f.access} />
+                    <Row l="Download Access" v={f.gate} />
+                    <Row l="Address" v={addr} />
+                    <Row l="Status" v={f.status} />
+                    <Row l="Listing expiration" v={f.expiration} />
+                  </Section>
+                  <Section title="Media & Description">
+                    <Row l="Cover image" v={f.cover ? 'Uploaded' : ''} />
+                    <Row l="Gallery photos" v={f.photos.length || ''} />
+                    <Row l="Listing sub-header" v={f.subheader} />
+                    <Row l="Investment Highlights" v={f.highlights ? <span className="whitespace-pre-line">{f.highlights}</span> : ''} />
+                    <Row l="Marketing Description" v={f.description} />
+                    <Row l="About the Area" v={f.areaText} />
+                  </Section>
+                  <Section title="Property Details">
+                    <Row l="Price" v={f.unpriced ? 'Contact for price' : (f.price ? currency(f.price) : '')} />
+                    <Row l="Price / SF" v={f.pricePerSf && ('$' + f.pricePerSf)} />
+                    <Row l="Cap Rate" v={f.capRate && (f.capRate + '%')} />
+                    <Row l="NOI" v={f.noi ? currency(f.noi) : ''} />
+                    <Row l="Pro-forma NOI" v={f.proformaNoi ? currency(f.proformaNoi) : ''} />
+                    <Row l="Pro-forma Cap Rate" v={f.proformaCap && (f.proformaCap + '%')} />
+                    <Row l="Investment Type" v={f.investmentType} />
+                    <Row l="Occupancy" v={f.occupancy && (f.occupancy + '%')} />
+                    <Row l="Building Size" v={f.size} />
+                    <Row l="Lot Size" v={f.lotSize} />
+                    <Row l="Year Built" v={f.yearBuilt} />
+                    <Row l="Year Renovated" v={f.yearsRenovated} />
+                    <Row l="Number of Units" v={f.numUnits} />
+                    <Row l="Tenant / Brand" v={f.tenantBrand} />
+                    <Row l="Tenants" v={f.tenants} />
+                    <Row l="Tenancy" v={f.tenancy} />
+                    <Row l="Tenant Credit" v={f.tenantCredit} />
+                    <Row l="Lease Type" v={f.leaseTypeDetail} />
+                    <Row l="Ground Lease" v={f.groundLease ? 'Yes' : ''} />
+                    <Row l="Lease Commencement" v={f.leaseCommence} />
+                    <Row l="Lease Expiration" v={f.leaseExpiration} />
+                    <Row l="Lease Term" v={f.leaseTerm} />
+                    <Row l="Remaining Term" v={f.remainingTerm} />
+                    <Row l="Lease Options" v={f.leaseOptions} />
+                    <Row l="Rent Bumps" v={f.rentBumps} />
+                    <Row l="Zoning" v={f.zoning} />
+                    <Row l="Parking" v={f.parking} />
+                    <Row l="Sub-type" v={f.subtype} />
+                    <Row l="Class" v={f.propertyClass} />
+                  </Section>
+                  <Section title="Location">
+                    <Row l="Latitude" v={f.lat} />
+                    <Row l="Longitude" v={f.lng} />
+                    {!f.lat && !f.lng && <p className="text-sm text-slate-400">Pin not set (falls back to city/state)</p>}
+                  </Section>
+                  <Section title="Documents">
+                    <Row l="Offering Memorandum" v={f.om ? f.om.name : ''} />
+                    <Row l="Confidential files" v={f.confidential.length || ''} />
+                    {!f.om && !f.confidential.length && <p className="text-sm text-slate-400">No documents uploaded</p>}
+                  </Section>
+                  <Section title="Listing Team">
+                    {f.contacts.length ? f.contacts.map((c, i) => <Row key={c.id} l={`Agent ${i + 1}`} v={[c.name, c.license && `Lic# ${c.license}`, c.email, c.phone].filter(Boolean).join(' · ')} />) : <p className="text-sm text-slate-400">No listing agents added</p>}
+                    <Row l="Broker of Record" v={f.bor} />
+                  </Section>
                 </div>
-              </div>
-            )}
+              )
+            })()}
           </div>
           {/* Footer nav */}
           <div className="flex items-center justify-between border-t border-slate-100 px-5 py-3">
