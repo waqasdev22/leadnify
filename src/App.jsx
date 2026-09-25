@@ -9661,12 +9661,14 @@ function NewDealModal({ onClose, onCreate, initial }) {
                   <p className="mb-2 mt-1 text-xs text-slate-400">Pick agents from your team roster — they show as the <b>Listing Agent(s)</b> on the property page (first two appear). Only agents on the roster can be added.</p>
                   <div className="space-y-2">
                     {f.contacts.map((c) => (
-                      <div key={c.id} className="flex items-start justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 p-2.5">
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-slate-800">{c.name}{c.license ? <span className="font-normal text-slate-500"> · Lic# {c.license}</span> : null}</p>
-                          <p className="mt-0.5 text-xs text-slate-500">{[c.email, c.phone].filter(Boolean).join(' · ') || '—'}</p>
+                      <div key={c.id} className="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <input className={inp} placeholder="Name" value={c.name || ''} onChange={(e) => setContact(c.id, 'name', e.target.value)} />
+                          <input className={inp} placeholder="RE License #" value={c.license || ''} onChange={(e) => setContact(c.id, 'license', e.target.value)} />
+                          <input className={inp} placeholder="Email" value={c.email || ''} onChange={(e) => setContact(c.id, 'email', e.target.value)} />
+                          <input className={inp} placeholder="Phone" value={c.phone || ''} onChange={(e) => setContact(c.id, 'phone', e.target.value)} />
                         </div>
-                        <button onClick={() => set('contacts', f.contacts.filter((x) => x.id !== c.id))} className="shrink-0 text-slate-400 hover:text-rose-500" title="Remove"><Trash2 className="h-4 w-4" /></button>
+                        <button onClick={() => set('contacts', f.contacts.filter((x) => x.id !== c.id))} className="mt-1.5 text-xs font-semibold text-rose-500 hover:underline">Remove</button>
                       </div>
                     ))}
                     {f.contacts.length === 0 && <p className="text-xs text-slate-400">No agents added yet.</p>}
@@ -11420,6 +11422,8 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
       }
     } catch { /* next My Deals publish carries it */ }
   }
+  // Edit an added agent's details inline (name/license/email/phone); agents re-sync on blur.
+  const editContact = (id, key, val) => setDealContacts((l) => l.map((c) => (c.id === id ? { ...c, [key]: val } : c)))
   const saveContact = () => {
     if (!contactDraft.name.trim()) { notify('Add a contact name', 'error'); return }
     if (dealContacts.length >= 4) { notify('A deal can have at most 4 contacts', 'error'); return }
@@ -11947,13 +11951,22 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
             <p className="text-xs text-slate-400">Up to 4 people on this deal — each can see the leads. The person labelled on the deal is a member, not the owner.</p>
             <div className="mt-3 space-y-2">
               {dealContacts.map((c) => (
-                <div key={c.id} className="flex items-start justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50 p-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-slate-800">{c.name}{c.company ? <span className="font-normal text-slate-500"> · {c.company}</span> : null}</p>
-                    <p className="mt-0.5 text-xs text-slate-500">{[c.email, c.phone, c.license && `Lic# ${c.license}`].filter(Boolean).join(' · ') || '—'}</p>
-                  </div>
-                  {canEditDealParties && (
-                    <button onClick={() => { const next = dealContacts.filter((x) => x.id !== c.id); setDealContacts(next); syncAgents(next); notify('Contact removed', 'error') }} className="shrink-0 text-slate-400 hover:text-rose-500" title="Remove contact"><Trash2 className="h-4 w-4" /></button>
+                <div key={c.id} className="rounded-lg border border-slate-100 bg-slate-50 p-3">
+                  {canEditDealParties ? (
+                    <>
+                      <div className="grid gap-2 sm:grid-cols-2" onBlur={() => syncAgents(dealContacts)}>
+                        <input className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm outline-none focus:border-brand" placeholder="Name" value={c.name || ''} onChange={(e) => editContact(c.id, 'name', e.target.value)} />
+                        <input className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm outline-none focus:border-brand" placeholder="RE License #" value={c.license || ''} onChange={(e) => editContact(c.id, 'license', e.target.value)} />
+                        <input className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm outline-none focus:border-brand" placeholder="Email" value={c.email || ''} onChange={(e) => editContact(c.id, 'email', e.target.value)} />
+                        <input className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm outline-none focus:border-brand" placeholder="Phone" value={c.phone || ''} onChange={(e) => editContact(c.id, 'phone', e.target.value)} />
+                      </div>
+                      <button onClick={() => { const next = dealContacts.filter((x) => x.id !== c.id); setDealContacts(next); syncAgents(next); notify('Contact removed', 'error') }} className="mt-1.5 text-xs font-semibold text-rose-500 hover:underline">Remove</button>
+                    </>
+                  ) : (
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">{c.name}{c.license ? <span className="font-normal text-slate-500"> · Lic# {c.license}</span> : null}</p>
+                      <p className="mt-0.5 text-xs text-slate-500">{[c.email, c.phone].filter(Boolean).join(' · ') || '—'}</p>
+                    </div>
                   )}
                 </div>
               ))}
