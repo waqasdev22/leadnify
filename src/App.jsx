@@ -8792,6 +8792,18 @@ body.detail-open .detail{display:block}
 .rhtml p{margin:0 0 10px}
 .rhtml a{color:${primary};text-decoration:underline}
 .rhtml b,.rhtml strong{font-weight:700;color:#334155}
+.demo{margin-top:20px;border:1px solid #e2e8f0;border-radius:10px;padding:16px;background:#fff}
+.demohd{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px}
+.fh2{font-size:12px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#334155}
+.demotog{display:inline-flex;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden}
+.demotog .dtg{background:#fff;border:0;padding:7px 16px;font-size:13px;font-weight:600;color:#64748b;cursor:pointer;transition:background .15s,color .15s}
+.demotog .dtg.act{background:${primary};color:#fff}
+.demogrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.democ{background:#f8fafc;border:1px solid #eef2f7;border-radius:10px;padding:16px 12px;text-align:center}
+.demov{font-size:22px;font-weight:800;color:#0f172a}
+.demol{font-size:12px;color:#64748b;margin-top:4px}
+.demoempty{grid-column:1/-1;padding:18px;text-align:center;color:#94a3b8;font-size:13px}
+@media(max-width:640px){.demogrid{grid-template-columns:repeat(2,1fr)}}
 .gal{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 .gal img{width:100%;height:180px;object-fit:cover;border-radius:8px;cursor:pointer;transition:opacity .15s}
 .gal img:hover{opacity:.9}
@@ -8958,7 +8970,13 @@ var highlights='<ul class="bullets"><li>Prime signalized hard-corner location</l
 var __city=esc(l.city||'');var __state=esc(l.state||'');
 var __areaLoc=(__city&&__state)?(__city+', '+__state):(__city||__state||esc(l.address)||'this market');
 var __areaText=l.areaText?esc(l.areaText):(esc(l.name)+' is located in '+__areaLoc+' \\u2014 a commercial trade area with established demand drivers, strong regional access, and a surrounding mix of retail, residential and employment that supports durable tenant demand and long-term value.');
-var areaHtml='<div class="dblock" id="sec-Area"><div class="bl">About the Area</div><p class="dtext">'+__areaText+'</p>'+((__city||__state)?('<div class="facts" style="margin-top:14px"><div class="fh">Location</div>'+frow('City',__city||'&mdash;')+frow('State',__state||'&mdash;')+'</div>'):'')+'</div>';
+// Demographics (owner-entered): render a 3-mile / 5-mile toggle with the numbers the owner supplied.
+var __demoCard=function(label,val){return val?('<div class="democ"><div class="demov">'+esc(String(val))+'</div><div class="demol">'+label+'</div></div>'):'';};
+var __c3=__demoCard('Population',l.pop3)+__demoCard('Households',l.hh3)+__demoCard('Median HH Income',l.mInc3)+__demoCard('Avg HH Income',l.aInc3);
+var __c5=__demoCard('Population',l.pop5)+__demoCard('Households',l.hh5)+__demoCard('Median HH Income',l.mInc5)+__demoCard('Avg HH Income',l.aInc5);
+var __hasDemo=(l.pop3||l.hh3||l.mInc3||l.aInc3||l.pop5||l.hh5||l.mInc5||l.aInc5);
+var demoHtml=__hasDemo?('<div class="demo"><div class="demohd"><div class="fh2">Demographics</div><div class="demotog"><button class="dtg act" onclick="demoTog(3,this)">3 Mile</button><button class="dtg" onclick="demoTog(5,this)">5 Mile</button></div></div><div class="demogrid" data-mi="3">'+(__c3||'<div class="demoempty">No 3-mile data provided.</div>')+'</div><div class="demogrid" data-mi="5" style="display:none">'+(__c5||'<div class="demoempty">No 5-mile data provided.</div>')+'</div></div>'):'';
+var areaHtml='<div class="dblock" id="sec-Area"><div class="bl">About the Area</div><p class="dtext">'+__areaText+'</p>'+((__city||__state)?('<div class="facts" style="margin-top:14px"><div class="fh">Location</div>'+frow('City',__city||'&mdash;')+frow('State',__state||'&mdash;')+'</div>'):'')+demoHtml+'</div>';
 var sidebar='<div class="side"><div class="card2"><div class="c2h">Listing Agent</div><div class="c2b"><div class="agent"><div class="av">'+AGENT.initials+'</div><div><div class="nm">'+AGENT.name+'</div><div class="rl">'+AGENT.role+'</div></div></div><a class="aemail" href="mailto:'+AGENT.email+'">'+AGENT.email+'</a><button class="btnp" onclick="dlPkg()">Download Marketing Package</button><button class="btno">Share</button></div></div><div class="card2"><div class="c2h">Request Information</div><div class="c2b"><form onsubmit="return submitInquiry(event)"><input class="finput" placeholder="Your Name *" required/><input class="finput" type="email" placeholder="Email *" required/><input class="finput" placeholder="Phone (optional)"/><textarea class="finput" rows="3">I\\'m interested in '+esc(l.name)+'. Please send me more information.</textarea><button class="btnp" type="submit">Send Inquiry</button></form></div></div></div>';
 var cta='<div class="cta dsec" id="sec-Contact"><div class="k">Get in Touch</div><h2>Interested in '+esc(l.name)+'?</h2><div class="sub">Send a message and we\\'ll respond within one business day.</div><form onsubmit="return submitInquiry(event)"><input class="finput" placeholder="Full Name *" required/><input class="finput" type="email" placeholder="Email *" required/><input class="finput" placeholder="Phone (optional)"/><textarea class="finput" rows="3">I\\'m interested in '+esc(l.name)+'. Please send me more information.</textarea><button class="btnp" type="submit">Send Inquiry</button></form></div>';
 var __hs=[];if(l.capRate)__hs.push(['CAP Rate',String(l.capRate).replace('%','').trim()+'%']);if(l.noi)__hs.push(['NOI',fullPrice(l.noi)]);if(l.type==='Hospitality'&&l.pricePerRoom)__hs.push(['Price / Room',fullPrice(l.pricePerRoom)]);else if(l.type==='Multifamily'&&l.numUnits&&Number(l.price)>0)__hs.push(['Price / Unit',fullPrice(Math.round(Number(l.price)/Number(l.numUnits)))]);
@@ -9048,6 +9066,7 @@ function pgCopyFallback(txt){try{var ta=document.createElement('textarea');ta.va
 function pgShare(){var u=pgUrl();var t=(CUR&&CUR.name)||document.title;if(navigator.share){navigator.share({title:t,url:u}).catch(function(){});}else{pgCopy(u);}}
 function pgEmail(){var t=(CUR&&CUR.name)||'this property';window.location.href='mailto:?subject='+encodeURIComponent(t)+'&body='+encodeURIComponent('Check out this property: '+pgUrl());}
 function pgLink(){pgCopy(pgUrl());}
+function demoTog(mi,btn){var w=btn.closest('.demo');if(!w)return;var tg=w.querySelectorAll('.dtg'),i;for(i=0;i<tg.length;i++)tg[i].classList.remove('act');btn.classList.add('act');var gr=w.querySelectorAll('.demogrid');for(i=0;i<gr.length;i++){gr[i].style.display=(gr[i].getAttribute('data-mi')===String(mi))?'':'none';}}
 function dlPkg(){if(!CUR){return;}
   // Free Access: no form, no NDA — download straight away, but still log the download as a lead
   // and notify the Owner (doDownloadPkg emails the Owner), so it shows in My Leads too.
@@ -9286,6 +9305,8 @@ export const toMicrositeItem = (l) => {
         gate: DEAL_ROOM_ACCESS.includes(l.gate) ? l.gate : 'Contact Required',
         subheader: l.subheader || '',
         areaText: l.areaText || '',
+        pop3: l.pop3 || '', hh3: l.hh3 || '', mInc3: l.mInc3 || '', aInc3: l.aInc3 || '',
+        pop5: l.pop5 || '', hh5: l.hh5 || '', mInc5: l.mInc5 || '', aInc5: l.aInc5 || '',
         unpriced: !!l.unpriced || !(Number(l.price) > 0),
         highlights: highlightsToLines(l.highlights),
         // Rich (bullets/bold/italic) version of the highlights when the editor produced HTML;
@@ -9787,7 +9808,7 @@ function NewDealModal({ onClose, onCreate, initial }) {
   const isEdit = !!initial
   const [step, setStep] = useState(0)
   const [f, setF] = useState(() => {
-    const base = { name: '', propertyType: 'Retail', saleType: 'For Sale', gate: 'Contact Required', street: '', city: '', state: '', zip: '', status: 'Active', access: 'Public', lat: '', lng: '', cover: '', subheader: '', highlights: '', description: '', photos: [], price: '', unpriced: false, expiration: '', capRate: '', noi: '', size: '', lotSize: '', yearBuilt: '', occupancy: '', tenants: '', leaseTypeDetail: '', tenancy: '', zoning: '', parking: '', subtype: '', pricePerSf: '', saleCondition: '', propertyClass: '', yearsRenovated: '', numUnits: '', tenantBrand: '', parkingType: '', groundLease: false, tenantCredit: '', leaseCommence: '', leaseExpiration: '', leaseTerm: '', remainingTerm: '', leaseOptions: '', rentBumps: '', investmentType: '', proformaNoi: '', proformaCap: '', areaText: '', om: null, confidential: [], contacts: [], bor: '' }
+    const base = { name: '', propertyType: 'Retail', saleType: 'For Sale', gate: 'Contact Required', street: '', city: '', state: '', zip: '', status: 'Active', access: 'Public', lat: '', lng: '', cover: '', subheader: '', highlights: '', description: '', photos: [], price: '', unpriced: false, expiration: '', capRate: '', noi: '', size: '', lotSize: '', yearBuilt: '', occupancy: '', tenants: '', leaseTypeDetail: '', tenancy: '', zoning: '', parking: '', subtype: '', pricePerSf: '', saleCondition: '', propertyClass: '', yearsRenovated: '', numUnits: '', tenantBrand: '', parkingType: '', groundLease: false, tenantCredit: '', leaseCommence: '', leaseExpiration: '', leaseTerm: '', remainingTerm: '', leaseOptions: '', rentBumps: '', investmentType: '', proformaNoi: '', proformaCap: '', areaText: '', pop3: '', hh3: '', mInc3: '', aInc3: '', pop5: '', hh5: '', mInc5: '', aInc5: '', om: null, confidential: [], contacts: [], bor: '' }
     // Editing: pre-fill EVERY field from the existing listing so the full form reopens with all the
     // values entered at creation (highlights, description, lease, media, etc.) — not a blank/short form (#6).
     if (!initial) return base
@@ -9976,6 +9997,30 @@ function NewDealModal({ onClose, onCreate, initial }) {
                   <div><label className={lbl}>Latitude</label><input className={inp} value={f.lat} onChange={(e) => set('lat', e.target.value)} placeholder="e.g. 40.8831" /></div>
                   <div><label className={lbl}>Longitude</label><input className={inp} value={f.lng} onChange={(e) => set('lng', e.target.value)} placeholder="e.g. -85.4975" /></div>
                 </div>
+                <div className="rounded-lg border border-slate-200 p-3">
+                  <p className="mb-1 text-sm font-bold text-slate-800">Demographics <span className="font-normal text-slate-400">— optional; shown on the property page with a 3 / 5-mile toggle</span></p>
+                  <p className="mb-3 text-xs text-slate-400">Enter the numbers from your own report (CoStar / Crexi / Esri). Leave blank to hide this section.</p>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-slate-500">3-Mile Radius</p>
+                      <div className="space-y-2">
+                        <div><label className={lbl}>Population</label><input className={inp} value={f.pop3} onChange={(e) => set('pop3', e.target.value)} placeholder="e.g. 62,500" /></div>
+                        <div><label className={lbl}>Households</label><input className={inp} value={f.hh3} onChange={(e) => set('hh3', e.target.value)} placeholder="e.g. 24,100" /></div>
+                        <div><label className={lbl}>Median HH Income</label><input className={inp} value={f.mInc3} onChange={(e) => set('mInc3', e.target.value)} placeholder="e.g. $58,000" /></div>
+                        <div><label className={lbl}>Avg HH Income</label><input className={inp} value={f.aInc3} onChange={(e) => set('aInc3', e.target.value)} placeholder="e.g. $72,000" /></div>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-slate-500">5-Mile Radius</p>
+                      <div className="space-y-2">
+                        <div><label className={lbl}>Population</label><input className={inp} value={f.pop5} onChange={(e) => set('pop5', e.target.value)} placeholder="e.g. 118,000" /></div>
+                        <div><label className={lbl}>Households</label><input className={inp} value={f.hh5} onChange={(e) => set('hh5', e.target.value)} placeholder="e.g. 45,300" /></div>
+                        <div><label className={lbl}>Median HH Income</label><input className={inp} value={f.mInc5} onChange={(e) => set('mInc5', e.target.value)} placeholder="e.g. $61,000" /></div>
+                        <div><label className={lbl}>Avg HH Income</label><input className={inp} value={f.aInc5} onChange={(e) => set('aInc5', e.target.value)} placeholder="e.g. $75,000" /></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
             {step === 4 && (
@@ -10094,6 +10139,18 @@ function NewDealModal({ onClose, onCreate, initial }) {
                     <Row l="Longitude" v={f.lng} />
                     {!f.lat && !f.lng && <p className="text-sm text-slate-400">Pin not set (falls back to city/state)</p>}
                   </Section>
+                  {(f.pop3 || f.hh3 || f.mInc3 || f.aInc3 || f.pop5 || f.hh5 || f.mInc5 || f.aInc5) && (
+                    <Section title="Demographics">
+                      <Row l="3-mi Population" v={f.pop3} />
+                      <Row l="3-mi Households" v={f.hh3} />
+                      <Row l="3-mi Median HH Income" v={f.mInc3} />
+                      <Row l="3-mi Avg HH Income" v={f.aInc3} />
+                      <Row l="5-mi Population" v={f.pop5} />
+                      <Row l="5-mi Households" v={f.hh5} />
+                      <Row l="5-mi Median HH Income" v={f.mInc5} />
+                      <Row l="5-mi Avg HH Income" v={f.aInc5} />
+                    </Section>
+                  )}
                   <Section title="Documents">
                     <Row l="Offering Memorandum" v={f.om ? f.om.name : ''} />
                     <Row l="Confidential files" v={f.confidential.length || ''} />
@@ -10294,6 +10351,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
         groundLease: !!d.groundLease, tenantCredit: d.tenantCredit || '', leaseCommence: d.leaseCommence || '', leaseExpiration: d.leaseExpiration || '',
         leaseTerm: d.leaseTerm || '', remainingTerm: d.remainingTerm || '', leaseOptions: d.leaseOptions || '', rentBumps: d.rentBumps || '',
         investmentType: d.investmentType || '', proformaNoi: d.proformaNoi || '', proformaCap: d.proformaCap || '',
+        pop3: d.pop3 || '', hh3: d.hh3 || '', mInc3: d.mInc3 || '', aInc3: d.aInc3 || '', pop5: d.pop5 || '', hh5: d.hh5 || '', mInc5: d.mInc5 || '', aInc5: d.aInc5 || '',
         lat: (d.lat === '' || d.lat == null) ? (l.lat ?? '') : Number(d.lat), lng: (d.lng === '' || d.lng == null) ? (l.lng ?? '') : Number(d.lng),
         bor: (typeof d.bor === 'string' && d.bor.trim()) ? d.bor.trim() : (l.bor || ''),
         ...agentFieldsFrom(d.contacts),
@@ -10310,7 +10368,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
     const address = [d.street, d.city, d.state, d.zip].filter(Boolean).join(', ') || '—'
     const cover = d.cover || (d.photos && d.photos[0] && d.photos[0].url) || ''
     const price = Number(d.price) || 0
-    setListings((list) => [{ id, dealId, name: d.name, address, city: d.city || '', state: d.state || '', ts: Date.now(), price, type: d.propertyType || 'Retail', saleType: d.saleType || 'For Sale', gate: d.gate || 'Contact Required', size: d.size || '—', status: d.status || 'Active', image: cover || '', featured: false, listed: d.status !== 'Draft', access: d.access || 'Public', subheader: d.subheader || '', highlights: d.highlights || '', description: d.description || '', areaText: d.areaText || '', capRate: d.capRate || '', noi: d.noi || '', pricePerSf: d.pricePerSf || '', lotSize: d.lotSize || '', yearBuilt: d.yearBuilt || '', occupancy: d.occupancy || '', tenants: d.tenants || '', tenancy: d.tenancy || '', leaseTypeDetail: d.leaseTypeDetail || '', subtype: d.subtype || '', zoning: d.zoning || '', parking: d.parking || '', unpriced: !!d.unpriced, expiration: d.expiration || '', saleCondition: d.saleCondition || '', propertyClass: d.propertyClass || '', yearsRenovated: d.yearsRenovated || '', numUnits: d.numUnits || '', tenantBrand: d.tenantBrand || '', parkingType: d.parkingType || '', groundLease: !!d.groundLease, tenantCredit: d.tenantCredit || '', leaseCommence: d.leaseCommence || '', leaseExpiration: d.leaseExpiration || '', leaseTerm: d.leaseTerm || '', remainingTerm: d.remainingTerm || '', leaseOptions: d.leaseOptions || '', rentBumps: d.rentBumps || '', investmentType: d.investmentType || '', proformaNoi: d.proformaNoi || '', proformaCap: d.proformaCap || '', lat: d.lat === '' || d.lat == null ? '' : Number(d.lat), lng: d.lng === '' || d.lng == null ? '' : Number(d.lng), bor: (typeof d.bor === 'string' ? d.bor.trim() : ''), ...agentFieldsFrom(d.contacts) }, ...list])
+    setListings((list) => [{ id, dealId, name: d.name, address, city: d.city || '', state: d.state || '', ts: Date.now(), price, type: d.propertyType || 'Retail', saleType: d.saleType || 'For Sale', gate: d.gate || 'Contact Required', size: d.size || '—', status: d.status || 'Active', image: cover || '', featured: false, listed: d.status !== 'Draft', access: d.access || 'Public', subheader: d.subheader || '', highlights: d.highlights || '', description: d.description || '', areaText: d.areaText || '', capRate: d.capRate || '', noi: d.noi || '', pricePerSf: d.pricePerSf || '', lotSize: d.lotSize || '', yearBuilt: d.yearBuilt || '', occupancy: d.occupancy || '', tenants: d.tenants || '', tenancy: d.tenancy || '', leaseTypeDetail: d.leaseTypeDetail || '', subtype: d.subtype || '', zoning: d.zoning || '', parking: d.parking || '', unpriced: !!d.unpriced, expiration: d.expiration || '', saleCondition: d.saleCondition || '', propertyClass: d.propertyClass || '', yearsRenovated: d.yearsRenovated || '', numUnits: d.numUnits || '', tenantBrand: d.tenantBrand || '', parkingType: d.parkingType || '', groundLease: !!d.groundLease, tenantCredit: d.tenantCredit || '', leaseCommence: d.leaseCommence || '', leaseExpiration: d.leaseExpiration || '', leaseTerm: d.leaseTerm || '', remainingTerm: d.remainingTerm || '', leaseOptions: d.leaseOptions || '', rentBumps: d.rentBumps || '', investmentType: d.investmentType || '', proformaNoi: d.proformaNoi || '', proformaCap: d.proformaCap || '', pop3: d.pop3 || '', hh3: d.hh3 || '', mInc3: d.mInc3 || '', aInc3: d.aInc3 || '', pop5: d.pop5 || '', hh5: d.hh5 || '', mInc5: d.mInc5 || '', aInc5: d.aInc5 || '', lat: d.lat === '' || d.lat == null ? '' : Number(d.lat), lng: d.lng === '' || d.lng == null ? '' : Number(d.lng), bor: (typeof d.bor === 'string' ? d.bor.trim() : ''), ...agentFieldsFrom(d.contacts) }, ...list])
     setDealRooms && setDealRooms((list) => [{ id: roomId, listingId: id, dealId, name: d.name, address, image: cover, price, capRate: d.capRate || '', noi: d.noi || '', status: d.status || 'Active', access: d.gate || 'Contact Required', files: (d.confidential || []).length, members: 0, updated: 'just now', ts: Date.now() }, ...list])
     if (d.om && d.om.url) {
       putPublicPackage(id, { name: d.om.name, url: d.om.url }).catch(() => {})
