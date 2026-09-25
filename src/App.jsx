@@ -9106,8 +9106,9 @@ function pgCopy(txt){if(navigator.clipboard&&navigator.clipboard.writeText){navi
 function pgCopyFallback(txt){try{var ta=document.createElement('textarea');ta.value=txt;ta.style.cssText='position:fixed;opacity:0';document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);pgToast('Link copied');}catch(e){window.prompt('Copy this link:',txt);}}
 function pgShare(){var u=pgUrl();var t=(CUR&&CUR.name)||document.title;if(navigator.share){navigator.share({title:t,url:u}).catch(function(){});}else{pgCopy(u);}}
 function pgEmail(){var t=(CUR&&CUR.name)||'this property';var subj=encodeURIComponent(t);var body=encodeURIComponent('Check out this property: '+t+'\\n'+pgUrl());
-  // Open Outlook web compose directly in a new tab (works in any browser, no mail app needed).
-  window.open('https://outlook.office.com/mail/deeplink/compose?subject='+subj+'&body='+body,'_blank','noopener');}
+  // Open Outlook web compose in a centered POPUP window over this page (not a new tab).
+  var w=720,h=820;var lft=Math.max(0,(screen.width-w)/2),tp=Math.max(0,(screen.height-h)/2);
+  window.open('https://outlook.office.com/mail/deeplink/compose?subject='+subj+'&body='+body,'outlookCompose','width='+w+',height='+h+',left='+lft+',top='+tp+',scrollbars=yes,resizable=yes');}
 function pgLink(){pgCopy(pgUrl());}
 function demoNum(v){var n=Number(String(v==null?'':v).replace(/[^0-9.\\-]/g,''));return isNaN(n)?0:n;}
 function demoList(v){return String(v==null?'':v).split(',').map(function(x){return x.trim();}).filter(function(x){return x!=='';});}
