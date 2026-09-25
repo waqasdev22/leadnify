@@ -8792,18 +8792,32 @@ body.detail-open .detail{display:block}
 .rhtml p{margin:0 0 10px}
 .rhtml a{color:${primary};text-decoration:underline}
 .rhtml b,.rhtml strong{font-weight:700;color:#334155}
-.demo{margin-top:20px;border:1px solid #e2e8f0;border-radius:10px;padding:16px;background:#fff}
-.demohd{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px}
-.fh2{font-size:12px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#334155}
-.demotog{display:inline-flex;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden}
-.demotog .dtg{background:#fff;border:0;padding:7px 16px;font-size:13px;font-weight:600;color:#64748b;cursor:pointer;transition:background .15s,color .15s}
-.demotog .dtg.act{background:${primary};color:#fff}
-.demogrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-.democ{background:#f8fafc;border:1px solid #eef2f7;border-radius:10px;padding:16px 12px;text-align:center}
-.demov{font-size:22px;font-weight:800;color:#0f172a}
-.demol{font-size:12px;color:#64748b;margin-top:4px}
+.demotabs{display:flex;gap:4px;border-bottom:1px solid #e2e8f0;margin:6px 0 18px;overflow-x:auto}
+.dtab{background:none;border:0;border-bottom:2px solid transparent;padding:10px 18px;font-size:14px;font-weight:600;color:#64748b;cursor:pointer;white-space:nowrap;transition:color .15s,border-color .15s}
+.dtab.act{color:${primary};border-bottom-color:${primary}}
+.dgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.dcard{border:1px solid #e2e8f0;border-radius:12px;padding:18px;background:#fff}
+.dch{font-size:14px;font-weight:800;color:${primary};margin-bottom:10px}
+.dcbig{font-size:30px;font-weight:800;color:#0f172a;line-height:1.1}
+.dcsub{font-size:12px;color:#64748b;margin-top:2px}
+.dcmini{font-size:12px;color:#334155;margin-top:6px;font-weight:600}
+.dcgrow{font-size:12px;color:#16a34a;margin-top:4px;font-weight:700}
+.dcflex{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.dcinfo{min-width:120px}
+.dcchart{display:flex;align-items:center;gap:10px}
+.pie{width:120px;height:120px;flex-shrink:0}
+.pleg{display:flex;flex-direction:column;gap:4px;font-size:11px;color:#64748b}
+.pli{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.pdot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+.spark{width:100%;height:auto;margin-top:10px}
+.dcbars{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+.brow{display:flex;align-items:center;gap:8px;font-size:12px}
+.blab{width:120px;flex-shrink:0;color:#475569;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.btrack{flex:1;height:10px;background:#eef2f7;border-radius:6px;overflow:hidden}
+.bfill{display:block;height:100%;background:#3b82f6;border-radius:6px}
+.bval{width:64px;flex-shrink:0;text-align:right;color:#334155;font-weight:600}
 .demoempty{grid-column:1/-1;padding:18px;text-align:center;color:#94a3b8;font-size:13px}
-@media(max-width:640px){.demogrid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:640px){.dgrid{grid-template-columns:1fr}.dcflex{flex-direction:column;align-items:flex-start}}
 .gal{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 .gal img{width:100%;height:180px;object-fit:cover;border-radius:8px;cursor:pointer;transition:opacity .15s}
 .gal img:hover{opacity:.9}
@@ -8993,12 +9007,8 @@ var highlights='<ul class="bullets"><li>Prime signalized hard-corner location</l
 var __city=esc(l.city||'');var __state=esc(l.state||'');
 var __areaLoc=(__city&&__state)?(__city+', '+__state):(__city||__state||esc(l.address)||'this market');
 var __areaText=l.areaText?esc(l.areaText):(esc(l.name)+' is located in '+__areaLoc+' \\u2014 a commercial trade area with established demand drivers, strong regional access, and a surrounding mix of retail, residential and employment that supports durable tenant demand and long-term value.');
-// Demographics (owner-entered): render a 3-mile / 5-mile toggle with the numbers the owner supplied.
-var __demoCard=function(label,val){return val?('<div class="democ"><div class="demov">'+esc(String(val))+'</div><div class="demol">'+label+'</div></div>'):'';};
-var __c3=__demoCard('Population',l.pop3)+__demoCard('Households',l.hh3)+__demoCard('Median HH Income',l.mInc3)+__demoCard('Avg HH Income',l.aInc3);
-var __c5=__demoCard('Population',l.pop5)+__demoCard('Households',l.hh5)+__demoCard('Median HH Income',l.mInc5)+__demoCard('Avg HH Income',l.aInc5);
-var __hasDemo=(l.pop3||l.hh3||l.mInc3||l.aInc3||l.pop5||l.hh5||l.mInc5||l.aInc5);
-var demoHtml=__hasDemo?('<div class="dblock" id="sec-Demographics"><div class="bl">Demographics</div><div class="demo"><div class="demohd"><div class="demotog"><button class="dtg act" onclick="demoTog(3,this)">3 Mile</button><button class="dtg" onclick="demoTog(5,this)">5 Mile</button></div></div><div class="demogrid" data-mi="3">'+(__c3||'<div class="demoempty">No 3-mile data provided.</div>')+'</div><div class="demogrid" data-mi="5" style="display:none">'+(__c5||'<div class="demoempty">No 5-mile data provided.</div>')+'</div></div></div>'):'';
+// Demographics — Crexi-style dashboard (1/3/5-mile tabs with charts), owner-entered.
+var demoHtml=demoSection(l);
 var areaHtml='<div class="dblock" id="sec-Area"><div class="bl">About the Area</div><p class="dtext">'+__areaText+'</p>'+((__city||__state)?('<div class="facts" style="margin-top:14px"><div class="fh">Location</div>'+frow('City',__city||'&mdash;')+frow('State',__state||'&mdash;')+'</div>'):'')+'</div>';
 var sidebar='<div class="side"><div class="card2"><div class="c2h">Listing Agent</div><div class="c2b"><div class="agent"><div class="av">'+AGENT.initials+'</div><div><div class="nm">'+AGENT.name+'</div><div class="rl">'+AGENT.role+'</div></div></div><a class="aemail" href="mailto:'+AGENT.email+'">'+AGENT.email+'</a><button class="btnp" onclick="dlPkg()">Download Marketing Package</button><button class="btno">Share</button></div></div><div class="card2"><div class="c2h">Request Information</div><div class="c2b"><form onsubmit="return submitInquiry(event)"><input class="finput" placeholder="Your Name *" required/><input class="finput" type="email" placeholder="Email *" required/><input class="finput" placeholder="Phone *" required/><textarea class="finput" rows="3">I\\'m interested in '+esc(l.name)+'. Please send me more information.</textarea><button class="btnp" type="submit">Send Inquiry</button></form></div></div></div>';
 var cta='<div class="cta dsec" id="sec-Contact"><div class="k">Get in Touch</div><h2>Interested in '+esc(l.name)+'?</h2><div class="sub">Send a message and we\\'ll respond within one business day.</div><form onsubmit="return submitInquiry(event)"><input class="finput" placeholder="Full Name *" required/><input class="finput" type="email" placeholder="Email *" required/><input class="finput" placeholder="Phone *" required/><textarea class="finput" rows="3">I\\'m interested in '+esc(l.name)+'. Please send me more information.</textarea><button class="btnp" type="submit">Send Inquiry</button></form></div>';
@@ -9097,7 +9107,27 @@ function pgCopyFallback(txt){try{var ta=document.createElement('textarea');ta.va
 function pgShare(){var u=pgUrl();var t=(CUR&&CUR.name)||document.title;if(navigator.share){navigator.share({title:t,url:u}).catch(function(){});}else{pgCopy(u);}}
 function pgEmail(){var t=(CUR&&CUR.name)||'this property';window.location.href='mailto:?subject='+encodeURIComponent(t)+'&body='+encodeURIComponent('Check out this property: '+pgUrl());}
 function pgLink(){pgCopy(pgUrl());}
-function demoTog(mi,btn){var w=btn.closest('.demo');if(!w)return;var tg=w.querySelectorAll('.dtg'),i;for(i=0;i<tg.length;i++)tg[i].classList.remove('act');btn.classList.add('act');var gr=w.querySelectorAll('.demogrid');for(i=0;i<gr.length;i++){gr[i].style.display=(gr[i].getAttribute('data-mi')===String(mi))?'':'none';}}
+function demoNum(v){var n=Number(String(v==null?'':v).replace(/[^0-9.\\-]/g,''));return isNaN(n)?0:n;}
+function demoList(v){return String(v==null?'':v).split(',').map(function(x){return x.trim();}).filter(function(x){return x!=='';});}
+function demoData(l){var D=(l.demo&&typeof l.demo==='object')?l.demo:null;if(!D){D={};if(l.pop3||l.hh3||l.mInc3||l.aInc3)D['3']={pop:l.pop3,hh:l.hh3,medInc:l.mInc3,avgInc:l.aInc3};if(l.pop5||l.hh5||l.mInc5||l.aInc5)D['5']={pop:l.pop5,hh:l.hh5,medInc:l.mInc5,avgInc:l.aInc5};}return D;}
+function radiusHas(d){if(!d)return false;for(var k in d){if(d[k]&&String(d[k]).trim())return true;}return false;}
+var DEMO_COLORS=['#1e40af','#3b82f6','#60a5fa','#93c5fd','#bfdbfe','#0ea5e9','#0369a1'];
+function pieSvg(vals){var nums=vals.map(demoNum);var total=nums.reduce(function(a,b){return a+b;},0);if(!total)return '';var cx=70,cy=70,r=60,a0=-Math.PI/2,out='';for(var i=0;i<nums.length;i++){if(!nums[i])continue;var frac=nums[i]/total;var a1=a0+frac*2*Math.PI;var x0=(cx+r*Math.cos(a0)).toFixed(1),y0=(cy+r*Math.sin(a0)).toFixed(1),x1=(cx+r*Math.cos(a1)).toFixed(1),y1=(cy+r*Math.sin(a1)).toFixed(1);var lg=frac>0.5?1:0;out+='<path d="M'+cx+','+cy+' L'+x0+','+y0+' A'+r+','+r+' 0 '+lg+' 1 '+x1+','+y1+' Z" fill="'+DEMO_COLORS[i%DEMO_COLORS.length]+'"></path>';a0=a1;}return '<svg viewBox="0 0 140 140" class="pie">'+out+'</svg>';}
+function pieLegend(labels,vals){var nums=vals.map(demoNum);var out='<div class="pleg">';for(var i=0;i<labels.length;i++){if(nums[i]===undefined)continue;out+='<div class="pli"><span class="pdot" style="background:'+DEMO_COLORS[i%DEMO_COLORS.length]+'"></span>'+esc(labels[i])+'</div>';}return out+'</div>';}
+function lineSvg(vals){var nums=vals.map(demoNum);if(nums.length<2)return '';var w=300,h=96,pad=10;var min=Math.min.apply(null,nums),max=Math.max.apply(null,nums);var rng=(max-min)||1;var pts=nums.map(function(v,i){var x=pad+(w-2*pad)*(i/(nums.length-1));var y=h-pad-(h-2*pad)*((v-min)/rng);return x.toFixed(1)+','+y.toFixed(1);});return '<svg viewBox="0 0 '+w+' '+h+'" class="spark"><polyline fill="none" stroke="#3b82f6" stroke-width="2.5" points="'+pts.join(' ')+'"></polyline></svg>';}
+function barRows(pairs){var max=0;pairs.forEach(function(p){var v=demoNum(p[1]);if(v>max)max=v;});if(!max)max=1;var out='';pairs.forEach(function(p){if(!p[1]&&p[1]!==0)return;var v=demoNum(p[1]);out+='<div class="brow"><span class="blab">'+esc(String(p[0]))+'</span><span class="btrack"><span class="bfill" style="width:'+Math.max(3,Math.round(v/max*100))+'%"></span></span><span class="bval">'+esc(String(p[1]))+'</span></div>';});return out;}
+function ratioText(a,b){var x=demoNum(a),y=demoNum(b);if(!x&&!y)return '';var r=y?(x/y):x;var g=(r>=1)?(Math.round(r)+':1'):('1:'+Math.round(1/r));return '<div class="dcbig">'+g+'</div>';}
+function demoPanel(d){var cards='';
+  if(d.pop||d.popTrend){cards+='<div class="dcard"><div class="dch">Population</div><div class="dcbig">'+esc(d.pop||'\\u2014')+'</div>'+(d.popGrowth?'<div class="dcgrow">\\u2191 '+esc(d.popGrowth)+'</div>':'')+(d.popTrend?lineSvg(demoList(d.popTrend)):'')+'</div>';}
+  if(d.medInc||d.incBr){var il=['Under $25K','$25K-$50K','$50K-$100K','$100K-$150K','Over $150K'];var pie=d.incBr?pieSvg(demoList(d.incBr)):'';cards+='<div class="dcard"><div class="dch">Household Income</div><div class="dcflex"><div class="dcinfo"><div class="dcbig">'+esc(d.medInc||'\\u2014')+'</div><div class="dcsub">Median Income</div>'+(d.inc2029?'<div class="dcmini">'+esc(d.inc2029)+' 2029 Est.</div>':'')+(d.incGrowth?'<div class="dcgrow">\\u2191 '+esc(d.incGrowth)+' Growth</div>':'')+'</div>'+(pie?'<div class="dcchart">'+pie+pieLegend(il,demoList(d.incBr))+'</div>':'')+'</div></div>';}
+  if(d.medAge||d.ageBuckets){var al=['Under 20','20-35','35-45','45-65','Over 65'];var pie=d.ageBuckets?pieSvg(demoList(d.ageBuckets)):'';cards+='<div class="dcard"><div class="dch">Age Demographics</div><div class="dcflex"><div class="dcinfo"><div class="dcbig">'+esc(d.medAge||'\\u2014')+'</div><div class="dcsub">Median Age</div>'+(d.age2029?'<div class="dcmini">'+esc(d.age2029)+' 2029 Est.</div>':'')+(d.ageGrowth?'<div class="dcgrow">\\u2191 '+esc(d.ageGrowth)+' Growth</div>':'')+'</div>'+(pie?'<div class="dcchart">'+pie+pieLegend(al,demoList(d.ageBuckets))+'</div>':'')+'</div></div>';}
+  if(d.emp||d.empCats){var pairs=demoList(d.empCats).map(function(s){var m=s.split(/[:|]/);return [(m[0]||s).trim(),(m[1]||'').trim()];});cards+='<div class="dcard"><div class="dch">Number of Employees</div><div class="dcbig">'+esc(d.emp||'\\u2014')+'</div>'+(pairs.length?'<div class="dcbars">'+barRows(pairs)+'</div>':'')+'</div>';}
+  if(d.occupied||d.vacant){cards+='<div class="dcard"><div class="dch">Housing Occupancy Ratio</div>'+ratioText(d.occupied,d.vacant)+'<div class="dcbars">'+barRows([['Occupied',d.occupied],['Vacant',d.vacant]])+'</div></div>';}
+  if(d.renters||d.owners){cards+='<div class="dcard"><div class="dch">Renter to Homeowner Ratio</div>'+ratioText(d.renters,d.owners)+'<div class="dcbars">'+barRows([['Renters',d.renters],['Homeowner',d.owners]])+'</div></div>';}
+  if(d.hh){cards+='<div class="dcard"><div class="dch">Households</div><div class="dcbig">'+esc(d.hh)+'</div>'+(d.avgInc?'<div class="dcsub">Avg HH Income '+esc(d.avgInc)+'</div>':'')+'</div>';}
+  return cards||'<div class="demoempty">No data for this radius.</div>';}
+function demoSection(l){var D=demoData(l);var radii=['1','3','5'].filter(function(k){return radiusHas(D[k]);});if(!radii.length)return '';var lbl={'1':'1 mile','3':'3 miles','5':'5 miles'};var tabs='';radii.forEach(function(k,i){tabs+='<button class="dtab'+(i===0?' act':'')+'" onclick="demoTog('+k+',this)">'+lbl[k]+'</button>';});var panels='';radii.forEach(function(k,i){panels+='<div class="demopanel" data-mi="'+k+'"'+(i===0?'':' style="display:none"')+'><div class="dgrid">'+demoPanel(D[k])+'</div></div>';});return '<div class="dblock" id="sec-Demographics"><div class="bl">Demographics</div><div class="demotabs">'+tabs+'</div>'+panels+'</div>';}
+function demoTog(mi,btn){var w=btn.closest('#sec-Demographics');if(!w)return;var tb=w.querySelectorAll('.dtab'),i;for(i=0;i<tb.length;i++)tb[i].classList.remove('act');btn.classList.add('act');var ps=w.querySelectorAll('.demopanel');for(i=0;i<ps.length;i++){ps[i].style.display=(ps[i].getAttribute('data-mi')===String(mi))?'':'none';}}
 function dlPkg(){if(!CUR){return;}
   // Free Access: no form, no NDA — download straight away, but still log the download as a lead
   // and notify the Owner (doDownloadPkg emails the Owner), so it shows in My Leads too.
@@ -9342,6 +9372,7 @@ export const toMicrositeItem = (l) => {
         gate: DEAL_ROOM_ACCESS.includes(l.gate) ? l.gate : 'Contact Required',
         subheader: l.subheader || '',
         areaText: l.areaText || '',
+        demo: (l.demo && typeof l.demo === 'object') ? l.demo : null,
         pop3: l.pop3 || '', hh3: l.hh3 || '', mInc3: l.mInc3 || '', aInc3: l.aInc3 || '',
         pop5: l.pop5 || '', hh5: l.hh5 || '', mInc5: l.mInc5 || '', aInc5: l.aInc5 || '',
         unpriced: !!l.unpriced || !(Number(l.price) > 0),
@@ -9845,7 +9876,7 @@ function NewDealModal({ onClose, onCreate, initial }) {
   const isEdit = !!initial
   const [step, setStep] = useState(0)
   const [f, setF] = useState(() => {
-    const base = { name: '', propertyType: 'Retail', saleType: 'For Sale', gate: 'Contact Required', street: '', city: '', state: '', zip: '', status: 'Active', access: 'Public', lat: '', lng: '', cover: '', subheader: '', highlights: '', description: '', photos: [], price: '', unpriced: false, expiration: '', capRate: '', noi: '', size: '', lotSize: '', yearBuilt: '', occupancy: '', tenants: '', leaseTypeDetail: '', tenancy: '', zoning: '', parking: '', subtype: '', pricePerSf: '', saleCondition: '', propertyClass: '', yearsRenovated: '', numUnits: '', tenantBrand: '', parkingType: '', groundLease: false, tenantCredit: '', leaseCommence: '', leaseExpiration: '', leaseTerm: '', remainingTerm: '', leaseOptions: '', rentBumps: '', investmentType: '', proformaNoi: '', proformaCap: '', areaText: '', pop3: '', hh3: '', mInc3: '', aInc3: '', pop5: '', hh5: '', mInc5: '', aInc5: '', om: null, confidential: [], contacts: [], bor: '' }
+    const base = { name: '', propertyType: 'Retail', saleType: 'For Sale', gate: 'Contact Required', street: '', city: '', state: '', zip: '', status: 'Active', access: 'Public', lat: '', lng: '', cover: '', subheader: '', highlights: '', description: '', photos: [], price: '', unpriced: false, expiration: '', capRate: '', noi: '', size: '', lotSize: '', yearBuilt: '', occupancy: '', tenants: '', leaseTypeDetail: '', tenancy: '', zoning: '', parking: '', subtype: '', pricePerSf: '', saleCondition: '', propertyClass: '', yearsRenovated: '', numUnits: '', tenantBrand: '', parkingType: '', groundLease: false, tenantCredit: '', leaseCommence: '', leaseExpiration: '', leaseTerm: '', remainingTerm: '', leaseOptions: '', rentBumps: '', investmentType: '', proformaNoi: '', proformaCap: '', areaText: '', demo: {}, om: null, confidential: [], contacts: [], bor: '' }
     // Editing: pre-fill EVERY field from the existing listing so the full form reopens with all the
     // values entered at creation (highlights, description, lease, media, etc.) — not a blank/short form (#6).
     if (!initial) return base
@@ -9873,6 +9904,10 @@ function NewDealModal({ onClose, onCreate, initial }) {
     }
   })
   const set = (k, v) => setF((s) => ({ ...s, [k]: v }))
+  // Demographics (Crexi-style): a nested { '1':{}, '3':{}, '5':{} } object edited one radius at a time.
+  const [demoR, setDemoR] = useState('3')
+  const dv = (r, k) => (((f.demo || {})[r]) || {})[k] || ''
+  const setDemo = (r, k, v) => setF((s) => ({ ...s, demo: { ...(s.demo || {}), [r]: { ...(((s.demo || {})[r]) || {}), [k]: v } } }))
   // Editing: pull this property's already-published gallery images into the Photos field so they're
   // visible and manageable here (they live in /public/gallery/<id>, not on the listing record).
   useEffect(() => {
@@ -10035,25 +10070,54 @@ function NewDealModal({ onClose, onCreate, initial }) {
                   <div><label className={lbl}>Longitude</label><input className={inp} value={f.lng} onChange={(e) => set('lng', e.target.value)} placeholder="e.g. -85.4975" /></div>
                 </div>
                 <div className="rounded-lg border border-slate-200 p-3">
-                  <p className="mb-1 text-sm font-bold text-slate-800">Demographics <span className="font-normal text-slate-400">— optional; shown on the property page with a 3 / 5-mile toggle</span></p>
-                  <p className="mb-3 text-xs text-slate-400">Enter the numbers from your own report (CoStar / Crexi / Esri). Leave blank to hide this section.</p>
-                  <div className="grid gap-4 sm:grid-cols-2">
+                  <p className="mb-1 text-sm font-bold text-slate-800">Demographics <span className="font-normal text-slate-400">— optional; Crexi-style dashboard on the property page (1 / 3 / 5-mile tabs)</span></p>
+                  <p className="mb-3 text-xs text-slate-400">Enter the numbers from your own report (CoStar / Crexi / Esri). Fill only the radii you have; empty sections are hidden. For charts, enter comma-separated values.</p>
+                  <div className="mb-3 inline-flex rounded-lg bg-slate-100 p-0.5 text-xs font-semibold">
+                    {['1', '3', '5'].map((r) => (
+                      <button key={r} type="button" onClick={() => setDemoR(r)} className={`rounded-md px-3 py-1 transition ${demoR === r ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}>{r} Mile</button>
+                    ))}
+                  </div>
+                  <div className="space-y-4">
                     <div>
-                      <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-slate-500">3-Mile Radius</p>
-                      <div className="space-y-2">
-                        <div><label className={lbl}>Population</label><input className={inp} value={f.pop3} onChange={(e) => set('pop3', e.target.value)} placeholder="e.g. 62,500" /></div>
-                        <div><label className={lbl}>Households</label><input className={inp} value={f.hh3} onChange={(e) => set('hh3', e.target.value)} placeholder="e.g. 24,100" /></div>
-                        <div><label className={lbl}>Median HH Income</label><input className={inp} value={f.mInc3} onChange={(e) => set('mInc3', e.target.value)} placeholder="e.g. $58,000" /></div>
-                        <div><label className={lbl}>Avg HH Income</label><input className={inp} value={f.aInc3} onChange={(e) => set('aInc3', e.target.value)} placeholder="e.g. $72,000" /></div>
+                      <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-slate-500">Population</p>
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <div><label className={lbl}>Population</label><input className={inp} value={dv(demoR, 'pop')} onChange={(e) => setDemo(demoR, 'pop', e.target.value)} placeholder="e.g. 36,100" /></div>
+                        <div><label className={lbl}>Growth</label><input className={inp} value={dv(demoR, 'popGrowth')} onChange={(e) => setDemo(demoR, 'popGrowth', e.target.value)} placeholder="e.g. +5%" /></div>
+                        <div><label className={lbl}>Households</label><input className={inp} value={dv(demoR, 'hh')} onChange={(e) => setDemo(demoR, 'hh', e.target.value)} placeholder="e.g. 24,100" /></div>
                       </div>
+                      <div className="mt-2"><label className={lbl}>Population trend <span className="font-normal text-slate-400">(comma-separated, e.g. 2020→2024)</span></label><input className={inp} value={dv(demoR, 'popTrend')} onChange={(e) => setDemo(demoR, 'popTrend', e.target.value)} placeholder="34400, 33900, 34200, 34600, 36100" /></div>
                     </div>
                     <div>
-                      <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-slate-500">5-Mile Radius</p>
-                      <div className="space-y-2">
-                        <div><label className={lbl}>Population</label><input className={inp} value={f.pop5} onChange={(e) => set('pop5', e.target.value)} placeholder="e.g. 118,000" /></div>
-                        <div><label className={lbl}>Households</label><input className={inp} value={f.hh5} onChange={(e) => set('hh5', e.target.value)} placeholder="e.g. 45,300" /></div>
-                        <div><label className={lbl}>Median HH Income</label><input className={inp} value={f.mInc5} onChange={(e) => set('mInc5', e.target.value)} placeholder="e.g. $61,000" /></div>
-                        <div><label className={lbl}>Avg HH Income</label><input className={inp} value={f.aInc5} onChange={(e) => set('aInc5', e.target.value)} placeholder="e.g. $75,000" /></div>
+                      <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-slate-500">Household Income</p>
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <div><label className={lbl}>Median Income</label><input className={inp} value={dv(demoR, 'medInc')} onChange={(e) => setDemo(demoR, 'medInc', e.target.value)} placeholder="e.g. $90,700" /></div>
+                        <div><label className={lbl}>2029 Estimate</label><input className={inp} value={dv(demoR, 'inc2029')} onChange={(e) => setDemo(demoR, 'inc2029', e.target.value)} placeholder="e.g. $124,100" /></div>
+                        <div><label className={lbl}>Growth</label><input className={inp} value={dv(demoR, 'incGrowth')} onChange={(e) => setDemo(demoR, 'incGrowth', e.target.value)} placeholder="e.g. +37%" /></div>
+                      </div>
+                      <div className="mt-2"><label className={lbl}>Income brackets <span className="font-normal text-slate-400">(Under $25K, $25–50K, $50–100K, $100–150K, Over $150K)</span></label><input className={inp} value={dv(demoR, 'incBr')} onChange={(e) => setDemo(demoR, 'incBr', e.target.value)} placeholder="800, 1400, 2100, 900, 400" /></div>
+                      <div className="mt-2"><label className={lbl}>Avg HH Income</label><input className={inp} value={dv(demoR, 'avgInc')} onChange={(e) => setDemo(demoR, 'avgInc', e.target.value)} placeholder="e.g. $75,000" /></div>
+                    </div>
+                    <div>
+                      <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-slate-500">Age</p>
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <div><label className={lbl}>Median Age</label><input className={inp} value={dv(demoR, 'medAge')} onChange={(e) => setDemo(demoR, 'medAge', e.target.value)} placeholder="e.g. 35" /></div>
+                        <div><label className={lbl}>2029 Estimate</label><input className={inp} value={dv(demoR, 'age2029')} onChange={(e) => setDemo(demoR, 'age2029', e.target.value)} placeholder="e.g. 35" /></div>
+                        <div><label className={lbl}>Growth</label><input className={inp} value={dv(demoR, 'ageGrowth')} onChange={(e) => setDemo(demoR, 'ageGrowth', e.target.value)} placeholder="e.g. +0%" /></div>
+                      </div>
+                      <div className="mt-2"><label className={lbl}>Age buckets <span className="font-normal text-slate-400">(Under 20, 20–35, 35–45, 45–65, Over 65)</span></label><input className={inp} value={dv(demoR, 'ageBuckets')} onChange={(e) => setDemo(demoR, 'ageBuckets', e.target.value)} placeholder="9000, 8000, 7000, 8000, 4100" /></div>
+                    </div>
+                    <div>
+                      <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-slate-500">Employment</p>
+                      <div><label className={lbl}>Total Employees</label><input className={inp} value={dv(demoR, 'emp')} onChange={(e) => setDemo(demoR, 'emp', e.target.value)} placeholder="e.g. 32,600" /></div>
+                      <div className="mt-2"><label className={lbl}>Top categories <span className="font-normal text-slate-400">(comma-separated "Name: value")</span></label><input className={inp} value={dv(demoR, 'empCats')} onChange={(e) => setDemo(demoR, 'empCats', e.target.value)} placeholder="Management: 5200, Professional: 4100, Education: 3800" /></div>
+                    </div>
+                    <div>
+                      <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-slate-500">Housing</p>
+                      <div className="grid gap-3 sm:grid-cols-4">
+                        <div><label className={lbl}>Occupied</label><input className={inp} value={dv(demoR, 'occupied')} onChange={(e) => setDemo(demoR, 'occupied', e.target.value)} placeholder="e.g. 8000" /></div>
+                        <div><label className={lbl}>Vacant</label><input className={inp} value={dv(demoR, 'vacant')} onChange={(e) => setDemo(demoR, 'vacant', e.target.value)} placeholder="e.g. 1000" /></div>
+                        <div><label className={lbl}>Renters</label><input className={inp} value={dv(demoR, 'renters')} onChange={(e) => setDemo(demoR, 'renters', e.target.value)} placeholder="e.g. 6000" /></div>
+                        <div><label className={lbl}>Owners</label><input className={inp} value={dv(demoR, 'owners')} onChange={(e) => setDemo(demoR, 'owners', e.target.value)} placeholder="e.g. 2000" /></div>
                       </div>
                     </div>
                   </div>
@@ -10176,16 +10240,13 @@ function NewDealModal({ onClose, onCreate, initial }) {
                     <Row l="Longitude" v={f.lng} />
                     {!f.lat && !f.lng && <p className="text-sm text-slate-400">Pin not set (falls back to city/state)</p>}
                   </Section>
-                  {(f.pop3 || f.hh3 || f.mInc3 || f.aInc3 || f.pop5 || f.hh5 || f.mInc5 || f.aInc5) && (
+                  {['1', '3', '5'].some((r) => (f.demo || {})[r] && Object.values((f.demo || {})[r]).some((v) => v && String(v).trim())) && (
                     <Section title="Demographics">
-                      <Row l="3-mi Population" v={f.pop3} />
-                      <Row l="3-mi Households" v={f.hh3} />
-                      <Row l="3-mi Median HH Income" v={f.mInc3} />
-                      <Row l="3-mi Avg HH Income" v={f.aInc3} />
-                      <Row l="5-mi Population" v={f.pop5} />
-                      <Row l="5-mi Households" v={f.hh5} />
-                      <Row l="5-mi Median HH Income" v={f.mInc5} />
-                      <Row l="5-mi Avg HH Income" v={f.aInc5} />
+                      {['1', '3', '5'].map((r) => {
+                        const d = (f.demo || {})[r] || {}
+                        if (!Object.values(d).some((v) => v && String(v).trim())) return null
+                        return <Row key={r} l={`${r}-mile`} v={[d.pop && `Pop ${d.pop}`, d.hh && `HH ${d.hh}`, d.medInc && `Median ${d.medInc}`, d.medAge && `Age ${d.medAge}`, d.emp && `Emp ${d.emp}`].filter(Boolean).join(' · ')} />
+                      })}
                     </Section>
                   )}
                   <Section title="Documents">
@@ -10388,7 +10449,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
         groundLease: !!d.groundLease, tenantCredit: d.tenantCredit || '', leaseCommence: d.leaseCommence || '', leaseExpiration: d.leaseExpiration || '',
         leaseTerm: d.leaseTerm || '', remainingTerm: d.remainingTerm || '', leaseOptions: d.leaseOptions || '', rentBumps: d.rentBumps || '',
         investmentType: d.investmentType || '', proformaNoi: d.proformaNoi || '', proformaCap: d.proformaCap || '',
-        pop3: d.pop3 || '', hh3: d.hh3 || '', mInc3: d.mInc3 || '', aInc3: d.aInc3 || '', pop5: d.pop5 || '', hh5: d.hh5 || '', mInc5: d.mInc5 || '', aInc5: d.aInc5 || '',
+        demo: d.demo || l.demo || {},
         lat: (d.lat === '' || d.lat == null) ? (l.lat ?? '') : Number(d.lat), lng: (d.lng === '' || d.lng == null) ? (l.lng ?? '') : Number(d.lng),
         bor: (typeof d.bor === 'string' && d.bor.trim()) ? d.bor.trim() : (l.bor || ''),
         ...agentFieldsFrom(d.contacts),
@@ -10405,7 +10466,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
     const address = [d.street, d.city, d.state, d.zip].filter(Boolean).join(', ') || '—'
     const cover = d.cover || (d.photos && d.photos[0] && d.photos[0].url) || ''
     const price = Number(d.price) || 0
-    setListings((list) => [{ id, dealId, name: d.name, address, city: d.city || '', state: d.state || '', ts: Date.now(), price, type: d.propertyType || 'Retail', saleType: d.saleType || 'For Sale', gate: d.gate || 'Contact Required', size: d.size || '—', status: d.status || 'Active', image: cover || '', featured: false, listed: d.status !== 'Draft', access: d.access || 'Public', subheader: d.subheader || '', highlights: d.highlights || '', description: d.description || '', areaText: d.areaText || '', capRate: d.capRate || '', noi: d.noi || '', pricePerSf: d.pricePerSf || '', lotSize: d.lotSize || '', yearBuilt: d.yearBuilt || '', occupancy: d.occupancy || '', tenants: d.tenants || '', tenancy: d.tenancy || '', leaseTypeDetail: d.leaseTypeDetail || '', subtype: d.subtype || '', zoning: d.zoning || '', parking: d.parking || '', unpriced: !!d.unpriced, expiration: d.expiration || '', saleCondition: d.saleCondition || '', propertyClass: d.propertyClass || '', yearsRenovated: d.yearsRenovated || '', numUnits: d.numUnits || '', tenantBrand: d.tenantBrand || '', parkingType: d.parkingType || '', groundLease: !!d.groundLease, tenantCredit: d.tenantCredit || '', leaseCommence: d.leaseCommence || '', leaseExpiration: d.leaseExpiration || '', leaseTerm: d.leaseTerm || '', remainingTerm: d.remainingTerm || '', leaseOptions: d.leaseOptions || '', rentBumps: d.rentBumps || '', investmentType: d.investmentType || '', proformaNoi: d.proformaNoi || '', proformaCap: d.proformaCap || '', pop3: d.pop3 || '', hh3: d.hh3 || '', mInc3: d.mInc3 || '', aInc3: d.aInc3 || '', pop5: d.pop5 || '', hh5: d.hh5 || '', mInc5: d.mInc5 || '', aInc5: d.aInc5 || '', lat: d.lat === '' || d.lat == null ? '' : Number(d.lat), lng: d.lng === '' || d.lng == null ? '' : Number(d.lng), bor: (typeof d.bor === 'string' ? d.bor.trim() : ''), ...agentFieldsFrom(d.contacts) }, ...list])
+    setListings((list) => [{ id, dealId, name: d.name, address, city: d.city || '', state: d.state || '', ts: Date.now(), price, type: d.propertyType || 'Retail', saleType: d.saleType || 'For Sale', gate: d.gate || 'Contact Required', size: d.size || '—', status: d.status || 'Active', image: cover || '', featured: false, listed: d.status !== 'Draft', access: d.access || 'Public', subheader: d.subheader || '', highlights: d.highlights || '', description: d.description || '', areaText: d.areaText || '', capRate: d.capRate || '', noi: d.noi || '', pricePerSf: d.pricePerSf || '', lotSize: d.lotSize || '', yearBuilt: d.yearBuilt || '', occupancy: d.occupancy || '', tenants: d.tenants || '', tenancy: d.tenancy || '', leaseTypeDetail: d.leaseTypeDetail || '', subtype: d.subtype || '', zoning: d.zoning || '', parking: d.parking || '', unpriced: !!d.unpriced, expiration: d.expiration || '', saleCondition: d.saleCondition || '', propertyClass: d.propertyClass || '', yearsRenovated: d.yearsRenovated || '', numUnits: d.numUnits || '', tenantBrand: d.tenantBrand || '', parkingType: d.parkingType || '', groundLease: !!d.groundLease, tenantCredit: d.tenantCredit || '', leaseCommence: d.leaseCommence || '', leaseExpiration: d.leaseExpiration || '', leaseTerm: d.leaseTerm || '', remainingTerm: d.remainingTerm || '', leaseOptions: d.leaseOptions || '', rentBumps: d.rentBumps || '', investmentType: d.investmentType || '', proformaNoi: d.proformaNoi || '', proformaCap: d.proformaCap || '', demo: d.demo || {}, lat: d.lat === '' || d.lat == null ? '' : Number(d.lat), lng: d.lng === '' || d.lng == null ? '' : Number(d.lng), bor: (typeof d.bor === 'string' ? d.bor.trim() : ''), ...agentFieldsFrom(d.contacts) }, ...list])
     setDealRooms && setDealRooms((list) => [{ id: roomId, listingId: id, dealId, name: d.name, address, image: cover, price, capRate: d.capRate || '', noi: d.noi || '', status: d.status || 'Active', access: d.gate || 'Contact Required', files: (d.confidential || []).length, members: 0, updated: 'just now', ts: Date.now() }, ...list])
     if (d.om && d.om.url) {
       putPublicPackage(id, { name: d.om.name, url: d.om.url }).catch(() => {})
@@ -12776,7 +12837,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
               groundLease: !!d.groundLease, tenantCredit: d.tenantCredit || '', leaseCommence: d.leaseCommence || '', leaseExpiration: d.leaseExpiration || '',
               leaseTerm: d.leaseTerm || '', remainingTerm: d.remainingTerm || '', leaseOptions: d.leaseOptions || '', rentBumps: d.rentBumps || '',
               investmentType: d.investmentType || '', proformaNoi: d.proformaNoi || '', proformaCap: d.proformaCap || '',
-              pop3: d.pop3 || '', hh3: d.hh3 || '', mInc3: d.mInc3 || '', aInc3: d.aInc3 || '', pop5: d.pop5 || '', hh5: d.hh5 || '', mInc5: d.mInc5 || '', aInc5: d.aInc5 || '',
+              demo: d.demo || gateListing.demo || {},
               lat: (d.lat === '' || d.lat == null) ? (gateListing.lat ?? '') : Number(d.lat), lng: (d.lng === '' || d.lng == null) ? (gateListing.lng ?? '') : Number(d.lng),
               bor: (typeof d.bor === 'string' && d.bor.trim()) ? d.bor.trim() : (gateListing.bor || ''),
               ...contactsToAgents(d.contacts),
