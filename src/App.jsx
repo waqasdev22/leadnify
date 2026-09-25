@@ -9112,7 +9112,12 @@ function pgEmail(){var t=(CUR&&CUR.name)||'this property';var subj=encodeURIComp
 function pgLink(){pgCopy(pgUrl());}
 function demoNum(v){var n=Number(String(v==null?'':v).replace(/[^0-9.\\-]/g,''));return isNaN(n)?0:n;}
 function demoList(v){return String(v==null?'':v).split(',').map(function(x){return x.trim();}).filter(function(x){return x!=='';});}
-function demoData(l){var D=(l.demo&&typeof l.demo==='object')?l.demo:null;if(!D){D={};if(l.pop3||l.hh3||l.mInc3||l.aInc3)D['3']={pop:l.pop3,hh:l.hh3,medInc:l.mInc3,avgInc:l.aInc3};if(l.pop5||l.hh5||l.mInc5||l.aInc5)D['5']={pop:l.pop5,hh:l.hh5,medInc:l.mInc5,avgInc:l.aInc5};}return D;}
+function demoData(l){var src=l.demo,D={};
+  // demo may be {r1,r3,r5} (new), {'1','3','5'} (old object), or [null,r1,null,r3,null,r5] (old array
+  // after Firebase converted numeric keys). Normalise all shapes to {1,3,5}.
+  if(src&&typeof src==='object'){['1','3','5'].forEach(function(k){var v=src['r'+k]||src[k]||(Array.isArray(src)?src[Number(k)]:null);if(v&&typeof v==='object')D[k]=v;});}
+  if(!D['1']&&!D['3']&&!D['5']){if(l.pop3||l.hh3||l.mInc3||l.aInc3)D['3']={pop:l.pop3,hh:l.hh3,medInc:l.mInc3,avgInc:l.aInc3};if(l.pop5||l.hh5||l.mInc5||l.aInc5)D['5']={pop:l.pop5,hh:l.hh5,medInc:l.mInc5,avgInc:l.aInc5};}
+  return D;}
 function radiusHas(d){if(!d)return false;for(var k in d){if(d[k]&&String(d[k]).trim())return true;}return false;}
 var DEMO_COLORS=['#1e40af','#3b82f6','#60a5fa','#93c5fd','#bfdbfe','#0ea5e9','#0369a1'];
 function pieSvg(vals){var nums=vals.map(demoNum);var total=nums.reduce(function(a,b){return a+b;},0);if(!total)return '';var cx=70,cy=70,r=60,a0=-Math.PI/2,out='';for(var i=0;i<nums.length;i++){if(!nums[i])continue;var frac=nums[i]/total;var a1=a0+frac*2*Math.PI;var x0=(cx+r*Math.cos(a0)).toFixed(1),y0=(cy+r*Math.sin(a0)).toFixed(1),x1=(cx+r*Math.cos(a1)).toFixed(1),y1=(cy+r*Math.sin(a1)).toFixed(1);var lg=frac>0.5?1:0;out+='<path d="M'+cx+','+cy+' L'+x0+','+y0+' A'+r+','+r+' 0 '+lg+' 1 '+x1+','+y1+' Z" fill="'+DEMO_COLORS[i%DEMO_COLORS.length]+'"></path>';a0=a1;}return '<svg viewBox="0 0 140 140" class="pie">'+out+'</svg>';}
@@ -9893,6 +9898,9 @@ function NewDealModal({ onClose, onCreate, initial }) {
     return {
       ...base,
       ...initial,
+      // Normalise any older demo shape (sparse array or numeric-keyed object) into the r-prefixed
+      // object the editor uses, so existing demographics reopen correctly.
+      demo: (() => { const s = initial.demo; const out = {}; if (s && typeof s === 'object') { ['1', '3', '5'].forEach((k) => { const v = s['r' + k] || s[k] || (Array.isArray(s) ? s[Number(k)] : null); if (v && typeof v === 'object') out['r' + k] = v }) } return out })(),
       cover: initial.cover || initial.image || '',
       photos: Array.isArray(initial.photos) ? initial.photos : [],
       confidential: Array.isArray(initial.confidential) ? initial.confidential : [],
@@ -9916,8 +9924,9 @@ function NewDealModal({ onClose, onCreate, initial }) {
   const set = (k, v) => setF((s) => ({ ...s, [k]: v }))
   // Demographics (Crexi-style): a nested { '1':{}, '3':{}, '5':{} } object edited one radius at a time.
   const [demoR, setDemoR] = useState('3')
-  const dv = (r, k) => (((f.demo || {})[r]) || {})[k] || ''
-  const setDemo = (r, k, v) => setF((s) => ({ ...s, demo: { ...(s.demo || {}), [r]: { ...(((s.demo || {})[r]) || {}), [k]: v } } }))
+  // Keys are prefixed ('r1'/'r3'/'r5') so Firebase never turns the demo object into a sparse array.
+  const dv = (r, k) => (((f.demo || {})['r' + r]) || {})[k] || ''
+  const setDemo = (r, k, v) => setF((s) => ({ ...s, demo: { ...(s.demo || {}), ['r' + r]: { ...(((s.demo || {})['r' + r]) || {}), [k]: v } } }))
   // Editing: pull this property's already-published gallery images into the Photos field so they're
   // visible and manageable here (they live in /public/gallery/<id>, not on the listing record).
   useEffect(() => {
@@ -10250,10 +10259,10 @@ function NewDealModal({ onClose, onCreate, initial }) {
                     <Row l="Longitude" v={f.lng} />
                     {!f.lat && !f.lng && <p className="text-sm text-slate-400">Pin not set (falls back to city/state)</p>}
                   </Section>
-                  {['1', '3', '5'].some((r) => (f.demo || {})[r] && Object.values((f.demo || {})[r]).some((v) => v && String(v).trim())) && (
+                  {['1', '3', '5'].some((r) => (f.demo || {})['r' + r] && Object.values((f.demo || {})['r' + r]).some((v) => v && String(v).trim())) && (
                     <Section title="Demographics">
                       {['1', '3', '5'].map((r) => {
-                        const d = (f.demo || {})[r] || {}
+                        const d = (f.demo || {})['r' + r] || {}
                         if (!Object.values(d).some((v) => v && String(v).trim())) return null
                         return <Row key={r} l={`${r}-mile`} v={[d.pop && `Pop ${d.pop}`, d.hh && `HH ${d.hh}`, d.medInc && `Median ${d.medInc}`, d.medAge && `Age ${d.medAge}`, d.emp && `Emp ${d.emp}`].filter(Boolean).join(' · ')} />
                       })}
