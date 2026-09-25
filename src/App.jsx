@@ -8792,12 +8792,15 @@ body.detail-open .detail{display:block}
 .rhtml p{margin:0 0 10px}
 .rhtml a{color:${primary};text-decoration:underline}
 .rhtml b,.rhtml strong{font-weight:700;color:#334155}
-.demotabs{display:flex;gap:4px;border-bottom:1px solid #e2e8f0;margin:6px 0 18px;overflow-x:auto}
-.dtab{background:none;border:0;border-bottom:2px solid transparent;padding:10px 18px;font-size:14px;font-weight:600;color:#64748b;cursor:pointer;white-space:nowrap;transition:color .15s,border-color .15s}
-.dtab.act{color:${primary};border-bottom-color:${primary}}
+.demohdr{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px}
+.democsv{background:#fff;border:1px solid #cbd5e1;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;color:#334155;cursor:pointer;transition:background .15s}
+.democsv:hover{background:#f1f5f9}
+.demotabs{display:flex;gap:0;border-bottom:1px solid #e2e8f0;margin:6px 0 18px}
+.dtab{flex:1;background:none;border:0;border-bottom:2px solid transparent;padding:12px 8px;font-size:14px;font-weight:600;color:#64748b;cursor:pointer;white-space:nowrap;text-align:center;transition:color .15s,border-color .15s}
+.dtab.act{color:#2563eb;border-bottom-color:#2563eb}
 .dgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .dcard{border:1px solid #e2e8f0;border-radius:12px;padding:18px;background:#fff}
-.dch{font-size:14px;font-weight:800;color:${primary};margin-bottom:10px}
+.dch{font-size:14px;font-weight:700;color:#2563eb;margin-bottom:10px}
 .dcbig{font-size:30px;font-weight:800;color:#0f172a;line-height:1.1}
 .dcsub{font-size:12px;color:#64748b;margin-top:2px}
 .dcmini{font-size:12px;color:#334155;margin-top:6px;font-weight:600}
@@ -9143,7 +9146,8 @@ function demoPanel(d){var cards='';
   if(d.renters||d.owners){cards+='<div class="dcard"><div class="dch">Renter to Homeowner Ratio</div>'+ratioText(d.renters,d.owners)+'<div class="dcbars">'+barRows([['Renters',d.renters],['Homeowner',d.owners]])+'</div></div>';}
   if(d.hh){cards+='<div class="dcard"><div class="dch">Households</div><div class="dcbig">'+esc(d.hh)+'</div>'+(d.avgInc?'<div class="dcsub">Avg HH Income '+esc(d.avgInc)+'</div>':'')+'</div>';}
   return cards||'<div class="demoempty">No data for this radius.</div>';}
-function demoSection(l){var D=demoData(l);var radii=['1','3','5'].filter(function(k){return radiusHas(D[k]);});if(!radii.length)return '';var lbl={'1':'1 mile','3':'3 miles','5':'5 miles'};var tabs='';radii.forEach(function(k,i){tabs+='<button class="dtab'+(i===0?' act':'')+'" onclick="demoTog('+k+',this)">'+lbl[k]+'</button>';});var panels='';radii.forEach(function(k,i){panels+='<div class="demopanel" data-mi="'+k+'"'+(i===0?'':' style="display:none"')+'><div class="dgrid">'+demoPanel(D[k])+'</div></div>';});return '<div class="dblock" id="sec-Demographics"><div class="bl">Demographics</div><div class="demotabs">'+tabs+'</div>'+panels+'</div>';}
+function demoSection(l){var D=demoData(l);var radii=['1','3','5'].filter(function(k){return radiusHas(D[k]);});if(!radii.length)return '';var lbl={'1':'1 mile','3':'3 miles','5':'5 miles'};var tabs='';radii.forEach(function(k,i){tabs+='<button class="dtab'+(i===0?' act':'')+'" onclick="demoTog('+k+',this)">'+lbl[k]+'</button>';});var panels='';radii.forEach(function(k,i){panels+='<div class="demopanel" data-mi="'+k+'"'+(i===0?'':' style="display:none"')+'><div class="dgrid">'+demoPanel(D[k])+'</div></div>';});return '<div class="dblock" id="sec-Demographics"><div class="demohdr"><div class="bl" style="margin:0">Demographics</div><button class="democsv" onclick="demoExportCSV()">Export to CSV</button></div><div class="demotabs">'+tabs+'</div>'+panels+'</div>';}
+function demoExportCSV(){if(!CUR)return;var D=demoData(CUR);var fields=[['pop','Population'],['popGrowth','Population Growth'],['popTrend','Population Trend'],['hh','Households'],['medInc','Median HH Income'],['avgInc','Avg HH Income'],['inc2029','Income 2029 Est'],['incGrowth','Income Growth'],['incBr','Income Brackets'],['medAge','Median Age'],['age2029','Age 2029 Est'],['ageGrowth','Age Growth'],['ageBuckets','Age Buckets'],['emp','Employees'],['empCats','Employment Categories'],['occupied','Occupied'],['vacant','Vacant'],['renters','Renters'],['owners','Owners']];var radii=['1','3','5'].filter(function(k){return radiusHas(D[k]);});var rows=[['Metric'].concat(radii.map(function(k){return k+' mile';}))];fields.forEach(function(f){var row=[f[1]];var any=false;radii.forEach(function(k){var v=(D[k]&&D[k][f[0]])||'';if(v)any=true;row.push('"'+String(v).replace(/"/g,'""')+'"');});if(any)rows.push(row);});var csv=rows.map(function(r){return r.join(',');}).join('\\n');var blob=new Blob([csv],{type:'text/csv'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='demographics-'+((CUR.name||'property').replace(/[^a-z0-9]+/gi,'-').toLowerCase())+'.csv';document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(function(){URL.revokeObjectURL(url);},1000);}
 function demoTog(mi,btn){var w=btn.closest('#sec-Demographics');if(!w)return;var tb=w.querySelectorAll('.dtab'),i;for(i=0;i<tb.length;i++)tb[i].classList.remove('act');btn.classList.add('act');var ps=w.querySelectorAll('.demopanel');for(i=0;i<ps.length;i++){ps[i].style.display=(ps[i].getAttribute('data-mi')===String(mi))?'':'none';}}
 function dlPkg(){if(!CUR){return;}
   // Free Access: no form, no NDA — download straight away, but still log the download as a lead
