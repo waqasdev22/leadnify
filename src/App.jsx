@@ -10268,7 +10268,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
   // The email that receives the "someone downloaded the package" notification. Set here on
   // the dashboard (synced across devices); falls back to the signed-in account email. Only
   // THIS address is emailed on a download — the visitor never gets an email.
-  const [notifyEmail, setNotifyEmail] = usePersistentState('cre_notify_email', '')
+  const [notifyEmail, setNotifyEmail] = usePersistentState('cre_notify_email', '', true)
   const [notifyDraft, setNotifyDraft] = useState('')
   useEffect(() => { setNotifyDraft(notifyEmail || '') }, [notifyEmail])
   // The OWNER's explicitly-configured notification address (empty if never set). Only this
@@ -10464,7 +10464,12 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
           .map((u) => String(u.email).trim())
           .filter(Boolean)
       } catch { /* ignore */ }
-      const recipients = ownerEmails.length ? Array.from(new Set(ownerEmails)) : [fallbackEmail].filter(Boolean)
+      // The "Download notification email" field, when set, is AUTHORITATIVE — all lead/download
+      // notifications go to exactly that address (client wants one controllable inbox). Otherwise
+      // fall back to every Owner-role account, then the locked fallback.
+      const recipients = explicitNotifyEmail
+        ? [explicitNotifyEmail]
+        : (ownerEmails.length ? Array.from(new Set(ownerEmails)) : [fallbackEmail].filter(Boolean))
       if (!cancelled && recipients.length) putPublicHub('vaziamts', { ...hubData, ownerEmail: recipients[0], ownerEmails: recipients }).catch(() => {})
     })()
     return () => { cancelled = true }
@@ -10709,7 +10714,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
               <Mail className="h-4 w-4 text-brand" /> Download notification email
             </p>
             <p className="mt-1 text-xs text-slate-500">
-              Every new lead (an inquiry or a package download) notifies the team <span className="font-medium text-slate-600">Owner</span> by email only — never a Manager, Admin, or Member. This field is a fallback used only if the team has no Owner set.
+              Every new lead (an inquiry or a package download) is emailed here. <span className="font-medium text-slate-600">When this is set, all notifications go to exactly this address</span> — otherwise they go to the team Owner(s). Managers, Admins and Members never receive them. Shared across the team.
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <input
