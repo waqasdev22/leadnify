@@ -9106,17 +9106,8 @@ function pgCopy(txt){if(navigator.clipboard&&navigator.clipboard.writeText){navi
 function pgCopyFallback(txt){try{var ta=document.createElement('textarea');ta.value=txt;ta.style.cssText='position:fixed;opacity:0';document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);pgToast('Link copied');}catch(e){window.prompt('Copy this link:',txt);}}
 function pgShare(){var u=pgUrl();var t=(CUR&&CUR.name)||document.title;if(navigator.share){navigator.share({title:t,url:u}).catch(function(){});}else{pgCopy(u);}}
 function pgEmail(){var t=(CUR&&CUR.name)||'this property';var subj=encodeURIComponent(t);var body=encodeURIComponent('Check out this property: '+t+'\\n'+pgUrl());
-  // A small chooser so the Email button works for EVERYONE, even without a default mail app:
-  // Gmail / Outlook open in the browser; "Default mail app" uses mailto for those who have one.
-  var links=[['Gmail','https://mail.google.com/mail/?view=cm&fs=1&su='+subj+'&body='+body],['Outlook','https://outlook.office.com/mail/deeplink/compose?subject='+subj+'&body='+body],['Default mail app','mailto:?subject='+subj+'&body='+body]];
-  var ex=document.getElementById('emailMenu');if(ex){ex.remove();return;}
-  var m=document.createElement('div');m.id='emailMenu';m.style.cssText='position:fixed;inset:0;z-index:100000;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;padding:20px';
-  var box=document.createElement('div');box.style.cssText='background:#fff;border-radius:14px;padding:18px;width:100%;max-width:300px;box-shadow:0 20px 60px rgba(0,0,0,.3)';
-  var h=document.createElement('div');h.textContent='Email this property';h.style.cssText='font-size:16px;font-weight:800;color:#0f172a;margin-bottom:12px';box.appendChild(h);
-  links.forEach(function(l){var a=document.createElement('a');a.href=l[1];if(l[1].indexOf('mailto:')!==0)a.target='_blank';a.rel='noopener';a.textContent=l[0];a.style.cssText='display:block;padding:11px 14px;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:8px;text-decoration:none;color:#0f172a;font-weight:600';a.addEventListener('click',function(){setTimeout(function(){m.remove();},60);});box.appendChild(a);});
-  var c=document.createElement('button');c.type='button';c.textContent='Cancel';c.style.cssText='width:100%;padding:10px;border:0;background:#f1f5f9;border-radius:10px;font-weight:600;color:#475569;cursor:pointer';c.addEventListener('click',function(){m.remove();});box.appendChild(c);
-  m.appendChild(box);m.addEventListener('click',function(e){if(e.target===m)m.remove();});
-  document.body.appendChild(m);}
+  // Open Outlook web compose directly in a new tab (works in any browser, no mail app needed).
+  window.open('https://outlook.office.com/mail/deeplink/compose?subject='+subj+'&body='+body,'_blank','noopener');}
 function pgLink(){pgCopy(pgUrl());}
 function demoNum(v){var n=Number(String(v==null?'':v).replace(/[^0-9.\\-]/g,''));return isNaN(n)?0:n;}
 function demoList(v){return String(v==null?'':v).split(',').map(function(x){return x.trim();}).filter(function(x){return x!=='';});}
