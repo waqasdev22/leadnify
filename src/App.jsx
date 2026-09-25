@@ -304,6 +304,46 @@ const contactsToAgents = (contacts) => {
   }
 }
 
+// Curated starter list of Tenant/Brand names for the autocomplete. The list is stored per team
+// (shared) and grows automatically as users enter new brands. This is only the seed — the client
+// can paste a bigger list and it will merge with whatever the team has already added.
+const SEED_BRANDS = [
+  // QSR / Fast food
+  "McDonald's", 'Burger King', "Wendy's", 'Taco Bell', 'KFC', 'Subway', "Carl's Jr.", 'Jack in the Box',
+  'Chick-fil-A', "Raising Cane's", 'In-N-Out Burger', "Popeyes", 'Sonic Drive-In', "Del Taco", 'Whataburger',
+  "Dunkin'", 'Starbucks', 'Dutch Bros', 'Panera Bread', 'Chipotle', 'Panda Express', "Culver's", 'Five Guys',
+  "Jersey Mike's", 'Jimmy John’s', 'Firehouse Subs', 'Little Caesars', "Domino's", 'Pizza Hut', "Papa John's",
+  'Baskin-Robbins', 'Dairy Queen', "Krispy Kreme", "Auntie Anne's", 'Cinnabon', 'Tim Hortons', 'Wingstop',
+  // Casual / sit-down restaurants
+  'Chili’s', "Applebee's", 'Olive Garden', 'Texas Roadhouse', 'Outback Steakhouse', 'Red Lobster',
+  "Denny's", 'IHOP', "Cracker Barrel", 'The Cheesecake Factory', 'BJ’s Restaurant', 'Buffalo Wild Wings',
+  "P.F. Chang's", "Cheddar's", 'Red Robin', 'Waffle House',
+  // Banks / financial
+  'Chase Bank', 'Bank of America', 'Wells Fargo', 'U.S. Bank', 'PNC Bank', 'Citibank', 'Capital One',
+  'TD Bank', 'Truist', 'Regions Bank', 'Fifth Third Bank', 'KeyBank', 'Citizens Bank', 'Huntington Bank',
+  // Medical / dental / urgent care
+  'CVS Pharmacy', 'Walgreens', 'Rite Aid', 'Quest Diagnostics', 'LabCorp', 'DaVita Dialysis',
+  'Fresenius Kidney Care', 'Aspen Dental', 'Western Dental', 'MinuteClinic', 'CityMD', 'MedExpress',
+  'Concentra', 'American Family Care', 'NextCare Urgent Care', 'Kaiser Permanente', 'One Medical',
+  // Auto
+  'AutoZone', "O'Reilly Auto Parts", 'Advance Auto Parts', 'NAPA Auto Parts', 'Jiffy Lube', 'Valvoline',
+  'Take 5 Oil Change', 'Firestone', 'Discount Tire', "Mavis Tire", 'Caliber Collision', 'Meineke',
+  // Grocery / convenience / gas
+  'Walmart', 'Target', 'Costco', "Sam's Club", 'Kroger', 'Albertsons', 'Safeway', 'Publix', 'Whole Foods Market',
+  'Trader Joe’s', 'Aldi', 'Sprouts Farmers Market', '7-Eleven', 'Circle K', 'Wawa', 'QuikTrip', 'RaceTrac',
+  'Shell', 'Chevron', 'ExxonMobil', 'BP', '76', 'Costco Gas',
+  // Dollar / discount / retail
+  'Dollar General', 'Dollar Tree', 'Family Dollar', 'Five Below', 'Big Lots', 'Ross Dress for Less',
+  'TJ Maxx', 'Marshalls', 'Burlington', 'Best Buy', 'Home Depot', "Lowe's", 'Tractor Supply Co.',
+  'PetSmart', 'Petco', 'Ulta Beauty', 'Michaels', 'Hobby Lobby', 'Dick’s Sporting Goods',
+  // Fitness
+  'Planet Fitness', 'LA Fitness', 'Crunch Fitness', 'Anytime Fitness', 'Orangetheory Fitness', "Gold's Gym",
+  // Data center / industrial
+  'Equinix', 'Digital Realty', 'CyrusOne', 'CoreSite', 'Switch', 'Iron Mountain', 'Amazon', 'FedEx', 'UPS',
+]
+
+const normBrand = (s) => String(s || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '')
+
 const readLS = (k, initial) => {
   try {
     const saved = localStorage.getItem(k)
@@ -8672,6 +8712,9 @@ body.detail-open .detail{display:block}
 .facts .fh{background:#eef2fb;color:#334155;font-size:12px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;padding:11px 18px}
 .frow{display:flex;justify-content:space-between;gap:10px;padding:12px 18px;border-top:1px solid #eef2f7;font-size:14px}
 .facts .frow:first-of-type{border-top:0}
+.factgrid{column-count:2;column-gap:0;column-rule:1px solid #eef2f7}
+.factgrid .frow{break-inside:avoid}
+@media(max-width:640px){.factgrid{column-count:1;column-rule:0}}
 .frow .k{color:#64748b}.frow .v{color:#0f172a;font-weight:700;text-align:right}
 .dtext{font-size:14px;color:#475569;line-height:1.7}
 .bullets{list-style:none}
@@ -8816,7 +8859,7 @@ var __hsHtml=__hs.length?'<div class="dhstats">'+__hs.map(function(s){return '<d
 return '<div class="dhero"'+(ncov(l)?' style="background:linear-gradient(135deg,#1e293b,#0f172a)"':'')+'>'+(ncov(l)?'':'<img src="'+esc(l.image)+'" fetchpriority="high" decoding="async" loading="eager"/>')+'<div class="ov"></div><div class="dtop"><button class="dbtn" onclick="backToList()">&larr; Back to Listings</button><button class="dbtn" onclick="backToList()">&times;</button></div><div class="dhin"><span class="dbadge" style="background:'+bc+'">'+esc(l.saleType)+'</span><div class="dhtitle">'+esc(l.name)+'</div><div class="dhaddr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> '+esc(l.address)+'</div><div class="dhpl">Asking Price</div><div class="dhprice">'+(l.unpriced?'Contact for Price':fullPrice(l.price))+'</div>'+__hsHtml+'</div></div>'
 +'<div class="dtabs"><div class="dtabsin">'+[['Overview','Overview'],['Gallery','Gallery'],['Location','Location'],['About the Area','Area'],['Contact','Contact']].map(function(t){return '<a href="#sec-'+t[1]+'">'+t[0]+'</a>';}).join('')+'</div></div>'
 +'<div class="dwrap"><div class="dmain">'
-+'<div class="dblock dh0" id="sec-Overview"><div class="nm">'+esc(l.name)+'<span class="badge2" style="background:'+bc+'">'+esc(l.saleType)+'</span></div><div class="ad"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> '+esc(l.address)+'</div><div class="pr">'+(l.unpriced?'Contact for Price':fullPrice(l.price))+'</div><div class="facts"><div class="fh">Property Facts</div>'+((l.details&&l.details.length)?l.details:[['Price',(l.unpriced?'Contact for Price':fullPrice(l.price))],['Property Type',esc(l.type)||'&mdash;'],['Sale Type',esc(l.saleType)||'&mdash;']]).map(function(r){return frow(r[0],r[1]);}).join('')+'</div></div>'
++'<div class="dblock dh0" id="sec-Overview"><div class="nm">'+esc(l.name)+'<span class="badge2" style="background:'+bc+'">'+esc(l.saleType)+'</span></div><div class="ad"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> '+esc(l.address)+'</div><div class="pr">'+(l.unpriced?'Contact for Price':fullPrice(l.price))+'</div><div class="facts"><div class="fh">Property Facts</div><div class="factgrid">'+((l.details&&l.details.length)?l.details:[['Price',(l.unpriced?'Contact for Price':fullPrice(l.price))],['Property Type',esc(l.type)||'&mdash;'],['Sale Type',esc(l.saleType)||'&mdash;']]).map(function(r){return frow(r[0],r[1]);}).join('')+'</div></div></div>'
 +'<div class="dblock" id="sec-Description"><div class="bl">Description</div><p class="dtext">'+(l.description?esc(l.description):(esc(l.name)+' is a premier '+esc(l.type)+' investment opportunity located at '+esc(l.address)+'. This asset offers a corporate-guaranteed net lease with scheduled rental increases in a dense, high-traffic trade area.'))+'</p></div>'
 +((l.highlights&&l.highlights.length)?'<div class="dblock" id="sec-Highlights"><div class="bl">Investment Highlights</div><ul class="bullets">'+l.highlights.map(function(h){return '<li>'+esc(h)+'</li>';}).join('')+'</ul></div>':'')
 +'<div class="dblock" id="sec-Gallery"><div class="bl">Gallery</div><div class="gal">'+galInner+'</div></div>'
@@ -9079,6 +9122,9 @@ function dl(){getPkg(LISTING_ID,function(p1){if(p1){savePdf(p1);return;}getPkg(N
 export const toMicrositeItem = (l) => {
       const m = micrositeFields(l)
       const [lat, lng] = coordsFor(l)
+      // Full-dollar amounts (Price/NOI shown as $159,000 not $159K) and mm/dd/yyyy lease dates.
+      const fullUSD = (n) => '$' + (Number(n) || 0).toLocaleString('en-US')
+      const mdY = (s) => { const t = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return t ? `${t[2]}/${t[3]}/${t[1]}` : String(s || '') }
       return {
         id: l.id,
         // URL slug — a custom one if set, else auto-derived from the name, so every property has a
@@ -9119,12 +9165,12 @@ export const toMicrositeItem = (l) => {
         description: l.description || '',
         // Crexi-style property detail facts (only the ones that are filled in are shown).
         details: [
-          ['Price', l.price ? compactPrice(l.price) : ''],
+          ['Price', l.price ? fullUSD(l.price) : ''],
           ['Price / SF', l.pricePerSf ? '$' + l.pricePerSf : ''],
           ['Cap Rate', l.capRate ? l.capRate + '%' : ''],
           ['Pro-forma Cap Rate', l.proformaCap ? l.proformaCap + '%' : ''],
-          ['NOI', l.noi ? compactPrice(l.noi) : ''],
-          ['Pro-forma NOI', l.proformaNoi ? compactPrice(l.proformaNoi) : ''],
+          ['NOI', l.noi ? fullUSD(l.noi) : ''],
+          ['Pro-forma NOI', l.proformaNoi ? fullUSD(l.proformaNoi) : ''],
           ['Investment Type', l.investmentType || ''],
           ['Sale Condition', l.saleCondition || ''],
           ['Class', l.propertyClass || ''],
@@ -9140,8 +9186,8 @@ export const toMicrositeItem = (l) => {
           ['Tenant Credit', l.tenantCredit || ''],
           ['Lease Type', l.leaseTypeDetail || ''],
           ['Ground Lease', l.groundLease ? 'Yes' : ''],
-          ['Lease Commencement', l.leaseCommence || ''],
-          ['Lease Expiration', l.leaseExpiration || ''],
+          ['Lease Commencement', l.leaseCommence ? mdY(l.leaseCommence) : ''],
+          ['Lease Expiration', l.leaseExpiration ? mdY(l.leaseExpiration) : ''],
           ['Lease Term', l.leaseTerm ? (/[a-z]/i.test(String(l.leaseTerm)) ? String(l.leaseTerm) : l.leaseTerm + ' yrs') : ''],
           ['Remaining Term', l.remainingTerm ? (/[a-z]/i.test(String(l.remainingTerm)) ? String(l.remainingTerm) : l.remainingTerm + ' yrs') : ''],
           ['Lease Options', l.leaseOptions || ''],
@@ -9478,6 +9524,78 @@ function InlineLocationMap({ lat, lng, query, onPick }) {
   )
 }
 
+// Tenant / Brand field with autocomplete. Suggestions come from a team-shared brand directory that
+// grows as new brands are entered. On commit it detects a duplicate (same brand, different spelling)
+// and asks whether to combine with the existing entry — exactly as the client requested.
+function BrandInput({ value, onChange, inp, lbl }) {
+  const [brands, setBrands] = usePersistentState('brand_directory', SEED_BRANDS, true)
+  const [open, setOpen] = useState(false)
+  const [dup, setDup] = useState(null) // { typed, match }
+  const boxRef = useRef(null)
+  const list = Array.isArray(brands) && brands.length ? brands : SEED_BRANDS
+  const q = String(value || '').trim().toLowerCase()
+  const sugg = (q ? list.filter((b) => b.toLowerCase().includes(q)) : list).slice(0, 8)
+  const addBrand = (name) => {
+    const v = String(name || '').trim()
+    if (!v || list.some((b) => b === v)) return
+    setBrands([...list, v].sort((a, b) => a.localeCompare(b)))
+  }
+  const commit = () => {
+    const v = String(value || '').trim()
+    if (!v || list.some((b) => b === v)) return
+    const near = list.find((b) => normBrand(b) === normBrand(v))
+    if (near) { setDup({ typed: v, match: near }); return }
+    addBrand(v)
+  }
+  useEffect(() => {
+    const onDoc = (e) => { if (boxRef.current && !boxRef.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [])
+  return (
+    <div ref={boxRef} className="relative">
+      <label className={lbl}>Tenant / Brand</label>
+      <input
+        className={inp}
+        value={value}
+        onChange={(e) => { onChange(e.target.value); setOpen(true); setDup(null) }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setTimeout(commit, 150)}
+        placeholder="e.g. Starbucks"
+        autoComplete="off"
+      />
+      {open && sugg.length > 0 && (
+        <div className="absolute z-30 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+          {sugg.map((b) => (
+            <button
+              key={b}
+              type="button"
+              onMouseDown={(e) => { e.preventDefault(); onChange(b); setOpen(false); setDup(null) }}
+              className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-orange-50"
+            >{b}</button>
+          ))}
+          {q && !list.some((b) => normBrand(b) === normBrand(q)) && (
+            <button
+              type="button"
+              onMouseDown={(e) => { e.preventDefault(); addBrand(value); setOpen(false) }}
+              className="block w-full border-t border-slate-100 px-3 py-2 text-left text-sm font-semibold text-brand hover:bg-orange-50"
+            >{'+ Add “' + value + '” to brand list'}</button>
+          )}
+        </div>
+      )}
+      {dup && (
+        <div className="mt-1 rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
+          <p className="mb-1.5"><b>{dup.match}</b> already exists. Combine with it?</p>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => { onChange(dup.match); setDup(null) }} className="rounded bg-amber-600 px-2 py-1 font-semibold text-white">{'Use “' + dup.match + '”'}</button>
+            <button type="button" onClick={() => { addBrand(dup.typed); setDup(null) }} className="rounded border border-amber-300 bg-white px-2 py-1 font-semibold text-amber-700">Keep both</button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function NewDealModal({ onClose, onCreate, initial }) {
   const notify = useToast()
   const isEdit = !!initial
@@ -9618,7 +9736,7 @@ function NewDealModal({ onClose, onCreate, initial }) {
                     <div><label className={lbl}>Net rentable / Building Size (SF)</label><input className={inp} value={f.size} onChange={(e) => set('size', e.target.value)} placeholder="12,500 SF" /></div>
                     <div><label className={lbl}>Lot Size</label><input className={inp} value={f.lotSize} onChange={(e) => set('lotSize', e.target.value)} placeholder="1.2 acres" /></div>
                     <div><label className={lbl}>Zoning</label><input className={inp} value={f.zoning} onChange={(e) => set('zoning', e.target.value)} placeholder="e.g. C-2 Commercial" /></div>
-                    <div><label className={lbl}>Tenant / Brand</label><input className={inp} value={f.tenantBrand} onChange={(e) => set('tenantBrand', e.target.value)} placeholder="e.g. Starbucks" /></div>
+                    <BrandInput value={f.tenantBrand} onChange={(v) => set('tenantBrand', v)} inp={inp} lbl={lbl} />
                     <div><label className={lbl}>Property Sub-type</label><input className={inp} value={f.subtype} onChange={(e) => set('subtype', e.target.value)} placeholder="e.g. Single-Tenant Net Lease" /></div>
                     <div><label className={lbl}>Parking type</label><select className={inp} value={f.parkingType} onChange={(e) => set('parkingType', e.target.value)}><option value="">N/A</option><option>spaces</option><option>per key</option><option>per unit</option><option>per 1,000 sq ft</option></select></div>
                     <div><label className={lbl}>Number of parking spaces</label><input className={inp} value={f.parking} onChange={(e) => set('parking', e.target.value)} placeholder="45" /></div>
@@ -9941,7 +10059,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
         gate: 'Contact Required', size: '—', status: 'Active', image: '',
         featured: false, listed: d.listed !== false, access: 'Public', subheader: d.subheader || '',
         highlights: d.highlights || '', description: '', capRate: d.capRate || '', noi: d.noi || '',
-        pricePerSf: '', lotSize: '', yearBuilt: '', occupancy: '', tenants: '', tenancy: '',
+        pricePerSf: '', lotSize: '', yearBuilt: '', tenants: '', tenancy: '',
         leaseTypeDetail: d.leaseTypeDetail || '', subtype: '', zoning: '', parking: '', unpriced: false, expiration: '',
         saleCondition: '', propertyClass: '', yearsRenovated: '', numUnits: '', tenantBrand: d.name || '', parkingType: '',
         groundLease: false, tenantCredit: '', leaseCommence: d.leaseCommence || '', leaseExpiration: d.leaseExpiration || '',
