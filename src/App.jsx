@@ -8795,33 +8795,26 @@ body.detail-open .detail{display:block}
 .gal{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 .gal img{width:100%;height:180px;object-fit:cover;border-radius:8px;cursor:pointer;transition:opacity .15s}
 .gal img:hover{opacity:.9}
-.gslider{position:relative;width:100%;background:#0f172a;border-radius:10px;overflow:hidden}
-.gs-img{width:100%;height:460px;object-fit:cover;display:block;cursor:zoom-in}
-.gs-arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:2;background:#fff;color:#334155;border:0;width:46px;height:46px;border-radius:50%;font-size:26px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,.28);transition:background .15s,transform .1s}
-.gs-arrow:hover{background:#f1f5f9;transform:translateY(-50%) scale(1.06)}
-.gs-prev{left:16px}.gs-next{right:16px}
-.gs-count{position:absolute;bottom:12px;right:14px;background:rgba(15,23,42,.65);color:#fff;font-size:12px;padding:3px 10px;border-radius:20px}
-.gs-thumbs{display:flex;gap:8px;margin-top:10px;overflow-x:auto;padding-bottom:4px}
-.gs-thumbs img{width:90px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer;opacity:.55;border:2px solid transparent;flex-shrink:0;transition:opacity .15s}
-.gs-thumbs img:hover{opacity:.85}
-.gs-thumbs img.act{opacity:1;border-color:${primary}}
 .gs-empty{padding:60px;text-align:center;color:#94a3b8;font-size:14px;background:#f8fafc;border-radius:10px}
-@media(max-width:640px){.gs-img{height:280px}.gs-arrow{width:40px;height:40px;font-size:22px}}
-.lb{position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.94);display:none}
+.lb{position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.55);display:none;align-items:center;justify-content:center;padding:24px}
 .lb.on{display:flex}
-.lb-x{position:absolute;top:16px;right:20px;z-index:2;background:rgba(255,255,255,.12);color:#fff;border:0;width:40px;height:40px;border-radius:50%;font-size:26px;line-height:1;cursor:pointer}
-.lb-x:hover{background:rgba(255,255,255,.25)}
-.lb-strip{width:122px;flex-shrink:0;overflow-y:auto;padding:18px 10px;display:flex;flex-direction:column;gap:10px}
-.lb-strip img{width:100%;height:74px;object-fit:cover;border-radius:6px;cursor:pointer;opacity:.5;border:2px solid transparent;transition:opacity .15s}
-.lb-strip img:hover{opacity:.85}
-.lb-strip img.act{opacity:1;border-color:#fff}
-.lb-stage{flex:1;position:relative;display:flex;align-items:center;justify-content:center;padding:30px 70px}
-.lb-img{max-width:100%;max-height:90vh;object-fit:contain;border-radius:6px}
-.lb-arrow{position:absolute;top:50%;transform:translateY(-50%);background:#fff;color:#334155;border:0;width:52px;height:52px;border-radius:50%;font-size:30px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,.28);transition:background .15s,transform .1s}
+.lb-panel{background:#fff;border-radius:12px;width:min(1180px,96vw);height:min(880px,92vh);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.4)}
+.lb-head{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e2e8f0;padding:0 18px;flex-shrink:0}
+.lb-tab{color:#2563eb;font-weight:700;font-size:14px;border-bottom:2px solid #2563eb;padding:14px 4px 12px}
+.lb-x{background:none;border:0;color:#2563eb;font-size:26px;line-height:1;cursor:pointer;padding:6px 8px}
+.lb-x:hover{color:#1e40af}
+.lb-body{flex:1;display:flex;min-height:0}
+.lb-strip{width:244px;flex-shrink:0;overflow-y:auto;padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:10px;align-content:start;border-right:1px solid #eef2f7}
+.lb-strip img{width:100%;height:80px;object-fit:cover;border-radius:6px;cursor:pointer;border:2px solid transparent;transition:border-color .15s}
+.lb-strip img:hover{border-color:#cbd5e1}
+.lb-strip img.act{border-color:#2563eb}
+.lb-stage{flex:1;position:relative;display:flex;align-items:center;justify-content:center;padding:24px 76px;background:#fff}
+.lb-img{max-width:100%;max-height:100%;object-fit:contain;border-radius:4px;transition:opacity .28s ease}
+.lb-arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:2;background:#fff;color:#334155;border:0;width:46px;height:46px;border-radius:50%;font-size:26px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 12px rgba(0,0,0,.22);transition:background .15s,transform .1s}
 .lb-arrow:hover{background:#f1f5f9;transform:translateY(-50%) scale(1.06)}
-.lb-prev{left:24px}.lb-next{right:24px}
-.lb-count{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);color:#e2e8f0;font-size:13px;background:rgba(15,23,42,.6);padding:4px 12px;border-radius:20px}
-@media(max-width:640px){.lb-strip{display:none}.lb-stage{padding:20px 50px}.lb-arrow{width:40px;height:40px;font-size:24px}}
+.lb-prev{left:14px}.lb-next{right:14px}
+.lb-count{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);color:#475569;font-size:12px;background:#f1f5f9;padding:3px 12px;border-radius:20px}
+@media(max-width:640px){.lb-strip{display:none}.lb-stage{padding:18px 54px}.lb-arrow{width:40px;height:40px;font-size:22px}.lb-panel{height:88vh}}
 #dmap{height:340px;border-radius:12px;border:1px solid #e2e8f0;z-index:0}
 .dside{position:sticky;top:72px;display:flex;flex-direction:column;gap:18px}
 .card2{background:#fff;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.06)}
@@ -8876,7 +8869,7 @@ body.detail-open .detail{display:block}
 <div class="content ${VIEW}" id="content"><div id="map"></div><div id="cards"></div></div>
 <footer class="list-footer"><div class="line"></div><p>Powered by <b>Leadnify.io</b></p></footer>
 <div class="detail" id="detailView"></div>
-<div class="lb" id="lb" onclick="if(event.target===this)closeLB()"><button class="lb-x" onclick="closeLB()" aria-label="Close">&times;</button><div class="lb-strip" id="lbThumbs"></div><div class="lb-stage" onclick="if(event.target===this)closeLB()"><button class="lb-arrow lb-prev" onclick="lbGo(-1)" aria-label="Previous">&#8249;</button><img class="lb-img" id="lbMain" src="" alt="Property photo"/><button class="lb-arrow lb-next" onclick="lbGo(1)" aria-label="Next">&#8250;</button><div class="lb-count" id="lbCount"></div></div></div>
+<div class="lb" id="lb" onclick="if(event.target===this)closeLB()"><div class="lb-panel"><div class="lb-head"><span class="lb-tab">Photos</span><button class="lb-x" onclick="closeLB()" aria-label="Close">&times;</button></div><div class="lb-body"><div class="lb-strip" id="lbThumbs"></div><div class="lb-stage"><button class="lb-arrow lb-prev" onclick="lbGo(-1)" aria-label="Previous">&#8249;</button><img class="lb-img" id="lbMain" src="" alt="Property photo"/><button class="lb-arrow lb-next" onclick="lbGo(1)" aria-label="Next">&#8250;</button><div class="lb-count" id="lbCount"></div></div></div></div></div>
 <script>
 var CAPTURE_API=${JSON.stringify(import.meta.env.VITE_API_URL || 'http://localhost:4000/api')};
 var OWNER_UID=${JSON.stringify(ownerUid || '')};
@@ -8963,7 +8956,7 @@ return '<div class="dhero"'+(ncov(l)?' style="background:linear-gradient(135deg,
 +'<div class="dblock dh0" id="sec-Overview"><div class="nm">'+esc(l.name)+'<span class="badge2" style="background:'+bc+'">'+esc(l.saleType)+'</span></div><div class="ad"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> '+esc(l.address)+'</div><div class="pr">'+(l.unpriced?'Contact for Price':fullPrice(l.price))+'</div><div class="facts"><div class="fh">Property Facts</div><div class="factgrid">'+((l.details&&l.details.length)?l.details:[['Price',(l.unpriced?'Contact for Price':fullPrice(l.price))],['Property Type',esc(l.type)||'&mdash;'],['Sale Type',esc(l.saleType)||'&mdash;']]).map(function(r){return frow(r[0],r[1]);}).join('')+'</div></div></div>'
 +'<div class="dblock" id="sec-Description"><div class="bl">Description</div><p class="dtext">'+(l.description?esc(l.description):(esc(l.name)+' is a premier '+esc(l.type)+' investment opportunity located at '+esc(l.address)+'. This asset offers a corporate-guaranteed net lease with scheduled rental increases in a dense, high-traffic trade area.'))+'</p></div>'
 +((l.highlightsHtml)?'<div class="dblock" id="sec-Highlights"><div class="bl">Investment Highlights</div><div class="rhtml">'+l.highlightsHtml+'</div></div>':((l.highlights&&l.highlights.length)?'<div class="dblock" id="sec-Highlights"><div class="bl">Investment Highlights</div><ul class="bullets">'+l.highlights.map(function(h){return '<li>'+esc(h)+'</li>';}).join('')+'</ul></div>':''))
-+'<div class="dblock" id="sec-Gallery"><div class="bl">Gallery</div><div class="gslider" id="gslider"><button class="gs-arrow gs-prev" onclick="gsGo(-1)" aria-label="Previous">&#8249;</button><img class="gs-img" id="gsImg" src="" alt="Property photo" onclick="openLB(GSI)"/><button class="gs-arrow gs-next" onclick="gsGo(1)" aria-label="Next">&#8250;</button><div class="gs-count" id="gsCount"></div></div><div class="gs-thumbs" id="gsThumbs"></div></div>'
++'<div class="dblock" id="sec-Gallery"><div class="bl">Gallery</div><div class="gal" id="galGrid"></div></div>'
 +'<div class="dblock" id="sec-Location"><div class="bl">Location</div><div id="dmap"></div></div>'
 +areaHtml
 +'</div>'
@@ -9073,18 +9066,16 @@ function creUrl(id){var qs=new URLSearchParams(location.search);
   return base||'/';}
 var LBI=0,LBL=[],GAL=[],GSI=0;
 function galFor(l){return (ncov(l)?[]:[l.image]).concat((Array.isArray(l.gallery)?l.gallery:[]).filter(function(x){return x&&x!==l.image;})).filter(function(x){return x;});}
-function gsInit(imgs){GAL=(imgs||[]).filter(function(x){return x;});GSI=0;gsRender();}
-function gsRender(){var wrap=document.getElementById('gslider');if(!wrap)return;var img=document.getElementById('gsImg'),th=document.getElementById('gsThumbs'),cnt=document.getElementById('gsCount'),prev=wrap.querySelector('.gs-prev'),next=wrap.querySelector('.gs-next');if(!GAL.length){if(img)img.style.display='none';if(cnt)cnt.style.display='none';if(prev)prev.style.display='none';if(next)next.style.display='none';if(!wrap.querySelector('.gs-empty'))wrap.insertAdjacentHTML('beforeend','<div class="gs-empty">No photos available yet.</div>');if(th)th.innerHTML='';return;}var e=wrap.querySelector('.gs-empty');if(e)e.parentNode.removeChild(e);var multi=GAL.length>1;if(img){img.style.display='';img.src=GAL[GSI];}if(cnt){cnt.style.display='';cnt.textContent=(GSI+1)+' / '+GAL.length;}if(prev)prev.style.display=multi?'':'none';if(next)next.style.display=multi?'':'none';if(th){th.innerHTML=GAL.map(function(im,ix){return '<img src="'+im+'" class="'+(ix===GSI?'act':'')+'" onclick="gsSet('+ix+')"/>';}).join('');var a=th.querySelector('.act');if(a&&a.scrollIntoView)a.scrollIntoView({block:'nearest',inline:'nearest'});}}
-function gsGo(d){if(!GAL.length)return;GSI=(GSI+d+GAL.length)%GAL.length;gsRender();}
-function gsSet(i){GSI=i;gsRender();}
+function galSet(imgs){GAL=(imgs||[]).filter(function(x){return x;});renderGrid();}
+function renderGrid(){var g=document.getElementById('galGrid');if(!g)return;if(!GAL.length){g.innerHTML='<div class="gs-empty" style="grid-column:1/-1">No photos available yet.</div>';return;}g.innerHTML=GAL.map(function(im,ix){return '<img src="'+im+'" onclick="openLB('+ix+')"/>';}).join('');}
 function openLB(i){if(!GAL.length)return;LBL=GAL.slice();LBI=i||0;renderLB();document.getElementById('lb').classList.add('on');document.body.style.overflow='hidden';}
 function closeLB(){document.getElementById('lb').classList.remove('on');document.body.style.overflow='';}
 function lbGo(d){if(!LBL.length)return;LBI=(LBI+d+LBL.length)%LBL.length;renderLB();}
 function lbSet(i){LBI=i;renderLB();}
-function renderLB(){var m=document.getElementById('lbMain');if(m)m.src=LBL[LBI];var t=document.getElementById('lbThumbs');if(t){t.innerHTML=LBL.map(function(im,ix){return '<img src="'+im+'" class="'+(ix===LBI?'act':'')+'" onclick="lbSet('+ix+')"/>';}).join('');var a=t.querySelector('.act');if(a&&a.scrollIntoView)a.scrollIntoView({block:'nearest'});}var c=document.getElementById('lbCount');if(c)c.textContent=(LBI+1)+' / '+LBL.length;}
+function renderLB(){var m=document.getElementById('lbMain');if(m){m.style.opacity='0';m.onload=function(){m.style.opacity='1';};m.src=LBL[LBI];if(m.complete)m.style.opacity='1';}var t=document.getElementById('lbThumbs');if(t){t.innerHTML=LBL.map(function(im,ix){return '<img src="'+im+'" class="'+(ix===LBI?'act':'')+'" onclick="lbSet('+ix+')"/>';}).join('');var a=t.querySelector('.act');if(a&&a.scrollIntoView)a.scrollIntoView({block:'nearest'});}var c=document.getElementById('lbCount');if(c)c.textContent=(LBI+1)+' / '+LBL.length;}
 document.addEventListener('keydown',function(e){var lb=document.getElementById('lb');if(!lb||!lb.classList.contains('on'))return;if(e.key==='Escape')closeLB();else if(e.key==='ArrowLeft')lbGo(-1);else if(e.key==='ArrowRight')lbGo(1);});
-function loadGallery(l){fetch(RTDB+'/public/gallery/'+l.id+'.json').then(function(r){return r.json();}).then(function(g){if(!g||!Array.isArray(g.images)||!g.images.length)return;var imgs=(ncov(l)?[]:[l.image]).concat(g.images.filter(function(x){return x&&x!==l.image;})).filter(function(x){return x;});if(!imgs.length)return;gsInit(imgs);creHeight();}).catch(function(){});}
-function openDetail(id,skipUrl){var l=null,i;for(i=0;i<DATA.length;i++){if(DATA[i].id==id||(DATA[i].slug&&DATA[i].slug===String(id))){l=DATA[i];break;}}if(!l)return;CUR=l;trackHit('pageViews',{id:l.id});document.getElementById('detailView').innerHTML=detailHtml(l);document.body.classList.add('detail-open');window.scrollTo(0,0);renderDemo(1);initDetailMap(l);gsInit(galFor(l));loadGallery(l);creNav(l.id);creHeight();if(!skipUrl){var pv=l.slug||l.id;try{history.pushState({p:pv},'',creUrl(pv));}catch(e){}}}
+function loadGallery(l){fetch(RTDB+'/public/gallery/'+l.id+'.json').then(function(r){return r.json();}).then(function(g){if(!g||!Array.isArray(g.images)||!g.images.length)return;var imgs=(ncov(l)?[]:[l.image]).concat(g.images.filter(function(x){return x&&x!==l.image;})).filter(function(x){return x;});if(!imgs.length)return;galSet(imgs);creHeight();}).catch(function(){});}
+function openDetail(id,skipUrl){var l=null,i;for(i=0;i<DATA.length;i++){if(DATA[i].id==id||(DATA[i].slug&&DATA[i].slug===String(id))){l=DATA[i];break;}}if(!l)return;CUR=l;trackHit('pageViews',{id:l.id});document.getElementById('detailView').innerHTML=detailHtml(l);document.body.classList.add('detail-open');window.scrollTo(0,0);renderDemo(1);initDetailMap(l);galSet(galFor(l));loadGallery(l);creNav(l.id);creHeight();if(!skipUrl){var pv=l.slug||l.id;try{history.pushState({p:pv},'',creUrl(pv));}catch(e){}}}
 function backToList(skipUrl){document.body.classList.remove('detail-open');if(dmap&&dmap.remove){try{dmap.remove();}catch(e){}}dmap=null;window.scrollTo(0,0);creNav(null);creHeight();if(!skipUrl){try{history.pushState({},'',creUrl(null));}catch(e){}}}
 document.addEventListener('click',function(e){var a=e.target.closest?e.target.closest('.dtabs a'):null;if(a){var tb=a.parentElement.querySelectorAll('a'),i;for(i=0;i<tb.length;i++)tb[i].classList.remove('active');a.classList.add('active');}});
 /* --- Embed messaging: talk to the parent page when used as an <iframe> --- */
