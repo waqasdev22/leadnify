@@ -12981,7 +12981,7 @@ const CRM_TABS = [
   // "Today" removed per spec; Reports is now the main (default) view.
   { key: 'reports', label: 'Reports', icon: BarChart3 },
   { key: 'leads', label: 'Leads', icon: Inbox },
-  { key: 'pipelines', label: 'Pipeline', icon: TrendingUp },
+  // Pipeline tab removed per client request (not used).
   { key: 'contacts', label: 'Contacts', icon: Users },
   { key: 'scripts', label: 'Scripts', icon: ScrollText },
   { key: 'automations', label: 'Automations', icon: Zap },
@@ -13644,10 +13644,6 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
               <CrmAttentionCard icon={CheckSquare} label="Due today" count={dueToday.length} onViewAll={() => setTab('tasks')}>
                 <div className="space-y-1.5">{dueToday.map((t) => <div key={t.id} className="flex justify-between text-sm"><span className="truncate text-slate-700">{t.title}</span><span className="shrink-0 text-xs text-slate-400">{t.related}</span></div>)}</div>
               </CrmAttentionCard>
-              <CrmAttentionCard icon={Clock} label="Stale deals" count={0} onViewAll={() => setTab('pipelines')} />
-              <CrmAttentionCard icon={TrendingUp} label="Deals with no next action" count={noNextAction.length} accent onViewAll={() => setTab('pipelines')}>
-                <div className="space-y-1.5">{noNextAction.map((d) => <div key={d.id} className="flex justify-between text-sm"><span className="truncate text-slate-700">{d.company} — {d.title}</span><span className="shrink-0 text-xs font-semibold text-slate-400">{currency(d.value)}</span></div>)}</div>
-              </CrmAttentionCard>
               <CrmAttentionCard icon={UserPlus} label="New leads (7d)" count={newLeads7d.length} onViewAll={() => setTab('leads')}>
                 <div className="space-y-1.5">{newLeads7d.map((l) => <div key={l.id} className="flex justify-between text-sm"><span className="truncate text-slate-700">{l.name}</span><span className="shrink-0 text-xs text-slate-400">{l.company}</span></div>)}</div>
               </CrmAttentionCard>
@@ -13655,16 +13651,6 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
                 <div className="space-y-1.5">{inquiries.map((i) => <div key={i.id} className="flex justify-between text-sm"><span className="truncate text-slate-700">{i.name}</span><span className="shrink-0 text-xs text-slate-400">{i.property}</span></div>)}</div>
               </CrmAttentionCard>
               <CrmAttentionCard icon={KeyRound} label="Access expiring (7d)" count={0} onViewAll={() => onNavigate && onNavigate('listings')} />
-            </div>
-
-            {/* Pipeline summary */}
-            <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
-              <div className="flex flex-wrap gap-8">
-                <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Open deals</p><p className="text-lg font-extrabold text-slate-900">{openDeals.length}</p></div>
-                <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Pipeline value</p><p className="text-lg font-extrabold text-slate-900">{currency(pipelineValue)}</p></div>
-                <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Weighted</p><p className="text-lg font-extrabold text-slate-900">{currency(weighted)}</p></div>
-              </div>
-              <button onClick={() => setTab('pipelines')} className="inline-flex items-center gap-1 text-sm font-semibold text-brand hover:underline">Open pipeline →</button>
             </div>
 
             {/* Last 12 weeks */}
