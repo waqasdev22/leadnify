@@ -8839,6 +8839,29 @@ body.detail-open .detail{display:block}
 .lb-count{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);color:#475569;font-size:12px;background:#f1f5f9;padding:3px 12px;border-radius:20px}
 @media(max-width:640px){.lb-strip{display:none}.lb-stage{padding:18px 54px}.lb-arrow{width:40px;height:40px;font-size:22px}.lb-panel{height:88vh}}
 #dmap{height:340px;border-radius:12px;border:1px solid #e2e8f0;z-index:0}
+/* Core Leaflet layout (inlined so the map renders correctly even when the external Leaflet CSS
+   hasn't loaded — otherwise tiles render unpositioned and scatter across the page). */
+.leaflet-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-tile-container,.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-zoom-box,.leaflet-image-layer,.leaflet-layer{position:absolute;left:0;top:0}
+.leaflet-container{overflow:hidden;position:relative;background:#ddd;-webkit-tap-highlight-color:transparent;font:12px/1.5 sans-serif}
+.leaflet-container img{max-width:none!important}
+.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow{-webkit-user-select:none;-moz-user-select:none;user-select:none;-webkit-user-drag:none}
+.leaflet-tile{filter:inherit;visibility:hidden}
+.leaflet-tile-loaded{visibility:inherit}
+.leaflet-pane{z-index:400}
+.leaflet-tile-pane{z-index:200}
+.leaflet-overlay-pane{z-index:400}
+.leaflet-shadow-pane{z-index:500}
+.leaflet-marker-pane{z-index:600}
+.leaflet-popup-pane{z-index:700}
+.leaflet-map-pane canvas{z-index:100}.leaflet-map-pane svg{z-index:200}
+.leaflet-control-container{position:absolute;z-index:800}
+.leaflet-top,.leaflet-bottom{position:absolute;z-index:1000;pointer-events:none}
+.leaflet-top{top:0}.leaflet-bottom{bottom:0}.leaflet-left{left:0}.leaflet-right{right:0}
+.leaflet-control{position:relative;pointer-events:auto;float:left;clear:both;margin:10px}
+.leaflet-right .leaflet-control{float:right}
+.leaflet-control-zoom a{background:#fff;color:#333;display:block;width:26px;height:26px;line-height:26px;text-align:center;text-decoration:none;border:1px solid #ccc;font-size:18px;font-weight:700}
+.leaflet-bar{box-shadow:0 1px 5px rgba(0,0,0,.4);border-radius:4px;overflow:hidden}
+.leaflet-control-attribution{background:rgba(255,255,255,.7);padding:0 5px;font-size:11px;color:#333}
 .dside{position:sticky;top:72px;display:flex;flex-direction:column;gap:18px}
 .card2{background:#fff;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.06)}
 .c2h{background:#0f172a;color:#fff;font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;padding:13px 20px}
