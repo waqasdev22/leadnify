@@ -8889,7 +8889,7 @@ window.addEventListener('message',function(e){if(e.data&&e.data.type==='cre-init
 setTimeout(creHeight,700);
 window.addEventListener('popstate',function(){var pid=new URLSearchParams(location.search).get('p');if(!pid){var segs=pathSegs();if(segs.length){var last=segs[segs.length-1];if(isPropSlug(last))pid=last;}}if(pid)openDetail(pid,true);else backToList(true);});
 render();creHeight();
-trackHit('impr',{n:(DATA&&DATA.length)||0});
+trackHit('impr',{n:(DATA&&DATA.length)||0,ids:(DATA||[]).map(function(d){return d.id;})});
 (function(){var pid=new URLSearchParams(location.search).get('p')||${JSON.stringify(openSlug || '')};if(pid)openDetail(pid,true);})();
 </script></body></html>`
 }
@@ -11410,14 +11410,36 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
     notify('Contact added')
   }
 
-  const views = prospects.reduce((s, p) => s + p.views, 0)
-  const downloads = prospects.reduce((s, p) => s + p.downloads, 0)
-  const openOms = prospects.filter((p) => p.views > 0).length
-  const executedCa = prospects.filter((p) => /NDA/i.test(p.access)).length
-  // Marketing metrics (sourced from analytics once connected): Impressions ≥ Page Views ≥ Visitors.
-  const impressions = prospects.reduce((s, p) => s + (p.impressions || p.views || 0), 0)
-  const totalVisitors = prospects.length
-  const downloadedOm = downloads
+  // Live stats for THIS property: page views + impressions from the public hit log, visitors +
+  // downloads from its real leads — so the room's top tiles reflect actual activity, not demo data.
+  const propId = String((gateListing && gateListing.id) || room.listingId || room.id || '')
+  const [roomHits, setRoomHits] = useState({ pageViews: 0, impressions: 0 })
+  useEffect(() => {
+    let alive = true
+    const load = () => {
+      Promise.all([
+        dbGet(dbRef(db, 'public/hits/pageViews')).then((s) => s.val()).catch(() => null),
+        dbGet(dbRef(db, 'public/hits/impr')).then((s) => s.val()).catch(() => null),
+      ]).then(([pv, im]) => {
+        if (!alive) return
+        const pvArr = pv ? Object.values(pv) : []
+        const imArr = im ? Object.values(im) : []
+        const pvCount = pvArr.filter((h) => h && String(h.id) === propId).length
+        const imCount = imArr.filter((h) => h && Array.isArray(h.ids) && h.ids.map(String).includes(propId)).length
+        setRoomHits({ pageViews: pvCount, impressions: imCount })
+      }).catch(() => {})
+    }
+    load(); const iv = setInterval(load, 30000); return () => { alive = false; clearInterval(iv) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [propId])
+  const propLeads = (allLeads || []).filter((l) => (l.property || '') === room.name)
+  const views = roomHits.pageViews
+  const impressions = roomHits.impressions
+  const totalVisitors = new Set(propLeads.map((l) => (l.email || '').toLowerCase()).filter((e) => e && e !== '—')).size
+  const downloadedOm = propLeads.filter((l) => /download|package|\bom\b/i.test(`${l.source || ''} ${l.message || ''}`)).length
+  const downloads = downloadedOm
+  const openOms = downloadedOm
+  const executedCa = propLeads.filter((l) => l.type === 'NDA Signer' || /nda/i.test(l.source || '')).length
   // Preview / Copy link / Share all point to the public PROPERTY PAGE (Modern theme by default),
   // matching the property's listing URL — not the internal deal-room gate page.
   // With a custom slug the link is the clean leadnify.io/<slug>; otherwise the query deep-link.
