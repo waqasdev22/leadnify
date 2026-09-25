@@ -10529,7 +10529,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
         const usersSnap = await dbGet(dbRef(db, 'users'))
         const users = usersSnap.val() || {}
         ownerEmails = Object.values(users)
-          .filter((u) => u && u.role === 'Owner' && u.email)
+          .filter((u) => u && u.email && ['Owner', 'Admin', 'Manager'].includes(u.role))
           .map((u) => String(u.email).trim())
           .filter(Boolean)
       } catch { /* ignore */ }
@@ -10783,7 +10783,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
               <Mail className="h-4 w-4 text-brand" /> Download notification email
             </p>
             <p className="mt-1 text-xs text-slate-500">
-              Every new lead (an inquiry or a package download) is emailed here. <span className="font-medium text-slate-600">When this is set, all notifications go to exactly this address</span> — otherwise they go to the team Owner(s). Managers, Admins and Members never receive them. Shared across the team.
+              Every new lead (an inquiry or a package download) is emailed here. <span className="font-medium text-slate-600">When this is set, all notifications go to exactly this address</span> — otherwise they go to the team's Owners, Admins and Managers. Members never receive them. Shared across the team.
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <input
