@@ -9537,12 +9537,16 @@ function BrandInput({ value, onChange, inp, lbl }) {
   const sugg = (q ? list.filter((b) => b.toLowerCase().includes(q)) : list).slice(0, 8)
   const addBrand = (name) => {
     const v = String(name || '').trim()
-    if (!v || list.some((b) => b === v)) return
+    // Skip empty, junk (no letters, e.g. "6"), or already-present entries.
+    if (!v || !/[a-zA-Z]/.test(v) || list.some((b) => b === v)) return
     setBrands([...list, v].sort((a, b) => a.localeCompare(b)))
+  }
+  const removeBrand = (name) => {
+    setBrands(list.filter((b) => b !== name))
   }
   const commit = () => {
     const v = String(value || '').trim()
-    if (!v || list.some((b) => b === v)) return
+    if (!v || !/[a-zA-Z]/.test(v) || list.some((b) => b === v)) return
     const near = list.find((b) => normBrand(b) === normBrand(v))
     if (near) { setDup({ typed: v, match: near }); return }
     addBrand(v)
@@ -9567,12 +9571,19 @@ function BrandInput({ value, onChange, inp, lbl }) {
       {open && sugg.length > 0 && (
         <div className="absolute z-30 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-slate-200 bg-white shadow-lg">
           {sugg.map((b) => (
-            <button
-              key={b}
-              type="button"
-              onMouseDown={(e) => { e.preventDefault(); onChange(b); setOpen(false); setDup(null) }}
-              className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-orange-50"
-            >{b}</button>
+            <div key={b} className="flex items-center hover:bg-orange-50">
+              <button
+                type="button"
+                onMouseDown={(e) => { e.preventDefault(); onChange(b); setOpen(false); setDup(null) }}
+                className="flex-1 px-3 py-2 text-left text-sm text-slate-700"
+              >{b}</button>
+              <button
+                type="button"
+                title="Remove from list"
+                onMouseDown={(e) => { e.preventDefault(); removeBrand(b) }}
+                className="px-2.5 py-2 text-base leading-none text-slate-300 hover:text-rose-500"
+              >×</button>
+            </div>
           ))}
           {q && !list.some((b) => normBrand(b) === normBrand(q)) && (
             <button
