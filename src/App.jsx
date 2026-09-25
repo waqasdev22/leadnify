@@ -10686,7 +10686,6 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
               <table className="w-full min-w-[1200px] text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-100 text-[11px] uppercase tracking-wide text-slate-400">
-                    <th className="py-2 pr-3 font-semibold">Deal ID</th>
                     <th className="py-2 pr-3 font-semibold">Property</th>
                     <th className="py-2 pr-3 font-semibold">City, State</th>
                     <th className="py-2 pr-3 font-semibold">Price</th>
@@ -10698,6 +10697,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                     <th className="py-2 pr-3 text-center font-semibold">Featured</th>
                     <th className="py-2 pr-3 text-center font-semibold">Listed</th>
                     <th className="py-2 pr-3 font-semibold">Access</th>
+                    <th className="py-2 pr-3 font-semibold">Deal ID</th>
                     <th className="py-2 pr-3 text-center font-semibold">Actions</th>
                   </tr>
                 </thead>
@@ -10707,7 +10707,6 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                     return (
                     <React.Fragment key={(l.id ?? 'row') + '-' + i}>
                     <tr className="hover:bg-slate-50">
-                      <td className="py-2.5 pr-3 font-mono text-xs font-semibold text-brand whitespace-nowrap">{l.dealId || '—'}</td>
                       <td className="py-2.5 pr-3">
                         <div className="flex items-center gap-2">
                           <button
@@ -10721,7 +10720,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                           <img src={displayImg(l.image)} onError={(e) => (e.currentTarget.src = FALLBACK_IMG)} alt="" className="h-8 w-10 rounded object-cover" />
                           <button
                             onClick={() => (onOpenDealRoom ? onOpenDealRoom(l) : (setEditing(l), setModalOpen(true)))}
-                            className="font-semibold text-slate-800 hover:text-brand"
+                            className="text-left font-semibold text-slate-800 hover:text-brand"
                             title="Open deal"
                           >
                             {l.name}
@@ -10815,6 +10814,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                           <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
                         </div>
                       </td>
+                      <td className="py-2.5 pr-3 font-mono text-xs text-slate-400 whitespace-nowrap">{l.dealId || '—'}</td>
                       <td className="py-2.5 pr-3">
                         <div className="flex items-center justify-center gap-1">
                           <IconButton icon={ExternalLink} label="Preview listing" onClick={() => {
