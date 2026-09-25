@@ -257,6 +257,17 @@ const nsKey = (key) => (DATA_NS ? `${DATA_NS}::${key}` : key)
 // Turn a property name into a URL slug — used so EVERY property gets a clean public URL
 // (leadnify.io/<hub>/<slug>) automatically, even when no custom slug was set by hand.
 const slugifyName = (s) => String(s || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60)
+// The team's agent roster — the ONLY people who can be added as Listing Agents. Selecting one
+// auto-fills name, RE license, email and phone. (Edit this list to add/remove agents.)
+const AGENT_DIRECTORY = [
+  { name: 'Neil Naran', license: '02025512', email: 'Neil@valuereis.com', phone: '(949) 332-2068' },
+  { name: 'Shala Brown', license: '02224658', email: 'Sbrown@valuereis.com', phone: '(949) 946-5790' },
+  { name: 'Shawn Behrouz', license: '02029898', email: 'Sbehrouz@valuereis.com', phone: '(949) 332-2503' },
+  { name: 'James Andrews', license: '02115272', email: 'James@valuereis.com', phone: '(949) 996-5774' },
+  { name: 'Dawn Taylor', license: '02167171', email: 'Dtaylor@valuereis.com', phone: '(909) 246-2387' },
+  { name: 'Jeff Robertson', license: '00882832', email: 'Jrobertson@valuereis.com', phone: '(949) 424-4033' },
+  { name: 'Brandon Ghilarducci', license: '02130424', email: 'Bghilarducci@valuereis.com', phone: '(949) 332-2526' },
+]
 // The first two Deal Contacts become the public Listing Agent(s) — map them to the listing's agent fields.
 const contactsToAgents = (contacts) => {
   const c0 = (contacts && contacts[0]) || {}
@@ -9646,20 +9657,29 @@ function NewDealModal({ onClose, onCreate, initial }) {
             {step === 6 && (
               <div className="space-y-4">
                 <div>
-                  <div className="mb-2 flex items-center justify-between"><label className={lbl + ' mb-0'}>Deal Contacts</label><button onClick={addContact} className="text-xs font-semibold text-brand hover:underline">+ Add contact</button></div>
-                  <p className="mb-2 text-xs text-slate-400">These show as the <b>Listing Agent(s)</b> on the public property page. The first two contacts appear on the listing.</p>
-                  {f.contacts.length === 0 && <p className="text-xs text-slate-400">No contacts yet — add the people on this deal.</p>}
-                  <div className="space-y-2">{f.contacts.map((c) => (
-                    <div key={c.id} className="rounded-lg border border-slate-200 p-2">
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        <input className={inp} placeholder="Name" value={c.name} onChange={(e) => setContact(c.id, 'name', e.target.value)} />
-                        <input className={inp} placeholder="License #" value={c.license || ''} onChange={(e) => setContact(c.id, 'license', e.target.value)} />
-                        <input className={inp} placeholder="Email" value={c.email} onChange={(e) => setContact(c.id, 'email', e.target.value)} />
-                        <input className={inp} placeholder="Phone" value={c.phone} onChange={(e) => setContact(c.id, 'phone', e.target.value)} />
+                  <label className={lbl + ' mb-0'}>Listing Agents</label>
+                  <p className="mb-2 mt-1 text-xs text-slate-400">Pick agents from your team roster — they show as the <b>Listing Agent(s)</b> on the property page (first two appear). Only agents on the roster can be added.</p>
+                  <div className="space-y-2">
+                    {f.contacts.map((c) => (
+                      <div key={c.id} className="flex items-start justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-slate-800">{c.name}{c.license ? <span className="font-normal text-slate-500"> · Lic# {c.license}</span> : null}</p>
+                          <p className="mt-0.5 text-xs text-slate-500">{[c.email, c.phone].filter(Boolean).join(' · ') || '—'}</p>
+                        </div>
+                        <button onClick={() => set('contacts', f.contacts.filter((x) => x.id !== c.id))} className="shrink-0 text-slate-400 hover:text-rose-500" title="Remove"><Trash2 className="h-4 w-4" /></button>
                       </div>
-                      <button onClick={() => set('contacts', f.contacts.filter((x) => x.id !== c.id))} className="mt-1 text-xs font-semibold text-rose-500 hover:underline">Remove</button>
-                    </div>
-                  ))}</div>
+                    ))}
+                    {f.contacts.length === 0 && <p className="text-xs text-slate-400">No agents added yet.</p>}
+                  </div>
+                  {(() => {
+                    const avail = AGENT_DIRECTORY.filter((a) => !f.contacts.some((c) => (c.email || '').toLowerCase() === a.email.toLowerCase() || (c.name || '').trim().toLowerCase() === a.name.toLowerCase()))
+                    return avail.length ? (
+                      <select className={inp + ' mt-2'} value="" onChange={(e) => { const a = AGENT_DIRECTORY.find((x) => x.email === e.target.value); if (a) set('contacts', [...f.contacts, { id: uid(), name: a.name, license: a.license, email: a.email, phone: a.phone }]) }}>
+                        <option value="">+ Add a listing agent…</option>
+                        {avail.map((a) => <option key={a.email} value={a.email}>{a.name} — {a.email}</option>)}
+                      </select>
+                    ) : <p className="mt-2 text-xs text-slate-400">All roster agents added.</p>
+                  })()}
                 </div>
                 <div>
                   <label className={lbl}>Broker of Record <span className="font-normal text-slate-400">— shown low-key on the property page</span></label>
@@ -11942,20 +11962,20 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
             {!canEditDealParties && (
               <p className="mt-3 border-t border-slate-100 pt-3 text-center text-xs text-slate-400">Only Manager, Admin or Owner can edit deal contacts.</p>
             )}
-            {/* Add contacts only from invited team members (no outsiders) */}
-            {canEditDealParties && dealContacts.length < 4 && (
-              availableMembers.length ? (
-                <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
-                  <select value={pickMember} onChange={(e) => setPickMember(e.target.value)} className="min-w-[180px] flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand">
-                    <option value="">Add an invited member…</option>
-                    {availableMembers.map((m) => <option key={m.id} value={m.id}>{m.name}{m.email ? ` — ${m.email}` : ''}</option>)}
+            {/* Add listing agents only from the team roster — auto-fills license, email & phone */}
+            {canEditDealParties && dealContacts.length < 4 && (() => {
+              const avail = AGENT_DIRECTORY.filter((a) => !dealContacts.some((c) => (c.email || '').toLowerCase() === a.email.toLowerCase() || (c.name || '').trim().toLowerCase() === a.name.toLowerCase()))
+              return avail.length ? (
+                <div className="mt-3 border-t border-slate-100 pt-3">
+                  <select value="" onChange={(e) => { const a = AGENT_DIRECTORY.find((x) => x.email === e.target.value); if (!a) return; const next = [...dealContacts, { id: uid(), name: a.name, company: '', email: a.email, phone: a.phone, license: a.license, member: true }]; setDealContacts(next); syncAgents(next); notify('Listing agent added') }} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand">
+                    <option value="">+ Add a listing agent…</option>
+                    {avail.map((a) => <option key={a.email} value={a.email}>{a.name} — {a.email}</option>)}
                   </select>
-                  <button onClick={() => { const m = availableMembers.find((x) => String(x.id) === String(pickMember)); if (!m) { notify('Choose a member', 'error'); return } const next = [...dealContacts, { id: uid(), name: m.name, company: m.company || '—', email: fixNel(m.email) || '', phone: m.phone || '—', license: m.license || '', member: true }]; setDealContacts(next); syncAgents(next); setPickMember(''); notify('Contact added') }} className="rounded-lg bg-brand px-3 py-2 text-xs font-bold text-white transition hover:bg-brand-hover">Add</button>
                 </div>
               ) : (
-                <p className="mt-3 border-t border-slate-100 pt-3 text-center text-xs text-slate-400">All invited members are already added. Invite more from <span className="font-semibold text-slate-500">Team &amp; Permissions</span>.</p>
+                <p className="mt-3 border-t border-slate-100 pt-3 text-center text-xs text-slate-400">All roster agents added. Edit the roster in code to add more.</p>
               )
-            )}
+            })()}
           </div>
 
           {/* Broker of Record (1 per listing, low-key / grey) */}
