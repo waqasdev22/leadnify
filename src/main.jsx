@@ -63,7 +63,8 @@ if (params.get('code') !== null && params.get('state') !== null && window.opener
       (params.get('c') ? '#' + params.get('c') : null) ||
       (saved && saved.primary) ||
       '#F97316'
-    const defaultView = params.get('v') || (saved && saved.defaultView) || 'mapgrid'
+    // Map + Grid is the default public view (client request); an explicit ?v= in the link still wins.
+    const defaultView = params.get('v') || 'mapgrid'
     let savedUid = ''
     try { savedUid = localStorage.getItem('crebuilder_owner_uid') || '' } catch { savedUid = '' }
     const ownerUid = (saved && saved.ownerUid) || savedUid || ''
