@@ -8645,7 +8645,7 @@ body.detail-open .detail{display:block}
 .dhero .ov{position:absolute;inset:0;background:linear-gradient(90deg,rgba(15,23,42,.9),rgba(15,23,42,.5) 62%,rgba(15,23,42,.32))}
 .dtop{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;padding:16px 22px;z-index:3}
 .dbtn{background:rgba(0,0,0,.35);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer}
-.dhin{position:absolute;left:0;right:0;bottom:30px;z-index:2;max-width:1160px;margin:0 auto;padding:0 40px}
+.dhin{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);z-index:2;max-width:1160px;margin:0 auto;padding:0 40px}
 .dbadge{display:inline-block;color:#fff;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:5px 12px;border-radius:6px}
 .dhtitle{font-family:${serif};font-size:44px;font-weight:800;line-height:1.05;margin:12px 0 8px}
 .dhaddr{display:flex;align-items:center;gap:7px;font-size:15px;opacity:.92}
@@ -8700,7 +8700,7 @@ body.detail-open .detail{display:block}
    height, shrink type, and tighten side padding so nothing is cut off or hidden behind the buttons. */
 @media(max-width:640px){
   .dhero{height:auto}
-  .dhin{position:relative;left:auto;right:auto;bottom:auto;padding:66px 16px 22px}
+  .dhin{position:relative;left:auto;right:auto;bottom:auto;top:auto;transform:none;padding:66px 16px 22px}
   .dhtitle{font-size:23px;line-height:1.15;margin:10px 0 6px}
   .dhaddr{font-size:13.5px}
   .dhpl{margin-top:12px}
