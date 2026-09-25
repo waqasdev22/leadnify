@@ -8547,7 +8547,9 @@ export function buildMicrositeHtml(items, brandColor, template = 'Modern', defau
   const primary = th.accent
   const bodyFont = th.font
   const hero = th.hero
-  const serif = "Georgia,'Times New Roman',serif"
+  // Headings/titles use a modern sans-serif (matches crebuilder), not a formal serif — just larger &
+  // bolder than the body. (Name kept as `serif` so the many references below don't need renaming.)
+  const serif = "Inter,system-ui,-apple-system,'Segoe UI',Arial,sans-serif"
   return `<!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8"/>
