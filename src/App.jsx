@@ -344,6 +344,69 @@ const SEED_BRANDS = [
 
 const normBrand = (s) => String(s || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '')
 
+// Rich-text (Investment Highlights) support. Only safe formatting tags survive; scripts, styles,
+// event handlers and unknown attributes are stripped. Content is broker-authored, but we sanitize
+// anyway before it is stored and echoed on the public microsite.
+const RICH_ALLOWED = { B: 1, STRONG: 1, I: 1, EM: 1, U: 1, UL: 1, OL: 1, LI: 1, P: 1, BR: 1, A: 1, SPAN: 1, DIV: 1 }
+const looksHtml = (s) => /<\/?(ul|ol|li|p|b|i|u|strong|em|br|a|span|div)\b/i.test(String(s || ''))
+function sanitizeRichHtml(html) {
+  const s = String(html || '')
+  if (!s.trim()) return ''
+  try {
+    const doc = new DOMParser().parseFromString('<div>' + s + '</div>', 'text/html')
+    const root = doc.body.firstChild
+    const walk = (node) => {
+      Array.prototype.slice.call(node.childNodes).forEach((child) => {
+        if (child.nodeType === 1) {
+          if (RICH_ALLOWED[child.tagName]) {
+            Array.prototype.slice.call(child.attributes).forEach((a) => {
+              const keep = child.tagName === 'A' && a.name === 'href' && /^(https?:|mailto:)/i.test(a.value)
+              if (!keep) child.removeAttribute(a.name)
+            })
+            if (child.tagName === 'A') { child.setAttribute('target', '_blank'); child.setAttribute('rel', 'noopener noreferrer') }
+            walk(child)
+          } else {
+            walk(child)
+            while (child.firstChild) node.insertBefore(child.firstChild, child)
+            node.removeChild(child)
+          }
+        } else if (child.nodeType === 8) {
+          node.removeChild(child)
+        }
+      })
+    }
+    walk(root)
+    return root.innerHTML.trim()
+  } catch {
+    return s.replace(/<[^>]*>/g, '')
+  }
+}
+// Turn a legacy "one per line" highlights string into a bullet list for the rich editor's initial value.
+const highlightsToHtml = (v) => {
+  const s = String(v || '')
+  if (looksHtml(s)) return sanitizeRichHtml(s)
+  const lines = s.split('\n').map((l) => l.trim()).filter(Boolean)
+  if (!lines.length) return ''
+  const esc = (t) => t.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))
+  return '<ul>' + lines.map((l) => '<li>' + esc(l) + '</li>').join('') + '</ul>'
+}
+// Plain-text bullet lines from a highlights value (HTML or legacy). Used by places that need text,
+// e.g. the email blast, so HTML tags never leak in as literal text.
+const highlightsToLines = (v) => {
+  const s = String(v || '')
+  if (looksHtml(s)) {
+    try {
+      const d = new DOMParser().parseFromString('<div>' + s + '</div>', 'text/html')
+      const lis = d.querySelectorAll('li')
+      if (lis.length) return Array.prototype.slice.call(lis).map((li) => li.textContent.trim()).filter(Boolean)
+      return (d.body.textContent || '').split('\n').map((t) => t.trim()).filter(Boolean)
+    } catch {
+      return s.replace(/<[^>]*>/g, '\n').split('\n').map((t) => t.trim()).filter(Boolean)
+    }
+  }
+  return s.split('\n').map((t) => t.trim()).filter(Boolean)
+}
+
 const readLS = (k, initial) => {
   try {
     const saved = localStorage.getItem(k)
@@ -8720,6 +8783,15 @@ body.detail-open .detail{display:block}
 .bullets{list-style:none}
 .bullets li{position:relative;padding-left:26px;margin-bottom:11px;font-size:14px;color:#475569;line-height:1.5}
 .bullets li:before{content:'\\2713';position:absolute;left:0;top:0;color:${primary};font-weight:800}
+.rhtml{font-size:14px;color:#475569;line-height:1.6}
+.rhtml ul{list-style:none;margin:0;padding:0}
+.rhtml ul li{position:relative;padding-left:26px;margin-bottom:11px}
+.rhtml ul li:before{content:'\\2713';position:absolute;left:0;top:0;color:${primary};font-weight:800}
+.rhtml ol{margin:0;padding-left:22px}
+.rhtml ol li{margin-bottom:11px}
+.rhtml p{margin:0 0 10px}
+.rhtml a{color:${primary};text-decoration:underline}
+.rhtml b,.rhtml strong{font-weight:700;color:#334155}
 .gal{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 .gal img{width:100%;height:180px;object-fit:cover;border-radius:8px}
 #dmap{height:340px;border-radius:12px;border:1px solid #e2e8f0;z-index:0}
@@ -8861,7 +8933,7 @@ return '<div class="dhero"'+(ncov(l)?' style="background:linear-gradient(135deg,
 +'<div class="dwrap"><div class="dmain">'
 +'<div class="dblock dh0" id="sec-Overview"><div class="nm">'+esc(l.name)+'<span class="badge2" style="background:'+bc+'">'+esc(l.saleType)+'</span></div><div class="ad"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> '+esc(l.address)+'</div><div class="pr">'+(l.unpriced?'Contact for Price':fullPrice(l.price))+'</div><div class="facts"><div class="fh">Property Facts</div><div class="factgrid">'+((l.details&&l.details.length)?l.details:[['Price',(l.unpriced?'Contact for Price':fullPrice(l.price))],['Property Type',esc(l.type)||'&mdash;'],['Sale Type',esc(l.saleType)||'&mdash;']]).map(function(r){return frow(r[0],r[1]);}).join('')+'</div></div></div>'
 +'<div class="dblock" id="sec-Description"><div class="bl">Description</div><p class="dtext">'+(l.description?esc(l.description):(esc(l.name)+' is a premier '+esc(l.type)+' investment opportunity located at '+esc(l.address)+'. This asset offers a corporate-guaranteed net lease with scheduled rental increases in a dense, high-traffic trade area.'))+'</p></div>'
-+((l.highlights&&l.highlights.length)?'<div class="dblock" id="sec-Highlights"><div class="bl">Investment Highlights</div><ul class="bullets">'+l.highlights.map(function(h){return '<li>'+esc(h)+'</li>';}).join('')+'</ul></div>':'')
++((l.highlightsHtml)?'<div class="dblock" id="sec-Highlights"><div class="bl">Investment Highlights</div><div class="rhtml">'+l.highlightsHtml+'</div></div>':((l.highlights&&l.highlights.length)?'<div class="dblock" id="sec-Highlights"><div class="bl">Investment Highlights</div><ul class="bullets">'+l.highlights.map(function(h){return '<li>'+esc(h)+'</li>';}).join('')+'</ul></div>':''))
 +'<div class="dblock" id="sec-Gallery"><div class="bl">Gallery</div><div class="gal">'+galInner+'</div></div>'
 +'<div class="dblock" id="sec-Location"><div class="bl">Location</div><div id="dmap"></div></div>'
 +areaHtml
@@ -9161,7 +9233,10 @@ export const toMicrositeItem = (l) => {
         subheader: l.subheader || '',
         areaText: l.areaText || '',
         unpriced: !!l.unpriced || !(Number(l.price) > 0),
-        highlights: (l.highlights || '').split('\n').map((h) => h.trim()).filter(Boolean),
+        highlights: highlightsToLines(l.highlights),
+        // Rich (bullets/bold/italic) version of the highlights when the editor produced HTML;
+        // falls back to the plain-line bullets above for legacy listings.
+        highlightsHtml: looksHtml(l.highlights) ? sanitizeRichHtml(l.highlights) : '',
         description: l.description || '',
         // Crexi-style property detail facts (only the ones that are filled in are shown).
         details: [
@@ -9607,6 +9682,52 @@ function BrandInput({ value, onChange, inp, lbl }) {
   )
 }
 
+// Lightweight rich-text editor (contentEditable) with a Crexi-style toolbar: bold, italic, underline,
+// link, numbered + bullet lists. Emits sanitized HTML. Used for Investment Highlights.
+function RichTextEditor({ value, onChange, lbl, label, hint, placeholder }) {
+  const ref = useRef(null)
+  const [focused, setFocused] = useState(false)
+  useEffect(() => {
+    if (!ref.current) return
+    const init = highlightsToHtml(value)
+    if (ref.current.innerHTML !== init) ref.current.innerHTML = init
+    // Initialise once on mount / when a different listing is opened.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  const emit = () => { if (ref.current) onChange(sanitizeRichHtml(ref.current.innerHTML)) }
+  const cmd = (c) => { document.execCommand(c, false, null); if (ref.current) ref.current.focus(); emit() }
+  const addLink = () => { const u = window.prompt('Link URL (https://…)'); if (u) { document.execCommand('createLink', false, u); emit() } }
+  const Btn = ({ onClick, title, children }) => (
+    <button type="button" title={title} onMouseDown={(e) => e.preventDefault()} onClick={onClick} className="min-w-[28px] rounded px-2 py-1 text-sm text-slate-600 hover:bg-slate-100">{children}</button>
+  )
+  return (
+    <div>
+      <label className={lbl}>{label}{hint ? <span className="font-normal text-slate-400"> — {hint}</span> : null}</label>
+      <div className={`rounded-lg border bg-white ${focused ? 'border-brand ring-2 ring-orange-200' : 'border-slate-300'}`}>
+        <div className="flex items-center gap-0.5 border-b border-slate-200 px-2 py-1">
+          <Btn onClick={() => cmd('bold')} title="Bold"><b>B</b></Btn>
+          <Btn onClick={() => cmd('italic')} title="Italic"><i>I</i></Btn>
+          <Btn onClick={() => cmd('underline')} title="Underline"><u>U</u></Btn>
+          <span className="mx-1 h-4 w-px bg-slate-200" />
+          <Btn onClick={addLink} title="Insert link">🔗</Btn>
+          <Btn onClick={() => cmd('insertOrderedList')} title="Numbered list">1.</Btn>
+          <Btn onClick={() => cmd('insertUnorderedList')} title="Bullet list">•</Btn>
+        </div>
+        <div
+          ref={ref}
+          contentEditable
+          suppressContentEditableWarning
+          onInput={emit}
+          onFocus={() => setFocused(true)}
+          onBlur={() => { setFocused(false); emit() }}
+          data-ph={placeholder || ''}
+          className="rte min-h-[130px] px-3 py-2 text-sm text-slate-800 focus:outline-none"
+        />
+      </div>
+    </div>
+  )
+}
+
 function NewDealModal({ onClose, onCreate, initial }) {
   const notify = useToast()
   const isEdit = !!initial
@@ -9722,7 +9843,7 @@ function NewDealModal({ onClose, onCreate, initial }) {
                   )}
                 </div>
                 <div><label className={lbl}>Listing Sub-header</label><input className={inp} value={f.subheader} onChange={(e) => set('subheader', e.target.value)} placeholder="e.g. Prime Net-Lease Retail Investment" /></div>
-                <div><label className={lbl}>Investment Highlights <span className="font-normal text-slate-400">— one per line</span></label><textarea rows={4} className={inp} value={f.highlights} onChange={(e) => set('highlights', e.target.value)} placeholder={'5.50% cap rate\nCorporate-guaranteed tenant\nPrime signalized hard-corner location\nScheduled rent increases'} /></div>
+                <RichTextEditor value={f.highlights} onChange={(v) => set('highlights', v)} lbl={lbl} label="Investment Highlights" hint="use the toolbar for bullets, bold or italic" placeholder="e.g. 5.50% cap rate, corporate-guaranteed tenant, prime hard-corner location…" />
                 <div><label className={lbl}>Marketing Description</label><textarea rows={4} className={inp} value={f.description} onChange={(e) => set('description', e.target.value)} placeholder="Describe the property, location and opportunity…" /></div>
                 <div><label className={lbl}>About the Area <span className="font-normal text-slate-400">— shown in its own section on the property page</span></label><textarea rows={4} className={inp} value={f.areaText} onChange={(e) => set('areaText', e.target.value)} placeholder="Describe the market, demographics, nearby demand drivers, access & major employers…" /></div>
                 <div>
@@ -9879,7 +10000,7 @@ function NewDealModal({ onClose, onCreate, initial }) {
                     <Row l="Cover image" v={f.cover ? 'Uploaded' : ''} />
                     <Row l="Gallery photos" v={f.photos.length || ''} />
                     <Row l="Listing sub-header" v={f.subheader} />
-                    <Row l="Investment Highlights" v={f.highlights ? <span className="whitespace-pre-line">{f.highlights}</span> : ''} />
+                    <Row l="Investment Highlights" v={f.highlights ? (looksHtml(f.highlights) ? <div className="rte-view" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(f.highlights) }} /> : <span className="whitespace-pre-line">{f.highlights}</span>) : ''} />
                     <Row l="Marketing Description" v={f.description} />
                     <Row l="About the Area" v={f.areaText} />
                   </Section>
