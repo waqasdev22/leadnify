@@ -8793,7 +8793,23 @@ body.detail-open .detail{display:block}
 .rhtml a{color:${primary};text-decoration:underline}
 .rhtml b,.rhtml strong{font-weight:700;color:#334155}
 .gal{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-.gal img{width:100%;height:180px;object-fit:cover;border-radius:8px}
+.gal img{width:100%;height:180px;object-fit:cover;border-radius:8px;cursor:pointer;transition:opacity .15s}
+.gal img:hover{opacity:.9}
+.lb{position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.94);display:none}
+.lb.on{display:flex}
+.lb-x{position:absolute;top:16px;right:20px;z-index:2;background:rgba(255,255,255,.12);color:#fff;border:0;width:40px;height:40px;border-radius:50%;font-size:26px;line-height:1;cursor:pointer}
+.lb-x:hover{background:rgba(255,255,255,.25)}
+.lb-strip{width:122px;flex-shrink:0;overflow-y:auto;padding:18px 10px;display:flex;flex-direction:column;gap:10px}
+.lb-strip img{width:100%;height:74px;object-fit:cover;border-radius:6px;cursor:pointer;opacity:.5;border:2px solid transparent;transition:opacity .15s}
+.lb-strip img:hover{opacity:.85}
+.lb-strip img.act{opacity:1;border-color:#fff}
+.lb-stage{flex:1;position:relative;display:flex;align-items:center;justify-content:center;padding:30px 70px}
+.lb-img{max-width:100%;max-height:90vh;object-fit:contain;border-radius:6px}
+.lb-arrow{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.14);color:#fff;border:0;width:48px;height:48px;border-radius:50%;font-size:30px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.lb-arrow:hover{background:rgba(255,255,255,.28)}
+.lb-prev{left:12px}.lb-next{right:12px}
+.lb-count{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);color:#e2e8f0;font-size:13px;background:rgba(15,23,42,.6);padding:4px 12px;border-radius:20px}
+@media(max-width:640px){.lb-strip{display:none}.lb-stage{padding:20px 50px}.lb-arrow{width:40px;height:40px;font-size:24px}}
 #dmap{height:340px;border-radius:12px;border:1px solid #e2e8f0;z-index:0}
 .dside{position:sticky;top:72px;display:flex;flex-direction:column;gap:18px}
 .card2{background:#fff;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.06)}
@@ -8848,6 +8864,7 @@ body.detail-open .detail{display:block}
 <div class="content ${VIEW}" id="content"><div id="map"></div><div id="cards"></div></div>
 <footer class="list-footer"><div class="line"></div><p>Powered by <b>Leadnify.io</b></p></footer>
 <div class="detail" id="detailView"></div>
+<div class="lb" id="lb" onclick="if(event.target===this)closeLB()"><button class="lb-x" onclick="closeLB()" aria-label="Close">&times;</button><div class="lb-strip" id="lbThumbs"></div><div class="lb-stage" onclick="if(event.target===this)closeLB()"><button class="lb-arrow lb-prev" onclick="lbGo(-1)" aria-label="Previous">&#8249;</button><img class="lb-img" id="lbMain" src="" alt="Property photo"/><button class="lb-arrow lb-next" onclick="lbGo(1)" aria-label="Next">&#8250;</button><div class="lb-count" id="lbCount"></div></div></div>
 <script>
 var CAPTURE_API=${JSON.stringify(import.meta.env.VITE_API_URL || 'http://localhost:4000/api')};
 var OWNER_UID=${JSON.stringify(ownerUid || '')};
@@ -8913,7 +8930,7 @@ var ag2=l.agent2Name?{name:l.agent2Name,role:l.agent2License?('Lic '+l.agent2Lic
 var ag2Html=ag2?('<div class="agent" style="margin-top:14px;padding-top:14px;border-top:1px solid #e2e8f0"><div class="av">'+ag2.initials+'</div><div><div class="nm">'+ag2.name+'</div><div class="rl">'+ag2.role+'</div></div></div>'+(ag2.email?'<a class="aemail" href="mailto:'+ag2.email+'">&#9993; '+ag2.email+'</a>':'')+(ag2.phone?'<a class="aemail" href="tel:'+String(ag2.phone).replace(/[^0-9+]/g,'')+'">&#9742; '+ag2.phone+'</a>':'')):'';
 var __g=(Array.isArray(l.gallery)?l.gallery:[]).filter(function(x){return x;});
 var __imgs=(ncov(l)?[]:[l.image]).concat(__g.filter(function(x){return x&&x!==l.image;})).filter(function(x){return x;});
-var galInner=__imgs.length?__imgs.map(function(im){return '<img src="'+esc(im)+'" style="width:100%;height:260px;object-fit:cover;border-radius:0;display:block"/>';}).join(''):'<div style="grid-column:1/-1;padding:44px;text-align:center;color:#94a3b8;font-size:14px">No photos available yet.</div>';
+var galInner=__imgs.length?__imgs.map(function(im,ix){return '<img src="'+esc(im)+'" onclick="openLB('+ix+')" style="width:100%;height:260px;object-fit:cover;border-radius:0;display:block"/>';}).join(''):'<div style="grid-column:1/-1;padding:44px;text-align:center;color:#94a3b8;font-size:14px">No photos available yet.</div>';
 var facts='<div class="facts"><div class="fh">Property Facts</div><div class="fg"><div>'+frow('Price',fullPrice(l.price))+frow('Lease Type','Ground Lease')+frow('Rent Increases','10% every 5 Years')+frow('Guarantor','Corporate')+'</div><div>'+frow('Tenant','Quick Quack Car Wash')+frow('Lease Term','20 Years')+frow('Renewal Options','Four (4), Five (5) Yr')+frow('Cap Rate','5.50%')+'</div></div></div>';
 var gallery='<div class="gal">'+galInner+'</div>';
 var desc='<p style="font-size:14px;color:#475569;line-height:1.6">'+esc(l.name)+' is a premier '+esc(l.type)+' investment opportunity located at '+esc(l.address)+'. This asset offers a corporate-guaranteed net lease with scheduled rental increases in a dense, high-traffic trade area, ideal for investors seeking stable passive income.</p>';
@@ -9042,7 +9059,15 @@ function creUrl(id){var qs=new URLSearchParams(location.search);
   else if(segs.length===1){base=isPropSlug(segs[0])?'':('/'+encodeURIComponent(segs[0]));}
   if(id!=null&&id!=='')return base+'/'+encodeURIComponent(id);
   return base||'/';}
-function loadGallery(l){fetch(RTDB+'/public/gallery/'+l.id+'.json').then(function(r){return r.json();}).then(function(g){if(!g||!Array.isArray(g.images)||!g.images.length)return;var gal=document.querySelector('#sec-Gallery .gal');if(!gal)return;var imgs=(ncov(l)?[]:[l.image]).concat(g.images.filter(function(x){return x&&x!==l.image;})).filter(function(x){return x;});if(!imgs.length)return;gal.innerHTML=imgs.map(function(im){return '<img src="'+im+'" style="width:100%;height:260px;object-fit:cover;border-radius:0;display:block"/>';}).join('');creHeight();}).catch(function(){});}
+var LBI=0,LBL=[];
+function galImgs(){return Array.prototype.slice.call(document.querySelectorAll('#sec-Gallery .gal img')).map(function(im){return im.getAttribute('src');});}
+function openLB(i){LBL=galImgs();if(!LBL.length)return;LBI=i||0;renderLB();document.getElementById('lb').classList.add('on');document.body.style.overflow='hidden';}
+function closeLB(){document.getElementById('lb').classList.remove('on');document.body.style.overflow='';}
+function lbGo(d){if(!LBL.length)return;LBI=(LBI+d+LBL.length)%LBL.length;renderLB();}
+function lbSet(i){LBI=i;renderLB();}
+function renderLB(){var m=document.getElementById('lbMain');if(m)m.src=LBL[LBI];var t=document.getElementById('lbThumbs');if(t){t.innerHTML=LBL.map(function(im,ix){return '<img src="'+im+'" class="'+(ix===LBI?'act':'')+'" onclick="lbSet('+ix+')"/>';}).join('');var a=t.querySelector('.act');if(a&&a.scrollIntoView)a.scrollIntoView({block:'nearest'});}var c=document.getElementById('lbCount');if(c)c.textContent=(LBI+1)+' / '+LBL.length;}
+document.addEventListener('keydown',function(e){var lb=document.getElementById('lb');if(!lb||!lb.classList.contains('on'))return;if(e.key==='Escape')closeLB();else if(e.key==='ArrowLeft')lbGo(-1);else if(e.key==='ArrowRight')lbGo(1);});
+function loadGallery(l){fetch(RTDB+'/public/gallery/'+l.id+'.json').then(function(r){return r.json();}).then(function(g){if(!g||!Array.isArray(g.images)||!g.images.length)return;var gal=document.querySelector('#sec-Gallery .gal');if(!gal)return;var imgs=(ncov(l)?[]:[l.image]).concat(g.images.filter(function(x){return x&&x!==l.image;})).filter(function(x){return x;});if(!imgs.length)return;gal.innerHTML=imgs.map(function(im,ix){return '<img src="'+im+'" onclick="openLB('+ix+')" style="width:100%;height:260px;object-fit:cover;border-radius:0;display:block"/>';}).join('');creHeight();}).catch(function(){});}
 function openDetail(id,skipUrl){var l=null,i;for(i=0;i<DATA.length;i++){if(DATA[i].id==id||(DATA[i].slug&&DATA[i].slug===String(id))){l=DATA[i];break;}}if(!l)return;CUR=l;trackHit('pageViews',{id:l.id});document.getElementById('detailView').innerHTML=detailHtml(l);document.body.classList.add('detail-open');window.scrollTo(0,0);renderDemo(1);initDetailMap(l);loadGallery(l);creNav(l.id);creHeight();if(!skipUrl){var pv=l.slug||l.id;try{history.pushState({p:pv},'',creUrl(pv));}catch(e){}}}
 function backToList(skipUrl){document.body.classList.remove('detail-open');if(dmap&&dmap.remove){try{dmap.remove();}catch(e){}}dmap=null;window.scrollTo(0,0);creNav(null);creHeight();if(!skipUrl){try{history.pushState({},'',creUrl(null));}catch(e){}}}
 document.addEventListener('click',function(e){var a=e.target.closest?e.target.closest('.dtabs a'):null;if(a){var tb=a.parentElement.querySelectorAll('a'),i;for(i=0;i<tb.length;i++)tb[i].classList.remove('active');a.classList.add('active');}});
