@@ -8784,11 +8784,11 @@ body.detail-open .detail{display:block}
 .bullets li{position:relative;padding-left:26px;margin-bottom:11px;font-size:14px;color:#475569;line-height:1.5}
 .bullets li:before{content:'\\2713';position:absolute;left:0;top:0;color:${primary};font-weight:800}
 .rhtml{font-size:14px;color:#475569;line-height:1.6}
-.rhtml ul{list-style:none;margin:0;padding:0}
-.rhtml ul li{position:relative;padding-left:26px;margin-bottom:11px}
-.rhtml ul li:before{content:'\\2713';position:absolute;left:0;top:0;color:${primary};font-weight:800}
-.rhtml ol{margin:0;padding-left:22px}
-.rhtml ol li{margin-bottom:11px}
+.rhtml ul{list-style:disc;margin:0;padding-left:22px}
+.rhtml ul li{margin-bottom:8px}
+.rhtml ol{list-style:decimal;margin:0;padding-left:22px}
+.rhtml ol li{margin-bottom:8px}
+.rhtml ul li::marker,.rhtml ol li::marker{color:${primary}}
 .rhtml p{margin:0 0 10px}
 .rhtml a{color:${primary};text-decoration:underline}
 .rhtml b,.rhtml strong{font-weight:700;color:#334155}
