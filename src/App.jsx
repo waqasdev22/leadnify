@@ -9105,7 +9105,9 @@ function pgToast(msg){var d=document.createElement('div');d.textContent=msg;d.st
 function pgCopy(txt){if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(function(){pgToast('Link copied');}).catch(function(){pgCopyFallback(txt);});}else{pgCopyFallback(txt);}}
 function pgCopyFallback(txt){try{var ta=document.createElement('textarea');ta.value=txt;ta.style.cssText='position:fixed;opacity:0';document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);pgToast('Link copied');}catch(e){window.prompt('Copy this link:',txt);}}
 function pgShare(){var u=pgUrl();var t=(CUR&&CUR.name)||document.title;if(navigator.share){navigator.share({title:t,url:u}).catch(function(){});}else{pgCopy(u);}}
-function pgEmail(){var t=(CUR&&CUR.name)||'this property';window.location.href='mailto:?subject='+encodeURIComponent(t)+'&body='+encodeURIComponent('Check out this property: '+pgUrl());}
+function pgEmail(){var t=(CUR&&CUR.name)||'this property';var mailto='mailto:?subject='+encodeURIComponent(t)+'&body='+encodeURIComponent('Check out this property: '+t+'\\n'+pgUrl());
+  // Anchor-click opens the user's default mail app more reliably than location.href.
+  try{var a=document.createElement('a');a.href=mailto;a.style.display='none';document.body.appendChild(a);a.click();document.body.removeChild(a);}catch(e){window.location.href=mailto;}}
 function pgLink(){pgCopy(pgUrl());}
 function demoNum(v){var n=Number(String(v==null?'':v).replace(/[^0-9.\\-]/g,''));return isNaN(n)?0:n;}
 function demoList(v){return String(v==null?'':v).split(',').map(function(x){return x.trim();}).filter(function(x){return x!=='';});}
