@@ -8,7 +8,7 @@
 // ============================================================================
 export const EMAILJS = {
   SERVICE_ID: 'service_mxlpm99',
-  TEMPLATE_ID: 'template_hm6h4df',
+  TEMPLATE_ID: 'template_5bnp7bu',
   PUBLIC_KEY: 'o9OR4rZqXtK2OLPtY',
 }
 

@@ -12100,6 +12100,12 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
     notify('File downloaded')
   }
   const openVisitor = () => {
+    // Save this exact property so its DETAIL page opens on the clean URL (even if it's a draft/
+    // unlisted deal or its slug doesn't match a published item). main.jsx merges this when the
+    // path slug matches.
+    try {
+      if (gateListing) { const item = toMicrositeItem(gateListing); item.slug = shareSlug; localStorage.setItem('cre_preview', JSON.stringify(item)) }
+    } catch { /* ignore */ }
     const w = window.open(visitorUrl, '_blank')
     if (!w) notify('Please allow pop-ups to preview', 'error')
     else notify('Visitor page opened in a new tab')
