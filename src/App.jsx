@@ -9046,22 +9046,27 @@ function emailOwners(subject,message){if(!EJS_ON||!OWNER_EMAILS||!OWNER_EMAILS.l
 // Branded HTML notification (matches the Leadnify.io look) sent to the Owner for every lead/download.
 // For this to render as a designed email, the EmailJS template body must be {{{message}}} (raw HTML).
 function ownerEmailHtml(o){o=o||{};var accent='${primary}';
-  var row=function(l,v){return v?('<tr><td style="padding:3px 12px 3px 0;color:#64748b;font-size:13px;vertical-align:top;white-space:nowrap">'+l+'</td><td style="padding:3px 0;color:#0f172a;font-size:13px;font-weight:600">'+v+'</td></tr>'):'';};
-  var mail=o.email?('<a href="mailto:'+esc(o.email)+'" style="color:'+accent+';text-decoration:none">'+esc(o.email)+'</a>'):'';
+  var row=function(l,v){return v?('<tr><td style="padding:5px 14px 5px 0;color:#64748b;font-size:13px;vertical-align:top;white-space:nowrap;font-weight:700">'+l+'</td><td style="padding:5px 0;color:#0f172a;font-size:13px">'+v+'</td></tr>'):'';};
+  var mail=o.email?('<a href="mailto:'+esc(o.email)+'" style="color:'+accent+';text-decoration:none;font-weight:600">'+esc(o.email)+'</a>'):'';
+  var tel=o.phone?('<a href="tel:'+String(o.phone).replace(/[^0-9+]/g,'')+'" style="color:#0f172a;text-decoration:none">'+esc(o.phone)+'</a>'):'';
   var h='';
-  h+='<div style="max-width:600px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:#0f172a">';
-  h+='<div style="background:'+accent+';padding:20px 24px;border-radius:10px 10px 0 0"><span style="color:#fff;font-size:22px;font-weight:800;letter-spacing:-.5px">Leadnify.io</span></div>';
-  h+='<div style="border:1px solid #e2e8f0;border-top:0;padding:24px 24px 26px">';
-  h+='<h2 style="margin:0 0 6px;font-size:20px;color:#0f172a">'+esc(o.title||'New Lead')+'</h2>';
-  h+='<p style="margin:0 0 16px;font-size:14px;color:#334155">'+esc(o.body||'You received a new lead through your Leadnify.io property page.')+'</p>';
-  h+='<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px 18px">';
-  h+='<p style="margin:0 0 6px;font-size:14px"><b style="color:#0f172a">From:</b> <span style="color:'+accent+';font-weight:700">'+esc(o.name||'A visitor')+'</span>'+(o.phone?(' &nbsp;|&nbsp; '+esc(o.phone)):'')+(mail?(' &nbsp;|&nbsp; '+mail):'')+'</p>';
-  h+='<table style="border-collapse:collapse;margin-top:2px">'+row('Property',esc(o.property||''))+row('Type',esc(o.type||''))+row('Source',esc(o.source||''))+'</table>';
-  if(o.message){h+='<p style="margin:12px 0 0;padding-top:12px;border-top:1px solid #e2e8f0;font-size:14px;color:#0f172a">'+esc(o.message)+'</p>';}
+  h+='<div style="max-width:600px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:#0f172a;background:#f4f5f7;padding:0 0 20px">';
+  // Branded header banner (logo/name)
+  h+='<div style="background:'+accent+';padding:22px 26px"><span style="color:#fff;font-size:24px;font-weight:800;letter-spacing:-.5px">Lead<span style="opacity:.85">nify</span>.io</span></div>';
+  h+='<div style="background:#fff;border:1px solid #e2e8f0;border-top:0;padding:26px 26px 28px">';
+  h+='<h1 style="margin:0 0 4px;font-size:24px;color:#0f172a">'+esc(o.title||'New Lead')+'</h1>';
+  h+='<p style="margin:0 0 18px;font-size:14px;color:#475569;line-height:1.5">'+esc(o.body||'You received a new lead through your Leadnify.io property page.')+'</p>';
+  // Lead detail card (LoopNet-style)
+  h+='<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:18px 20px">';
+  h+='<p style="margin:0 0 10px;font-size:15px"><b style="color:#0f172a">From:</b> <span style="color:'+accent+';font-weight:700">'+esc(o.name||'A visitor')+'</span>'+(tel?('<span style="color:#cbd5e1"> &nbsp;|&nbsp; </span>'+tel):'')+(mail?('<span style="color:#cbd5e1"> &nbsp;|&nbsp; </span>'+mail):'')+'</p>';
+  h+='<table style="border-collapse:collapse;width:100%">'+row('Property',esc(o.property||''))+row('Type',esc(o.type||''))+row('Source',esc(o.source||''))+'</table>';
+  if(o.message){h+='<div style="margin:14px 0 0;padding-top:14px;border-top:1px solid #e2e8f0;font-size:14px;color:#0f172a;line-height:1.55">'+esc(o.message)+'</div>';}
   h+='</div>';
-  h+='<p style="margin:16px 0 0;font-size:12px;color:#94a3b8">Reply directly to the buyer at the email above. This notification was sent by your Leadnify.io listings site.</p>';
+  // Reply CTA
+  if(o.email){h+='<div style="margin-top:20px"><a href="mailto:'+esc(o.email)+'" style="display:inline-block;background:'+accent+';color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:11px 22px;border-radius:8px">Reply to '+esc(o.name||'lead')+'</a></div>';}
+  h+='<p style="margin:18px 0 0;font-size:12px;color:#94a3b8;line-height:1.5">Reply directly to the buyer at the email above. This notification was sent automatically by your Leadnify.io listings site.</p>';
   h+='</div>';
-  h+='<p style="text-align:center;font-size:11px;color:#cbd5e1;margin:12px 0">&copy; Leadnify.io &mdash; Commercial Real Estate Marketing</p></div>';
+  h+='<p style="text-align:center;font-size:11px;color:#94a3b8;margin:14px 0 0">&copy; Leadnify.io &mdash; Commercial Real Estate Marketing</p></div>';
   return h;}
 function sendDownloadNotice(prop){var info={};try{info=JSON.parse(localStorage.getItem('cre_enrolled_info')||'{}');}catch(e){}emailOwners('Marketing package downloaded'+(prop?' \\u2014 '+prop:''),ownerEmailHtml({title:'Marketing Package Downloaded',body:'A visitor just downloaded the marketing package from your Leadnify.io property page.',name:info.name,email:info.email,type:info.type||'Download',property:prop||'',source:'Package Download'}));}
 // Notify the owner by email for EVERY new lead (inquiry, registration, etc.) — not just downloads.
