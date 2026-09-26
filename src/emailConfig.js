@@ -7,9 +7,9 @@
 //  3) PUBLIC_KEY  → EmailJS → Account → Public Key (jaise "AbC123XyZ")
 // ============================================================================
 export const EMAILJS = {
-  SERVICE_ID: 'service_mxlpm99',
-  TEMPLATE_ID: 'template_5bnp7bu',
-  PUBLIC_KEY: 'o9OR4rZqXtK2OLPtY',
+  SERVICE_ID: 'service_1luots8',
+  TEMPLATE_ID: 'template_7pzaf2m',
+  PUBLIC_KEY: 'HgEuapWD8eUh-9XgV',
 }
 
 // Configured hai ya nahi (placeholders abhi tak nahi badle) — code isi se check karta hai.
