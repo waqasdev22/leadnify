@@ -7,7 +7,7 @@
 //  3) PUBLIC_KEY  → EmailJS → Account → Public Key (jaise "AbC123XyZ")
 // ============================================================================
 export const EMAILJS = {
-  SERVICE_ID: 'service_aughubj',
+  SERVICE_ID: 'service_mxlpm99',
   TEMPLATE_ID: 'template_hm6h4df',
   PUBLIC_KEY: 'o9OR4rZqXtK2OLPtY',
 }
