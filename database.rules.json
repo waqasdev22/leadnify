@@ -36,7 +36,7 @@
       },
       "dl_tokens": {
         "$token": {
-          ".read": true,
+          ".read": false,
           ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'Owner' || root.child('users').child(auth.uid).child('role').val() === 'Admin' || root.child('users').child(auth.uid).child('role').val() === 'Manager')"
         }
       },

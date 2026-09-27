@@ -9124,16 +9124,6 @@ function checkApproval(cb){var em='';try{em=localStorage.getItem('cre_signer_ema
 function showNdaApproval(){var ov=document.createElement('div');ov.id='enrollOv';ov.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.6);display:flex;align-items:center;justify-content:center;z-index:99999;padding:20px';ov.innerHTML='<div id="enCard" style="background:#fff;border-radius:16px;max-width:520px;width:100%;max-height:90vh;overflow-y:auto;padding:26px;box-shadow:0 20px 60px rgba(0,0,0,.3)"></div>';document.body.appendChild(ov);document.getElementById('enCard').innerHTML=ndaApprovalForm();}
 function ndaApprovalForm(){var pn=(CUR&&CUR.name)||'this property';var CBL='display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:#475569;margin-bottom:10px;cursor:pointer;line-height:1.35';return '<div style="font-size:20px;font-weight:800;color:#0f172a">Confidentiality Agreement</div><div style="font-size:14px;color:#64748b;margin:6px 0 16px">Sign to request access to the full package for '+esc(pn)+'. The listing owner will review and approve your request.</div><form onsubmit="return submitNdaApproval(event)"><div style="display:flex;gap:10px"><input id="enFirst" required placeholder="First Name *" style="'+ENIS+'"><input id="enLast" required placeholder="Last Name *" style="'+ENIS+'"></div><select id="enType" required style="'+ENIS+'background:#fff;color:#334155"><option value="" disabled selected>Profile Type (Broker or Principal) *</option><option value="Broker">Broker</option><option value="Principal">Principal</option></select><input id="enCompany" placeholder="Company (optional)" style="'+ENIS+'"><input id="enEmail" type="email" required placeholder="Email *" style="'+ENIS+'"><input id="enPhone" required placeholder="Mobile Phone *" style="'+ENIS+'">'+enAddrHtml()+'<div style="max-height:120px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:10px;padding:12px;font-size:12px;color:#64748b;line-height:1.5;margin-bottom:10px">This Confidentiality Agreement governs access to the marketing package for '+esc(pn)+'. By signing, you agree to keep all materials strictly confidential, use them solely to evaluate this opportunity, and not to disclose or reproduce them without the listing broker&#39;s written consent. Access is granted after the owner approves your request.</div><input id="ndaSig" required placeholder="Type your full name to sign *" style="'+ENIS+'">'+enConsentHtml()+'<div style="display:flex;gap:10px;margin-top:6px"><button type="button" onclick="closeEnroll()" style="flex:1;border:1px solid #e2e8f0;background:#fff;border-radius:10px;padding:12px;font-weight:700;color:#475569;cursor:pointer">Cancel</button><button type="submit" style="flex:2;border:0;background:'+PRIMARY+';border-radius:10px;padding:12px;font-weight:700;color:#fff;cursor:pointer">Sign &amp; Request Access</button></div></form>';}
 function submitNdaApproval(e){e.preventDefault();var first=enVal('enFirst'),last=enVal('enLast'),name=(first+' '+last).trim();var type=enVal('enType'),company=enVal('enCompany'),email=enVal('enEmail'),phone=enVal('enPhone'),sig=enVal('ndaSig');var a1=enVal('enAddr1'),a2=enVal('enAddr2'),city=enVal('enCity'),state=enVal('enState'),hs=enVal('enSource');var addr=[a1,a2].filter(Boolean).join(', ');var pn=(CUR&&CUR.name)||'';var lead={name:name,firstName:first,lastName:last,profile:type,type:'NDA Signer',status:'Pending',company:company,email:email,phone:phone,address:addr,addr1:a1,addr2:a2,city:city,state:state,hearSource:hs,message:'Signed the NDA (approval required). Signature: '+sig,property:pn,source:'NDA - Approval Required',signed:true,approval:'pending',ts:Date.now()};sendApprovalNotice(lead);postLead(lead);if(OWNER_UID){fetch(RTDB+'/public/approvals/'+OWNER_UID+'/'+ekey(email)+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'pending',name:name,email:email,phone:phone,company:company,profile:type,property:pn,ts:Date.now()})}).catch(function(){});}try{localStorage.setItem('cre_enrolled','1');localStorage.setItem('cre_signer_email',email);localStorage.setItem('cre_enrolled_info',JSON.stringify({name:name,email:email,type:type}));}catch(e2){}var card=document.getElementById('enCard');if(card){card.innerHTML='<div style="text-align:center;padding:10px"><div style="font-size:44px">&#9203;</div><div style="font-size:20px;font-weight:800;color:#0f172a;margin-top:8px">Request submitted</div><div style="font-size:14px;color:#64748b;margin:10px 0 18px">Thanks '+esc(name)+'. Your NDA is signed and your access request has been sent to the listing owner. Once approved, come back and click Download again to get the package.</div><button onclick="closeEnroll()" style="border:0;background:'+PRIMARY+';border-radius:10px;padding:12px 22px;font-weight:700;color:#fff;cursor:pointer">Got it</button></div>';}return false;}
-// ---- Approved-access download link (cross-device) ----------------------------
-// The owner's dashboard emails an approved visitor a link like
-// leadnify.io/property/<slug>?dl=<token>. The token maps (in public/dl_tokens) to
-// the approval record + package id. We verify the approval is still 'approved' and
-// then let the visitor download from ANY device/browser — no prior localStorage needed.
-function dlMsgBox(html){var ov=document.getElementById('enrollOv');if(ov)ov.remove();ov=document.createElement('div');ov.id='enrollOv';ov.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.6);display:flex;align-items:center;justify-content:center;z-index:99999;padding:20px';ov.innerHTML='<div style="background:#fff;border-radius:16px;max-width:440px;width:100%;padding:28px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3)">'+html+'</div>';document.body.appendChild(ov);}
-function dlTokenMsg(msg,ok){dlMsgBox('<div style="font-size:19px;font-weight:700;color:#0f172a;margin-bottom:2px">'+(ok?'Access approved':'Access unavailable')+'</div><div style="font-size:14px;color:#64748b;margin:10px 0 18px;line-height:1.5">'+esc(msg)+'</div><button onclick="closeEnroll()" style="border:0;background:'+PRIMARY+';border-radius:8px;padding:12px 22px;font-weight:600;color:#fff;cursor:pointer">Close</button>');}
-function dlDoToken(){var d=window.__DLT||{};var w=window.open('','_blank');fetchPkg(d.pkgId,function(p){if(p){openPkgBlob(w,p);dlTokenMsg('Your download has started.',true);}else{if(w)w.close();dlTokenMsg('The marketing package is not available for download yet. Please contact the listing broker.',false);}});}
-function dlTokenReady(d){window.__DLT=d;var prop=d.prop||'this property';dlMsgBox('<div style="font-size:20px;font-weight:700;color:#0f172a;margin-bottom:2px">Access approved</div><div style="font-size:14px;color:#64748b;margin:10px 0 20px;line-height:1.5">Your request for <b>'+esc(prop)+'</b> has been approved. Click below to download the marketing package.</div><button onclick="dlDoToken()" style="border:0;background:'+PRIMARY+';border-radius:8px;padding:13px 26px;font-weight:600;color:#fff;cursor:pointer;font-size:15px">Download Marketing Package</button>');}
-function dlTokenFlow(){var q=new URLSearchParams(location.search);var tk=q.get('dl');if(!tk)return;fetch(RTDB+'/public/dl_tokens/'+encodeURIComponent(tk)+'.json').then(function(r){return r.json();}).then(function(d){if(!d||!d.uid||!d.key){dlTokenMsg('This download link is invalid or has expired.',false);return;}fetch(RTDB+'/public/approvals/'+d.uid+'/'+encodeURIComponent(d.key)+'.json').then(function(r){return r.json();}).then(function(a){if(a&&a.status==='approved'){try{localStorage.setItem('cre_enrolled','1');if(a.email)localStorage.setItem('cre_signer_email',a.email);}catch(e){}dlTokenReady(d);}else if(a&&a.status==='revoked'){dlTokenMsg('Your access to this package was declined by the listing owner.',false);}else{dlTokenMsg('Your access request is still pending owner approval. You will be able to download here as soon as it is approved.',false);}}).catch(function(){dlTokenMsg('Could not verify your access right now. Please try again in a moment.',false);});}).catch(function(){dlTokenMsg('This download link is invalid or has expired.',false);});}
 function pgUrl(){return window.location.href;}
 function pgToast(msg){var d=document.createElement('div');d.textContent=msg;d.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;padding:10px 18px;border-radius:8px;font-size:14px;z-index:10000;box-shadow:0 6px 20px rgba(0,0,0,.3)';document.body.appendChild(d);setTimeout(function(){d.style.transition='opacity .3s';d.style.opacity='0';setTimeout(function(){if(d.parentNode)d.parentNode.removeChild(d);},300);},1600);}
 function pgCopy(txt){if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(function(){pgToast('Link copied');}).catch(function(){pgCopyFallback(txt);});}else{pgCopyFallback(txt);}}
@@ -9183,7 +9173,7 @@ function dlPkg(){if(!CUR){return;}
   // NDA - Auto Access: sign the NDA, then download immediately.
   if(CUR.gate==='NDA - Auto Access'){if(isEnrolled()){doDownloadPkg();}else{showNda();}return;}
   // NDA - Approval Required: sign, then only download once the owner has approved.
-  if(CUR.gate==='NDA - Approval Required'){if(isEnrolled()){checkApproval(function(st){if(st==='approved'){doDownloadPkg();}else if(st==='revoked'){alert('Your access request was declined by the listing owner.');}else{alert('Your access request is pending owner approval. Once approved, click Download Package again.');}});}else{showNdaApproval();}return;}
+  if(CUR.gate==='NDA - Approval Required'){if(isEnrolled()){checkApproval(function(st){if(st==='approved'){alert('Your access has been approved. A secure, one-time download link has been emailed to you \\u2014 please use that link to download the package. It is valid for 24 hours.');}else if(st==='revoked'){alert('Your access request was declined by the listing owner.');}else{alert('Your access request is pending owner approval. You will receive a secure download link by email once it is approved.');}});}else{showNdaApproval();}return;}
   // Contact Required (default): register (name/email/phone) first, then download.
   if(isEnrolled()){doDownloadPkg();}else{showEnroll();}}
 function submitInquiry(e){e.preventDefault();var f=e.target;var v={name:'',email:'',phone:'',msg:''};f.querySelectorAll('input,textarea').forEach(function(i){var p=(i.placeholder||'').toLowerCase();if(i.type==='email'||p.indexOf('email')>=0)v.email=i.value;else if(p.indexOf('phone')>=0)v.phone=i.value;else if(i.tagName==='TEXTAREA')v.msg=i.value;else if(p.indexOf('name')>=0)v.name=i.value;});
@@ -9250,7 +9240,6 @@ window.addEventListener('popstate',function(){var pid=new URLSearchParams(locati
 render();creHeight();
 trackHit('impr',{n:(DATA&&DATA.length)||0,ids:(DATA||[]).map(function(d){return d.id;})});
 (function(){var pid=new URLSearchParams(location.search).get('p')||${JSON.stringify(openSlug || '')};if(pid)openDetail(pid,true);})();
-dlTokenFlow();
 </script></body></html>`
 }
 
@@ -17547,7 +17536,7 @@ async function sendVisitorEmail(to, subject, message) {
   } catch { return false }
 }
 
-function AccessRequestsPage({ role = 'Member', listings = [] }) {
+function AccessRequestsPage({ role = 'Member', listings = [], dealRooms = [] }) {
   const notify = useToast()
   const canDecide = ['Owner', 'Admin', 'Manager'].includes(role)
   const [ownerUid, setOwnerUid] = useState('')
@@ -17607,9 +17596,9 @@ function AccessRequestsPage({ role = 'Member', listings = [] }) {
     return true
   })
 
-  // Match an approval's property name to a listing → gives us the package id + slug for the link.
+  const norm = (s) => String(s || '').trim().toLowerCase()
+  // Match an approval's property name to a listing → gives us the package id for its files.
   const findListing = (propName) => {
-    const norm = (s) => String(s || '').trim().toLowerCase()
     const p = norm(propName)
     if (!p) return null
     return (
@@ -17627,6 +17616,25 @@ function AccessRequestsPage({ role = 'Member', listings = [] }) {
       return 'tk' + Date.now().toString(36) + Math.random().toString(36).slice(2, 12)
     }
   }
+  // Gather every file behind this deal's gate (OM + confidential docs) so the one-time link
+  // delivers them all. Files live under the deal room / listing id; try each candidate id.
+  const gatherDealFiles = async (row) => {
+    const listing = findListing(row.property)
+    const pkgId = listing ? listing.id : ''
+    const room = (dealRooms || []).find((r) => pkgId && String(r.listingId) === String(pkgId)) ||
+      (dealRooms || []).find((r) => norm(r.name) === norm(row.property)) || null
+    const ids = Array.from(new Set([room && room.id, pkgId, room && room.listingId].filter(Boolean).map(String)))
+    const files = []
+    // OM/Flyer (published package by listing id)
+    if (pkgId) { try { const pkg = await getPublicPackage(pkgId); if (pkg && pkg.url) files.push({ name: pkg.name || 'Offering Memorandum.pdf', url: pkg.url }) } catch { /* ignore */ } }
+    for (const id of ids) {
+      try { const om = await getFile(`om_${id}`); if (om && om.url) files.push({ name: om.name || 'Offering Memorandum.pdf', url: om.url }) } catch { /* ignore */ }
+      try { const rf = await getFile(`roomfiles_${id}`); const list = (rf && rf.list) || []; list.forEach((f) => { if (f && f.url) files.push({ name: f.name || 'Document.pdf', url: f.url }) }) } catch { /* ignore */ }
+    }
+    // De-dupe by url.
+    const seen = {}
+    return files.filter((f) => { if (!f.url || seen[f.url]) return false; seen[f.url] = true; return true })
+  }
 
   const decide = async (row, status) => {
     if (!canDecide) { notify('Only Owners, Admins and Managers can decide requests', 'error'); return }
@@ -17634,23 +17642,28 @@ function AccessRequestsPage({ role = 'Member', listings = [] }) {
     setBusy(row.key)
     try {
       if (status === 'approved') {
-        // Mint a private capability token → maps to this approval + its package, so the emailed
-        // download link works on ANY device (no reliance on the visitor's browser storage).
-        const token = row.token || genToken()
-        const listing = findListing(row.property)
-        const pkgId = listing ? listing.id : ''
-        const slug = listing ? (listing.slug || slugifyName(listing.name)) : slugifyName(row.property)
-        await dbSet(dbRef(db, `public/dl_tokens/${token}`), { uid: ownerUid, key: row.key, pkgId, prop: row.property || '', ts: Date.now() })
+        // Mint a fresh single-use capability token that expires in 24h. The emailed link points to
+        // the secure Cloud Function (/d/<token>), which is the ONLY way these files are served —
+        // it enforces one-time use + expiry and streams the files, so the link can't be re-shared.
+        const token = genToken()
+        const files = await gatherDealFiles(row)
+        const expiresAt = Date.now() + 24 * 60 * 60 * 1000
+        await dbSet(dbRef(db, `public/dl_tokens/${token}`), { uid: ownerUid, key: row.key, prop: row.property || '', files, expiresAt, used: false, ts: Date.now() })
+        // Retire any previous link for this visitor so only the newest one works.
+        if (row.token && row.token !== token) { try { await dbRemove(dbRef(db, `public/dl_tokens/${row.token}`)) } catch { /* ignore */ } }
         await dbUpdate(dbRef(db, `public/approvals/${ownerUid}/${row.key}`), {
           status, decidedTs: Date.now(), decidedBy: (auth.currentUser && auth.currentUser.email) || '', token,
         })
-        // Email the visitor their private download link.
-        const link = `${window.location.origin}/property/${encodeURIComponent(slug)}?dl=${token}`
+        const link = `${window.location.origin}/d/${token}`
         let emailed = false
         if (row.email && row.email !== '—') {
-          emailed = await sendVisitorEmail(row.email, `Access approved — ${row.property || 'your requested package'}`, grantedEmailHtml({ name: row.name, prop: row.property, link }))
+          emailed = await sendVisitorEmail(row.email, `Access approved — ${row.property || 'your requested documents'}`, grantedEmailHtml({ name: row.name, prop: row.property, link }))
         }
-        notify(emailed ? `Approved — download link emailed to ${row.email}` : `Approved${row.email ? ' — but the email could not be sent (check EmailJS)' : ''}`, emailed || !row.email ? 'success' : 'error')
+        if (!files.length) {
+          notify('Approved, but no documents are attached to this deal yet — upload the OM / files, then approve again', 'error')
+        } else {
+          notify(emailed ? `Approved — a one-time (24h) download link was emailed to ${row.email}` : `Approved${row.email ? ' — but the email could not be sent (check EmailJS)' : ''}`, emailed || !row.email ? 'success' : 'error')
+        }
       } else {
         // Deny/revoke: flip status and kill the download link so the token can no longer be used.
         await dbUpdate(dbRef(db, `public/approvals/${ownerUid}/${row.key}`), {
@@ -18115,7 +18128,7 @@ export default function App() {
         return <DealRoomsPage dealRooms={dealRooms} setDealRooms={setDealRooms} listings={listings} setListings={setListings} onEditDocument={resumeDraft} openTarget={dealRoomTarget} onOpenHandled={() => setDealRoomTarget(null)} onExit={() => { setDealRoomTarget(null); navigate('listings') }} user={user} role={role} />
       case 'approvals':
         // NDA approval center — Owner/Admin/Manager only (matches the sidebar gating).
-        return ['Owner', 'Admin', 'Manager'].includes(role) ? <AccessRequestsPage role={role} listings={listings} /> : <NoAccessPage />
+        return ['Owner', 'Admin', 'Manager'].includes(role) ? <AccessRequestsPage role={role} listings={listings} dealRooms={dealRooms} /> : <NoAccessPage />
       case 'team':
         // Role-based (not override-based): Owner/Admin/Manager may open this page. A Manager can
         // only add members; changing roles/permissions is locked to Owner/Admin inside the page.
