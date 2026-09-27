@@ -11952,6 +11952,36 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
   const [openLeadId, setOpenLeadId] = useState(null)
   // Per-lead access gate for this room: Authorize (grant) or Revoke (block) — persisted per room.
   const [gateStatus, setGateStatus] = usePersistentState(`room_${room.id}_gate`, {})
+  // Live approval status (by lead email) from the SAME record the Access Requests page writes to,
+  // so a lead approved/denied there instantly reflects here (and the buttons lock accordingly).
+  const [approvalMap, setApprovalMap] = useState({})
+  useEffect(() => {
+    let alive = true
+    let unsub = null
+    ;(async () => {
+      let ownerUid = (auth.currentUser && auth.currentUser.uid) || ''
+      try { const saved = JSON.parse(localStorage.getItem('crebuilder_hub') || 'null'); if (saved && saved.ownerUid) ownerUid = saved.ownerUid } catch { /* ignore */ }
+      try { const r = await fetch('https://cre-dashboard-ba596-default-rtdb.firebaseio.com/public/hub/vaziamts.json'); const c = await r.json(); if (c && c.ownerUid) ownerUid = c.ownerUid } catch { /* ignore */ }
+      if (!alive || !ownerUid) return
+      unsub = onValue(dbRef(db, `public/approvals/${ownerUid}`), (snap) => {
+        const v = snap.val() || {}
+        const m = {}
+        Object.values(v).forEach((r) => { if (r && r.email) m[String(r.email).toLowerCase()] = r.status || '' })
+        setApprovalMap(m)
+      }, () => {})
+    })()
+    return () => { alive = false; if (unsub) unsub() }
+  }, [])
+  // Effective status for a lead: prefer the live approval record; fall back to the local per-room gate.
+  const leadGate = (l) => {
+    const em = l && l.email ? String(l.email).toLowerCase() : ''
+    const live = em && approvalMap[em]
+    if (live === 'approved') return 'approved'
+    if (live === 'revoked') return 'revoked'
+    if (gateStatus[l.id] === 'Authorized') return 'approved'
+    if (gateStatus[l.id] === 'Revoked') return 'revoked'
+    return ''
+  }
   const setGate = async (e, lead, val) => {
     e.stopPropagation()
     const leadId = lead && lead.id
@@ -12479,11 +12509,27 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
                       <td className="py-2.5 pr-3">{l.status === 'Unread' ? <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">Unread</span> : <span className="text-xs text-slate-500">{l.status}</span>}</td>
                       <td className="py-2.5 pr-3">
                         <div className="flex items-center justify-end gap-1.5">
-                          {gateStatus[l.id] && (
-                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${gateStatus[l.id] === 'Authorized' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>{gateStatus[l.id]}</span>
-                          )}
-                          <button onClick={(e) => setGate(e, l, 'Authorized')} className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100">Authorize</button>
-                          <button onClick={(e) => setGate(e, l, 'Revoked')} className="rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700 transition hover:bg-rose-100">Revoke</button>
+                          {(() => {
+                            const g = leadGate(l)
+                            return (
+                              <>
+                                {g === 'approved' ? (
+                                  <span className="inline-flex cursor-default items-center gap-1 rounded-md border border-emerald-200 bg-emerald-100 px-2 py-1 text-xs font-bold text-emerald-700" title="Already approved">
+                                    <Check className="h-3.5 w-3.5" /> Authorized
+                                  </span>
+                                ) : (
+                                  <button onClick={(e) => setGate(e, l, 'Authorized')} className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100">Authorize</button>
+                                )}
+                                {g === 'revoked' ? (
+                                  <span className="inline-flex cursor-default items-center gap-1 rounded-md border border-rose-200 bg-rose-100 px-2 py-1 text-xs font-bold text-rose-700" title="Access revoked">
+                                    <Ban className="h-3.5 w-3.5" /> Revoked
+                                  </span>
+                                ) : (
+                                  <button onClick={(e) => setGate(e, l, 'Revoked')} className="rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700 transition hover:bg-rose-100">Revoke</button>
+                                )}
+                              </>
+                            )
+                          })()}
                         </div>
                       </td>
                     </tr>
