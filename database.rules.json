@@ -30,7 +30,7 @@
           ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'Owner' || root.child('users').child(auth.uid).child('role').val() === 'Admin' || root.child('users').child(auth.uid).child('role').val() === 'Manager')",
           "$req": {
             ".read": true,
-            ".write": "(auth != null && (root.child('users').child(auth.uid).child('role').val() === 'Owner' || root.child('users').child(auth.uid).child('role').val() === 'Admin' || root.child('users').child(auth.uid).child('role').val() === 'Manager')) || (newData.child('status').val() === 'pending' && (!data.exists() || data.child('status').val() === 'pending'))"
+            ".write": "(auth != null && (root.child('users').child(auth.uid).child('role').val() === 'Owner' || root.child('users').child(auth.uid).child('role').val() === 'Admin' || root.child('users').child(auth.uid).child('role').val() === 'Manager')) || newData.child('status').val() === 'pending'"
           }
         }
       },
