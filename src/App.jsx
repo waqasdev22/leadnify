@@ -9130,9 +9130,9 @@ function submitNdaApproval(e){e.preventDefault();var first=enVal('enFirst'),last
 // the approval record + package id. We verify the approval is still 'approved' and
 // then let the visitor download from ANY device/browser — no prior localStorage needed.
 function dlMsgBox(html){var ov=document.getElementById('enrollOv');if(ov)ov.remove();ov=document.createElement('div');ov.id='enrollOv';ov.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.6);display:flex;align-items:center;justify-content:center;z-index:99999;padding:20px';ov.innerHTML='<div style="background:#fff;border-radius:16px;max-width:440px;width:100%;padding:28px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3)">'+html+'</div>';document.body.appendChild(ov);}
-function dlTokenMsg(msg,ok){dlMsgBox('<div style="font-size:44px">'+(ok?'&#9989;':'&#9888;&#65039;')+'</div><div style="font-size:19px;font-weight:800;color:#0f172a;margin-top:8px">'+(ok?'Access approved':'Access unavailable')+'</div><div style="font-size:14px;color:#64748b;margin:10px 0 18px;line-height:1.5">'+esc(msg)+'</div><button onclick="closeEnroll()" style="border:0;background:'+PRIMARY+';border-radius:10px;padding:12px 22px;font-weight:700;color:#fff;cursor:pointer">Close</button>');}
-function dlDoToken(){var d=window.__DLT||{};var w=window.open('','_blank');fetchPkg(d.pkgId,function(p){if(p){openPkgBlob(w,p);dlTokenMsg('Your download has started. Thank you!',true);}else{if(w)w.close();dlTokenMsg('The marketing package is not available for download yet. Please contact the listing broker.',false);}});}
-function dlTokenReady(d){window.__DLT=d;var prop=d.prop||'this property';dlMsgBox('<div style="font-size:46px">&#9989;</div><div style="font-size:20px;font-weight:800;color:#0f172a;margin-top:8px">Access approved</div><div style="font-size:14px;color:#64748b;margin:8px 0 18px;line-height:1.5">Your request for <b>'+esc(prop)+'</b> has been approved by the listing owner. Click below to download the marketing package.</div><button onclick="dlDoToken()" style="border:0;background:'+PRIMARY+';border-radius:10px;padding:13px 26px;font-weight:800;color:#fff;cursor:pointer;font-size:15px">&#8681; Download Marketing Package</button>');}
+function dlTokenMsg(msg,ok){dlMsgBox('<div style="font-size:19px;font-weight:700;color:#0f172a;margin-bottom:2px">'+(ok?'Access approved':'Access unavailable')+'</div><div style="font-size:14px;color:#64748b;margin:10px 0 18px;line-height:1.5">'+esc(msg)+'</div><button onclick="closeEnroll()" style="border:0;background:'+PRIMARY+';border-radius:8px;padding:12px 22px;font-weight:600;color:#fff;cursor:pointer">Close</button>');}
+function dlDoToken(){var d=window.__DLT||{};var w=window.open('','_blank');fetchPkg(d.pkgId,function(p){if(p){openPkgBlob(w,p);dlTokenMsg('Your download has started.',true);}else{if(w)w.close();dlTokenMsg('The marketing package is not available for download yet. Please contact the listing broker.',false);}});}
+function dlTokenReady(d){window.__DLT=d;var prop=d.prop||'this property';dlMsgBox('<div style="font-size:20px;font-weight:700;color:#0f172a;margin-bottom:2px">Access approved</div><div style="font-size:14px;color:#64748b;margin:10px 0 20px;line-height:1.5">Your request for <b>'+esc(prop)+'</b> has been approved. Click below to download the marketing package.</div><button onclick="dlDoToken()" style="border:0;background:'+PRIMARY+';border-radius:8px;padding:13px 26px;font-weight:600;color:#fff;cursor:pointer;font-size:15px">Download Marketing Package</button>');}
 function dlTokenFlow(){var q=new URLSearchParams(location.search);var tk=q.get('dl');if(!tk)return;fetch(RTDB+'/public/dl_tokens/'+encodeURIComponent(tk)+'.json').then(function(r){return r.json();}).then(function(d){if(!d||!d.uid||!d.key){dlTokenMsg('This download link is invalid or has expired.',false);return;}fetch(RTDB+'/public/approvals/'+d.uid+'/'+encodeURIComponent(d.key)+'.json').then(function(r){return r.json();}).then(function(a){if(a&&a.status==='approved'){try{localStorage.setItem('cre_enrolled','1');if(a.email)localStorage.setItem('cre_signer_email',a.email);}catch(e){}dlTokenReady(d);}else if(a&&a.status==='revoked'){dlTokenMsg('Your access to this package was declined by the listing owner.',false);}else{dlTokenMsg('Your access request is still pending owner approval. You will be able to download here as soon as it is approved.',false);}}).catch(function(){dlTokenMsg('Could not verify your access right now. Please try again in a moment.',false);});}).catch(function(){dlTokenMsg('This download link is invalid or has expired.',false);});}
 function pgUrl(){return window.location.href;}
 function pgToast(msg){var d=document.createElement('div');d.textContent=msg;d.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;padding:10px 18px;border-radius:8px;font-size:14px;z-index:10000;box-shadow:0 6px 20px rgba(0,0,0,.3)';document.body.appendChild(d);setTimeout(function(){d.style.transition='opacity .3s';d.style.opacity='0';setTimeout(function(){if(d.parentNode)d.parentNode.removeChild(d);},300);},1600);}
@@ -17499,21 +17499,32 @@ function useApprovalsPending() {
   return count
 }
 
-// Branded "Access Approved" email sent to the visitor, carrying their private download link.
+// Professional "Access Approved" email sent to the visitor with their private download link.
+// Deliberately plain and corporate — no emojis, no marketing flourishes.
 function grantedEmailHtml({ name, prop, link }) {
-  const accent = '#F97316'
+  const ink = '#0f172a'
+  const line = '#e2e8f0'
   const e = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  const property = e(prop || 'the requested property')
   return (
-    '<div style="max-width:600px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:#0f172a;background:#f4f5f7;padding:0 0 20px">' +
-    '<div style="background:' + accent + ';padding:22px 26px"><span style="color:#fff;font-size:24px;font-weight:800;letter-spacing:-.5px">Lead<span style="opacity:.85">nify</span>.io</span></div>' +
-    '<div style="background:#fff;border:1px solid #e2e8f0;border-top:0;padding:28px 26px 30px">' +
-    '<h1 style="margin:0 0 6px;font-size:24px;color:#0f172a">Access approved &#9989;</h1>' +
-    '<p style="margin:0 0 16px;font-size:14px;color:#475569;line-height:1.55">Hi ' + e(name || 'there') + ', your request to access the marketing package for <b>' + e(prop || 'the property') + '</b> has been approved by the listing owner.</p>' +
-    '<div style="text-align:center;margin:22px 0 18px"><a href="' + e(link) + '" style="display:inline-block;background:' + accent + ';color:#fff;text-decoration:none;font-weight:800;font-size:15px;padding:14px 30px;border-radius:10px">&#8681; Download Marketing Package</a></div>' +
-    '<p style="margin:0 0 4px;font-size:12.5px;color:#94a3b8;line-height:1.5">This link is private to you. If the button does not work, copy and paste this address into your browser:</p>' +
-    '<p style="margin:0;font-size:12px;color:' + accent + ';word-break:break-all">' + e(link) + '</p>' +
+    '<div style="max-width:600px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:' + ink + ';background:#ffffff">' +
+    '<div style="border:1px solid ' + line + '">' +
+    '<div style="border-bottom:2px solid ' + ink + ';padding:20px 28px">' +
+    '<span style="font-size:20px;font-weight:700;color:' + ink + ';letter-spacing:.3px">Leadnify.io</span>' +
+    '<span style="display:block;font-size:10px;letter-spacing:2px;color:#94a3b8;margin-top:3px">COMMERCIAL REAL ESTATE</span>' +
     '</div>' +
-    '<p style="text-align:center;font-size:11px;color:#94a3b8;margin:14px 0 0">&copy; Leadnify.io &mdash; Commercial Real Estate Marketing</p></div>'
+    '<div style="padding:30px 28px">' +
+    '<p style="margin:0 0 18px;font-size:15px;color:' + ink + '">Dear ' + e(name || 'Sir or Madam') + ',</p>' +
+    '<p style="margin:0 0 16px;font-size:14px;color:#334155;line-height:1.6">Thank you for your interest in <strong>' + property + '</strong>. Your request to access the confidential marketing package has been reviewed and approved.</p>' +
+    '<p style="margin:0 0 22px;font-size:14px;color:#334155;line-height:1.6">You may now download the marketing package using the button below.</p>' +
+    '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 22px"><tr><td style="background:' + ink + ';border-radius:4px"><a href="' + e(link) + '" style="display:inline-block;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:13px 26px">Download Marketing Package</a></td></tr></table>' +
+    '<p style="margin:0 0 6px;font-size:12px;color:#64748b;line-height:1.5">If the button does not work, copy and paste this address into your browser:</p>' +
+    '<p style="margin:0 0 24px;font-size:12px;color:#1d4ed8;word-break:break-all">' + e(link) + '</p>' +
+    '<p style="margin:0 0 18px;font-size:12.5px;color:#64748b;line-height:1.6">This link is intended solely for your use. Please treat the enclosed materials as strictly confidential in accordance with the confidentiality agreement you signed.</p>' +
+    '<p style="margin:0;font-size:14px;color:' + ink + '">Regards,<br>Leadnify.io Listings</p>' +
+    '</div>' +
+    '<div style="border-top:1px solid ' + line + ';padding:16px 28px"><p style="margin:0;font-size:11px;color:#94a3b8">&copy; Leadnify.io. This message was sent because access was requested to a listing on Leadnify.io.</p></div>' +
+    '</div></div>'
   )
 }
 
