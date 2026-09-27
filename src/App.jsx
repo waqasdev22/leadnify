@@ -11956,23 +11956,36 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
     e.stopPropagation()
     const leadId = lead && lead.id
     setGateStatus((g) => ({ ...g, [leadId]: val }))
-    // Flip the public approval record so an "NDA - Approval Required" visitor can (or can't)
-    // download from the public microsite. It MUST be written under the SAME ownerUid the public
-    // visitor reads from (the hub's ownerUid) — not the signed-in admin's uid — keyed by the
-    // signer's email exactly as the microsite encodes it.
+    // Grant/deny access. This runs the SAME secure flow as the Access Requests page: Authorize mints
+    // a one-time 24h token and emails the visitor the secure download link; Revoke deletes it. The
+    // approval record MUST be written under the hub's ownerUid (what the public visitor reads from),
+    // keyed by the signer's email exactly as the microsite encodes it.
     const em = lead && lead.email && lead.email !== '—' ? String(lead.email).toLowerCase() : ''
-    if (em) {
-      const key = em.replace(/[.$#\[\]\/]/g, '_')
-      let ownerUid = (auth.currentUser && auth.currentUser.uid) || ''
-      try { const saved = JSON.parse(localStorage.getItem('crebuilder_hub') || 'null'); if (saved && saved.ownerUid) ownerUid = saved.ownerUid } catch { /* ignore */ }
-      try {
-        const r = await fetch('https://cre-dashboard-ba596-default-rtdb.firebaseio.com/public/hub/vaziamts.json')
-        const cloud = await r.json()
-        if (cloud && cloud.ownerUid) ownerUid = cloud.ownerUid
-      } catch { /* keep the local/auth uid */ }
-      if (ownerUid) dbSet(dbRef(db, `public/approvals/${ownerUid}/${key}`), { status: val === 'Authorized' ? 'approved' : 'revoked', email: em, property: room.name || '', ts: Date.now() }).catch(() => {})
+    if (!em) { notify('This lead has no email address — a secure download link needs one', 'error'); return }
+    const key = em.replace(/[.$#\[\]\/]/g, '_')
+    let ownerUid = (auth.currentUser && auth.currentUser.uid) || ''
+    try { const saved = JSON.parse(localStorage.getItem('crebuilder_hub') || 'null'); if (saved && saved.ownerUid) ownerUid = saved.ownerUid } catch { /* ignore */ }
+    try {
+      const r = await fetch('https://cre-dashboard-ba596-default-rtdb.firebaseio.com/public/hub/vaziamts.json')
+      const cloud = await r.json()
+      if (cloud && cloud.ownerUid) ownerUid = cloud.ownerUid
+    } catch { /* keep the local/auth uid */ }
+    if (!ownerUid) { notify('Could not resolve the listing owner — try again', 'error'); return }
+    try {
+      if (val === 'Authorized') {
+        const pkgId = room.listingId || room.id
+        const roomIds = Array.from(new Set([room.id, room.listingId, pkgId].filter(Boolean).map(String)))
+        const files = await gatherGatedFiles({ pkgId, roomIds })
+        const res = await issueAccessGrant({ ownerUid, key, email: em, name: lead.name, prop: room.name || '', files })
+        if (!res.filesCount) notify('Authorized, but no documents are attached to this deal yet — upload the OM / files first', 'error')
+        else notify(res.emailed ? `Authorized — a one-time (24h) download link was emailed to ${em}` : 'Authorized — but the email could not be sent (check EmailJS)', res.emailed ? 'success' : 'error')
+      } else {
+        await revokeAccessGrant({ ownerUid, key })
+        notify('Access revoked — the download link no longer works')
+      }
+    } catch {
+      notify('Could not save the decision — check your connection', 'error')
     }
-    notify(val === 'Authorized' ? 'Access authorized — the visitor can now download' : 'Access revoked')
   }
   // Read the SAME live leads list the central My Leads writes to, so a lead created there
   // (with this property selected) shows up here automatically.
@@ -17536,6 +17549,52 @@ async function sendVisitorEmail(to, subject, message) {
   } catch { return false }
 }
 
+// A random, unguessable capability token for a one-time download link.
+function genDlToken() {
+  try {
+    const a = new Uint8Array(16)
+    ;(window.crypto || crypto).getRandomValues(a)
+    return Array.from(a).map((b) => b.toString(16).padStart(2, '0')).join('')
+  } catch {
+    return 'tk' + Date.now().toString(36) + Math.random().toString(36).slice(2, 12)
+  }
+}
+// Collect every file behind a deal's gate (OM/Flyer + confidential docs), de-duped.
+async function gatherGatedFiles({ pkgId, roomIds }) {
+  const files = []
+  if (pkgId) { try { const pkg = await getPublicPackage(pkgId); if (pkg && pkg.url) files.push({ name: pkg.name || 'Offering Memorandum.pdf', url: pkg.url }) } catch { /* ignore */ } }
+  for (const id of roomIds || []) {
+    try { const om = await getFile(`om_${id}`); if (om && om.url) files.push({ name: om.name || 'Offering Memorandum.pdf', url: om.url }) } catch { /* ignore */ }
+    try { const rf = await getFile(`roomfiles_${id}`); const list = (rf && rf.list) || []; list.forEach((f) => { if (f && f.url) files.push({ name: f.name || 'Document.pdf', url: f.url }) }) } catch { /* ignore */ }
+  }
+  const seen = {}
+  return files.filter((f) => { if (!f.url || seen[f.url]) return false; seen[f.url] = true; return true })
+}
+// Grant access: mint a fresh single-use 24h token, retire the previous one, flip the approval
+// to 'approved', and email the visitor the secure one-time download link. Shared by the Access
+// Requests page AND the deal room's Authorize button so both behave identically.
+async function issueAccessGrant({ ownerUid, key, email, name, prop, files }) {
+  const token = genDlToken()
+  let oldToken = null
+  try { const s = await dbGet(dbRef(db, `public/approvals/${ownerUid}/${key}/token`)); oldToken = s.val() } catch { /* ignore */ }
+  const expiresAt = Date.now() + 24 * 60 * 60 * 1000
+  await dbSet(dbRef(db, `public/dl_tokens/${token}`), { uid: ownerUid, key, prop: prop || '', files: files || [], expiresAt, used: false, ts: Date.now() })
+  if (oldToken && oldToken !== token) { try { await dbRemove(dbRef(db, `public/dl_tokens/${oldToken}`)) } catch { /* ignore */ } }
+  await dbUpdate(dbRef(db, `public/approvals/${ownerUid}/${key}`), { status: 'approved', decidedTs: Date.now(), decidedBy: (auth.currentUser && auth.currentUser.email) || '', token })
+  let emailed = false
+  if (email && email !== '—') {
+    emailed = await sendVisitorEmail(email, `Access approved — ${prop || 'your requested documents'}`, grantedEmailHtml({ name, prop, link: `${window.location.origin}/d/${token}` }))
+  }
+  return { token, emailed, filesCount: (files || []).length }
+}
+// Revoke access: flip to 'revoked' and delete the token so any emailed link stops working.
+async function revokeAccessGrant({ ownerUid, key }) {
+  let oldToken = null
+  try { const s = await dbGet(dbRef(db, `public/approvals/${ownerUid}/${key}/token`)); oldToken = s.val() } catch { /* ignore */ }
+  await dbUpdate(dbRef(db, `public/approvals/${ownerUid}/${key}`), { status: 'revoked', decidedTs: Date.now(), decidedBy: (auth.currentUser && auth.currentUser.email) || '' })
+  if (oldToken) { try { await dbRemove(dbRef(db, `public/dl_tokens/${oldToken}`)) } catch { /* ignore */ } }
+}
+
 function AccessRequestsPage({ role = 'Member', listings = [], dealRooms = [] }) {
   const notify = useToast()
   const canDecide = ['Owner', 'Admin', 'Manager'].includes(role)
@@ -17607,15 +17666,6 @@ function AccessRequestsPage({ role = 'Member', listings = [], dealRooms = [] }) 
       null
     )
   }
-  const genToken = () => {
-    try {
-      const a = new Uint8Array(16)
-      ;(window.crypto || crypto).getRandomValues(a)
-      return Array.from(a).map((b) => b.toString(16).padStart(2, '0')).join('')
-    } catch {
-      return 'tk' + Date.now().toString(36) + Math.random().toString(36).slice(2, 12)
-    }
-  }
   // Gather every file behind this deal's gate (OM + confidential docs) so the one-time link
   // delivers them all. Files live under the deal room / listing id; try each candidate id.
   const gatherDealFiles = async (row) => {
@@ -17623,17 +17673,8 @@ function AccessRequestsPage({ role = 'Member', listings = [], dealRooms = [] }) 
     const pkgId = listing ? listing.id : ''
     const room = (dealRooms || []).find((r) => pkgId && String(r.listingId) === String(pkgId)) ||
       (dealRooms || []).find((r) => norm(r.name) === norm(row.property)) || null
-    const ids = Array.from(new Set([room && room.id, pkgId, room && room.listingId].filter(Boolean).map(String)))
-    const files = []
-    // OM/Flyer (published package by listing id)
-    if (pkgId) { try { const pkg = await getPublicPackage(pkgId); if (pkg && pkg.url) files.push({ name: pkg.name || 'Offering Memorandum.pdf', url: pkg.url }) } catch { /* ignore */ } }
-    for (const id of ids) {
-      try { const om = await getFile(`om_${id}`); if (om && om.url) files.push({ name: om.name || 'Offering Memorandum.pdf', url: om.url }) } catch { /* ignore */ }
-      try { const rf = await getFile(`roomfiles_${id}`); const list = (rf && rf.list) || []; list.forEach((f) => { if (f && f.url) files.push({ name: f.name || 'Document.pdf', url: f.url }) }) } catch { /* ignore */ }
-    }
-    // De-dupe by url.
-    const seen = {}
-    return files.filter((f) => { if (!f.url || seen[f.url]) return false; seen[f.url] = true; return true })
+    const roomIds = Array.from(new Set([room && room.id, pkgId, room && room.listingId].filter(Boolean).map(String)))
+    return gatherGatedFiles({ pkgId, roomIds })
   }
 
   const decide = async (row, status) => {
@@ -17642,34 +17683,17 @@ function AccessRequestsPage({ role = 'Member', listings = [], dealRooms = [] }) 
     setBusy(row.key)
     try {
       if (status === 'approved') {
-        // Mint a fresh single-use capability token that expires in 24h. The emailed link points to
-        // the secure Cloud Function (/d/<token>), which is the ONLY way these files are served —
-        // it enforces one-time use + expiry and streams the files, so the link can't be re-shared.
-        const token = genToken()
+        // Approve → mint a fresh single-use 24h token + email the secure link (shared helper, so the
+        // deal room's Authorize button does the exact same thing).
         const files = await gatherDealFiles(row)
-        const expiresAt = Date.now() + 24 * 60 * 60 * 1000
-        await dbSet(dbRef(db, `public/dl_tokens/${token}`), { uid: ownerUid, key: row.key, prop: row.property || '', files, expiresAt, used: false, ts: Date.now() })
-        // Retire any previous link for this visitor so only the newest one works.
-        if (row.token && row.token !== token) { try { await dbRemove(dbRef(db, `public/dl_tokens/${row.token}`)) } catch { /* ignore */ } }
-        await dbUpdate(dbRef(db, `public/approvals/${ownerUid}/${row.key}`), {
-          status, decidedTs: Date.now(), decidedBy: (auth.currentUser && auth.currentUser.email) || '', token,
-        })
-        const link = `${window.location.origin}/d/${token}`
-        let emailed = false
-        if (row.email && row.email !== '—') {
-          emailed = await sendVisitorEmail(row.email, `Access approved — ${row.property || 'your requested documents'}`, grantedEmailHtml({ name: row.name, prop: row.property, link }))
-        }
-        if (!files.length) {
+        const res = await issueAccessGrant({ ownerUid, key: row.key, email: row.email, name: row.name, prop: row.property, files })
+        if (!res.filesCount) {
           notify('Approved, but no documents are attached to this deal yet — upload the OM / files, then approve again', 'error')
         } else {
-          notify(emailed ? `Approved — a one-time (24h) download link was emailed to ${row.email}` : `Approved${row.email ? ' — but the email could not be sent (check EmailJS)' : ''}`, emailed || !row.email ? 'success' : 'error')
+          notify(res.emailed ? `Approved — a one-time (24h) download link was emailed to ${row.email}` : `Approved${row.email ? ' — but the email could not be sent (check EmailJS)' : ''}`, res.emailed || !row.email ? 'success' : 'error')
         }
       } else {
-        // Deny/revoke: flip status and kill the download link so the token can no longer be used.
-        await dbUpdate(dbRef(db, `public/approvals/${ownerUid}/${row.key}`), {
-          status, decidedTs: Date.now(), decidedBy: (auth.currentUser && auth.currentUser.email) || '',
-        })
-        if (row.token) { try { await dbRemove(dbRef(db, `public/dl_tokens/${row.token}`)) } catch { /* ignore */ } }
+        await revokeAccessGrant({ ownerUid, key: row.key })
         notify(`Access denied for ${row.name || row.email}`, 'error')
       }
     } catch {
