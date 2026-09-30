@@ -9179,8 +9179,9 @@ function dlPkg(){if(!CUR){return;}
   if(CUR.gate==='Free Access'){try{localStorage.setItem('cre_last_lead',JSON.stringify({name:'Anonymous visitor',type:'Free Download',property:(CUR&&CUR.name)||'',source:'Free Access',message:'Downloaded via Free Access (no form).',ts:Date.now()}));}catch(e){}doDownloadPkg();return;}
   // NDA - Auto Access: sign the NDA, then download immediately.
   if(CUR.gate==='NDA - Auto Access'){if(isEnrolled()){doDownloadPkg();}else{showNda();}return;}
-  // NDA - Approval Required: sign, then only download once the owner has approved.
-  if(CUR.gate==='NDA - Approval Required'){checkApproval(function(st){if(st==='approved'){alert('Your access has been approved. A secure, one-time download link has been emailed to you \\u2014 please use that link to download the package. It is valid for 24 hours.');}else if(st==='revoked'){alert('Your access request was declined by the listing owner.');}else if(st==='pending'){alert('Your access request is pending owner approval. You will receive a secure download link by email once it is approved.');}else{showNdaApproval();}});return;}
+  // NDA - Approval Required: once the owner approves this visitor (by email), they can download the
+  // OM from ANY NDA-Approval property on the same browser/email — no need to fill the form again.
+  if(CUR.gate==='NDA - Approval Required'){checkApproval(function(st){if(st==='approved'){doDownloadPkg();}else if(st==='revoked'){alert('Your access request was declined by the listing owner.');}else if(st==='pending'){alert('Your access request is pending owner approval. You will be able to download here as soon as it is approved.');}else{showNdaApproval();}});return;}
   // Contact Required (default): register (name/email/phone) first, then download.
   if(isEnrolled()){doDownloadPkg();}else{showEnroll();}}
 function submitInquiry(e){e.preventDefault();var f=e.target;var v={name:'',email:'',phone:'',msg:''};f.querySelectorAll('input,textarea').forEach(function(i){var p=(i.placeholder||'').toLowerCase();if(i.type==='email'||p.indexOf('email')>=0)v.email=i.value;else if(p.indexOf('phone')>=0)v.phone=i.value;else if(i.tagName==='TEXTAREA')v.msg=i.value;else if(p.indexOf('name')>=0)v.name=i.value;});
