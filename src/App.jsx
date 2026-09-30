@@ -1119,7 +1119,7 @@ function UpgradeCard({ onDismiss }) {
 
 const NAV_PERM = { dashboard: 'dashboard.view', listings: 'listings.view', deals: 'dealrooms.view' }
 
-function Sidebar({ active, onNavigate, onSignOut, user, forceCollapsed, responsiveCollapse, onClose, can, role = 'Member', approvalsCount = 0 }) {
+function Sidebar({ active, onNavigate, onSignOut, user, forceCollapsed, responsiveCollapse, onClose, can, role = 'Member' }) {
   const isAdminUp = ['Owner', 'Admin'].includes(role)
   const [collapsed, setCollapsed] = useState(
     () => !!forceCollapsed || (!!responsiveCollapse && typeof window !== 'undefined' && window.innerWidth < 1024),
@@ -1144,9 +1144,7 @@ function Sidebar({ active, onNavigate, onSignOut, user, forceCollapsed, responsi
         // Team & Permissions is shown to Owner/Admin/Manager (role-based, so a stray "all
         // permissions" override can never surface it for a Member). Managers can only invite;
         // changing roles/permissions is locked to Owner/Admin inside the page.
-        // Access Requests — NDA approval center, shown to Owner/Admin/Manager with a live count badge.
-        ...(['Owner', 'Admin', 'Manager'].includes(role) ? [{ key: 'approvals', label: 'Access Requests', icon: ShieldCheck, dividerBefore: true, badge: approvalsCount }] : []),
-        ...(['Owner', 'Admin', 'Manager'].includes(role) ? [{ key: 'team', label: 'Team & Permissions', icon: Users }] : []),
+        ...(['Owner', 'Admin', 'Manager'].includes(role) ? [{ key: 'team', label: 'Team & Permissions', icon: Users, dividerBefore: true }] : []),
         { key: 'profile', label: 'Profile Settings', icon: User, dividerBefore: true },
         // Team Settings (embed, appearance, company CA) stays strictly Owner/Admin.
         ...(isAdminUp ? [{ key: 'teamsettings', label: 'Team Settings', icon: Users }] : []),
@@ -9083,9 +9081,6 @@ function ownerEmailHtml(o){o=o||{};var accent='${primary}';
 function sendDownloadNotice(prop){var info={};try{info=JSON.parse(localStorage.getItem('cre_enrolled_info')||'{}');}catch(e){}emailOwners('Marketing package downloaded'+(prop?' \\u2014 '+prop:''),ownerEmailHtml({title:'Marketing Package Downloaded',body:'A visitor just downloaded the marketing package from your Leadnify.io property page.',name:info.name,email:info.email,type:info.type||'Download',property:prop||'',source:'Package Download'}));}
 // Notify the owner by email for EVERY new lead (inquiry, registration, etc.) — not just downloads.
 function sendLeadNotice(lead){if(!lead)return;emailOwners('New lead'+(lead.property?(' \\u2014 '+lead.property):''),ownerEmailHtml({title:'New Lead',body:'You received a new lead through your Leadnify.io property page.',name:lead.name,email:lead.email,phone:lead.phone,type:lead.type,property:lead.property||'',source:lead.source||'',message:lead.message||''}));}
-// Distinct email for NDA - Approval Required requests: tells the owner to authorize the user in the
-// dashboard (My Leads / deal room -> Authorize).
-function sendApprovalNotice(lead){if(!lead)return;emailOwners('Access approval required'+(lead.property?(' \\u2014 '+lead.property):''),ownerEmailHtml({title:'Access Approval Required',body:esc(lead.name||'A user')+' signed the NDA and is requesting access to your marketing package. Open your Leadnify.io dashboard \\u2192 My Leads (or the deal room) and click <b>Authorize</b> to grant access, or <b>Revoke</b> to deny.',name:lead.name,email:lead.email,phone:lead.phone,type:'NDA - Approval Required',property:lead.property||'',source:lead.hearSource||'',message:lead.message||''}));}
 // Lightweight own analytics: record a property-page view or a listings impression under /public/hits
 // so the dashboard shows real Page Views & Impressions without any external analytics service.
 function trackHit(kind,extra){try{var b=extra||{};b.t=Date.now();fetch(RTDB+'/public/hits/'+kind+'.json',{method:'POST',keepalive:true,headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).catch(function(){});}catch(e){}}
@@ -9116,14 +9111,6 @@ function submitEnroll(e){e.preventDefault();EN.first=enVal('enFirst');EN.last=en
 function showNda(){var ov=document.createElement('div');ov.id='enrollOv';ov.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.6);display:flex;align-items:center;justify-content:center;z-index:99999;padding:20px';ov.innerHTML='<div id="enCard" style="background:#fff;border-radius:16px;max-width:520px;width:100%;max-height:90vh;overflow-y:auto;padding:26px;box-shadow:0 20px 60px rgba(0,0,0,.3)"></div>';document.body.appendChild(ov);document.getElementById('enCard').innerHTML=ndaForm();}
 function ndaForm(){var pn=(CUR&&CUR.name)||'this property';var CBL='display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:#475569;margin-bottom:10px;cursor:pointer;line-height:1.35';return '<div style="font-size:20px;font-weight:800;color:#0f172a">Confidentiality Agreement</div><div style="font-size:14px;color:#64748b;margin:6px 0 16px">Sign to unlock the full package for '+esc(pn)+'. Access is granted immediately after signing.</div><form onsubmit="return submitNda(event)"><div style="display:flex;gap:10px"><input id="enFirst" required placeholder="First Name *" style="'+ENIS+'"><input id="enLast" required placeholder="Last Name *" style="'+ENIS+'"></div><select id="enType" required style="'+ENIS+'background:#fff;color:#334155"><option value="" disabled selected>Profile Type (Broker or Principal) *</option><option value="Broker">Broker</option><option value="Principal">Principal</option></select><input id="enCompany" placeholder="Company (optional)" style="'+ENIS+'"><input id="enEmail" type="email" required placeholder="Email *" style="'+ENIS+'"><input id="enPhone" required placeholder="Mobile Phone *" style="'+ENIS+'">'+enAddrHtml()+'<div style="max-height:120px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:10px;padding:12px;font-size:12px;color:#64748b;line-height:1.5;margin-bottom:10px">This Confidentiality Agreement governs access to the marketing package for '+esc(pn)+'. By signing, you agree to keep all materials strictly confidential, use them solely to evaluate this opportunity, and not to disclose or reproduce them without the listing broker&#39;s written consent. Your signature is recorded with a timestamp.</div><input id="ndaSig" required placeholder="Type your full name to sign *" style="'+ENIS+'">'+enConsentHtml()+'<div style="display:flex;gap:10px;margin-top:6px"><button type="button" onclick="closeEnroll()" style="flex:1;border:1px solid #e2e8f0;background:#fff;border-radius:10px;padding:12px;font-weight:700;color:#475569;cursor:pointer">Cancel</button><button type="submit" style="flex:2;border:0;background:'+PRIMARY+';border-radius:10px;padding:12px;font-weight:700;color:#fff;cursor:pointer">Sign &amp; Download</button></div></form>';}
 function submitNda(e){e.preventDefault();var first=enVal('enFirst'),last=enVal('enLast'),name=(first+' '+last).trim();var type=enVal('enType'),company=enVal('enCompany'),email=enVal('enEmail'),phone=enVal('enPhone'),sig=enVal('ndaSig');var a1=enVal('enAddr1'),a2=enVal('enAddr2'),city=enVal('enCity'),state=enVal('enState'),hs=enVal('enSource');var addr=[a1,a2].filter(Boolean).join(', ');var pn=(CUR&&CUR.name)||'';var lead={name:name,firstName:first,lastName:last,profile:type,type:'NDA Signer',company:company,email:email,phone:phone,address:addr,addr1:a1,addr2:a2,city:city,state:state,hearSource:hs,message:'Signed the NDA (auto access). Signature: '+sig,property:pn,source:'NDA - Auto Access',signed:true,ts:Date.now()};try{localStorage.setItem('cre_enrolled','1');localStorage.setItem('cre_enrolled_info',JSON.stringify({name:name,email:email,type:type}));localStorage.setItem('cre_last_lead',JSON.stringify(lead));}catch(e2){}closeEnroll();doDownloadPkg();return false;}
-// NDA - Approval Required: sign the NDA, then WAIT for the owner to approve before the package
-// unlocks. The signer is stored as a pending lead + a public approval record the owner flips to
-// 'approved'; the visitor re-checks that record on their next Download click.
-function ekey(em){em=String(em||'').toLowerCase();var out='';for(var i=0;i<em.length;i++){var c=em.charAt(i);out+=('.$#[]/'.indexOf(c)>=0)?'_':c;}return out;}
-function checkApproval(cb){var em='';try{em=localStorage.getItem('cre_signer_email')||'';}catch(e){}if(!em||!OWNER_UID){cb('none');return;}fetch(RTDB+'/public/approvals/'+OWNER_UID+'/'+ekey(em)+'.json').then(function(r){return r.json();}).then(function(a){cb(a&&a.status?a.status:'none');}).catch(function(){cb('none');});}
-function showNdaApproval(){var ov=document.createElement('div');ov.id='enrollOv';ov.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.6);display:flex;align-items:center;justify-content:center;z-index:99999;padding:20px';ov.innerHTML='<div id="enCard" style="background:#fff;border-radius:16px;max-width:520px;width:100%;max-height:90vh;overflow-y:auto;padding:26px;box-shadow:0 20px 60px rgba(0,0,0,.3)"></div>';document.body.appendChild(ov);document.getElementById('enCard').innerHTML=ndaApprovalForm();}
-function ndaApprovalForm(){var pn=(CUR&&CUR.name)||'this property';var CBL='display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:#475569;margin-bottom:10px;cursor:pointer;line-height:1.35';return '<div style="font-size:20px;font-weight:800;color:#0f172a">Confidentiality Agreement</div><div style="font-size:14px;color:#64748b;margin:6px 0 16px">Sign to request access to the full package for '+esc(pn)+'. The listing owner will review and approve your request.</div><form onsubmit="return submitNdaApproval(event)"><div style="display:flex;gap:10px"><input id="enFirst" required placeholder="First Name *" style="'+ENIS+'"><input id="enLast" required placeholder="Last Name *" style="'+ENIS+'"></div><select id="enType" required style="'+ENIS+'background:#fff;color:#334155"><option value="" disabled selected>Profile Type (Broker or Principal) *</option><option value="Broker">Broker</option><option value="Principal">Principal</option></select><input id="enCompany" placeholder="Company (optional)" style="'+ENIS+'"><input id="enEmail" type="email" required placeholder="Email *" style="'+ENIS+'"><input id="enPhone" required placeholder="Mobile Phone *" style="'+ENIS+'">'+enAddrHtml()+'<div style="max-height:120px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:10px;padding:12px;font-size:12px;color:#64748b;line-height:1.5;margin-bottom:10px">This Confidentiality Agreement governs access to the marketing package for '+esc(pn)+'. By signing, you agree to keep all materials strictly confidential, use them solely to evaluate this opportunity, and not to disclose or reproduce them without the listing broker&#39;s written consent. Access is granted after the owner approves your request.</div><input id="ndaSig" required placeholder="Type your full name to sign *" style="'+ENIS+'">'+enConsentHtml()+'<div style="display:flex;gap:10px;margin-top:6px"><button type="button" onclick="closeEnroll()" style="flex:1;border:1px solid #e2e8f0;background:#fff;border-radius:10px;padding:12px;font-weight:700;color:#475569;cursor:pointer">Cancel</button><button type="submit" style="flex:2;border:0;background:'+PRIMARY+';border-radius:10px;padding:12px;font-weight:700;color:#fff;cursor:pointer">Sign &amp; Request Access</button></div></form>';}
-function submitNdaApproval(e){e.preventDefault();var first=enVal('enFirst'),last=enVal('enLast'),name=(first+' '+last).trim();var type=enVal('enType'),company=enVal('enCompany'),email=enVal('enEmail'),phone=enVal('enPhone'),sig=enVal('ndaSig');var a1=enVal('enAddr1'),a2=enVal('enAddr2'),city=enVal('enCity'),state=enVal('enState'),hs=enVal('enSource');var addr=[a1,a2].filter(Boolean).join(', ');var pn=(CUR&&CUR.name)||'';var lead={name:name,firstName:first,lastName:last,profile:type,type:'NDA Signer',status:'Pending',company:company,email:email,phone:phone,address:addr,addr1:a1,addr2:a2,city:city,state:state,hearSource:hs,message:'Signed the NDA (approval required). Signature: '+sig,property:pn,source:'NDA - Approval Required',signed:true,approval:'pending',ts:Date.now()};sendApprovalNotice(lead);postLead(lead);if(OWNER_UID){fetch(RTDB+'/public/approvals/'+OWNER_UID+'/'+ekey(email)+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'pending',name:name,email:email,phone:phone,company:company,profile:type,property:pn,ts:Date.now()})}).catch(function(){});}try{localStorage.setItem('cre_enrolled','1');localStorage.setItem('cre_signer_email',email);localStorage.setItem('cre_enrolled_info',JSON.stringify({name:name,email:email,type:type}));}catch(e2){}var card=document.getElementById('enCard');if(card){card.innerHTML='<div style="text-align:center;padding:10px"><div style="font-size:44px">&#9203;</div><div style="font-size:20px;font-weight:800;color:#0f172a;margin-top:8px">Request submitted</div><div style="font-size:14px;color:#64748b;margin:10px 0 18px">Thanks '+esc(name)+'. Your NDA is signed and your access request has been sent to the listing owner. Once approved, come back and click Download again to get the package.</div><button onclick="closeEnroll()" style="border:0;background:'+PRIMARY+';border-radius:10px;padding:12px 22px;font-weight:700;color:#fff;cursor:pointer">Got it</button></div>';}return false;}
 function pgUrl(){return window.location.href;}
 function pgToast(msg){var d=document.createElement('div');d.textContent=msg;d.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;padding:10px 18px;border-radius:8px;font-size:14px;z-index:10000;box-shadow:0 6px 20px rgba(0,0,0,.3)';document.body.appendChild(d);setTimeout(function(){d.style.transition='opacity .3s';d.style.opacity='0';setTimeout(function(){if(d.parentNode)d.parentNode.removeChild(d);},300);},1600);}
 function pgCopy(txt){if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(function(){pgToast('Link copied');}).catch(function(){pgCopyFallback(txt);});}else{pgCopyFallback(txt);}}
@@ -9172,8 +9159,6 @@ function dlPkg(){if(!CUR){return;}
   if(CUR.gate==='Free Access'){try{localStorage.setItem('cre_last_lead',JSON.stringify({name:'Anonymous visitor',type:'Free Download',property:(CUR&&CUR.name)||'',source:'Free Access',message:'Downloaded via Free Access (no form).',ts:Date.now()}));}catch(e){}doDownloadPkg();return;}
   // NDA - Auto Access: sign the NDA, then download immediately.
   if(CUR.gate==='NDA - Auto Access'){if(isEnrolled()){doDownloadPkg();}else{showNda();}return;}
-  // NDA - Approval Required: sign, then only download once the owner has approved.
-  if(CUR.gate==='NDA - Approval Required'){checkApproval(function(st){if(st==='approved'){alert('Your access has been approved. A secure, one-time download link has been emailed to you \\u2014 please use that link to download the package. It is valid for 24 hours.');}else if(st==='revoked'){alert('Your access request was declined by the listing owner.');}else if(st==='pending'){alert('Your access request is pending owner approval. You will receive a secure download link by email once it is approved.');}else{showNdaApproval();}});return;}
   // Contact Required (default): register (name/email/phone) first, then download.
   if(isEnrolled()){doDownloadPkg();}else{showEnroll();}}
 function submitInquiry(e){e.preventDefault();var f=e.target;var v={name:'',email:'',phone:'',msg:''};f.querySelectorAll('input,textarea').forEach(function(i){var p=(i.placeholder||'').toLowerCase();if(i.type==='email'||p.indexOf('email')>=0)v.email=i.value;else if(p.indexOf('phone')>=0)v.phone=i.value;else if(i.tagName==='TEXTAREA')v.msg=i.value;else if(p.indexOf('name')>=0)v.name=i.value;});
@@ -9413,8 +9398,8 @@ export const toMicrositeItem = (l) => {
         //   'Free Access'          → download immediately, no form
         //   'Contact Required'     → register (name/email/phone) then download  (default)
         //   'NDA - Auto Access'    → sign the NDA, then download immediately
-        //   'NDA - Approval Required' → sign the NDA, owner approves, then download
-        gate: DEAL_ROOM_ACCESS.includes(l.gate) ? l.gate : 'Contact Required',
+        // Older deals that used the retired 'NDA - Approval Required' gate now behave as NDA - Auto Access.
+        gate: l.gate === 'NDA - Approval Required' ? 'NDA - Auto Access' : (DEAL_ROOM_ACCESS.includes(l.gate) ? l.gate : 'Contact Required'),
         subheader: l.subheader || '',
         areaText: l.areaText || '',
         demo: (l.demo && typeof l.demo === 'object') ? l.demo : null,
@@ -11378,7 +11363,7 @@ function DealForm({ initialStage, onSubmit, onCancel }) {
 /* -------------------------------------------------------------------------- */
 
 const DEAL_ROOM_STATUSES = ['Active', 'Archived']
-const DEAL_ROOM_ACCESS = ['Free Access', 'Contact Required', 'NDA - Auto Access', 'NDA - Approval Required']
+const DEAL_ROOM_ACCESS = ['Free Access', 'Contact Required', 'NDA - Auto Access']
 
 function DealRoomForm({ onSubmit, onCancel, initial, submitLabel = 'Create Deal Room' }) {
   const notify = useToast()
@@ -11952,73 +11937,6 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
   const ME = 'Waqas' // current user (demo)
   const [leadScope, setLeadScope] = useState('team') // 'mine' | 'team'
   const [openLeadId, setOpenLeadId] = useState(null)
-  // Per-lead access gate for this room: Authorize (grant) or Revoke (block) — persisted per room.
-  const [gateStatus, setGateStatus] = usePersistentState(`room_${room.id}_gate`, {})
-  // Live approval status (by lead email) from the SAME record the Access Requests page writes to,
-  // so a lead approved/denied there instantly reflects here (and the buttons lock accordingly).
-  const [approvalMap, setApprovalMap] = useState({})
-  useEffect(() => {
-    let alive = true
-    let unsub = null
-    ;(async () => {
-      let ownerUid = (auth.currentUser && auth.currentUser.uid) || ''
-      try { const saved = JSON.parse(localStorage.getItem('crebuilder_hub') || 'null'); if (saved && saved.ownerUid) ownerUid = saved.ownerUid } catch { /* ignore */ }
-      try { const r = await fetch('https://cre-dashboard-ba596-default-rtdb.firebaseio.com/public/hub/vaziamts.json'); const c = await r.json(); if (c && c.ownerUid) ownerUid = c.ownerUid } catch { /* ignore */ }
-      if (!alive || !ownerUid) return
-      unsub = onValue(dbRef(db, `public/approvals/${ownerUid}`), (snap) => {
-        const v = snap.val() || {}
-        const m = {}
-        Object.values(v).forEach((r) => { if (r && r.email) m[String(r.email).toLowerCase()] = r.status || '' })
-        setApprovalMap(m)
-      }, () => {})
-    })()
-    return () => { alive = false; if (unsub) unsub() }
-  }, [])
-  // Effective status for a lead: prefer the live approval record; fall back to the local per-room gate.
-  const leadGate = (l) => {
-    const em = l && l.email ? String(l.email).toLowerCase() : ''
-    const live = em && approvalMap[em]
-    if (live === 'approved') return 'approved'
-    if (live === 'revoked') return 'revoked'
-    if (gateStatus[l.id] === 'Authorized') return 'approved'
-    if (gateStatus[l.id] === 'Revoked') return 'revoked'
-    return ''
-  }
-  const setGate = async (e, lead, val) => {
-    e.stopPropagation()
-    const leadId = lead && lead.id
-    setGateStatus((g) => ({ ...g, [leadId]: val }))
-    // Grant/deny access. This runs the SAME secure flow as the Access Requests page: Authorize mints
-    // a one-time 24h token and emails the visitor the secure download link; Revoke deletes it. The
-    // approval record MUST be written under the hub's ownerUid (what the public visitor reads from),
-    // keyed by the signer's email exactly as the microsite encodes it.
-    const em = lead && lead.email && lead.email !== '—' ? String(lead.email).toLowerCase() : ''
-    if (!em) { notify('This lead has no email address — a secure download link needs one', 'error'); return }
-    const key = em.replace(/[.$#\[\]\/]/g, '_')
-    let ownerUid = (auth.currentUser && auth.currentUser.uid) || ''
-    try { const saved = JSON.parse(localStorage.getItem('crebuilder_hub') || 'null'); if (saved && saved.ownerUid) ownerUid = saved.ownerUid } catch { /* ignore */ }
-    try {
-      const r = await fetch('https://cre-dashboard-ba596-default-rtdb.firebaseio.com/public/hub/vaziamts.json')
-      const cloud = await r.json()
-      if (cloud && cloud.ownerUid) ownerUid = cloud.ownerUid
-    } catch { /* keep the local/auth uid */ }
-    if (!ownerUid) { notify('Could not resolve the listing owner — try again', 'error'); return }
-    try {
-      if (val === 'Authorized') {
-        const pkgId = room.listingId || room.id
-        const roomIds = Array.from(new Set([room.id, room.listingId, pkgId].filter(Boolean).map(String)))
-        const files = await gatherGatedFiles({ pkgId, roomIds })
-        const res = await issueAccessGrant({ ownerUid, key, email: em, name: lead.name, prop: room.name || '', files })
-        if (!res.filesCount) notify('Authorized, but no documents are attached to this deal yet — upload the OM / files first', 'error')
-        else notify(res.emailed ? `Authorized — a one-time (24h) download link was emailed to ${em}` : 'Authorized — but the email could not be sent (check EmailJS)', res.emailed ? 'success' : 'error')
-      } else {
-        await revokeAccessGrant({ ownerUid, key })
-        notify('Access revoked — the download link no longer works')
-      }
-    } catch {
-      notify('Could not save the decision — check your connection', 'error')
-    }
-  }
   // Read the SAME live leads list the central My Leads writes to, so a lead created there
   // (with this property selected) shows up here automatically.
   const [allLeads, setAllLeads] = usePersistentState('crm_inbox', CRM_INBOX_SEED)
@@ -12488,7 +12406,6 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
                     <th className="py-2 pr-3 font-semibold">Listing</th>
                     <th className="py-2 pr-3 font-semibold">Date</th>
                     <th className="py-2 pr-3 font-semibold">Status</th>
-                    <th className="py-2 pr-3 text-right font-semibold">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -12509,35 +12426,10 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
                       <td className="py-2.5 pr-3 text-slate-600">{l.property}</td>
                       <td className="py-2.5 pr-3 text-slate-500">{l.date}{l.ts ? <span className="block text-xs text-slate-400">{new Date(l.ts).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span> : null}</td>
                       <td className="py-2.5 pr-3">{l.status === 'Unread' ? <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">Unread</span> : <span className="text-xs text-slate-500">{l.status}</span>}</td>
-                      <td className="py-2.5 pr-3">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {(() => {
-                            const g = leadGate(l)
-                            return (
-                              <>
-                                {g === 'approved' ? (
-                                  <span className="inline-flex cursor-default items-center gap-1 rounded-md border border-emerald-200 bg-emerald-100 px-2 py-1 text-xs font-bold text-emerald-700" title="Already approved">
-                                    <Check className="h-3.5 w-3.5" /> Authorized
-                                  </span>
-                                ) : (
-                                  <button onClick={(e) => setGate(e, l, 'Authorized')} className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100">Authorize</button>
-                                )}
-                                {g === 'revoked' ? (
-                                  <span className="inline-flex cursor-default items-center gap-1 rounded-md border border-rose-200 bg-rose-100 px-2 py-1 text-xs font-bold text-rose-700" title="Access revoked">
-                                    <Ban className="h-3.5 w-3.5" /> Revoked
-                                  </span>
-                                ) : (
-                                  <button onClick={(e) => setGate(e, l, 'Revoked')} className="rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700 transition hover:bg-rose-100">Revoke</button>
-                                )}
-                              </>
-                            )
-                          })()}
-                        </div>
-                      </td>
                     </tr>
                     {open && (
                       <tr className="bg-slate-50/70">
-                        <td colSpan={7} className="px-3 pb-4 pt-1">
+                        <td colSpan={6} className="px-3 pb-4 pt-1">
                           <div className="rounded-lg border border-slate-200 bg-white p-4">
                             <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
                               <div><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Name</p><p className="mt-0.5 text-sm font-semibold text-slate-800">{l.name}</p></div>
@@ -12741,10 +12633,8 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
                 : access === 'Contact Required'
                   ? 'Visitors submit their contact details before viewing.'
                   : access === 'NDA - Auto Access'
-                    ? 'Visitors e-sign an NDA and get instant access.'
-                    : access === 'NDA - Approval Required'
-                      ? 'Visitors e-sign an NDA, then you approve each request.'
-                      : `Visitors must pass the "${access}" gate before viewing.`}
+                    ? 'Visitors e-sign an NDA and get instant access to the files.'
+                    : `Visitors must pass the "${access}" gate before viewing.`}
             </p>
           </div>
 
@@ -17510,445 +17400,6 @@ function TeamPermissionsPage({ myUid, role = 'Member', can = () => true }) {
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Access Requests (NDA – Approval Required approval center)                  */
-/* -------------------------------------------------------------------------- */
-
-// Resolve the public hub's ownerUid — the SAME uid the microsite writes approval
-// records under (public/approvals/<ownerUid>/...). Falls back to the signed-in uid.
-async function resolveHubOwnerUid() {
-  let ownerUid = (auth.currentUser && auth.currentUser.uid) || ''
-  try {
-    const saved = JSON.parse(localStorage.getItem('crebuilder_hub') || 'null')
-    if (saved && saved.ownerUid) ownerUid = saved.ownerUid
-  } catch { /* ignore */ }
-  try {
-    const r = await fetch('https://cre-dashboard-ba596-default-rtdb.firebaseio.com/public/hub/vaziamts.json')
-    const cloud = await r.json()
-    if (cloud && cloud.ownerUid) ownerUid = cloud.ownerUid
-  } catch { /* keep the local/auth uid */ }
-  return ownerUid
-}
-
-// Live count of PENDING access requests — used for the sidebar badge.
-function useApprovalsPending() {
-  const [count, setCount] = useState(0)
-  useEffect(() => {
-    let alive = true
-    let unsub = null
-    ;(async () => {
-      const ownerUid = await resolveHubOwnerUid()
-      if (!alive || !ownerUid) return
-      unsub = onValue(dbRef(db, `public/approvals/${ownerUid}`), (snap) => {
-        const val = snap.val() || {}
-        const n = Object.values(val).filter((r) => r && (r.status || 'pending') === 'pending').length
-        setCount(n)
-      }, () => {})
-    })()
-    return () => { alive = false; if (unsub) unsub() }
-  }, [])
-  return count
-}
-
-// Professional "Access Approved" email sent to the visitor with their private download link.
-// Deliberately plain and corporate — no emojis, no marketing flourishes.
-function grantedEmailHtml({ name, prop, link }) {
-  const ink = '#0f172a'
-  const line = '#e2e8f0'
-  const e = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-  const property = e(prop || 'the requested property')
-  return (
-    '<div style="max-width:600px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:' + ink + ';background:#ffffff">' +
-    '<div style="border:1px solid ' + line + '">' +
-    '<div style="border-bottom:2px solid ' + ink + ';padding:20px 28px">' +
-    '<span style="font-size:20px;font-weight:700;color:' + ink + ';letter-spacing:.3px">Leadnify.io</span>' +
-    '<span style="display:block;font-size:10px;letter-spacing:2px;color:#94a3b8;margin-top:3px">COMMERCIAL REAL ESTATE</span>' +
-    '</div>' +
-    '<div style="padding:30px 28px">' +
-    '<p style="margin:0 0 18px;font-size:15px;color:' + ink + '">Dear ' + e(name || 'Sir or Madam') + ',</p>' +
-    '<p style="margin:0 0 16px;font-size:14px;color:#334155;line-height:1.6">Thank you for your interest in <strong>' + property + '</strong>. Your request to access the confidential marketing package has been reviewed and approved.</p>' +
-    '<p style="margin:0 0 22px;font-size:14px;color:#334155;line-height:1.6">You may now download the marketing package using the button below.</p>' +
-    '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 22px"><tr><td style="background:' + ink + ';border-radius:4px"><a href="' + e(link) + '" style="display:inline-block;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:13px 26px">Download Marketing Package</a></td></tr></table>' +
-    '<p style="margin:0 0 6px;font-size:12px;color:#64748b;line-height:1.5">If the button does not work, copy and paste this address into your browser:</p>' +
-    '<p style="margin:0 0 24px;font-size:12px;color:#1d4ed8;word-break:break-all">' + e(link) + '</p>' +
-    '<p style="margin:0 0 18px;font-size:12.5px;color:#64748b;line-height:1.6">This link is intended solely for your use. Please treat the enclosed materials as strictly confidential in accordance with the confidentiality agreement you signed.</p>' +
-    '<p style="margin:0;font-size:14px;color:' + ink + '">Regards,<br>Leadnify.io Listings</p>' +
-    '</div>' +
-    '<div style="border-top:1px solid ' + line + ';padding:16px 28px"><p style="margin:0;font-size:11px;color:#94a3b8">&copy; Leadnify.io. This message was sent because access was requested to a listing on Leadnify.io.</p></div>' +
-    '</div></div>'
-  )
-}
-
-// Send an email through EmailJS from the dashboard (same account the microsite uses).
-async function sendVisitorEmail(to, subject, message) {
-  const ok = EMAILJS.SERVICE_ID && EMAILJS.SERVICE_ID !== 'YOUR_SERVICE_ID' && EMAILJS.TEMPLATE_ID && EMAILJS.TEMPLATE_ID !== 'YOUR_TEMPLATE_ID' && EMAILJS.PUBLIC_KEY && EMAILJS.PUBLIC_KEY !== 'YOUR_PUBLIC_KEY'
-  if (!ok || !to) return false
-  try {
-    const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        service_id: EMAILJS.SERVICE_ID,
-        template_id: EMAILJS.TEMPLATE_ID,
-        user_id: EMAILJS.PUBLIC_KEY,
-        template_params: { to_email: to, email: to, name: 'Leadnify.io', subject, message },
-      }),
-    })
-    return res.ok
-  } catch { return false }
-}
-
-// A random, unguessable capability token for a one-time download link.
-function genDlToken() {
-  try {
-    const a = new Uint8Array(16)
-    ;(window.crypto || crypto).getRandomValues(a)
-    return Array.from(a).map((b) => b.toString(16).padStart(2, '0')).join('')
-  } catch {
-    return 'tk' + Date.now().toString(36) + Math.random().toString(36).slice(2, 12)
-  }
-}
-// Collect every file behind a deal's gate (OM/Flyer + confidential docs), de-duped.
-async function gatherGatedFiles({ pkgId, roomIds }) {
-  const files = []
-  if (pkgId) { try { const pkg = await getPublicPackage(pkgId); if (pkg && pkg.url) files.push({ name: pkg.name || 'Offering Memorandum.pdf', url: pkg.url }) } catch { /* ignore */ } }
-  for (const id of roomIds || []) {
-    try { const om = await getFile(`om_${id}`); if (om && om.url) files.push({ name: om.name || 'Offering Memorandum.pdf', url: om.url }) } catch { /* ignore */ }
-    try { const rf = await getFile(`roomfiles_${id}`); const list = (rf && rf.list) || []; list.forEach((f) => { if (f && f.url) files.push({ name: f.name || 'Document.pdf', url: f.url }) }) } catch { /* ignore */ }
-  }
-  const seen = {}
-  return files.filter((f) => { if (!f.url || seen[f.url]) return false; seen[f.url] = true; return true })
-}
-// Grant access: mint a fresh single-use 24h token, retire the previous one, flip the approval
-// to 'approved', and email the visitor the secure one-time download link. Shared by the Access
-// Requests page AND the deal room's Authorize button so both behave identically.
-async function issueAccessGrant({ ownerUid, key, email, name, prop, files }) {
-  const token = genDlToken()
-  let oldToken = null
-  try { const s = await dbGet(dbRef(db, `public/approvals/${ownerUid}/${key}/token`)); oldToken = s.val() } catch { /* ignore */ }
-  const expiresAt = Date.now() + 24 * 60 * 60 * 1000
-  await dbSet(dbRef(db, `public/dl_tokens/${token}`), { uid: ownerUid, key, prop: prop || '', files: files || [], expiresAt, used: false, ts: Date.now() })
-  if (oldToken && oldToken !== token) { try { await dbRemove(dbRef(db, `public/dl_tokens/${oldToken}`)) } catch { /* ignore */ } }
-  await dbUpdate(dbRef(db, `public/approvals/${ownerUid}/${key}`), { status: 'approved', decidedTs: Date.now(), decidedBy: (auth.currentUser && auth.currentUser.email) || '', token })
-  let emailed = false
-  if (email && email !== '—') {
-    emailed = await sendVisitorEmail(email, `Access approved — ${prop || 'your requested documents'}`, grantedEmailHtml({ name, prop, link: `${window.location.origin}/d/${token}` }))
-  }
-  return { token, emailed, filesCount: (files || []).length }
-}
-// Revoke access: flip to 'revoked' and delete the token so any emailed link stops working.
-async function revokeAccessGrant({ ownerUid, key }) {
-  let oldToken = null
-  try { const s = await dbGet(dbRef(db, `public/approvals/${ownerUid}/${key}/token`)); oldToken = s.val() } catch { /* ignore */ }
-  await dbUpdate(dbRef(db, `public/approvals/${ownerUid}/${key}`), { status: 'revoked', decidedTs: Date.now(), decidedBy: (auth.currentUser && auth.currentUser.email) || '' })
-  if (oldToken) { try { await dbRemove(dbRef(db, `public/dl_tokens/${oldToken}`)) } catch { /* ignore */ } }
-}
-
-function AccessRequestsPage({ role = 'Member', listings = [], dealRooms = [] }) {
-  const notify = useToast()
-  const canDecide = ['Owner', 'Admin', 'Manager'].includes(role)
-  const [ownerUid, setOwnerUid] = useState('')
-  const [rows, setRows] = useState([]) // [{ key, status, name, email, phone, company, profile, property, ts, decidedTs }]
-  const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState('pending') // pending | approved | revoked | all
-  const [q, setQ] = useState('')
-  const [busy, setBusy] = useState('') // key currently being acted on
-
-  // Live subscription to the hub owner's approval records.
-  const subscribe = () => {
-    let unsub = null
-    let alive = true
-    setLoading(true)
-    ;(async () => {
-      const uid = await resolveHubOwnerUid()
-      if (!alive) return
-      setOwnerUid(uid)
-      if (!uid) { setLoading(false); return }
-      unsub = onValue(dbRef(db, `public/approvals/${uid}`), (snap) => {
-        const val = snap.val() || {}
-        const list = Object.entries(val).map(([key, r]) => ({
-          key,
-          status: (r && r.status) || 'pending',
-          name: (r && r.name) || '',
-          email: (r && r.email) || '',
-          phone: (r && r.phone) || '',
-          company: (r && r.company) || '',
-          profile: (r && r.profile) || '',
-          property: (r && r.property) || '',
-          ts: (r && r.ts) || 0,
-          decidedTs: (r && r.decidedTs) || 0,
-          token: (r && r.token) || '',
-        }))
-        list.sort((a, b) => (b.ts || 0) - (a.ts || 0))
-        setRows(list)
-        setLoading(false)
-      }, () => setLoading(false))
-    })()
-    return () => { alive = false; if (unsub) unsub() }
-  }
-  useEffect(subscribe, [])
-
-  const counts = {
-    pending: rows.filter((r) => r.status === 'pending').length,
-    approved: rows.filter((r) => r.status === 'approved').length,
-    revoked: rows.filter((r) => r.status === 'revoked').length,
-    all: rows.length,
-  }
-
-  const filtered = rows.filter((r) => {
-    if (tab !== 'all' && r.status !== tab) return false
-    if (q.trim()) {
-      const s = q.trim().toLowerCase()
-      if (![r.name, r.email, r.company, r.property, r.phone].some((v) => String(v || '').toLowerCase().includes(s))) return false
-    }
-    return true
-  })
-
-  const norm = (s) => String(s || '').trim().toLowerCase()
-  // Match an approval's property name to a listing → gives us the package id for its files.
-  const findListing = (propName) => {
-    const p = norm(propName)
-    if (!p) return null
-    return (
-      (listings || []).find((l) => norm(l.name) === p) ||
-      (listings || []).find((l) => norm(l.name) && (norm(l.name).includes(p) || p.includes(norm(l.name)))) ||
-      null
-    )
-  }
-  // Gather every file behind this deal's gate (OM + confidential docs) so the one-time link
-  // delivers them all. Files live under the deal room / listing id; try each candidate id.
-  const gatherDealFiles = async (row) => {
-    const listing = findListing(row.property)
-    const pkgId = listing ? listing.id : ''
-    const room = (dealRooms || []).find((r) => pkgId && String(r.listingId) === String(pkgId)) ||
-      (dealRooms || []).find((r) => norm(r.name) === norm(row.property)) || null
-    const roomIds = Array.from(new Set([room && room.id, pkgId, room && room.listingId].filter(Boolean).map(String)))
-    return gatherGatedFiles({ pkgId, roomIds })
-  }
-
-  const decide = async (row, status) => {
-    if (!canDecide) { notify('Only Owners, Admins and Managers can decide requests', 'error'); return }
-    if (!ownerUid) { notify('Could not resolve the listing owner — try refreshing', 'error'); return }
-    setBusy(row.key)
-    try {
-      if (status === 'approved') {
-        // Approve → mint a fresh single-use 24h token + email the secure link (shared helper, so the
-        // deal room's Authorize button does the exact same thing).
-        const files = await gatherDealFiles(row)
-        const res = await issueAccessGrant({ ownerUid, key: row.key, email: row.email, name: row.name, prop: row.property, files })
-        if (!res.filesCount) {
-          notify('Approved, but no documents are attached to this deal yet — upload the OM / files, then approve again', 'error')
-        } else {
-          notify(res.emailed ? `Approved — a one-time (24h) download link was emailed to ${row.email}` : `Approved${row.email ? ' — but the email could not be sent (check EmailJS)' : ''}`, res.emailed || !row.email ? 'success' : 'error')
-        }
-      } else {
-        await revokeAccessGrant({ ownerUid, key: row.key })
-        notify(`Access denied for ${row.name || row.email}`, 'error')
-      }
-    } catch {
-      notify('Could not save the decision — check your connection', 'error')
-    } finally {
-      setBusy('')
-    }
-  }
-
-  const fmtWhen = (ts) => {
-    if (!ts) return '—'
-    const d = new Date(ts)
-    const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-    const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-    return `${date} · ${time}`
-  }
-  const initials = (name, email) => {
-    const src = (name || email || '?').trim()
-    const parts = src.split(/\s+/).filter(Boolean)
-    return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase() || src[0]?.toUpperCase() || '?'
-  }
-  const StatusPill = ({ status }) => {
-    const map = {
-      pending: { label: 'Pending', cls: 'bg-amber-50 text-amber-700 ring-amber-200', icon: Clock },
-      approved: { label: 'Approved', cls: 'bg-emerald-50 text-emerald-700 ring-emerald-200', icon: CheckCircle2 },
-      revoked: { label: 'Denied', cls: 'bg-rose-50 text-rose-700 ring-rose-200', icon: Ban },
-    }
-    const s = map[status] || map.pending
-    const I = s.icon
-    return (
-      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ${s.cls}`}>
-        <I className="h-3.5 w-3.5" /> {s.label}
-      </span>
-    )
-  }
-  const TABS = [
-    { key: 'pending', label: 'Pending' },
-    { key: 'approved', label: 'Approved' },
-    { key: 'revoked', label: 'Denied' },
-    { key: 'all', label: 'All' },
-  ]
-
-  return (
-    <div className="mx-auto w-full max-w-6xl p-4 sm:p-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
-            <ShieldCheck className="h-6 w-6" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Access Requests</h1>
-            <p className="mt-0.5 text-sm text-slate-500">
-              Approve or deny NDA access requests. Once approved, the visitor can download the marketing package.
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {counts.pending > 0 && (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-800">
-              <Clock className="h-3.5 w-3.5" /> {counts.pending} awaiting review
-            </span>
-          )}
-          <button
-            onClick={() => subscribe()}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
-          >
-            <RefreshCw className="h-4 w-4" /> Refresh
-          </button>
-        </div>
-      </div>
-
-      {/* Filter tabs + search */}
-      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1">
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-sm font-semibold transition ${
-                tab === t.key ? 'bg-brand text-white shadow-sm' : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              {t.label}
-              <span className={`rounded-full px-1.5 text-[11px] font-bold ${tab === t.key ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-500'}`}>
-                {counts[t.key]}
-              </span>
-            </button>
-          ))}
-        </div>
-        <div className="relative sm:w-72">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search name, email, property…"
-            className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
-          />
-        </div>
-      </div>
-
-      {/* List */}
-      <div className="mt-5">
-        {loading ? (
-          <div className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-16 text-sm font-medium text-slate-400">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-brand" /> Loading requests…
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white py-16 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50 text-slate-300">
-              <Inbox className="h-7 w-7" />
-            </div>
-            <h3 className="mt-4 text-base font-bold text-slate-800">
-              {tab === 'pending' ? 'No pending requests' : q ? 'No matches' : 'Nothing here yet'}
-            </h3>
-            <p className="mt-1 max-w-sm text-sm text-slate-500">
-              {tab === 'pending'
-                ? 'When someone signs an NDA that needs approval, their request will appear here for you to review.'
-                : 'Requests you approve or deny will show up under these tabs.'}
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {filtered.map((r) => (
-              <div
-                key={r.key}
-                className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md sm:flex-row sm:items-center"
-              >
-                {/* Identity */}
-                <div className="flex min-w-0 flex-1 items-center gap-3">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand to-orange-600 text-sm font-bold text-white">
-                    {initials(r.name, r.email)}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="truncate font-bold text-slate-900">{r.name || 'Unnamed visitor'}</p>
-                      {r.profile && (
-                        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-500">{r.profile}</span>
-                      )}
-                    </div>
-                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
-                      {r.email && (
-                        <a href={`mailto:${r.email}`} className="inline-flex items-center gap-1 hover:text-brand" onClick={(e) => e.stopPropagation()}>
-                          <Mail className="h-3.5 w-3.5" /> {r.email}
-                        </a>
-                      )}
-                      {r.phone && (
-                        <a href={`tel:${String(r.phone).replace(/[^0-9+]/g, '')}`} className="inline-flex items-center gap-1 hover:text-brand" onClick={(e) => e.stopPropagation()}>
-                          <Phone className="h-3.5 w-3.5" /> {r.phone}
-                        </a>
-                      )}
-                      {r.company && (
-                        <span className="inline-flex items-center gap-1"><Building2 className="h-3.5 w-3.5" /> {r.company}</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Property + time */}
-                <div className="min-w-0 sm:w-56">
-                  <div className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
-                    <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                    <span className="truncate">{r.property || '—'}</span>
-                  </div>
-                  <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-400">
-                    <Calendar className="h-3.5 w-3.5" /> {fmtWhen(r.ts)}
-                  </div>
-                </div>
-
-                {/* Status + actions */}
-                <div className="flex shrink-0 items-center gap-2 sm:w-64 sm:justify-end">
-                  <StatusPill status={r.status} />
-                  {canDecide && r.status !== 'approved' && (
-                    <button
-                      onClick={() => decide(r, 'approved')}
-                      disabled={busy === r.key}
-                      className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-50"
-                    >
-                      <Check className="h-3.5 w-3.5" /> Approve
-                    </button>
-                  )}
-                  {canDecide && r.status !== 'revoked' && (
-                    <button
-                      onClick={() => decide(r, 'revoked')}
-                      disabled={busy === r.key}
-                      className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-white px-3 py-1.5 text-xs font-bold text-rose-600 transition hover:bg-rose-50 disabled:opacity-50"
-                    >
-                      <X className="h-3.5 w-3.5" /> Deny
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Footnote */}
-      <p className="mt-6 flex items-center gap-1.5 text-xs text-slate-400">
-        <ShieldCheck className="h-3.5 w-3.5" />
-        Decisions apply instantly. Approved visitors can download on their next attempt; denied visitors are blocked.
-      </p>
-    </div>
-  )
-}
-
-/* -------------------------------------------------------------------------- */
 /*  Main App                                                                  */
 /* -------------------------------------------------------------------------- */
 
@@ -17961,8 +17412,6 @@ export default function App() {
   const [role, setRole] = useState('Member')
   const [perms, setPerms] = useState(() => new Set())
   const can = (key) => perms.has(key)
-  // Live count of pending NDA access requests — drives the "Access Requests" sidebar badge.
-  const approvalsPending = useApprovalsPending()
 
   // Firebase Auth is the source of truth. On sign-in we ensure a profile exists
   // in the Realtime DB (the FIRST account to sign up becomes the Admin), then
@@ -18187,7 +17636,7 @@ export default function App() {
     )
   }
 
-  const EXTRA_LABELS = { approvals: 'Access Requests', team: 'Team & Permissions', profile: 'Profile Settings', teamsettings: 'Team Settings' }
+  const EXTRA_LABELS = { team: 'Team & Permissions', profile: 'Profile Settings', teamsettings: 'Team Settings' }
   const activeLabel = NAV_ITEMS.find((n) => n.key === active)?.label || EXTRA_LABELS[active] || 'My Leads'
 
   const renderScreen = () => {
@@ -18198,9 +17647,6 @@ export default function App() {
         return <ListingHubPage listings={listings} setListings={setListings} setPackages={setPackages} globalQuery={query} onCreateNew={startCreate} onResumeDraft={resumeDraft} onOpenDealRoom={openDealRoomFor} dealRooms={dealRooms} setDealRooms={setDealRooms} onOpenRoom={(room) => { setDealRoomTarget(room); setActive('deals'); setMobileNav(false) }} user={user} role={role} can={can} />
       case 'deals':
         return <DealRoomsPage dealRooms={dealRooms} setDealRooms={setDealRooms} listings={listings} setListings={setListings} onEditDocument={resumeDraft} openTarget={dealRoomTarget} onOpenHandled={() => setDealRoomTarget(null)} onExit={() => { setDealRoomTarget(null); navigate('listings') }} user={user} role={role} />
-      case 'approvals':
-        // NDA approval center — Owner/Admin/Manager only (matches the sidebar gating).
-        return ['Owner', 'Admin', 'Manager'].includes(role) ? <AccessRequestsPage role={role} listings={listings} dealRooms={dealRooms} /> : <NoAccessPage />
       case 'team':
         // Role-based (not override-based): Owner/Admin/Manager may open this page. A Manager can
         // only add members; changing roles/permissions is locked to Owner/Admin inside the page.
@@ -18229,7 +17675,7 @@ export default function App() {
       <div className="flex h-screen overflow-hidden bg-slate-50 text-slate-900">
         {/* Desktop sidebar */}
         <div className="hidden md:block">
-          <Sidebar active={active} onNavigate={navigate} onSignOut={handleSignOut} user={user} can={can} role={role} approvalsCount={approvalsPending} responsiveCollapse />
+          <Sidebar active={active} onNavigate={navigate} onSignOut={handleSignOut} user={user} can={can} role={role} responsiveCollapse />
         </div>
 
         {/* Mobile slide-in drawer */}
@@ -18252,7 +17698,6 @@ export default function App() {
                 user={user}
                 can={can}
                 role={role}
-                approvalsCount={approvalsPending}
               />
             </div>
           </div>

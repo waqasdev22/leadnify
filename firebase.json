@@ -21,10 +21,6 @@
     ],
     "rewrites": [
       {
-        "source": "/d/**",
-        "run": { "serviceId": "dl", "region": "us-central1" }
-      },
-      {
         "source": "**",
         "destination": "/index.html"
       }
