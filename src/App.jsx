@@ -11862,7 +11862,13 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
   // Load this room's OM + confidential files + photos from the cloud whenever the room opens.
   useEffect(() => {
     let alive = true
-    getFile(`om_${room.id}`).then((o) => { if (alive) setOmFlyer(o || null) }).catch(() => {})
+    // OM/Flyer: prefer the shared file; fall back to the public package (published by listing id)
+    // so an OM a teammate uploaded earlier still shows for everyone, even pre-shared uploads.
+    getFile(`om_${room.id}`).then(async (o) => {
+      if (!alive) return
+      if (o && o.url) { setOmFlyer(o); return }
+      try { const pkg = await getPublicPackage(room.listingId || room.id); if (alive) setOmFlyer(pkg && pkg.url ? { name: pkg.name || 'Offering Memorandum.pdf', url: pkg.url } : null) } catch { if (alive) setOmFlyer(o || null) }
+    }).catch(() => {})
     getFile(`roomfiles_${room.id}`).then((v) => { if (alive) setFiles(Array.isArray(v?.list) ? v.list : []) }).catch(() => {})
     getFile(`photos_${room.id}`).then((v) => {
       if (!alive) return

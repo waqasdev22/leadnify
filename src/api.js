@@ -175,8 +175,12 @@ export const getFile = async (key) => {
   const uid = currentUid()
   if (!uid) return null
   try {
-    const snap = await dbGet(dbRef(db, `data/${uid}/files/${key}`))
-    return snap.val() || null
+    // Shared team workspace first, so every teammate sees the SAME OM / confidential files...
+    let snap = await dbGet(dbRef(db, `data/${TEAM_KEY}/files/${key}`))
+    let val = snap.val()
+    // ...falling back to this account's older per-user path (files uploaded before the shared move).
+    if (val == null) { snap = await dbGet(dbRef(db, `data/${uid}/files/${key}`)); val = snap.val() }
+    return val || null
   } catch {
     return null
   }
@@ -200,11 +204,13 @@ const restSet = async (path, value) => {
 export const putFile = async (key, obj) => {
   const uid = currentUid()
   if (!uid) throw new Error('not signed in')
-  await restSet(`data/${uid}/files/${key}`, clean(obj))
+  // Write to the SHARED team workspace so every teammate can open it.
+  await restSet(`data/${TEAM_KEY}/files/${key}`, clean(obj))
 }
 export const delFile = async (key) => {
   const uid = currentUid()
   if (!uid) return
+  try { await dbSet(dbRef(db, `data/${TEAM_KEY}/files/${key}`), null) } catch { /* ignore */ }
   try { await dbSet(dbRef(db, `data/${uid}/files/${key}`), null) } catch { /* ignore */ }
 }
 
