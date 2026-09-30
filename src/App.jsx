@@ -424,7 +424,11 @@ const readFileAsDataUrl = (f) =>
 // microsite "Download Package" for the listing with the same name.
 const pkgNameKey = (name) => 'byname_' + String(name || '').toLowerCase().replace(/[^a-z0-9]/g, '')
 const dataUrlToBlobUrl = (dataUrl) => {
-  const [meta, b64] = String(dataUrl).split(',')
+  const s = String(dataUrl)
+  // A real (Storage/https) URL opens/streams directly in the browser — no slow client-side
+  // decode. Only legacy base64 data: URLs need converting to a Blob URL.
+  if (/^https?:/i.test(s)) return s
+  const [meta, b64] = s.split(',')
   const mime = (meta.match(/data:([^;]+)/) || [])[1] || 'application/octet-stream'
   const bin = atob(b64 || '')
   const arr = new Uint8Array(bin.length)
@@ -12150,7 +12154,13 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
   }, [room])
 
   const downloadFile = (f) => {
-    // If we have the real uploaded file (cloud data URL), download that.
+    // Real Storage/https URL → open in a new tab (fast, streamed; the browser handles the PDF).
+    if (f?.url && /^https?:/i.test(String(f.url))) {
+      window.open(f.url, '_blank')
+      notify('Opening file')
+      return
+    }
+    // Legacy base64 data URL → convert to a Blob and download.
     if (f?.url) {
       const objUrl = dataUrlToBlobUrl(f.url)
       const a = document.createElement('a')
