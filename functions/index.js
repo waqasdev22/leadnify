@@ -183,3 +183,41 @@ exports.dl = onRequest({ cors: true, timeoutSeconds: 300, memory: '512MiB' }, as
     try { res.status(500).set('Content-Type', 'text/html').send(noticePage('Something went wrong', 'We could not process this download right now. Please try again later or contact the listing broker.')) } catch { /* ignore */ }
   }
 })
+
+/* -------------------------------------------------------------------------- */
+/*  registerMember — add an OM/download form filler to the team as a Member    */
+/*                                                                            */
+/*  Public microsites cannot write to /users (rules require an authed team     */
+/*  member), so the form posts here and the Admin SDK writes a directory-only  */
+/*  Member entry (no login account). Never overwrites an existing account, so  */
+/*  a real Owner/Admin/Manager can never be downgraded by a form submission.  */
+/* -------------------------------------------------------------------------- */
+exports.registerMember = onRequest({ cors: true, timeoutSeconds: 30, memory: '256MiB' }, async (req, res) => {
+  try {
+    if (req.method !== 'POST') { res.status(405).json({ ok: false, error: 'POST only' }); return }
+    const b = req.body || {}
+    const email = String(b.email || '').trim().toLowerCase()
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { res.status(400).json({ ok: false, error: 'invalid email' }); return }
+    // Never touch an existing account (real members/owners/admins) — no downgrades, no overwrite.
+    const usersSnap = await db.ref('users').get()
+    const users = usersSnap.val() || {}
+    const already = Object.values(users).some((u) => u && String(u.email || '').toLowerCase() === email)
+    if (already) { res.json({ ok: true, existed: true }); return }
+    const uid = 'lead_' + email.replace(/[.$#[\]/@]/g, '_')
+    const clip = (v, n) => String(v == null ? '' : v).slice(0, n)
+    await db.ref('users/' + uid).set({
+      name: clip(b.name || email.split('@')[0], 80),
+      email,
+      role: 'Member',
+      overrides: {},
+      source: 'om-form',
+      phone: clip(b.phone, 40),
+      company: clip(b.company, 80),
+      profile: clip(b.profile, 40),
+      createdAt: new Date().toISOString(),
+    })
+    res.json({ ok: true, created: true })
+  } catch (err) {
+    res.status(500).json({ ok: false, error: 'server error' })
+  }
+})
