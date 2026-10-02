@@ -38,6 +38,16 @@ if (params.get('code') !== null && params.get('state') !== null && window.opener
 } else if (params.get('hub') !== null || cleanSlug) {
   const slug = params.get('hub') || 'vaziamts'
   const RTDB = 'https://cre-dashboard-ba596-default-rtdb.firebaseio.com'
+  // Kick off the banner image download IMMEDIATELY (in parallel with the hub fetch) using the
+  // cached hub, so on reload the banner isn't waiting for the network round-trip to even start.
+  try {
+    if (cleanSlug) {
+      const localHub = JSON.parse(localStorage.getItem('crebuilder_hub') || 'null')
+      const localItems = localHub && Array.isArray(localHub.items) ? localHub.items : null
+      const it = localItems && localItems.find((x) => String(x.slug || '') === cleanSlug || String(x.id) === cleanSlug)
+      if (it && it.image && !/^data:/i.test(it.image)) { const im = new Image(); im.fetchPriority = 'high'; im.src = it.image }
+    }
+  } catch { /* ignore */ }
   const renderHub = (saved) => {
     let items =
       saved && Array.isArray(saved.items) && saved.items.length
