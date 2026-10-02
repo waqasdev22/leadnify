@@ -10,6 +10,16 @@
     <link rel="preconnect" href="https://firebasestorage.googleapis.com" crossorigin />
     <link rel="dns-prefetch" href="https://firebasestorage.googleapis.com" />
     <title>Leadnify.io — Dashboard</title>
+    <!-- Match the first-paint background to what will render, so a reload shows no white flash:
+         dark (hero) for a property page, light for the dashboard / listings. -->
+    <style>html,body{margin:0}</style>
+    <script>
+      try {
+        var p = location.pathname.replace(/^\/+|\/+$/g, '');
+        var isProperty = p && p.indexOf('.') === -1; // any clean path segment = a property page
+        document.documentElement.style.background = isProperty ? '#0f172a' : '#f8fafc';
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

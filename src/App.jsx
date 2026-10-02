@@ -8759,7 +8759,7 @@ html{scroll-behavior:auto}
 body.detail-open .hero,body.detail-open .toolbar,body.detail-open #content,body.detail-open .list-footer{display:none}
 body.detail-open .detail{display:block}
 /* Modern single-listing detail — compact banner + two-column sticky sidebar (Exhibit C) */
-.dhero{position:relative;height:440px;overflow:hidden;color:#fff}
+.dhero{position:relative;height:440px;overflow:hidden;color:#fff;background:#0f172a}
 .dhero>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .dhero .ov{position:absolute;inset:0;background:linear-gradient(90deg,rgba(15,23,42,.9),rgba(15,23,42,.5) 62%,rgba(15,23,42,.32))}
 .dtop{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;padding:16px 22px;z-index:3}
