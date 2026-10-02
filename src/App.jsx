@@ -8758,7 +8758,7 @@ footer{text-align:center;padding:28px;background:linear-gradient(#fff,rgba(255,2
 footer .line{width:96px;height:2px;background:${primary};opacity:.4;margin:0 auto 12px;border-radius:2px}
 footer p{font-size:14px;color:#64748b}footer b{color:${primary}}
 @media(max-width:900px){.content.mapgrid,.content.grid #cards{grid-template-columns:1fr}}
-html{scroll-behavior:auto}
+html{scroll-behavior:auto;overflow-y:scroll;scrollbar-gutter:stable}
 .card{cursor:pointer}
 .detail{display:none}
 body.detail-open .hero,body.detail-open .toolbar,body.detail-open #content,body.detail-open .list-footer{display:none}
