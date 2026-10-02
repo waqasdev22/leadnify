@@ -8753,7 +8753,7 @@ footer{text-align:center;padding:28px;background:linear-gradient(#fff,rgba(255,2
 footer .line{width:96px;height:2px;background:${primary};opacity:.4;margin:0 auto 12px;border-radius:2px}
 footer p{font-size:14px;color:#64748b}footer b{color:${primary}}
 @media(max-width:900px){.content.mapgrid,.content.grid #cards{grid-template-columns:1fr}}
-html{scroll-behavior:smooth}
+html{scroll-behavior:auto}
 .card{cursor:pointer}
 .detail{display:none}
 body.detail-open .hero,body.detail-open .toolbar,body.detail-open #content,body.detail-open .list-footer{display:none}
@@ -9197,9 +9197,9 @@ var mapDetailTries=0;
 function drawDetailMap(el,l,pos){
   // Prefer Google Maps satellite (client request). Wait for the Google script to load (up to ~6s);
   // only if the key is missing or Google never loads do we fall back to Leaflet + Esri satellite.
-  if(gReady()){el.innerHTML='';dmap=new google.maps.Map(el,{center:pos,zoom:18,mapTypeId:'hybrid',mapTypeControl:true,streetViewControl:true,fullscreenControl:true,keyboardShortcuts:false});new google.maps.Marker({position:pos,map:dmap,icon:gPin()});[0,150,450].forEach(function(ms){setTimeout(pinTopIfIdle,ms);});return;}
+  if(gReady()){el.innerHTML='';dmap=new google.maps.Map(el,{center:pos,zoom:18,mapTypeId:'hybrid',mapTypeControl:true,streetViewControl:true,fullscreenControl:true,keyboardShortcuts:false});new google.maps.Marker({position:pos,map:dmap,icon:gPin()});return;}
   if(GKEY&&mapDetailTries<20){mapDetailTries++;setTimeout(function(){drawDetailMap(el,l,pos);},300);return;}
-  var go=function(){el.innerHTML='';dmap=L.map(el,{keyboard:false}).setView([pos.lat,pos.lng],17);L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Imagery &copy; Esri'}).addTo(dmap);L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:19}).addTo(dmap);L.marker([pos.lat,pos.lng],{icon:lPin()}).addTo(dmap);setTimeout(function(){dmap.invalidateSize();},100);[0,150,450].forEach(function(ms){setTimeout(pinTopIfIdle,ms);});};window.L?go():loadLeaflet(go);}
+  var go=function(){el.innerHTML='';dmap=L.map(el,{keyboard:false}).setView([pos.lat,pos.lng],17);L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Imagery &copy; Esri'}).addTo(dmap);L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:19}).addTo(dmap);L.marker([pos.lat,pos.lng],{icon:lPin()}).addTo(dmap);setTimeout(function(){dmap.invalidateSize();},100);};window.L?go():loadLeaflet(go);}
 function geoNominatim(addr,cb){try{fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q='+encodeURIComponent(addr)).then(function(r){return r.json();}).then(function(a){cb(a&&a[0]&&a[0].lat?{lat:Number(a[0].lat),lng:Number(a[0].lon)}:null);}).catch(function(){cb(null);});}catch(e){cb(null);}}
 function geocodeAddr(addr,cb,tries){if(!addr){cb(null);return;}tries=tries||0;
   // Prefer Google's geocoder (best building coverage). Wait briefly for the Maps script to load; then
@@ -9236,7 +9236,7 @@ function lbGo(d){if(!LBL.length)return;LBI=(LBI+d+LBL.length)%LBL.length;renderL
 function lbSet(i){LBI=i;renderLB();}
 function renderLB(){var m=document.getElementById('lbMain');if(m){m.style.opacity='0';m.onload=function(){m.style.opacity='1';};m.src=LBL[LBI];if(m.complete)m.style.opacity='1';}var t=document.getElementById('lbThumbs');if(t){t.innerHTML=LBL.map(function(im,ix){return '<img src="'+im+'" class="'+(ix===LBI?'act':'')+'" onclick="lbSet('+ix+')"/>';}).join('');var a=t.querySelector('.act');if(a&&a.scrollIntoView)a.scrollIntoView({block:'nearest'});}var c=document.getElementById('lbCount');if(c)c.textContent=(LBI+1)+' / '+LBL.length;}
 document.addEventListener('keydown',function(e){var lb=document.getElementById('lb');if(!lb||!lb.classList.contains('on'))return;if(e.key==='Escape')closeLB();else if(e.key==='ArrowLeft')lbGo(-1);else if(e.key==='ArrowRight')lbGo(1);});
-function loadGallery(l){fetch(RTDB+'/public/gallery/'+l.id+'.json').then(function(r){return r.json();}).then(function(g){if(!g||!Array.isArray(g.images)||!g.images.length)return;var imgs=(ncov(l)?[]:[l.image]).concat(g.images.filter(function(x){return x&&x!==l.image;})).filter(function(x){return x;});if(!imgs.length)return;gsInit(imgs);creHeight();pinTopIfIdle();}).catch(function(){});}
+function loadGallery(l){fetch(RTDB+'/public/gallery/'+l.id+'.json').then(function(r){return r.json();}).then(function(g){if(!g||!Array.isArray(g.images)||!g.images.length)return;var imgs=(ncov(l)?[]:[l.image]).concat(g.images.filter(function(x){return x&&x!==l.image;})).filter(function(x){return x;});if(!imgs.length)return;gsInit(imgs);creHeight();}).catch(function(){});}
 // Pin the page to the top when a property opens — but NEVER fight the user: the moment they
 // scroll/wheel/touch, auto-pinning stops so they can scroll freely and smoothly.
 var __userScrolled=false;
