@@ -8695,10 +8695,15 @@ export function buildMicrositeHtml(items, brandColor, template = 'Modern', defau
   // Headings/titles use a modern sans-serif (matches crebuilder), not a formal serif — just larger &
   // bolder than the body. (Name kept as `serif` so the many references below don't need renaming.)
   const serif = "Inter,system-ui,-apple-system,'Segoe UI',Arial,sans-serif"
+  // Preload the opened property's banner image in <head> so the browser starts downloading it
+  // immediately (before it parses the <img> in the body) — removes the "banner appears a bit late".
+  const openItem = openSlug ? (items || []).find((it) => String(it.slug || '') === String(openSlug) || String(it.id) === String(openSlug)) : null
+  const heroPreload = (openItem && openItem.image && !/^data:/i.test(String(openItem.image))) ? `<link rel="preload" as="image" href="${String(openItem.image).replace(/"/g, '&quot;')}" fetchpriority="high"/>` : ''
   return `<!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
+${heroPreload}
 <title>Listings — Leadnify.io</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}

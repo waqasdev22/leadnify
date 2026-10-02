@@ -71,6 +71,12 @@ if (params.get('code') !== null && params.get('state') !== null && window.opener
     const ownerEmail = (saved && saved.ownerEmail) || ''
     const ownerEmails = (saved && Array.isArray(saved.ownerEmails) && saved.ownerEmails.length) ? saved.ownerEmails : (ownerEmail ? [ownerEmail] : [])
     const logoUrl = (saved && saved.logoUrl) || ''
+    // Start downloading the opened property's banner BEFORE we rewrite the document, so it's already
+    // in-flight (warm cache) by the time the new page's <img> parses — no "banner appears late".
+    try {
+      const openItem = cleanSlug ? items.find((it) => String(it.slug || '') === cleanSlug || String(it.id) === cleanSlug) : null
+      if (openItem && openItem.image && !/^data:/i.test(openItem.image)) { const im = new Image(); im.src = openItem.image }
+    } catch { /* ignore */ }
     document.open()
     document.write(buildMicrositeHtml(items, primary, template, defaultView, ownerUid, ownerEmail, logoUrl, ownerEmails, cleanSlug))
     document.close()
