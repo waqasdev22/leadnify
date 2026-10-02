@@ -11861,7 +11861,9 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
   // The shared public hub slug, so a property's share link nests as /<hub>/<property>.
   const [hubSlug] = usePersistentState('hub_slug', 'vaziamts', true)
   const [slugDraft, setSlugDraft] = useState(gateListing?.slug || room.slug || '')
+  const canEditUrl = ['Owner', 'Admin'].includes(role)
   const saveSlug = () => {
+    if (!canEditUrl) { notify('Only an Owner or Admin can change the property URL', 'error'); return }
     const clean = slugify(slugDraft)
     if (clean && (listings || []).some((l) => l.slug === clean && l.id !== gateListing?.id)) {
       notify('That URL is already used by another property — pick a different one', 'error'); return
@@ -12866,19 +12868,21 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <p className="text-sm font-bold text-slate-900">Property URL</p>
             <p className="text-xs text-slate-400">Set a custom web address for this property</p>
-            <div className="mt-3 flex items-stretch overflow-hidden rounded-lg border border-slate-200 focus-within:border-orange-400">
+            <div className={`mt-3 flex items-stretch overflow-hidden rounded-lg border border-slate-200 ${canEditUrl ? 'focus-within:border-orange-400' : 'bg-slate-50 opacity-70'}`}>
               <span className="flex items-center whitespace-nowrap bg-slate-50 px-2.5 text-[11px] font-medium text-slate-400">{window.location.host}/…&p=</span>
               <input
                 value={slugDraft}
                 onChange={(e) => setSlugDraft(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') saveSlug() }}
                 placeholder="ziggis-coffee-huntington"
-                className="min-w-0 flex-1 px-2 py-2 text-xs text-slate-700 outline-none"
+                disabled={!canEditUrl}
+                title={canEditUrl ? undefined : 'Only an Owner or Admin can change the property URL'}
+                className="min-w-0 flex-1 bg-transparent px-2 py-2 text-xs text-slate-700 outline-none disabled:cursor-not-allowed"
               />
             </div>
-            <div className="mt-2 flex items-center justify-between">
-              <p className="truncate text-[11px] text-slate-400">{slugify(slugDraft) ? `Link ends in …&p=${slugify(slugDraft)}` : 'Letters, numbers & dashes only'}</p>
-              <button onClick={saveSlug} disabled={slugify(slugDraft) === urlSlug} className={`rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition ${slugify(slugDraft) === urlSlug ? 'cursor-not-allowed bg-slate-300' : 'bg-brand hover:bg-brand-hover'}`}>Save URL</button>
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <p className="truncate text-[11px] text-slate-400">{!canEditUrl ? 'Only an Owner or Admin can change this.' : (slugify(slugDraft) ? `Link ends in …&p=${slugify(slugDraft)}` : 'Letters, numbers & dashes only')}</p>
+              <button onClick={saveSlug} disabled={!canEditUrl || slugify(slugDraft) === urlSlug} title={canEditUrl ? undefined : 'Only an Owner or Admin can change the property URL'} className={`rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition ${(!canEditUrl || slugify(slugDraft) === urlSlug) ? 'cursor-not-allowed bg-slate-300' : 'bg-brand hover:bg-brand-hover'}`}>Save URL</button>
             </div>
           </div>
 
