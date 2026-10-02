@@ -8758,9 +8758,6 @@ html{scroll-behavior:auto}
 .detail{display:none}
 body.detail-open .hero,body.detail-open .toolbar,body.detail-open #content,body.detail-open .list-footer{display:none}
 body.detail-open .detail{display:block}
-/* Smooth fade/slide-in when a property detail opens (no flicker / abrupt banner pop). */
-@keyframes dvIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-#detailView.dvIn{animation:dvIn .32s ease-out}
 /* Modern single-listing detail — compact banner + two-column sticky sidebar (Exhibit C) */
 .dhero{position:relative;height:440px;overflow:hidden;color:#fff}
 .dhero>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
@@ -9257,7 +9254,7 @@ function __markScrolled(){__userScrolled=true;}
 function __toTopNow(){try{var de=document.documentElement;var p=de.style.scrollBehavior;de.style.scrollBehavior='auto';window.scrollTo(0,0);de.scrollTop=0;if(document.body)document.body.scrollTop=0;de.style.scrollBehavior=p;}catch(e){try{window.scrollTo(0,0);}catch(e2){}}}
 function scrollTopHard(){__userScrolled=false;function s(){if(__userScrolled)return;__toTopNow();}s();try{requestAnimationFrame(s);}catch(e){}[60,180,350,600].forEach(function(ms){setTimeout(s,ms);});}
 function pinTopIfIdle(){if(!__userScrolled)__toTopNow();}
-function openDetail(id,skipUrl){var l=null,i;for(i=0;i<DATA.length;i++){if(DATA[i].id==id||(DATA[i].slug&&DATA[i].slug===String(id))){l=DATA[i];break;}}if(!l)return;CUR=l;trackHit('pageViews',{id:l.id});var __dv=document.getElementById('detailView');__dv.innerHTML=detailHtml(l);__dv.classList.remove('dvIn');void __dv.offsetWidth;__dv.classList.add('dvIn');document.body.classList.add('detail-open');scrollTopHard();renderDemo(1);initDetailMapLazy(l);gsInit(galFor(l));loadGallery(l);creNav(l.id);creHeight();if(!skipUrl){var pv=l.slug||l.id;try{history.pushState({p:pv},'',creUrl(pv));}catch(e){}}}
+function openDetail(id,skipUrl){var l=null,i;for(i=0;i<DATA.length;i++){if(DATA[i].id==id||(DATA[i].slug&&DATA[i].slug===String(id))){l=DATA[i];break;}}if(!l)return;CUR=l;trackHit('pageViews',{id:l.id});document.getElementById('detailView').innerHTML=detailHtml(l);document.body.classList.add('detail-open');scrollTopHard();renderDemo(1);initDetailMapLazy(l);gsInit(galFor(l));loadGallery(l);creNav(l.id);creHeight();if(!skipUrl){var pv=l.slug||l.id;try{history.pushState({p:pv},'',creUrl(pv));}catch(e){}}}
 function backToList(skipUrl){document.body.classList.remove('detail-open');if(dmap&&dmap.remove){try{dmap.remove();}catch(e){}}dmap=null;__toTopNow();creNav(null);creHeight();if(!skipUrl){try{history.pushState({},'',creUrl(null));}catch(e){}}}
 document.addEventListener('click',function(e){var a=e.target.closest?e.target.closest('.dtabs a'):null;if(a){var tb=a.parentElement.querySelectorAll('a'),i;for(i=0;i<tb.length;i++)tb[i].classList.remove('active');a.classList.add('active');}});
 /* --- Embed messaging: talk to the parent page when used as an <iframe> --- */
