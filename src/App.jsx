@@ -8945,7 +8945,7 @@ body.detail-open .detail{display:block}
   #dmap{height:260px}
   .c2b{padding:16px}
 }
-</style></head><body>
+</style></head><body${openSlug ? ' class="detail-open"' : ''}>
 <header class="hero"><div class="cut"></div><div class="inner"><div class="logo"></div><div class="count" id="count"></div></div></header>
 <div class="toolbar"><div class="tbin">
   <button onclick="if(window.top!==window.self){if(history.length>1)history.back()}else{location.href='/'}" style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:700;color:#334155;cursor:pointer;white-space:nowrap">&larr; Back</button>
@@ -9268,7 +9268,7 @@ window.addEventListener('popstate',function(){var pid=new URLSearchParams(locati
 try{if('scrollRestoration' in history)history.scrollRestoration='manual';}catch(e){}
 render();creHeight();
 trackHit('impr',{n:(DATA&&DATA.length)||0,ids:(DATA||[]).map(function(d){return d.id;})});
-(function(){var pid=new URLSearchParams(location.search).get('p')||${JSON.stringify(openSlug || '')};if(pid){openDetail(pid,true);scrollTopHard();}})();
+(function(){var pid=new URLSearchParams(location.search).get('p')||${JSON.stringify(openSlug || '')};if(pid){openDetail(pid,true);scrollTopHard();}if(!CUR){document.body.classList.remove('detail-open');}})();
 </script></body></html>`
 }
 
