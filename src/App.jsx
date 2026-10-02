@@ -9242,10 +9242,13 @@ function loadGallery(l){fetch(RTDB+'/public/gallery/'+l.id+'.json').then(functio
 var __userScrolled=false;
 function __markScrolled(){__userScrolled=true;}
 ['wheel','touchmove','keydown','mousedown'].forEach(function(ev){try{window.addEventListener(ev,__markScrolled,{passive:true});}catch(e){}});
-function scrollTopHard(){__userScrolled=false;function s(){if(__userScrolled)return;try{window.scrollTo(0,0);}catch(e){}try{document.documentElement.scrollTop=0;document.body.scrollTop=0;}catch(e){}}s();try{requestAnimationFrame(s);}catch(e){}[60,180,350,600].forEach(function(ms){setTimeout(s,ms);});}
-function pinTopIfIdle(){if(!__userScrolled){try{window.scrollTo(0,0);}catch(e){}}}
+// Jump to the very top INSTANTLY (bypassing the page's smooth scroll-behavior, which would
+// otherwise animate the jump and look like the page is scrolling on open).
+function __toTopNow(){try{var de=document.documentElement;var p=de.style.scrollBehavior;de.style.scrollBehavior='auto';window.scrollTo(0,0);de.scrollTop=0;if(document.body)document.body.scrollTop=0;de.style.scrollBehavior=p;}catch(e){try{window.scrollTo(0,0);}catch(e2){}}}
+function scrollTopHard(){__userScrolled=false;function s(){if(__userScrolled)return;__toTopNow();}s();try{requestAnimationFrame(s);}catch(e){}[60,180,350,600].forEach(function(ms){setTimeout(s,ms);});}
+function pinTopIfIdle(){if(!__userScrolled)__toTopNow();}
 function openDetail(id,skipUrl){var l=null,i;for(i=0;i<DATA.length;i++){if(DATA[i].id==id||(DATA[i].slug&&DATA[i].slug===String(id))){l=DATA[i];break;}}if(!l)return;CUR=l;trackHit('pageViews',{id:l.id});document.getElementById('detailView').innerHTML=detailHtml(l);document.body.classList.add('detail-open');scrollTopHard();renderDemo(1);initDetailMap(l);gsInit(galFor(l));loadGallery(l);creNav(l.id);creHeight();if(!skipUrl){var pv=l.slug||l.id;try{history.pushState({p:pv},'',creUrl(pv));}catch(e){}}}
-function backToList(skipUrl){document.body.classList.remove('detail-open');if(dmap&&dmap.remove){try{dmap.remove();}catch(e){}}dmap=null;window.scrollTo(0,0);creNav(null);creHeight();if(!skipUrl){try{history.pushState({},'',creUrl(null));}catch(e){}}}
+function backToList(skipUrl){document.body.classList.remove('detail-open');if(dmap&&dmap.remove){try{dmap.remove();}catch(e){}}dmap=null;__toTopNow();creNav(null);creHeight();if(!skipUrl){try{history.pushState({},'',creUrl(null));}catch(e){}}}
 document.addEventListener('click',function(e){var a=e.target.closest?e.target.closest('.dtabs a'):null;if(a){var tb=a.parentElement.querySelectorAll('a'),i;for(i=0;i<tb.length;i++)tb[i].classList.remove('active');a.classList.add('active');}});
 /* --- Embed messaging: talk to the parent page when used as an <iframe> --- */
 function creHeight(){try{var h=Math.max(document.body.scrollHeight,document.documentElement.scrollHeight);parent.postMessage({type:'cre-listings-resize',height:h},'*');}catch(e){}}
