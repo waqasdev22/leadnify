@@ -9241,10 +9241,10 @@ function loadGallery(l){fetch(RTDB+'/public/gallery/'+l.id+'.json').then(functio
 // scroll/wheel/touch, auto-pinning stops so they can scroll freely and smoothly.
 var __userScrolled=false;
 function __markScrolled(){__userScrolled=true;}
+// Genuine user-scroll intent (wheel/trackpad/touch). We do NOT listen to the 'scroll' event here,
+// because switching from the list to the detail view fires a layout 'scroll' that would be
+// mistaken for the user and stop the open-at-top pin.
 ['wheel','touchmove'].forEach(function(ev){try{window.addEventListener(ev,__markScrolled,{passive:true});}catch(e){}});
-// Catch ANY scroll away from the top (wheel, trackpad, touch, OR scrollbar drag). Our own pins
-// only ever scroll to 0, so a position > 2px means the user moved it — stop fighting them.
-try{window.addEventListener('scroll',function(){if((window.scrollY||document.documentElement.scrollTop||0)>2)__userScrolled=true;},{passive:true});}catch(e){}
 // Jump to the very top INSTANTLY (bypassing the page's smooth scroll-behavior, which would
 // otherwise animate the jump and look like the page is scrolling on open).
 function __toTopNow(){try{var de=document.documentElement;var p=de.style.scrollBehavior;de.style.scrollBehavior='auto';window.scrollTo(0,0);de.scrollTop=0;if(document.body)document.body.scrollTop=0;de.style.scrollBehavior=p;}catch(e){try{window.scrollTo(0,0);}catch(e2){}}}
