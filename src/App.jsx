@@ -9207,6 +9207,10 @@ function geocodeAddr(addr,cb,tries){if(!addr){cb(null);return;}tries=tries||0;
   if(window.google&&google.maps&&google.maps.Geocoder){try{var gc=new google.maps.Geocoder();gc.geocode({address:addr},function(res,st){if(st==='OK'&&res&&res[0]&&res[0].geometry){var loc=res[0].geometry.location;cb({lat:loc.lat(),lng:loc.lng()});}else{geoNominatim(addr,cb);}});return;}catch(e){}}
   if(tries<4){setTimeout(function(){geocodeAddr(addr,cb,tries+1);},400);return;}
   geoNominatim(addr,cb);}
+// Load the map ONLY when the Location section is about to come into view. If we build it on open
+// (while it sits below the fold) the map grabs focus and scrolls the whole page down — this avoids
+// that entirely, so the property page always opens at the top.
+function initDetailMapLazy(l){var el=document.getElementById('dmap');if(!el)return;if('IntersectionObserver' in window){var done=false;var io=new IntersectionObserver(function(ents){for(var i=0;i<ents.length;i++){if(ents[i].isIntersecting&&!done){done=true;try{io.disconnect();}catch(e){}initDetailMap(l);}}},{rootMargin:'250px 0px'});io.observe(el);}else{initDetailMap(l);}}
 function initDetailMap(l){var el=document.getElementById('dmap');if(!el)return;mapDetailTries=0;var fb=(l.lat!=null&&l.lng!=null)?{lat:Number(l.lat),lng:Number(l.lng)}:null;
   // An exact pin set on the deal's Location step wins — use it as-is, don't geocode over it.
   if(l.exact&&fb){drawDetailMap(el,l,fb);return;}
@@ -9250,7 +9254,7 @@ function __markScrolled(){__userScrolled=true;}
 function __toTopNow(){try{var de=document.documentElement;var p=de.style.scrollBehavior;de.style.scrollBehavior='auto';window.scrollTo(0,0);de.scrollTop=0;if(document.body)document.body.scrollTop=0;de.style.scrollBehavior=p;}catch(e){try{window.scrollTo(0,0);}catch(e2){}}}
 function scrollTopHard(){__userScrolled=false;function s(){if(__userScrolled)return;__toTopNow();}s();try{requestAnimationFrame(s);}catch(e){}[60,180,350,600].forEach(function(ms){setTimeout(s,ms);});}
 function pinTopIfIdle(){if(!__userScrolled)__toTopNow();}
-function openDetail(id,skipUrl){var l=null,i;for(i=0;i<DATA.length;i++){if(DATA[i].id==id||(DATA[i].slug&&DATA[i].slug===String(id))){l=DATA[i];break;}}if(!l)return;CUR=l;trackHit('pageViews',{id:l.id});document.getElementById('detailView').innerHTML=detailHtml(l);document.body.classList.add('detail-open');scrollTopHard();renderDemo(1);initDetailMap(l);gsInit(galFor(l));loadGallery(l);creNav(l.id);creHeight();if(!skipUrl){var pv=l.slug||l.id;try{history.pushState({p:pv},'',creUrl(pv));}catch(e){}}}
+function openDetail(id,skipUrl){var l=null,i;for(i=0;i<DATA.length;i++){if(DATA[i].id==id||(DATA[i].slug&&DATA[i].slug===String(id))){l=DATA[i];break;}}if(!l)return;CUR=l;trackHit('pageViews',{id:l.id});document.getElementById('detailView').innerHTML=detailHtml(l);document.body.classList.add('detail-open');scrollTopHard();renderDemo(1);initDetailMapLazy(l);gsInit(galFor(l));loadGallery(l);creNav(l.id);creHeight();if(!skipUrl){var pv=l.slug||l.id;try{history.pushState({p:pv},'',creUrl(pv));}catch(e){}}}
 function backToList(skipUrl){document.body.classList.remove('detail-open');if(dmap&&dmap.remove){try{dmap.remove();}catch(e){}}dmap=null;__toTopNow();creNav(null);creHeight();if(!skipUrl){try{history.pushState({},'',creUrl(null));}catch(e){}}}
 document.addEventListener('click',function(e){var a=e.target.closest?e.target.closest('.dtabs a'):null;if(a){var tb=a.parentElement.querySelectorAll('a'),i;for(i=0;i<tb.length;i++)tb[i].classList.remove('active');a.classList.add('active');}});
 /* --- Embed messaging: talk to the parent page when used as an <iframe> --- */
