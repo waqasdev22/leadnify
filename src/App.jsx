@@ -8766,8 +8766,8 @@ body.detail-open .detail{display:block}
 /* Modern single-listing detail — compact banner + two-column sticky sidebar (Exhibit C) */
 .dhero{position:relative;height:440px;overflow:hidden;color:#fff;background:#0f172a}
 .dhlogo{position:absolute;top:16px;left:50%;transform:translateX(-50%);z-index:4;text-align:center}
-.dhlogo img{max-height:72px;max-width:230px;object-fit:contain;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
-@media(max-width:640px){.dhlogo img{max-height:52px;max-width:170px}}
+.dhlogo img{max-height:120px;max-width:320px;object-fit:contain;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
+@media(max-width:640px){.dhlogo img{max-height:70px;max-width:190px}}
 .dhero>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .dhero .ov{position:absolute;inset:0;background:linear-gradient(90deg,rgba(15,23,42,.9),rgba(15,23,42,.5) 62%,rgba(15,23,42,.32))}
 .dtop{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;padding:16px 22px;z-index:3}
@@ -9003,7 +9003,7 @@ function render(){var items=filtered();
   // logo box so there's a single, centered logo (falls back to "All Properties" if no logo is set).
   var logoEl=document.querySelector('.hero .logo');if(logoEl)logoEl.style.display='none';
   var inner=document.querySelector('.hero .inner');if(inner)inner.style.justifyContent='center';
-  var c=document.getElementById('count');if(c){c.innerHTML=OWNER_LOGO?('<img src="'+OWNER_LOGO+'" alt="Company logo" style="max-height:130px;max-width:340px;object-fit:contain;display:block"/>'):'<span style="font-size:20px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase">All Properties</span>';}
+  var c=document.getElementById('count');if(c){c.innerHTML=OWNER_LOGO?('<img src="'+OWNER_LOGO+'" alt="Company logo" style="max-height:120px;max-width:320px;object-fit:contain;display:block"/>'):'<span style="font-size:20px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase">All Properties</span>';}
   document.getElementById('result').innerHTML='';document.getElementById('cards').innerHTML=items.map(cardHtml).join('');document.getElementById('content').className='content '+state.view;if(state.view==='map'||state.view==='mapgrid'){drawMap(items);}creHeight();}
 document.getElementById('filterSeg').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;state.filter=b.getAttribute('data-f');var ch=this.children;for(var i=0;i<ch.length;i++)ch[i].classList.toggle('active',ch[i]===b);render();});
 document.getElementById('viewSeg').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;state.view=b.getAttribute('data-v');var ch=this.children;for(var i=0;i<ch.length;i++)ch[i].classList.toggle('active',ch[i]===b);render();});
