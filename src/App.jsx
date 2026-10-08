@@ -8715,6 +8715,8 @@ body{font-family:${bodyFont};background:#f8fafc;color:#0f172a}
 .logo{height:96px;width:160px;border-radius:12px;background:rgba(255,255,255,.15)}
 .count b{font-size:48px;font-weight:800;line-height:1;display:block;text-align:right}
 .count span{font-size:12px;font-weight:600;letter-spacing:2px;text-transform:uppercase;opacity:.85}
+.count img{max-height:120px;max-width:320px;object-fit:contain;display:block}
+@media(max-width:640px){.count img{max-height:70px;max-width:190px}}
 .toolbar{background:#fff;border-bottom:1px solid #e2e8f0;position:sticky;top:0;z-index:1000}
 .tbin{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:12px 24px;max-width:1200px;margin:0 auto}
 .seg{display:inline-flex;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden}
@@ -9003,7 +9005,7 @@ function render(){var items=filtered();
   // logo box so there's a single, centered logo (falls back to "All Properties" if no logo is set).
   var logoEl=document.querySelector('.hero .logo');if(logoEl)logoEl.style.display='none';
   var inner=document.querySelector('.hero .inner');if(inner)inner.style.justifyContent='center';
-  var c=document.getElementById('count');if(c){c.innerHTML=OWNER_LOGO?('<img src="'+OWNER_LOGO+'" alt="Company logo" style="max-height:120px;max-width:320px;object-fit:contain;display:block"/>'):'<span style="font-size:20px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase">All Properties</span>';}
+  var c=document.getElementById('count');if(c){c.innerHTML=OWNER_LOGO?('<img src="'+OWNER_LOGO+'" alt="Company logo"/>'):'<span style="font-size:20px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase">All Properties</span>';}
   document.getElementById('result').innerHTML='';document.getElementById('cards').innerHTML=items.map(cardHtml).join('');document.getElementById('content').className='content '+state.view;if(state.view==='map'||state.view==='mapgrid'){drawMap(items);}creHeight();}
 document.getElementById('filterSeg').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;state.filter=b.getAttribute('data-f');var ch=this.children;for(var i=0;i<ch.length;i++)ch[i].classList.toggle('active',ch[i]===b);render();});
 document.getElementById('viewSeg').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;state.view=b.getAttribute('data-v');var ch=this.children;for(var i=0;i<ch.length;i++)ch[i].classList.toggle('active',ch[i]===b);render();});
