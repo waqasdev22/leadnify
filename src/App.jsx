@@ -13685,7 +13685,7 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
   const [search, setSearch] = useState('')
   // Live Page Views + Impressions from the public site's own hit log (no Google Analytics needed):
   // every property-page open and listings-page load is recorded under /public/hits and counted here.
-  const [siteHits, setSiteHits] = useState({ pageViews: 0, impressions: 0, byProp: {} })
+  const [siteHits, setSiteHits] = useState({ pageViews: 0, impressions: 0, byProp: {}, imByProp: {} })
   useEffect(() => {
     let alive = true
     // Read through the authenticated Firebase SDK (public/hits requires auth to read), not a plain
@@ -13699,13 +13699,34 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
         const pvArr = pv ? Object.values(pv) : []
         const byProp = {}
         pvArr.forEach((h) => { const id = h && h.id != null ? String(h.id) : ''; if (id) byProp[id] = (byProp[id] || 0) + 1 })
-        const imSum = im ? Object.values(im).reduce((a, x) => a + (Number(x && x.n) || 1), 0) : 0
-        setSiteHits({ pageViews: pvArr.length, impressions: imSum, byProp })
+        // Per-property impressions: each impression record lists the ids shown in that grid load,
+        // so a property's impressions = the number of loads it appeared in.
+        const imArr = im ? Object.values(im) : []
+        const imByProp = {}
+        imArr.forEach((h) => { const ids = (h && Array.isArray(h.ids)) ? h.ids : []; ids.forEach((id) => { const k = id != null ? String(id) : ''; if (k) imByProp[k] = (imByProp[k] || 0) + 1 }) })
+        const imSum = imArr.reduce((a, x) => a + (Number(x && x.n) || 1), 0)
+        setSiteHits({ pageViews: pvArr.length, impressions: imSum, byProp, imByProp })
       }).catch(() => {})
     }
     load()
     const iv = setInterval(load, 30000)
     return () => { alive = false; clearInterval(iv) }
+  }, [])
+  // Property name -> id map (hits are keyed by property id, but the report filters by name), so a
+  // selected property's own Impressions / Page Views can be looked up from siteHits.
+  const [nameToId, setNameToId] = useState({})
+  useEffect(() => {
+    let alive = true
+    fetch('https://cre-dashboard-ba596-default-rtdb.firebaseio.com/public/hub/vaziamts.json')
+      .then((r) => r.json())
+      .then((hub) => {
+        if (!alive || !hub || !Array.isArray(hub.items)) return
+        const m = {}
+        hub.items.forEach((it) => { if (it && it.name && it.id != null) m[it.name] = String(it.id) })
+        setNameToId(m)
+      })
+      .catch(() => {})
+    return () => { alive = false }
   }, [])
   const [tasks, setTasks] = usePersistentState('crm_tasks', CRM_TASKS_SEED)
   const [autos, setAutos] = usePersistentState('crm_autos', CRM_AUTOMATIONS_SEED)
@@ -15743,7 +15764,12 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
               const liveVisitors = new Set(reportLeads.map((l) => (l.email || '').toLowerCase()).filter((e) => e && e !== '—')).size || reportLeads.length
               const liveOpenOms = reportLeads.filter((l) => /download|package|\bom\b/i.test(l.source || '') || /download/i.test(l.message || '')).length
               const liveExecutedCa = reportLeads.filter((l) => l.type === 'NDA Signer').length
-              const totals = { impressions: sum('impressions') + siteHits.impressions, pageViews: sum('pageViews') + siteHits.pageViews, visitors: liveVisitors, openOms: liveOpenOms, executedCa: liveExecutedCa, leads: liveLeads }
+              // When a single property is selected, show ITS impressions/page views (from the hit log,
+              // keyed by property id); for "All properties", show the whole-site totals.
+              const selId = reportProperty === 'all' ? null : (nameToId[reportProperty] || null)
+              const propImpr = selId ? ((siteHits.imByProp && siteHits.imByProp[selId]) || 0) : siteHits.impressions
+              const propPV = selId ? ((siteHits.byProp && siteHits.byProp[selId]) || 0) : siteHits.pageViews
+              const totals = { impressions: sum('impressions') + propImpr, pageViews: sum('pageViews') + propPV, visitors: liveVisitors, openOms: liveOpenOms, executedCa: liveExecutedCa, leads: liveLeads }
               const tiles = [
                 { label: 'Leads captured', v: liveLeads, icon: UserPlus, tone: 'bg-orange-50 text-brand', live: true },
                 { label: 'Total Impressions', v: totals.impressions, icon: Eye, tone: 'bg-blue-50 text-blue-500' },
