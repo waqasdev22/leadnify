@@ -9265,7 +9265,7 @@ function __markScrolled(){__userScrolled=true;}
 function __toTopNow(){try{var de=document.documentElement;var p=de.style.scrollBehavior;de.style.scrollBehavior='auto';window.scrollTo(0,0);de.scrollTop=0;if(document.body)document.body.scrollTop=0;de.style.scrollBehavior=p;}catch(e){try{window.scrollTo(0,0);}catch(e2){}}}
 function scrollTopHard(){__userScrolled=false;function s(){if(__userScrolled)return;__toTopNow();}s();try{requestAnimationFrame(s);}catch(e){}[60,180,350,600].forEach(function(ms){setTimeout(s,ms);});}
 function pinTopIfIdle(){if(!__userScrolled)__toTopNow();}
-function openDetail(id,skipUrl){var l=null,i;for(i=0;i<DATA.length;i++){if(DATA[i].id==id||(DATA[i].slug&&DATA[i].slug===String(id))){l=DATA[i];break;}}if(!l)return;CUR=l;trackHit('pageViews',{id:l.id});document.getElementById('detailView').innerHTML=detailHtml(l);document.body.classList.add('detail-open');scrollTopHard();renderDemo(1);initDetailMapLazy(l);gsInit(galFor(l));loadGallery(l);creNav(l.id);creHeight();if(!skipUrl){var pv=l.slug||l.id;try{history.pushState({p:pv},'',creUrl(pv));}catch(e){}}}
+function openDetail(id,skipUrl){var l=null,i;for(i=0;i<DATA.length;i++){if(DATA[i].id==id||(DATA[i].slug&&DATA[i].slug===String(id))){l=DATA[i];break;}}if(!l)return;CUR=l;trackHit('pageViews',{id:l.id});trackHit('impr',{n:1,ids:[l.id]});document.getElementById('detailView').innerHTML=detailHtml(l);document.body.classList.add('detail-open');scrollTopHard();renderDemo(1);initDetailMapLazy(l);gsInit(galFor(l));loadGallery(l);creNav(l.id);creHeight();if(!skipUrl){var pv=l.slug||l.id;try{history.pushState({p:pv},'',creUrl(pv));}catch(e){}}}
 function backToList(skipUrl){document.body.classList.remove('detail-open');if(dmap&&dmap.remove){try{dmap.remove();}catch(e){}}dmap=null;__toTopNow();creNav(null);creHeight();if(!skipUrl){try{history.pushState({},'',creUrl(null));}catch(e){}}}
 document.addEventListener('click',function(e){var a=e.target.closest?e.target.closest('.dtabs a'):null;if(a){var tb=a.parentElement.querySelectorAll('a'),i;for(i=0;i<tb.length;i++)tb[i].classList.remove('active');a.classList.add('active');}});
 /* --- Embed messaging: talk to the parent page when used as an <iframe> --- */
@@ -9278,8 +9278,12 @@ setTimeout(creHeight,700);
 window.addEventListener('popstate',function(){var pid=new URLSearchParams(location.search).get('p');if(!pid){var segs=pathSegs();if(segs.length){var last=segs[segs.length-1];if(isPropSlug(last))pid=last;}}if(pid)openDetail(pid,true);else backToList(true);});
 try{if('scrollRestoration' in history)history.scrollRestoration='manual';}catch(e){}
 render();creHeight();
-trackHit('impr',{n:(DATA&&DATA.length)||0,ids:(DATA||[]).map(function(d){return d.id;})});
-(function(){var pid=new URLSearchParams(location.search).get('p')||${JSON.stringify(openSlug || '')};if(pid){openDetail(pid,true);scrollTopHard();}if(!CUR){document.body.classList.remove('detail-open');}})();
+var __pid=new URLSearchParams(location.search).get('p')||${JSON.stringify(openSlug || '')};
+// Count a listings-grid impression for all shown properties ONLY when the visitor lands on the grid
+// itself — NOT when they deep-link straight to one property. The opened property gets its own
+// impression in openDetail, so opening one property never bumps the others' impressions.
+if(!__pid){trackHit('impr',{n:(DATA&&DATA.length)||0,ids:(DATA||[]).map(function(d){return d.id;})});}
+(function(){if(__pid){openDetail(__pid,true);scrollTopHard();}if(!CUR){document.body.classList.remove('detail-open');}})();
 </script></body></html>`
 }
 
