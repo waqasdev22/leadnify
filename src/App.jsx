@@ -11,6 +11,12 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { getCol, putCol, saveUser, sendEmail, setApiNamespace, getFile, putFile, delFile, MAX_CLOUD_FILE, putPublicPackage, getPublicPackage, delPublicPackage, drainPublicLeads, putPublicHub, putGallery, kvGet, kvSet } from './api'
 import { EMAILJS } from './emailConfig'
+import './distributionData' // Email+Social data model (M1 tables); exposes window.dm in dev for testing
+import { saveCampaignDraft, listCampaigns, deleteCampaignDraft, listTemplates, getEmailSettings, submitForApproval, approveCampaign, rejectCampaign, updateCampaignSchedule } from './distributionData' // M2: campaign drafts + templates + approval + scheduling
+import CampaignWizard from './CampaignWizard' // M2: "New Campaign" composer wizard
+import SendingAdminPanel from './SendingAdmin' // M1 STEP 10: sending health admin monitoring
+import TeamEmailSettings from './TeamEmailSettings' // M1: Team Settings → Email & sending domain
+import TemplateManager from './TemplateManager' // M2: Team Settings → Campaign templates (editing)
 import { auth, googleProvider, db, createMemberAccount, connectSocialAccount, setMemberPassword, uploadToStorage } from './firebase'
 import { ref as dbRef, get as dbGet, set as dbSet, update as dbUpdate, remove as dbRemove, onValue } from 'firebase/database'
 import { PERMISSION_GROUPS, ROLE_PRESETS, ROLES, ROLE_INFO, resolvePerms, decodeOverrides, encodeOverrides } from './permissions'
@@ -10371,7 +10377,7 @@ function NewDealModal({ onClose, onCreate, initial }) {
   )
 }
 
-function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCreateNew, onResumeDraft, onOpenDealRoom, dealRooms = [], setDealRooms, onOpenRoom, user, role = 'Member', can = () => true }) {
+function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCreateNew, onResumeDraft, onOpenDealRoom, dealRooms = [], setDealRooms, onOpenRoom, onNavigate, user, role = 'Member', can = () => true }) {
   // Custom URL + website embed are account-level distribution settings — only Admin/Owner may change them.
   const canManageUrl = ['Owner', 'Admin'].includes(role)
   const notify = useToast()
@@ -11159,6 +11165,9 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                             </div>
                             <div className="col-span-2 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-100 pt-3 sm:col-span-4">
                               <CardAction icon={Pencil} label="Edit" onClick={() => (setEditing(l), setNewDealOpen(true))} />
+                              {['Owner', 'Admin'].includes(role) && (
+                                <CardAction icon={Send} label="Distribute" onClick={() => { try { localStorage.setItem('cre_distribute_deal', String(l.id)) } catch { /* ignore */ } onNavigate && onNavigate('email') }} />
+                              )}
                               <CardAction icon={FileDown} label="PDF" onClick={() => downloadPdf(l, notify)} />
                               <CardAction icon={Send} label="Transfer" onClick={() => transferListing(l)} />
                               <CardAction icon={Copy} label="Duplicate" onClick={() => duplicateListing(l)} />
@@ -16164,6 +16173,27 @@ function EmailBlastPage({ user, onNavigate, role = 'Member' }) {
   const [conns, setConns] = usePersistentState('email_conns', {})
   const [campaigns, setCampaigns] = usePersistentState('email_campaigns', EMAIL_CAMPAIGNS_SEED)
   const [composeOpen, setComposeOpen] = useState(false)
+  const [campaignWizardOpen, setCampaignWizardOpen] = useState(false) // M2: New Campaign wizard
+  const [wizardDeals, setWizardDeals] = useState([]) // listings shown in the wizard's Deal step
+  const [wizardInitialDeal, setWizardInitialDeal] = useState(null) // deal pre-selected via "Distribute"
+  const [campaignDrafts, setCampaignDrafts] = useState([]) // saved campaign drafts (campaigns table)
+  const [editDraft, setEditDraft] = useState(null) // draft being edited in the wizard
+  const [customTemplates, setCustomTemplates] = useState([]) // team-created templates
+  const [requireApproval, setRequireApproval] = useState(false) // team setting: Members need approval to send
+  const reloadDrafts = () => listCampaigns().then((r) => setCampaignDrafts(Array.isArray(r) ? r : [])).catch(() => {})
+  useEffect(() => {
+    getCol('listings').then((l) => setWizardDeals(Array.isArray(l) ? l : [])).catch(() => {})
+    reloadDrafts()
+    listTemplates().then((r) => setCustomTemplates(Array.isArray(r) ? r : [])).catch(() => {})
+    getEmailSettings().then((s) => setRequireApproval(!!(s && s.require_approval))).catch(() => {})
+  }, [])
+  // Arriving from a "Distribute" button in My Deals: open the wizard with that deal pre-selected.
+  useEffect(() => {
+    try {
+      const d = localStorage.getItem('cre_distribute_deal')
+      if (d) { localStorage.removeItem('cre_distribute_deal'); setWizardInitialDeal(d); setCampaignWizardOpen(true) }
+    } catch { /* ignore */ }
+  }, [])
   const [form, setForm] = useState({ audience: EMAIL_AUDIENCES[0], subject: '', body: '', type: 'individual', to: '' })
   const [sending, setSending] = useState(false)
   // Real recipients come from your live leads (the same list My Leads writes to), so a blast
@@ -16513,9 +16543,83 @@ function EmailBlastPage({ user, onNavigate, role = 'Member' }) {
           <p className="text-sm text-brand">Turn any completed property into a polished email — drafts save automatically as you work.</p>
         </div>
         <div className="flex items-center gap-2">
-          <span data-tour-target="1" className={`inline-block ${tourHi(1)}`}><PrimaryButton icon={Plus} onClick={startBlast}>New email blast</PrimaryButton></span>
+          <PrimaryButton icon={Plus} onClick={() => setCampaignWizardOpen(true)}>New Campaign</PrimaryButton>
+          <span data-tour-target="1" className={`inline-block ${tourHi(1)}`}><button onClick={startBlast} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50">New email blast</button></span>
         </div>
       </div>
+
+      {/* SENDING HEALTH — admin monitoring (M1 STEP 10) */}
+      {['Owner', 'Admin'].includes(role) && <SendingAdminPanel role={role} />}
+
+      {/* CAMPAIGN DRAFTS + APPROVAL WORKFLOW (M2 step 8) */}
+      {campaignDrafts.length > 0 && (() => {
+        const me = (user && (user.email || user.name)) || ''
+        const pending = campaignDrafts.filter((d) => d.status === 'pending_approval')
+        // A campaign the reviewer can act on: Managers/Admins/Owner approve or reject pending ones.
+        const doApprove = async (d) => { try { await approveCampaign(d.id, me); notify('Campaign approved'); reloadDrafts() } catch { notify('Could not approve', 'error') } }
+        const doReject = async (d) => { const c = window.prompt('Reason for rejecting (the sender will see this):', ''); if (c === null) return; try { await rejectCampaign(d.id, me, c); notify('Campaign rejected'); reloadDrafts() } catch { notify('Could not reject', 'error') } }
+        const doSubmit = async (d) => { try { await submitForApproval(d.id, me); notify('Sent for approval'); reloadDrafts() } catch { notify('Could not submit', 'error') } }
+        const doCancelSchedule = async (d) => { if (!window.confirm('Cancel the schedule? The campaign stays as a draft (set to send now).')) return; try { await updateCampaignSchedule(d.id, { mode: 'now', at: '' }); notify('Schedule cancelled'); reloadDrafts() } catch { notify('Could not cancel', 'error') } }
+        // A campaign is "scheduled" when its saved schedule is mode:later with a time.
+        const schedInfo = (d) => { const s = d.schedule; return s && s.mode === 'later' && s.at ? s : null }
+        // status → badge styling + label
+        const badge = (s) => {
+          const map = {
+            pending_approval: ['bg-amber-50 text-amber-700', 'Pending approval'],
+            approved: ['bg-emerald-50 text-emerald-700', 'Approved'],
+            rejected: ['bg-rose-50 text-rose-600', 'Rejected'],
+          }
+          const [cls, label] = map[s] || ['bg-slate-100 text-slate-500', 'Draft']
+          return <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold ${cls}`}>{label}</span>
+        }
+        const Card = ({ d }) => {
+          const st = d.status || 'draft'
+          const canReview = canManageTemplates && st === 'pending_approval'
+          const canSubmit = requireApproval && role === 'Member' && (st === 'draft' || st === 'rejected')
+          return (
+            <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="truncate text-sm font-bold text-slate-900">{d.deal_name || 'Untitled campaign'}</p>
+                    {badge(st)}
+                  </div>
+                  <p className="mt-0.5 text-xs text-slate-400">{(Array.isArray(d.channels) ? d.channels : []).join(', ') || 'no channels'}{d.created_at ? ' · ' + new Date(d.created_at).toLocaleDateString() : ''}</p>
+                  {st === 'pending_approval' && d.submitted_by && <p className="mt-1 text-[11px] text-amber-600">Submitted by {d.submitted_by}</p>}
+                  {st === 'approved' && d.approved_by && <p className="mt-1 text-[11px] text-emerald-600">Approved by {d.approved_by}</p>}
+                  {st === 'rejected' && <p className="mt-1 text-[11px] text-rose-500">Rejected{d.reviewed_by ? ' by ' + d.reviewed_by : ''}{d.review_comment ? ': "' + d.review_comment + '"' : ''}</p>}
+                  {schedInfo(d) && (() => { const s = schedInfo(d); const past = new Date(s.at).getTime() < Date.now(); return (
+                    <p className={`mt-1 inline-flex items-center gap-1 text-[11px] font-semibold ${past ? 'text-rose-500' : 'text-indigo-600'}`}><Clock className="h-3 w-3" /> {past ? 'Was scheduled' : 'Scheduled'}: {new Date(s.at).toLocaleString()}{s.tz ? ' (' + s.tz + ')' : ''}{past ? ' — time passed' : ''}</p>
+                  ) })()}
+                </div>
+              </div>
+              <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                <button onClick={() => { setEditDraft(d); setCampaignWizardOpen(true) }} className="rounded-lg bg-orange-50 px-3 py-1.5 text-xs font-bold text-brand transition hover:bg-orange-100">{schedInfo(d) ? 'Edit / Reschedule' : 'Continue'}</button>
+                {schedInfo(d) && <button onClick={() => doCancelSchedule(d)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-50">Cancel schedule</button>}
+                {canSubmit && <button onClick={() => doSubmit(d)} className="rounded-lg bg-brand px-3 py-1.5 text-xs font-bold text-white transition hover:bg-brand-hover">Submit for approval</button>}
+                {canReview && <button onClick={() => doApprove(d)} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-emerald-700">Approve</button>}
+                {canReview && <button onClick={() => doReject(d)} className="rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-50">Reject</button>}
+                <button onClick={async () => { if (window.confirm('Delete this draft?')) { try { await deleteCampaignDraft(d.id); notify('Draft deleted'); reloadDrafts() } catch { notify('Could not delete the draft', 'error') } } }} className="ml-auto rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-500 transition hover:border-rose-200 hover:text-rose-500">Delete</button>
+              </div>
+            </div>
+          )
+        }
+        return (
+          <div className="mt-6">
+            {/* Managers/Admins: anything waiting on them, pulled to the top. */}
+            {canManageTemplates && pending.length > 0 && (
+              <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50/50 p-4">
+                <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-amber-700"><Clock className="h-3.5 w-3.5" /> Awaiting your approval ({pending.length})</p>
+                <div className="mt-3 grid gap-2.5 sm:grid-cols-2">{pending.map((d) => <Card key={d.id} d={d} />)}</div>
+              </div>
+            )}
+            <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-500"><FileText className="h-3.5 w-3.5" /> Campaign Drafts{requireApproval && <span className="ml-1 font-semibold normal-case text-slate-400">· approval required for Members</span>}</p>
+            <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
+              {campaignDrafts.map((d) => <Card key={d.id} d={d} />)}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* SEND WITH */}
       <div data-tour-target="2" className={`mt-7 ${tourHi(2)} ${tourStep === 2 ? 'bg-white p-4' : ''}`}>
@@ -16523,32 +16627,65 @@ function EmailBlastPage({ user, onNavigate, role = 'Member' }) {
         <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-500"><Send className="h-3.5 w-3.5" /> Send with</p>
         <button onClick={() => setIntegrationsOpen(true)} className="text-xs font-semibold text-brand hover:underline">Manage in Integrations →</button>
       </div>
-      <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {EMAIL_PROVIDERS.map((p) => {
-          const on = conns[p.key]
-          const Icon = p.icon
-          return (
-            <div key={p.key} className="flex flex-col items-center rounded-xl border border-slate-200 bg-white p-4 text-center shadow-sm">
-              <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${p.tile}`}><Icon className="h-5 w-5" /></div>
-              <p className="mt-2 text-sm font-bold text-slate-900">{p.name}</p>
-              <p className="mt-0.5 text-xs text-slate-400">{p.sub}</p>
-              <div className="mt-2.5">
-                {p.action === 'ready' ? (
-                  <span className="inline-flex items-center gap-1 text-sm font-semibold text-emerald-600"><CheckCircle2 className="h-4 w-4" /> Always ready</span>
-                ) : p.action === 'setup' ? (
-                  <button onClick={() => setIntegrationsOpen(true)} className="text-sm font-semibold text-brand hover:underline">Set up →</button>
-                ) : on ? (
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700"><CheckCircle2 className="h-4 w-4" /> Connected</span>
-                    <button onClick={() => disconnect(p)} className="text-xs font-medium text-slate-400 hover:text-rose-500">Disconnect</button>
-                  </div>
-                ) : (
-                  <button disabled={openingKey === p.key} onClick={() => startConnect(p)} className="rounded-full bg-orange-50 px-4 py-1 text-sm font-semibold text-brand transition hover:bg-orange-100 disabled:opacity-70">{openingKey === p.key ? 'Opening…' : 'Connect'}</button>
-                )}
+      <div className="mt-3 space-y-5">
+        {(() => {
+          const byKey = Object.fromEntries(EMAIL_PROVIDERS.map((p) => [p.key, p]))
+          const renderCard = (p) => {
+            if (!p) return null
+            const on = conns[p.key]
+            const Icon = p.icon
+            return (
+              <div key={p.key} className="flex flex-col items-center rounded-xl border border-slate-200 bg-white p-4 text-center shadow-sm">
+                <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${p.tile}`}><Icon className="h-5 w-5" /></div>
+                <p className="mt-2 text-sm font-bold text-slate-900">{p.name}</p>
+                <p className="mt-0.5 text-xs text-slate-400">{p.sub}</p>
+                <div className="mt-2.5">
+                  {p.action === 'ready' ? (
+                    <span className="inline-flex items-center gap-1 text-sm font-semibold text-emerald-600"><CheckCircle2 className="h-4 w-4" /> Always ready</span>
+                  ) : p.action === 'setup' ? (
+                    <button onClick={() => setIntegrationsOpen(true)} className="text-sm font-semibold text-brand hover:underline">Set up →</button>
+                  ) : on ? (
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700"><CheckCircle2 className="h-4 w-4" /> Connected</span>
+                      <button onClick={() => disconnect(p)} className="text-xs font-medium text-slate-400 hover:text-rose-500">Disconnect</button>
+                    </div>
+                  ) : (
+                    <button disabled={openingKey === p.key} onClick={() => startConnect(p)} className="rounded-full bg-orange-50 px-4 py-1 text-sm font-semibold text-brand transition hover:bg-orange-100 disabled:opacity-70">{openingKey === p.key ? 'Opening…' : 'Connect'}</button>
+                  )}
+                </div>
               </div>
-            </div>
+            )
+          }
+          const groups = [
+            { label: '2. Your mailbox', note: 'Outlook / Gmail · max 50 recipients', keys: ['outlook', 'gmail'] },
+            { label: '3. Export', note: 'push a draft or download the HTML', keys: ['mailchimp', 'constant', 'download'] },
+            { label: '4. Advanced', note: 'your own AWS SES', keys: ['ses'] },
+          ]
+          return (
+            <>
+              {/* 1. Leadnify Send (default / recommended) */}
+              <div>
+                <p className="mb-2 text-xs font-bold text-slate-700">1. Leadnify Send <span className="ml-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-600">Recommended</span></p>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="flex flex-col items-center rounded-xl border-2 border-brand/40 bg-orange-50/40 p-4 text-center shadow-sm">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand text-white"><Send className="h-5 w-5" /></div>
+                    <p className="mt-2 text-sm font-bold text-slate-900">Leadnify Send</p>
+                    <p className="mt-0.5 text-xs text-slate-400">Send directly through Leadnify (Amazon SES)</p>
+                    <span className="mt-2.5 inline-flex items-center gap-1 text-xs font-semibold text-amber-600">Setup pending (needs AWS)</span>
+                  </div>
+                </div>
+              </div>
+              {groups.map((g) => (
+                <div key={g.label}>
+                  <p className="mb-2 text-xs font-bold text-slate-700">{g.label} <span className="font-normal text-slate-400">· {g.note}</span></p>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {g.keys.map((k) => renderCard(byKey[k]))}
+                  </div>
+                </div>
+              ))}
+            </>
           )
-        })}
+        })()}
       </div>
       </div>
 
@@ -16801,6 +16938,29 @@ function EmailBlastPage({ user, onNavigate, role = 'Member' }) {
           </div>
         </div>
       )}
+
+      {/* New Campaign wizard (M2) */}
+      <CampaignWizard
+        open={campaignWizardOpen}
+        onClose={() => { setCampaignWizardOpen(false); setWizardInitialDeal(null); setEditDraft(null) }}
+        deals={wizardDeals}
+        customTemplates={customTemplates}
+        leads={blastLeads}
+        conns={conns}
+        initialDealId={wizardInitialDeal}
+        initialDraft={editDraft}
+        onSaveDraft={async (data) => {
+          try { await saveCampaignDraft(data); notify('Campaign draft saved'); reloadDrafts(); return true }
+          catch (e) { notify('Could not save the draft — ' + (e?.message || 'try again'), 'error'); return false }
+        }}
+        userEmail={user?.email || ''}
+        onSendTest={async (subject, body) => {
+          const to = user?.email
+          if (!to) { notify('No email address on your account', 'error'); return false }
+          try { await sendEmail({ to, subject: subject || 'Test — Leadnify', message: body || '', name: 'Leadnify.io' }); notify('Test email sent to ' + to); return true }
+          catch (e) { notify('Could not send the test — ' + (e?.message || 'try again'), 'error'); return false }
+        }}
+      />
 
       {/* Compose modal */}
       {composeOpen && (
@@ -17148,6 +17308,18 @@ function TeamSettingsPage({ role = 'Member' }) {
           </div>
         )
       })()}
+
+      {/* Email & Sending Domain (M1) */}
+      <div className="mt-5">
+        <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">Email &amp; Sending Domain</h2>
+        <TeamEmailSettings role={role} />
+      </div>
+
+      {/* Campaign templates (M2) */}
+      <div className="mt-5">
+        <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">Campaign Templates</h2>
+        <TemplateManager role={role} />
+      </div>
 
       {/* Appearance (moved here from My Deals — Admin/Owner only) */}
       {isAdminUp && <AppearanceSettings />}
@@ -18279,7 +18451,7 @@ export default function App() {
       case 'dashboard':
         return <DashboardPage packages={packages} setPackages={setPackages} setListings={setListings} globalQuery={query} createNonce={createNonce} resume={resume} onResumeHandled={() => setResume(null)} onNavigate={navigate} onSignOut={handleSignOut} onOpenDealRoom={openDealRoomFor} dealRooms={dealRooms} setDealRooms={setDealRooms} onOpenRoom={(room) => { setDealRoomTarget(room); setActive('deals'); setMobileNav(false) }} onDeleteRoom={(room) => { if (window.confirm(`Delete deal room "${room.name}"?`)) setDealRooms((list) => list.filter((r) => r.id !== room.id)) }} onUpdateRoom={(id, data) => setDealRooms((list) => list.map((r) => (r.id === id ? { ...r, ...data, ts: Date.now(), updated: 'just now' } : r)))} onTransferRoom={(id, name) => setDealRooms((list) => list.map((r) => (r.id === id ? { ...r, assignee: name, owner_name: name } : r)))} onDuplicateRoom={(room) => setDealRooms((list) => [{ ...room, id: uid(), name: `${room.name} (Copy)`, ts: Date.now(), updated: 'just now' }, ...list])} user={user} can={can} />
       case 'listings':
-        return <ListingHubPage listings={listings} setListings={setListings} setPackages={setPackages} globalQuery={query} onCreateNew={startCreate} onResumeDraft={resumeDraft} onOpenDealRoom={openDealRoomFor} dealRooms={dealRooms} setDealRooms={setDealRooms} onOpenRoom={(room) => { setDealRoomTarget(room); setActive('deals'); setMobileNav(false) }} user={user} role={role} can={can} />
+        return <ListingHubPage listings={listings} setListings={setListings} setPackages={setPackages} globalQuery={query} onCreateNew={startCreate} onResumeDraft={resumeDraft} onOpenDealRoom={openDealRoomFor} dealRooms={dealRooms} setDealRooms={setDealRooms} onOpenRoom={(room) => { setDealRoomTarget(room); setActive('deals'); setMobileNav(false) }} onNavigate={navigate} user={user} role={role} can={can} />
       case 'deals':
         return <DealRoomsPage dealRooms={dealRooms} setDealRooms={setDealRooms} listings={listings} setListings={setListings} onEditDocument={resumeDraft} openTarget={dealRoomTarget} onOpenHandled={() => setDealRoomTarget(null)} onExit={() => { setDealRoomTarget(null); navigate('listings') }} user={user} role={role} />
       case 'approvals':

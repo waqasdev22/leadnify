@@ -10,6 +10,7 @@
  * codebase. Social connect is a future feature and can be re-added with its secrets set.)
  */
 const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https')
+const { onSchedule } = require('firebase-functions/v2/scheduler')
 const admin = require('firebase-admin')
 const archiver = require('archiver')
 
@@ -17,6 +18,83 @@ admin.initializeApp()
 const db = admin.database()
 
 const STORAGE_BUCKET = 'cre-dashboard-ba596.firebasestorage.app'
+
+// Email + Social Publishing — job queue + scheduler (STEP 2).
+const dist = require('./distribution')
+
+// Reusable guard: only an Owner/Admin may call this function.
+async function assertOwnerAdmin(request) {
+  const uid = request.auth && request.auth.uid
+  if (!uid) throw new HttpsError('unauthenticated', 'Sign in first.')
+  const role = (await db.ref(`users/${uid}/role`).get()).val()
+  if (role !== 'Owner' && role !== 'Admin') {
+    throw new HttpsError('permission-denied', 'Only an Owner or Admin can do this.')
+  }
+  return uid
+}
+
+// Scheduler: every minute, run due jobs, then evaluate the circuit breaker (Sections 5.4 + 6).
+exports.distributionScheduler = onSchedule('every 1 minutes', async () => {
+  const r = await dist.processDueJobs()
+  if (r.scanned) console.log('distributionScheduler', JSON.stringify(r))
+  const cb = await dist.checkCircuitBreaker()
+  if (cb.tripped) console.log('circuitBreaker', JSON.stringify(cb))
+  await dist.refreshWarmupStatus() // keep the warm-up cap / today's usage fresh for the admin page
+})
+
+// Current warm-up cap + today's usage (Owner/Admin) — for the admin page and testing.
+exports.distributionWarmupStatus = onCall({ cors: true }, async (request) => {
+  await assertOwnerAdmin(request)
+  return await dist.warmupStatus()
+})
+
+// Manual circuit-breaker check (Owner/Admin) — evaluate now, for testing.
+exports.distributionBreakerCheck = onCall({ cors: true }, async (request) => {
+  await assertOwnerAdmin(request)
+  return await dist.checkCircuitBreaker()
+})
+
+// Resume sending after the breaker tripped (Owner/Admin, once the list is fixed).
+exports.resumeSending = onCall({ cors: true }, async (request) => {
+  await assertOwnerAdmin(request)
+  return await dist.resumeSending()
+})
+
+// TEST ONLY (Owner/Admin): add demo sends/bounces/complaints, or reset to a clean state. Lets the
+// admin page's "Test tools" exercise the monitoring numbers before real sending (SES) exists.
+exports.distributionTestData = onCall({ cors: true }, async (request) => {
+  await assertOwnerAdmin(request)
+  const { sends = 0, bounces = 0, complaints = 0, reset = false } = request.data || {}
+  const base = 'distribution/vaziamts'
+  if (reset) {
+    await db.ref(`${base}/email_sends`).remove()
+    await db.ref(`${base}/email_events`).remove()
+    await db.ref(`${base}/alerts`).remove()
+    await db.ref(`${base}/sending_domains/leadnify_io`).update({ status: 'pending' })
+    await db.ref(`${base}/team_email_settings/config`).update({ warmup_started_at: null, daily_cap: 500, sending_paused: false, paused_reason: null, sent_today: 0, remaining_today: 50, warmup_cap: 50, warmup_stage: 0, effective_daily_cap: 50 })
+    return { reset: true }
+  }
+  const now = Date.now()
+  const updates = {}
+  for (let i = 0; i < sends; i++) updates[`${base}/email_sends/tt_s_${now}_${i}`] = { email: `t${i}@example.com`, status: 'sent', created_at: now, _note: 'test tool' }
+  for (let i = 0; i < bounces; i++) updates[`${base}/email_events/tt_b_${now}_${i}`] = { type: 'bounce', email: `b${i}@example.com`, created_at: now, _note: 'test tool' }
+  for (let i = 0; i < complaints; i++) updates[`${base}/email_events/tt_c_${now}_${i}`] = { type: 'complaint', email: `c${i}@example.com`, created_at: now, _note: 'test tool' }
+  if (Object.keys(updates).length) await db.ref().update(updates)
+  return { added: { sends, bounces, complaints } }
+})
+
+// Manual tick (Owner/Admin) — process due jobs now, without waiting for the schedule. For testing.
+exports.distributionTick = onCall({ cors: true }, async (request) => {
+  await assertOwnerAdmin(request)
+  return await dist.processDueJobs()
+})
+
+// Enqueue a harmless demo job (Owner/Admin) — lets us exercise the queue before real workers exist.
+exports.enqueueTestJob = onCall({ cors: true }, async (request) => {
+  await assertOwnerAdmin(request)
+  const id = await dist.enqueueJob({ type: 'demo', payload: { note: 'test', at: Date.now() }, scheduledAt: Date.now() })
+  return { id }
+})
 
 exports.adminSetPassword = onCall({ cors: true }, async (request) => {
   const callerUid = request.auth && request.auth.uid

@@ -59,6 +59,43 @@
           ".write": true
         }
       }
+    },
+    "distribution": {
+      "vaziamts": {
+        ".read": "auth != null",
+        "sending_domains": {
+          ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'Owner' || root.child('users').child(auth.uid).child('role').val() === 'Admin')"
+        },
+        "team_email_settings": {
+          ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'Owner' || root.child('users').child(auth.uid).child('role').val() === 'Admin')"
+        },
+        "suppressions": {
+          ".write": false
+        },
+        "email_sends": {
+          ".write": false,
+          ".indexOn": ["created_at"]
+        },
+        "email_events": {
+          ".write": false,
+          ".indexOn": ["created_at"]
+        },
+        "jobs": {
+          ".write": false,
+          ".indexOn": ["due_at"]
+        },
+        "alerts": {
+          ".write": false
+        },
+        "campaigns": {
+          ".write": "auth != null",
+          ".indexOn": ["created_at"]
+        },
+        "templates": {
+          ".write": "auth != null",
+          ".indexOn": ["created_at"]
+        }
+      }
     }
   }
 }
