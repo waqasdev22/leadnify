@@ -5,7 +5,7 @@
 //   everything falls back to localStorage so create/edit/delete still persist
 //   across reloads in that browser.
 import { auth, db, fdb } from './firebase'
-import { ref as dbRef, get as dbGet, set as dbSet } from 'firebase/database'
+import { ref as dbRef, get as dbGet, set as dbSet, onValue, off } from 'firebase/database'
 import { doc as fsDoc, setDoc as fsSetDoc } from 'firebase/firestore'
 import { EMAILJS, emailReady } from './emailConfig'
 
@@ -115,6 +115,21 @@ export const getCol = async (col) => {
     }
   }
   return lsGet(col)
+}
+
+// Live-subscribe to a shared collection: `cb(arr)` fires whenever the cloud data changes (this
+// device or any teammate's). Keeps every open session in sync, so one session can't overwrite
+// another's edits with stale data (fixes covers/agents "disappearing" after a day). Returns an
+// unsubscribe function. No-op when signed out.
+export const subscribeCol = (col, cb) => {
+  const uid = currentUid()
+  if (!uid) return () => {}
+  const r = dbRef(db, dataPath(uid, col))
+  const handler = onValue(r, (snap) => {
+    const arr = toArray(snap.val())
+    if (arr != null) { lsSet(col, arr); cb(arr) }
+  }, () => { /* permission / offline — ignore */ })
+  return () => { try { off(r, 'value', handler) } catch { /* ignore */ } }
 }
 
 // Replace the whole collection with `arr` (persists create/edit/delete/toggle).
@@ -254,12 +269,24 @@ export const drainPublicLeads = async () => {
   const uid = currentUid()
   if (!uid) return []
   const out = []
+  // A single submission is POSTed to BOTH buckets (shared + owner uid) with a DIFFERENT push id in
+  // each, so a bucket+push-id key can't de-dupe them — the same lead would show twice in My Leads.
+  // De-dupe on the lead's own content + timestamp instead: the two copies share identical values, so
+  // they collapse to one, while two genuine submissions (different ts) stay separate.
+  const seen = new Set()
   for (const key of [SHARED_LEADS_KEY, uid]) {
     try {
       const snap = await dbGet(dbRef(db, `public/leads/${key}`))
       const val = snap.val()
       if (val && typeof val === 'object') {
-        Object.keys(val).forEach((k) => out.push({ _key: key + '::' + k, ...val[k] }))
+        Object.keys(val).forEach((k) => {
+          const lead = val[k] || {}
+          const sig = ['email', 'phone', 'property', 'name', 'source', 'message', 'ts']
+            .map((f) => String(lead[f] == null ? '' : lead[f]).trim().toLowerCase()).join('|')
+          if (sig.replace(/\|/g, '') && seen.has(sig)) return
+          if (sig.replace(/\|/g, '')) seen.add(sig)
+          out.push({ _key: key + '::' + k, ...lead })
+        })
       }
     } catch { /* ignore this bucket */ }
   }

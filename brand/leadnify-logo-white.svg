@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="96" viewBox="0 0 360 96" role="img" aria-label="Leadnify.io">
+  <g transform="translate(10,12)">
+    <path d="M36 4C22.7 4 12 14.7 12 28c0 15 24 40 24 40s24-25 24-40C60 14.7 49.3 4 36 4z" fill="#FFFFFF"/>
+    <path d="M36 14 L47 26 L41 26 L41 38 L31 38 L31 26 L25 26 Z" fill="#0A63CB"/>
+  </g>
+  <text x="96" y="62" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-weight="800" font-size="44" letter-spacing="-1.5" fill="#FFFFFF">Leadnify<tspan font-weight="500" fill="#BCD6F6">.io</tspan></text>
+</svg>

@@ -9,7 +9,7 @@ import React, {
 import { jsPDF } from 'jspdf'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { getCol, putCol, saveUser, sendEmail, setApiNamespace, getFile, putFile, delFile, MAX_CLOUD_FILE, putPublicPackage, getPublicPackage, delPublicPackage, drainPublicLeads, putPublicHub, putGallery, kvGet, kvSet } from './api'
+import { getCol, putCol, subscribeCol, saveUser, sendEmail, setApiNamespace, getFile, putFile, delFile, MAX_CLOUD_FILE, putPublicPackage, getPublicPackage, delPublicPackage, drainPublicLeads, putPublicHub, putGallery, kvGet, kvSet } from './api'
 import { EMAILJS } from './emailConfig'
 import './distributionData' // Email+Social data model (M1 tables); exposes window.dm in dev for testing
 import { saveCampaignDraft, listCampaigns, deleteCampaignDraft, listTemplates, getEmailSettings, submitForApproval, approveCampaign, rejectCampaign, updateCampaignSchedule } from './distributionData' // M2: campaign drafts + templates + approval + scheduling
@@ -29,6 +29,9 @@ import {
   onAuthStateChanged,
   sendPasswordResetEmail,
   updateProfile,
+  updatePassword,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
 } from 'firebase/auth'
 import {
   Menu,
@@ -681,7 +684,7 @@ function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={notify}>
       {children}
-      <div className="pointer-events-none fixed bottom-5 right-5 z-[100] flex w-80 flex-col gap-2">
+      <div className="pointer-events-none fixed bottom-5 right-5 z-[10000] flex w-80 flex-col gap-2">
         {toasts.map((t) => (
           <div
             key={t.id}
@@ -4316,15 +4319,27 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
           }),
       ),
     )
+  // Photos only, max 15 MB per upload (client spec — Property Pictures). Filters out videos and
+  // oversized files with a toast, returns just the acceptable ones.
+  const okPics = (files) => [...files].filter((f) => {
+    if (f.type && f.type.startsWith('video/')) { notify(`"${f.name}" is a video — photos only`, 'error'); return false }
+    if (f.size > 15 * 1024 * 1024) { notify(`"${f.name}" is too large (max 15 MB per upload) — skipped`, 'error'); return false }
+    return true
+  })
   const uploadCover = async (files) => {
     if (!files?.length) return
-    const [img] = await readFiles([files[0]])
+    const ok = okPics(files)
+    if (!ok.length) return
+    const [img] = await readFiles([ok[0]])
+    if (!img) return
     setMedia((m) => ({ ...m, cover: img }))
     notify('Cover image added')
   }
   const uploadSingles = async (files) => {
     if (!files?.length) return
-    const imgs = await readFiles(files)
+    const ok = okPics(files)
+    if (!ok.length) return
+    const imgs = await readFiles(ok)
     setMedia((m) => ({ ...m, singles: [...m.singles, ...imgs] }))
     notify(`${imgs.length} image${imgs.length > 1 ? 's' : ''} added`)
   }
@@ -4336,7 +4351,9 @@ function DocumentBuilder({ config, initial, draftId, onExit, onChangeType, onSav
   const [galleryModal, setGalleryModal] = useState({ open: false, title: '', layout: 'Grid', images: [] })
   const addGalleryImages = async (files) => {
     if (!files?.length) return
-    const imgs = await readFiles(files)
+    const ok = okPics(files)
+    if (!ok.length) return
+    const imgs = await readFiles(ok)
     setGalleryModal((g) => ({ ...g, images: [...g.images, ...imgs].slice(0, 8) }))
   }
   const createGallery = () => {
@@ -9053,8 +9070,8 @@ var __areaText=l.areaText?esc(l.areaText):(esc(l.name)+' is located in '+__areaL
 // Demographics — Crexi-style dashboard (1/3/5-mile tabs with charts), owner-entered.
 var demoHtml=demoSection(l);
 var areaHtml='<div class="dblock" id="sec-Area"><div class="bl">About the Area</div><p class="dtext">'+__areaText+'</p>'+((__city||__state)?('<div class="facts" style="margin-top:14px"><div class="fh">Location</div>'+frow('City',__city||'&mdash;')+frow('State',__state||'&mdash;')+'</div>'):'')+'</div>';
-var sidebar='<div class="side"><div class="card2"><div class="c2h">Listing Agent</div><div class="c2b"><div class="agent"><div class="av">'+AGENT.initials+'</div><div><div class="nm">'+AGENT.name+'</div><div class="rl">'+AGENT.role+'</div></div></div><a class="aemail" href="mailto:'+AGENT.email+'">'+AGENT.email+'</a><button class="btnp" onclick="dlPkg()">Download Marketing Package</button><button class="btno">Share</button></div></div><div class="card2"><div class="c2h">Request Information</div><div class="c2b"><form onsubmit="return submitInquiry(event)"><input class="finput" placeholder="Your Name *" required/><input class="finput" type="email" placeholder="Email *" required/><input class="finput" type="tel" maxlength="16" oninput="fmtPhone(this)" placeholder="Phone * - (555) 123-4567" required/><textarea class="finput" rows="3">I\\'m interested in '+esc(l.name)+'. Please send me more information.</textarea><button class="btnp" type="submit">Send Inquiry</button></form></div></div></div>';
-var cta='<div class="cta dsec" id="sec-Contact"><div class="k">Get in Touch</div><h2>Interested in '+esc(l.name)+'?</h2><div class="sub">Send a message and we\\'ll respond within one business day.</div><form onsubmit="return submitInquiry(event)"><input class="finput" placeholder="Full Name *" required/><input class="finput" type="email" placeholder="Email *" required/><input class="finput" type="tel" maxlength="16" oninput="fmtPhone(this)" placeholder="Phone * - (555) 123-4567" required/><textarea class="finput" rows="3">I\\'m interested in '+esc(l.name)+'. Please send me more information.</textarea><button class="btnp" type="submit">Send Inquiry</button></form></div>';
+var sidebar='<div class="side"><div class="card2"><div class="c2h">Listing Agent</div><div class="c2b"><div class="agent"><div class="av">'+AGENT.initials+'</div><div><div class="nm">'+AGENT.name+'</div><div class="rl">'+AGENT.role+'</div></div></div><a class="aemail" href="mailto:'+AGENT.email+'">'+AGENT.email+'</a><button class="btnp" onclick="dlPkg()">Download Marketing Package</button><button class="btno">Share</button></div></div><div class="card2"><div class="c2h">Request Information</div><div class="c2b"><form onsubmit="return submitInquiry(event)"><input class="finput" placeholder="Your Name *" required/><input class="finput" type="email" placeholder="Email *" required/><input class="finput" type="tel" maxlength="16" oninput="fmtPhone(this)" placeholder="Phone * - (555) 123-4567" required/><select class="finput" data-f="state"><option value="">Your State (optional)</option>${US_STATES.map((s) => '<option>' + s + '</option>').join('')}</select><textarea class="finput" rows="3">I\\'m interested in '+esc(l.name)+'. Please send me more information.</textarea><button class="btnp" type="submit">Send Inquiry</button></form></div></div></div>';
+var cta='<div class="cta dsec" id="sec-Contact"><div class="k">Get in Touch</div><h2>Interested in '+esc(l.name)+'?</h2><div class="sub">Send a message and we\\'ll respond within one business day.</div><form onsubmit="return submitInquiry(event)"><input class="finput" placeholder="Full Name *" required/><input class="finput" type="email" placeholder="Email *" required/><input class="finput" type="tel" maxlength="16" oninput="fmtPhone(this)" placeholder="Phone * - (555) 123-4567" required/><select class="finput" data-f="state"><option value="">Your State (optional)</option>${US_STATES.map((s) => '<option>' + s + '</option>').join('')}</select><textarea class="finput" rows="3">I\\'m interested in '+esc(l.name)+'. Please send me more information.</textarea><button class="btnp" type="submit">Send Inquiry</button></form></div>';
 var __hs=[];if(l.capRate)__hs.push(['CAP Rate',String(l.capRate).replace('%','').trim()+'%']);if(l.noi)__hs.push(['NOI',fullPrice(l.noi)]);if(l.type==='Hospitality'&&l.pricePerRoom)__hs.push(['Price / Room',fullPrice(l.pricePerRoom)]);else if(l.type==='Multifamily'&&l.numUnits&&Number(l.price)>0)__hs.push(['Price / Unit',fullPrice(Math.round(Number(l.price)/Number(l.numUnits)))]);
 var __hsHtml=__hs.length?'<div class="dhstats">'+__hs.map(function(s){return '<div class="dhstat"><span class="dhk">'+s[0]+'</span><span class="dhv">'+esc(s[1])+'</span></div>';}).join('')+'</div>':'';
 return '<div class="dhero"'+(ncov(l)?' style="background:linear-gradient(135deg,#1e293b,#0f172a)"':'')+'>'+(ncov(l)?'':'<img src="'+esc(l.image)+'" fetchpriority="high" decoding="async" loading="eager"/>')+'<div class="ov"></div>'+(OWNER_LOGO?'<div class="dhlogo"><img src="'+esc(OWNER_LOGO)+'" alt="Company logo"/></div>':'')+'<div class="dtop"><button class="dbtn" onclick="backToList()">&larr; Back to Listings</button><button class="dbtn" onclick="backToList()">&times;</button></div><div class="dhin"><span class="dbadge" style="background:'+bc+'">'+esc(l.saleType)+'</span><div class="dhtitle">'+esc(l.name)+'</div><div class="dhaddr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> '+esc(l.address)+'</div><div class="dhpl">Asking Price</div><div class="dhprice">'+(l.unpriced?'Contact for Price':fullPrice(l.price))+'</div>'+__hsHtml+'</div></div>'
@@ -9069,7 +9086,7 @@ return '<div class="dhero"'+(ncov(l)?' style="background:linear-gradient(135deg,
 +areaHtml
 +'</div>'
 +'<div class="dside"><div class="card2"><div class="c2h">Listing Agent</div><div class="c2b"><div class="agent"><div class="av">'+ag.initials+'</div><div><div class="nm">'+ag.name+'</div><div class="rl">'+ag.role+'</div></div></div><a class="aemail" href="mailto:'+ag.email+'">&#9993; '+ag.email+'</a>'+(ag.phone?'<a class="aemail" href="tel:'+String(ag.phone).replace(/[^0-9+]/g,'')+'">&#9742; '+ag.phone+'</a>':'')+ag2Html+'<button class="btnp" onclick="dlPkg()">&#8681;&nbsp; Download Marketing Package</button>'+(l.bor?('<div class="borbox"><div class="borlbl">Broker of Record</div><div class="borval">'+esc(l.bor)+'</div></div>'):'')+'<div class="sharerow"><button type="button" onclick="pgShare()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>Share</button><button type="button" onclick="pgEmail()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m22 7-10 5L2 7"></path></svg>Email</button><button type="button" onclick="pgLink()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>Link</button></div></div></div>'
-+'<div class="card2" id="sec-Contact"><div class="c2h">Request Information</div><div class="c2b"><form onsubmit="return submitInquiry(event)"><input class="finput" placeholder="Your Name *" required/><input class="finput" type="email" placeholder="Email *" required/><input class="finput" type="tel" maxlength="16" oninput="fmtPhone(this)" placeholder="Phone * - (555) 123-4567" required/><textarea class="finput" rows="3">I\\'m interested in '+esc(l.name)+'. Please send me more information.</textarea><button class="btnp" type="submit">&#9993;&nbsp; Send Inquiry</button></form></div></div></div></div>'
++'<div class="card2" id="sec-Contact"><div class="c2h">Request Information</div><div class="c2b"><form onsubmit="return submitInquiry(event)"><input class="finput" placeholder="Your Name *" required/><input class="finput" type="email" placeholder="Email *" required/><input class="finput" type="tel" maxlength="16" oninput="fmtPhone(this)" placeholder="Phone * - (555) 123-4567" required/><select class="finput" data-f="state"><option value="">Your State (optional)</option>${US_STATES.map((s) => '<option>' + s + '</option>').join('')}</select><textarea class="finput" rows="3">I\\'m interested in '+esc(l.name)+'. Please send me more information.</textarea><button class="btnp" type="submit">&#9993;&nbsp; Send Inquiry</button></form></div></div></div></div>'
 +'<footer><div class="line"></div><p>Powered by <b>Leadnify.io</b></p></footer>';}
 function goContact(){var el=document.getElementById('sec-Contact');if(el)el.scrollIntoView({behavior:'smooth'});}
 var CUR=null;
@@ -9079,6 +9096,12 @@ var EJS_ON=EJS.s&&EJS.s!=='YOUR_SERVICE_ID'&&EJS.t&&EJS.t!=='YOUR_TEMPLATE_ID'&&
 function openPkgBlob(w,pkg){var u=String(pkg.url||'');if(/^https?:/i.test(u)){if(w)w.location.href=u;return;}var parts=u.split(',');var mime=(parts[0].match(/data:([^;]+)/)||[])[1]||'application/pdf';var bin=atob(parts[1]||'');var arr=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);var url=URL.createObjectURL(new Blob([arr],{type:mime}));if(w)w.location.href=url;setTimeout(function(){URL.revokeObjectURL(url);},60000);}
 function fetchPkg(key,cb){if(!key){cb(null);return;}fetch(RTDB+'/public/packages/'+key+'.json').then(function(r){return r.json();}).then(function(p){cb(p&&p.url?p:null);}).catch(function(){cb(null);});}
 function emailOwners(subject,message){if(!EJS_ON||!OWNER_EMAILS||!OWNER_EMAILS.length)return;OWNER_EMAILS.forEach(function(addr){if(!addr)return;fetch('https://api.emailjs.com/api/v1.0/email/send',{method:'POST',keepalive:true,headers:{'Content-Type':'application/json'},body:JSON.stringify({service_id:EJS.s,template_id:EJS.t,user_id:EJS.u,template_params:{to_email:addr,email:addr,name:'Leadnify.io',subject:subject,message:message}})}).catch(function(){});});}
+// Leads/downloads go to the AGENT(S) assigned to THAT property (not a single global inbox). If a
+// property has no agent, they go to the default inbox below. (Client change: "agents part of the
+// deal receives the lead"; agent only — not the owner.)
+var DEFAULT_LEAD_EMAIL='info@valuereis.com';
+function agentEmailsFor(propName){var out=[];try{var n=String(propName||'').trim().toLowerCase();for(var i=0;i<DATA.length;i++){if(String(DATA[i].name||'').trim().toLowerCase()===n){if(DATA[i].agentEmail)out.push(String(DATA[i].agentEmail).trim());if(DATA[i].agent2Email)out.push(String(DATA[i].agent2Email).trim());break;}}}catch(e){}out=out.filter(function(x){return x;});if(!out.length&&DEFAULT_LEAD_EMAIL)out.push(DEFAULT_LEAD_EMAIL);return out;}
+function emailTo(list,subject,message){if(!EJS_ON||!list||!list.length)return;list.forEach(function(addr){if(!addr)return;fetch('https://api.emailjs.com/api/v1.0/email/send',{method:'POST',keepalive:true,headers:{'Content-Type':'application/json'},body:JSON.stringify({service_id:EJS.s,template_id:EJS.t,user_id:EJS.u,template_params:{to_email:addr,email:addr,name:'Leadnify.io',subject:subject,message:message}})}).catch(function(){});});}
 // Branded HTML notification (matches the Leadnify.io look) sent to the Owner for every lead/download.
 // For this to render as a designed email, the EmailJS template body must be {{{message}}} (raw HTML).
 function ownerEmailHtml(o){o=o||{};var accent='${primary}';
@@ -9104,12 +9127,12 @@ function ownerEmailHtml(o){o=o||{};var accent='${primary}';
   h+='</div>';
   h+='<p style="text-align:center;font-size:11px;color:#94a3b8;margin:14px 0 0">&copy; Leadnify.io &mdash; Commercial Real Estate Marketing</p></div>';
   return h;}
-function sendDownloadNotice(prop){var info={};try{info=JSON.parse(localStorage.getItem('cre_enrolled_info')||'{}');}catch(e){}emailOwners('Marketing package downloaded'+(prop?' \\u2014 '+prop:''),ownerEmailHtml({title:'Marketing Package Downloaded',body:'A visitor just downloaded the marketing package from your Leadnify.io property page.',name:info.name,email:info.email,type:info.type||'Download',property:prop||'',source:'Package Download'}));}
+function sendDownloadNotice(prop){var info={};try{info=JSON.parse(localStorage.getItem('cre_enrolled_info')||'{}');}catch(e){}emailTo(agentEmailsFor(prop),'Marketing package downloaded'+(prop?' \\u2014 '+prop:''),ownerEmailHtml({title:'Marketing Package Downloaded',body:'A visitor just downloaded the marketing package from your Leadnify.io property page.',name:info.name,email:info.email,type:info.type||'Download',property:prop||'',source:'Package Download'}));}
 // Notify the owner by email for EVERY new lead (inquiry, registration, etc.) — not just downloads.
-function sendLeadNotice(lead){if(!lead)return;emailOwners('New lead'+(lead.property?(' \\u2014 '+lead.property):''),ownerEmailHtml({title:'New Lead',body:'You received a new lead through your Leadnify.io property page.',name:lead.name,email:lead.email,phone:lead.phone,type:lead.type,property:lead.property||'',source:lead.source||'',message:lead.message||''}));}
+function sendLeadNotice(lead){if(!lead)return;emailTo(agentEmailsFor(lead.property),'New lead'+(lead.property?(' \\u2014 '+lead.property):''),ownerEmailHtml({title:'New Lead',body:'You received a new lead through your Leadnify.io property page.',name:lead.name,email:lead.email,phone:lead.phone,type:lead.type,property:lead.property||'',source:lead.source||'',message:lead.message||''}));}
 // Distinct email for NDA - Approval Required requests: tells the owner to authorize the user in the
 // dashboard (My Leads / deal room -> Authorize).
-function sendApprovalNotice(lead){if(!lead)return;emailOwners('Access approval required'+(lead.property?(' \\u2014 '+lead.property):''),ownerEmailHtml({title:'Access Approval Required',body:esc(lead.name||'A user')+' signed the NDA and is requesting access to your marketing package. Open your Leadnify.io dashboard \\u2192 My Leads (or the deal room) and click <b>Authorize</b> to grant access, or <b>Revoke</b> to deny.',name:lead.name,email:lead.email,phone:lead.phone,type:'NDA - Approval Required',property:lead.property||'',source:lead.hearSource||'',message:lead.message||''}));}
+function sendApprovalNotice(lead){if(!lead)return;emailTo(agentEmailsFor(lead.property),'Access approval required'+(lead.property?(' \\u2014 '+lead.property):''),ownerEmailHtml({title:'Access Approval Required',body:esc(lead.name||'A user')+' signed the NDA and is requesting access to your marketing package. Open your Leadnify.io dashboard \\u2192 My Leads (or the deal room) and click <b>Authorize</b> to grant access, or <b>Revoke</b> to deny.',name:lead.name,email:lead.email,phone:lead.phone,type:'NDA - Approval Required',property:lead.property||'',source:lead.hearSource||'',message:lead.message||''}));}
 // Lightweight own analytics: record a property-page view or a listings impression under /public/hits
 // so the dashboard shows real Page Views & Impressions without any external analytics service.
 function trackHit(kind,extra){try{var b=extra||{};b.t=Date.now();fetch(RTDB+'/public/hits/'+kind+'.json',{method:'POST',keepalive:true,headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).catch(function(){});}catch(e){}}
@@ -9204,12 +9227,12 @@ function dlPkg(){if(!CUR){return;}
   if(CUR.gate==='NDA - Approval Required'){checkApproval(function(st){if(st==='approved'){doDownloadPkg();}else if(st==='revoked'){alert('Your access request was declined by the listing owner.');}else if(st==='pending'){alert('Your access request is pending owner approval. You will be able to download here as soon as it is approved.');}else{showNdaApproval();}});return;}
   // Contact Required (default): register (name/email/phone) first, then download.
   if(isEnrolled()){doDownloadPkg();}else{showEnroll();}}
-function submitInquiry(e){e.preventDefault();var f=e.target;var v={name:'',email:'',phone:'',msg:''};f.querySelectorAll('input,textarea').forEach(function(i){var p=(i.placeholder||'').toLowerCase();if(i.type==='email'||p.indexOf('email')>=0)v.email=i.value;else if(p.indexOf('phone')>=0)v.phone=i.value;else if(i.tagName==='TEXTAREA')v.msg=i.value;else if(p.indexOf('name')>=0)v.name=i.value;});
+function submitInquiry(e){e.preventDefault();var f=e.target;var v={name:'',email:'',phone:'',msg:'',state:''};var __st=f.querySelector('[data-f=state]');if(__st)v.state=__st.value;f.querySelectorAll('input,textarea').forEach(function(i){var p=(i.placeholder||'').toLowerCase();if(i.type==='email'||p.indexOf('email')>=0)v.email=i.value;else if(p.indexOf('phone')>=0)v.phone=i.value;else if(i.tagName==='TEXTAREA')v.msg=i.value;else if(p.indexOf('name')>=0)v.name=i.value;});
 var emailOk=/^[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}$/.test((v.email||'').trim());
 var phoneOk=validUSPhone(v.phone);if(!(v.name||'').trim()||!emailOk||!phoneOk){var msg=!emailOk?'Please enter a valid email address so we can reply.':!phoneOk?'Please enter a valid 10-digit US phone number, e.g. (555) 123-4567.':'Please fill in your name, a valid email, and phone.';var er=f.querySelector('.inqerr');if(!er){er=document.createElement('div');er.className='inqerr';er.style.cssText='color:#dc2626;font-size:13px;margin:0 0 8px;font-weight:600';f.insertBefore(er,f.firstChild);}er.textContent=msg;return false;}
 // Any valid inquiry notifies the team owners/admins/managers (the buyer enters THEIR own email;
 // it's included in the notification so the owner can reply).
-var t=document.querySelector('.dhtitle');var lead={name:v.name,email:v.email,phone:v.phone,message:v.msg,property:t?t.textContent:'',source:'Listing Website',ts:Date.now()};sendLeadNotice(lead);postLead(lead);e.target.innerHTML='<div style="padding:22px 12px;text-align:center"><div style="width:52px;height:52px;border-radius:50%;background:#dcfce7;color:#16a34a;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;margin:0 auto 14px">&#10003;</div><div style="font-size:17px;font-weight:800;color:#0f172a">Thank you!</div><div style="font-size:14px;color:#475569;margin-top:6px;line-height:1.5">Your inquiry has been sent. We\\'ll respond within one business day.</div></div>';return false;}
+var t=document.querySelector('.dhtitle');var lead={name:v.name,email:v.email,phone:v.phone,message:v.msg,state:v.state,property:t?t.textContent:'',source:'Listing Website',ts:Date.now()};sendLeadNotice(lead);postLead(lead);e.target.innerHTML='<div style="padding:22px 12px;text-align:center"><div style="width:52px;height:52px;border-radius:50%;background:#dcfce7;color:#16a34a;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;margin:0 auto 14px">&#10003;</div><div style="font-size:17px;font-weight:800;color:#0f172a">Thank you!</div><div style="font-size:14px;color:#475569;margin-top:6px;line-height:1.5">Your inquiry has been sent. We\\'ll respond within one business day.</div></div>';return false;}
 var mapDetailTries=0;
 function drawDetailMap(el,l,pos){
   // Prefer Google Maps satellite (client request). Wait for the Google script to load (up to ~6s);
@@ -9569,6 +9592,7 @@ function AppearanceSettings() {
       <div className="flex items-start gap-2">
         <Palette className="mt-0.5 h-5 w-5 text-slate-400" />
         <div><p className="text-sm font-bold text-slate-900">Appearance</p><p className="text-xs text-slate-400">Theme, layout and brand colour for your public microsite &amp; property pages. Admins &amp; Owners only.</p></div>
+        <span className="ml-auto hidden shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-600 sm:inline-flex"><Check className="h-3 w-3" /> Changes save automatically</span>
       </div>
 
       {/* Company logo — shown on the microsite header in place of the property count */}
@@ -9973,9 +9997,31 @@ function NewDealModal({ onClose, onCreate, initial }) {
     // Editing: pre-fill EVERY field from the existing listing so the full form reopens with all the
     // values entered at creation (highlights, description, lease, media, etc.) — not a blank/short form (#6).
     if (!initial) return base
+    // Older deals saved only the combined `address` string (not `street`/`zip` separately), so the
+    // edit form's Street/Zip came back blank. Rebuild them from the address here. (#2 Pre-Saved
+    // Fields — Property Address.) The address was built as [street, city, state, zip].
+    const rebuildAddr = () => {
+      let street = initial.street || '', zip = initial.zip || ''
+      const addr = String(initial.address || '').trim()
+      if ((!street || !zip) && addr) {
+        const parts = addr.split(',').map((s) => s.trim()).filter(Boolean)
+        if (!zip && parts.length && /^\d{4,}(-\d+)?$/.test(parts[parts.length - 1])) zip = parts[parts.length - 1]
+        if (!street) {
+          // Street = only the parts BEFORE the city. If the city is the first part (idx 0) or absent,
+          // no street was ever stored — leave it blank (don't mistake the city for a street line).
+          const cityL = String(initial.city || '').trim().toLowerCase()
+          const idx = cityL ? parts.findIndex((p) => p.toLowerCase() === cityL) : -1
+          street = idx > 0 ? parts.slice(0, idx).join(', ') : ''
+        }
+      }
+      return { street, zip }
+    }
+    const _addr = rebuildAddr()
     return {
       ...base,
       ...initial,
+      street: _addr.street,
+      zip: _addr.zip,
       // Normalise any older demo shape (sparse array or numeric-keyed object) into the r-prefixed
       // object the editor uses, so existing demographics reopen correctly.
       demo: (() => { const s = initial.demo; const out = {}; if (s && typeof s === 'object') { ['1', '3', '5'].forEach((k) => { const v = s['r' + k] || s[k] || (Array.isArray(s) ? s[Number(k)] : null); if (v && typeof v === 'object') out['r' + k] = v }) } return out })(),
@@ -10024,15 +10070,28 @@ function NewDealModal({ onClose, onCreate, initial }) {
     return () => { alive = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+  // Also pull the PUBLISHED OM (marketing package) so the OM step shows it on reopen — even if the
+  // listing record's `om` field is missing (the OM lives at /public/packages/<id>). This guarantees
+  // the OM never "disappears" from step 5, no matter how long ago it was uploaded. (#2 Pre-Saved.)
+  useEffect(() => {
+    if (!isEdit || !initial || initial.id == null) return
+    let alive = true
+    getPublicPackage(initial.id).then((pkg) => {
+      if (!alive || !pkg || !pkg.url) return
+      setF((s) => (s.om && s.om.url ? s : { ...s, om: { name: pkg.name || initial.pkgName || 'Offering Memorandum.pdf', url: pkg.url } }))
+    }).catch(() => {})
+    return () => { alive = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const coverRef = useRef(null), photoRef = useRef(null), omRef = useRef(null), confRef = useRef(null)
   const fsize = (file) => { const mb = file.size / (1024 * 1024); return mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.max(1, Math.round(file.size / 1024))} KB` }
   const today = () => new Date().toLocaleDateString('en-GB')
   const inp = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-brand focus:ring-2 focus:ring-blue-100'
   const lbl = 'mb-1 block text-xs font-semibold text-slate-500'
 
-  const onCover = async (e) => { const file = e.target.files?.[0]; e.target.value = ''; if (!file) return; if (!file.type.startsWith('image/')) { notify('Choose an image', 'error'); return } if (file.size > 150 * 1024 * 1024) { notify('Image too large (max 150 MB)', 'error'); return } try { set('cover', await uploadToStorage(await resizeImageFile(file), f.name)) } catch { notify('Upload failed — try again', 'error') } }
-  const onPhotos = async (e) => { const files = Array.from(e.target.files || []).filter((x) => x.type.startsWith('image/')); e.target.value = ''; const added = []; for (const file of files) { if (file.size > 150 * 1024 * 1024) { notify(`"${file.name}" too large (max 150 MB) — skipped`, 'error'); continue } added.push({ id: uid(), name: file.name, url: await uploadToStorage(await resizeImageFile(file), f.name) }) } set('photos', [...f.photos, ...added].slice(0, 12)) }
-  const onOm = async (e) => { const file = e.target.files?.[0]; e.target.value = ''; if (!file) return; if (file.type !== 'application/pdf') { notify('OM must be a PDF', 'error'); return } if (file.size > 150 * 1024 * 1024) { notify('PDF too large (max 150 MB)', 'error'); return } set('om', { name: file.name, size: fsize(file), date: today(), url: await uploadToStorage(file, f.name) }) }
+  const onCover = async (e) => { const file = e.target.files?.[0]; e.target.value = ''; if (!file) return; if (!file.type.startsWith('image/')) { notify('Choose an image (photos only — no videos)', 'error'); return } if (file.size > 15 * 1024 * 1024) { notify('Image too large (max 15 MB per upload)', 'error'); return } try { set('cover', await uploadToStorage(await resizeImageFile(file), f.name)) } catch { notify('Upload failed — try again', 'error') } }
+  const onPhotos = async (e) => { const picked = Array.from(e.target.files || []); e.target.value = ''; const files = picked.filter((x) => x.type.startsWith('image/')); if (picked.length && !files.length) { notify('Photos only — videos can’t be uploaded', 'error') } const added = []; for (const file of files) { if (file.size > 15 * 1024 * 1024) { notify(`"${file.name}" too large (max 15 MB per upload) — skipped`, 'error'); continue } added.push({ id: uid(), name: file.name, url: await uploadToStorage(await resizeImageFile(file), f.name) }) } set('photos', [...f.photos, ...added].slice(0, 12)) }
+  const onOm = async (e) => { const file = e.target.files?.[0]; e.target.value = ''; if (!file) return; if (file.type !== 'application/pdf') { notify('OM must be a PDF', 'error'); return } if (file.size > 150 * 1024 * 1024) { notify('PDF too large (max 150 MB)', 'error'); return } const url = await uploadToStorage(file, f.name); setF((s) => ({ ...s, om: { name: file.name, size: fsize(file), date: today(), url }, _omRemoved: false })) }
   const onConf = async (e) => { const files = Array.from(e.target.files || []); e.target.value = ''; const added = []; for (const file of files) { if (file.size > 150 * 1024 * 1024) { notify(`"${file.name}" too large (max 150 MB) — skipped`, 'error'); continue } added.push({ id: uid(), name: file.name, size: fsize(file), date: today(), url: await uploadToStorage(file, f.name) }) } set('confidential', [...f.confidential, ...added]) }
   const addContact = () => set('contacts', [...f.contacts, { id: uid(), name: '', license: '', email: '', phone: '' }])
   const setContact = (id, k, v) => set('contacts', f.contacts.map((c) => (c.id === id ? { ...c, [k]: v } : c)))
@@ -10226,7 +10285,7 @@ function NewDealModal({ onClose, onCreate, initial }) {
                 <label className={lbl}>Offering Memorandum (PDF)</label>
                 <input ref={omRef} type="file" accept="application/pdf" className="hidden" onChange={onOm} />
                 {f.om ? (
-                  <div className="flex items-center gap-3 rounded-lg border border-slate-200 p-3"><FileText className="h-6 w-6 text-brand" /><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-slate-800">{f.om.name}</p><p className="text-xs text-slate-400">{f.om.size}</p></div><button onClick={() => set('om', null)} className="text-rose-600"><Trash2 className="h-4 w-4" /></button></div>
+                  <div className="flex items-center gap-3 rounded-lg border border-slate-200 p-3"><FileText className="h-6 w-6 text-brand" /><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-slate-800">{f.om.name}</p><p className="text-xs text-slate-400">{f.om.size}</p></div><button onClick={() => setF((s) => ({ ...s, om: null, _omRemoved: true }))} className="text-rose-600"><Trash2 className="h-4 w-4" /></button></div>
                 ) : (
                   <button onClick={() => omRef.current?.click()} className="flex w-full flex-col items-center gap-1 rounded-lg border border-dashed border-slate-300 py-6 text-sm font-medium text-slate-500 hover:border-brand hover:text-brand"><Upload className="h-5 w-5" /> Upload OM (PDF only)</button>
                 )}
@@ -10534,7 +10593,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
       const address = [d.street, d.city, d.state, d.zip].filter(Boolean).join(', ') || editing.address || '—'
       const priceN = Number(d.price) || 0
       setListings((list) => list.map((l) => (l.id === editing.id ? {
-        ...l, name: d.name, address, city: d.city || '', state: d.state || '', price: priceN,
+        ...l, name: d.name, address, street: d.street || '', city: d.city || '', state: d.state || '', zip: d.zip || '', price: priceN,
         type: d.propertyType || l.type, saleType: d.saleType || l.saleType, gate: d.gate || l.gate,
         size: d.size || l.size || '—', status: d.status || l.status, listed: d.status === 'Draft' ? false : l.listed, image: cover, access: d.access || l.access,
         subheader: d.subheader || '', highlights: d.highlights || '', description: d.description || '', areaText: d.areaText || '',
@@ -10549,10 +10608,18 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
         demo: d.demo || l.demo || {},
         lat: (d.lat === '' || d.lat == null) ? (l.lat ?? '') : Number(d.lat), lng: (d.lng === '' || d.lng == null) ? (l.lng ?? '') : Number(d.lng),
         bor: (typeof d.bor === 'string' && d.bor.trim()) ? d.bor.trim() : (l.bor || ''),
+        // Persist the FULL contacts array (not just the 2 flattened agents) so every listing agent —
+        // name, license, email, phone — reloads in the editor. (#2 Pre-Saved Fields — Agents in Deal.)
+        contacts: Array.isArray(d.contacts) ? d.contacts : (l.contacts || []),
+        // Persist the OM on the listing so it shows in My Deals + reopens in the editor + the preview.
+        // If the user explicitly removed it (trash in step 5), clear it everywhere instead.
+        om: d._omRemoved ? null : (d.om || l.om || null),
+        pkgName: d._omRemoved ? '' : ((d.om && d.om.name) || l.pkgName || ''),
         ...agentFieldsFrom(d.contacts),
       } : l)))
       if (setDealRooms) setDealRooms((list) => list.map((r) => ((r.listingId === editing.id || r.id === editing.id) ? { ...r, name: d.name, address, image: cover, price: priceN, capRate: d.capRate || '', noi: d.noi || '', access: d.gate || r.access, status: d.status || r.status } : r)))
       if (d.om && d.om.url) putPublicPackage(editing.id, { name: d.om.name, url: d.om.url }).catch(() => {})
+      else if (d._omRemoved) { delPublicPackage(editing.id).catch(() => {}); delFile(`om_${editing.id}`).catch(() => {}) }
       if (d.photos && d.photos.length) putGallery(editing.id, d.photos.map((p) => p.url).filter(Boolean).slice(0, 12))
       setNewDealOpen(false); setEditing(null); notify('Deal updated')
       return
@@ -10563,7 +10630,7 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
     const address = [d.street, d.city, d.state, d.zip].filter(Boolean).join(', ') || '—'
     const cover = d.cover || (d.photos && d.photos[0] && d.photos[0].url) || ''
     const price = Number(d.price) || 0
-    setListings((list) => [{ id, dealId, name: d.name, address, city: d.city || '', state: d.state || '', ts: Date.now(), price, type: d.propertyType || 'Retail', saleType: d.saleType || 'For Sale', gate: d.gate || 'Contact Required', size: d.size || '—', status: d.status || 'Active', image: cover || '', featured: false, listed: d.status !== 'Draft', access: d.access || 'Public', subheader: d.subheader || '', highlights: d.highlights || '', description: d.description || '', areaText: d.areaText || '', capRate: d.capRate || '', noi: d.noi || '', pricePerSf: d.pricePerSf || '', lotSize: d.lotSize || '', yearBuilt: d.yearBuilt || '', occupancy: d.occupancy || '', tenants: d.tenants || '', tenancy: d.tenancy || '', leaseTypeDetail: d.leaseTypeDetail || '', subtype: d.subtype || '', zoning: d.zoning || '', parking: d.parking || '', unpriced: !!d.unpriced, expiration: d.expiration || '', saleCondition: d.saleCondition || '', propertyClass: d.propertyClass || '', yearsRenovated: d.yearsRenovated || '', numUnits: d.numUnits || '', tenantBrand: d.tenantBrand || '', parkingType: d.parkingType || '', groundLease: !!d.groundLease, tenantCredit: d.tenantCredit || '', leaseCommence: d.leaseCommence || '', leaseExpiration: d.leaseExpiration || '', leaseTerm: d.leaseTerm || '', remainingTerm: d.remainingTerm || '', leaseOptions: d.leaseOptions || '', rentBumps: d.rentBumps || '', investmentType: d.investmentType || '', proformaNoi: d.proformaNoi || '', proformaCap: d.proformaCap || '', demo: d.demo || {}, lat: d.lat === '' || d.lat == null ? '' : Number(d.lat), lng: d.lng === '' || d.lng == null ? '' : Number(d.lng), bor: (typeof d.bor === 'string' ? d.bor.trim() : ''), ...agentFieldsFrom(d.contacts) }, ...list])
+    setListings((list) => [{ id, dealId, name: d.name, address, street: d.street || '', city: d.city || '', state: d.state || '', zip: d.zip || '', ts: Date.now(), price, type: d.propertyType || 'Retail', saleType: d.saleType || 'For Sale', gate: d.gate || 'Contact Required', size: d.size || '—', status: d.status || 'Active', image: cover || '', featured: false, listed: d.status !== 'Draft', access: d.access || 'Public', subheader: d.subheader || '', highlights: d.highlights || '', description: d.description || '', areaText: d.areaText || '', capRate: d.capRate || '', noi: d.noi || '', pricePerSf: d.pricePerSf || '', lotSize: d.lotSize || '', yearBuilt: d.yearBuilt || '', occupancy: d.occupancy || '', tenants: d.tenants || '', tenancy: d.tenancy || '', leaseTypeDetail: d.leaseTypeDetail || '', subtype: d.subtype || '', zoning: d.zoning || '', parking: d.parking || '', unpriced: !!d.unpriced, expiration: d.expiration || '', saleCondition: d.saleCondition || '', propertyClass: d.propertyClass || '', yearsRenovated: d.yearsRenovated || '', numUnits: d.numUnits || '', tenantBrand: d.tenantBrand || '', parkingType: d.parkingType || '', groundLease: !!d.groundLease, tenantCredit: d.tenantCredit || '', leaseCommence: d.leaseCommence || '', leaseExpiration: d.leaseExpiration || '', leaseTerm: d.leaseTerm || '', remainingTerm: d.remainingTerm || '', leaseOptions: d.leaseOptions || '', rentBumps: d.rentBumps || '', investmentType: d.investmentType || '', proformaNoi: d.proformaNoi || '', proformaCap: d.proformaCap || '', demo: d.demo || {}, lat: d.lat === '' || d.lat == null ? '' : Number(d.lat), lng: d.lng === '' || d.lng == null ? '' : Number(d.lng), bor: (typeof d.bor === 'string' ? d.bor.trim() : ''), contacts: Array.isArray(d.contacts) ? d.contacts : [], om: d.om || null, pkgName: (d.om && d.om.name) || '', ...agentFieldsFrom(d.contacts) }, ...list])
     setDealRooms && setDealRooms((list) => [{ id: roomId, listingId: id, dealId, name: d.name, address, image: cover, price, capRate: d.capRate || '', noi: d.noi || '', status: d.status || 'Active', access: d.gate || 'Contact Required', files: (d.confidential || []).length, members: 0, updated: 'just now', ts: Date.now() }, ...list])
     if (d.om && d.om.url) {
       putPublicPackage(id, { name: d.om.name, url: d.om.url }).catch(() => {})
@@ -10673,6 +10740,17 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
 
   const patch = (id, changes) =>
     setListings((list) => list.map((l) => (l.id === id ? { ...withDefaults(l), ...changes } : l)))
+
+  // Featured properties are capped at 5 at any time (client change). Turning one ON is blocked once
+  // 5 are already featured; turning one OFF is always allowed.
+  const FEATURED_MAX = 5
+  const toggleFeatured = (l) => {
+    if (!l.featured) {
+      const count = (listings || []).filter((x) => x && x.featured).length
+      if (count >= FEATURED_MAX) { notify(`You can feature up to ${FEATURED_MAX} properties at a time. Unfeature one first.`, 'error'); return }
+    }
+    patch(l.id, { featured: !l.featured })
+  }
 
   // Marketing package (PDF) per listing — powers the public "Download Package" button.
   // Stored in the cloud at /public/packages/<id> (public read) so the button works on
@@ -10788,115 +10866,25 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
             Active
           </span>
         </div>
-        <button
-          onClick={() => shareItem({ id: 'hub', title: 'My Deals', address: hubCleanUrl }, notify)}
-          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
-        >
-          <Share2 className="h-4 w-4" />
-          Share microsite
-        </button>
+        {/* "Share microsite" + the public link moved to Team Settings (Owners/Admins only) per client change. */}
       </div>
 
       <div className="mt-5">
         {/* LEFT column */}
         <div className="min-w-0 space-y-4">
-          {/* Public URL card */}
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-                <Link2 className="h-4 w-4 shrink-0 text-slate-400" />
-                <span className="truncate text-sm text-slate-600">{siteUrl}</span>
-              </div>
-              <button
-                onClick={copyLink}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
-              >
-                <Copy className="h-4 w-4" />
-                Copy Link
-              </button>
-              <button
-                onClick={openMicrosite}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-              >
-                <Eye className="h-4 w-4" />
-                Preview
-              </button>
-            </div>
-            <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-slate-500">
-              {canManageUrl && (
-                <button
-                  onClick={() => { setSlugDraft(slug); setCustomUrlOpen((v) => !v) }}
-                  className={`inline-flex items-center gap-1.5 font-medium transition hover:text-brand ${customUrlOpen ? 'text-brand' : ''}`}
-                >
-                  <Pencil className="h-3.5 w-3.5" /> Custom URL
-                </button>
-              )}
-              {/* "Embed on Your Website" moved to Team Settings (Admin/Owner only) per spec. */}
-              <span className="inline-flex items-center gap-2">
-                <Toggle on={inquiryForm} onChange={setInquiryForm} /> Inquiry Form
-              </span>
-            </div>
+          {/* Public URL card moved to Team Settings → "Microsite & Public Link" (Owners/Admins only),
+              per client change. It is no longer shown here in My Deals. */}
 
-            {/* Custom URL inline editor (full width) */}
-            {customUrlOpen && (
-              <div className="mt-3 border-t border-slate-100 pt-3">
-                <p className="text-sm text-slate-500">
-                  Replace the long default URL with a short, easy-to-remember link. This is the URL you share with clients or put on your business cards.
-                </p>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <span className="whitespace-nowrap text-sm text-slate-500">{window.location.origin}/</span>
-                  <input
-                    value={slugDraft}
-                    onChange={(e) => setSlugDraft(e.target.value.replace(/[^a-z0-9-]/gi, '').toLowerCase())}
-                    className="min-w-[220px] flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
-                  />
-                  <PrimaryButton
-                    onClick={() => {
-                      if (!slugDraft.trim()) return
-                      setSlug(slugDraft.trim())
-                      setCustomUrlOpen(false)
-                      notify('Custom URL updated')
-                    }}
-                  >
-                    Save
-                  </PrimaryButton>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Download notification email — Owner only (the address that receives lead/download
-              alerts). Managers/Admins/Members never see or set it. The visitor never gets an email. */}
+          {/* Lead notifications now route to the agent(s) assigned to each deal (client change —
+              the editable "Download notification email" field was removed). Owner-only info note. */}
           {role === 'Owner' && (
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <p className="flex items-center gap-2 text-sm font-bold text-slate-900">
-              <Mail className="h-4 w-4 text-brand" /> Download notification email
+              <Mail className="h-4 w-4 text-brand" /> Lead notifications
             </p>
             <p className="mt-1 text-xs text-slate-500">
-              Every new lead (an inquiry or a package download) is emailed here. <span className="font-medium text-slate-600">When this is set, all notifications go to exactly this address</span> — otherwise they go to the team's Owners, Admins and Managers. Members never receive them. Shared across the team.
+              Each new lead (an inquiry or a package download) is emailed to the <span className="font-medium text-slate-600">agent(s) assigned to that property</span> — set in the deal's Listing Team. A property with no agent goes to the team's default inbox. The visitor never gets an email.
             </p>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <input
-                type="email"
-                value={notifyDraft}
-                onChange={(e) => setNotifyDraft(e.target.value)}
-                placeholder="owner@yourcompany.com"
-                className="min-w-[240px] flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
-              />
-              <PrimaryButton
-                onClick={() => {
-                  const v = (notifyDraft || '').trim()
-                  if (v && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)) { notify('Please enter a valid email'); return }
-                  setNotifyEmail(v)
-                  notify(v ? 'Notification email saved' : 'Notification email cleared — using login email')
-                }}
-              >
-                Save
-              </PrimaryButton>
-            </div>
-            {notifyEmail && notifyEmail.trim() && (
-              <p className="mt-2 text-xs font-medium text-emerald-600">Notifications go to {notifyEmail.trim()}</p>
-            )}
           </div>
           )}
 
@@ -11099,9 +11087,9 @@ function ListingHubPage({ listings, setListings, setPackages, globalQuery, onCre
                       </td>
                       <td className="py-2.5 pr-3 text-center">
                         <button
-                          onClick={() => can('listing.feature') && patch(l.id, { featured: !l.featured })}
+                          onClick={() => can('listing.feature') && toggleFeatured(l)}
                           disabled={!can('listing.feature')}
-                          title={can('listing.feature') ? 'Featured' : 'Only Manager, Admin or Owner can feature a listing'}
+                          title={can('listing.feature') ? (l.featured ? 'Featured — click to unfeature' : 'Feature (up to 5)') : 'Only Manager, Admin or Owner can feature a listing'}
                           className={can('listing.feature') ? '' : 'cursor-not-allowed'}
                         >
                           <Star className={`mx-auto h-4 w-4 ${l.featured ? 'fill-amber-400 text-amber-400' : 'text-slate-300'}`} />
@@ -11441,7 +11429,8 @@ function DealRoomForm({ onSubmit, onCancel, initial, submitLabel = 'Create Deal 
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
-    if (!file.type.startsWith('image/')) { notify('Please choose an image file', 'error'); return }
+    if (!file.type.startsWith('image/')) { notify('Please choose an image file (photos only — no videos)', 'error'); return }
+    if (file.size > 15 * 1024 * 1024) { notify('Image too large (max 15 MB per upload)', 'error'); return }
     setUploading(true)
     try {
       // Read the image directly as a data URL — instant, works offline, and displays
@@ -11700,9 +11689,12 @@ function DocumentHubView({ room, onBack, notify, onEditDocument }) {
   )
   return (
     <div>
-      <button onClick={onBack} className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 transition hover:text-slate-800">
-        <ArrowLeft className="h-4 w-4" /> Documents
-      </button>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <button onClick={onBack} className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 transition hover:text-slate-800">
+          <ArrowLeft className="h-4 w-4" /> Documents
+        </button>
+        <button onClick={onBack} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-brand-hover"><Check className="h-4 w-4" /> Done</button>
+      </div>
 
       {/* Header */}
       <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -12125,7 +12117,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
   // agent fields and re-publish the hub, so editing agents from the deal room shows on the page.
   const syncAgents = (contacts) => {
     if (!gateListing || !setListings) return
-    const fields = contactsToAgents(contacts)
+    const fields = { ...contactsToAgents(contacts), contacts: Array.isArray(contacts) ? contacts : [] }
     setListings((list) => list.map((l) => (l.id === gateListing.id ? { ...l, ...fields } : l)))
     try {
       const saved = JSON.parse(localStorage.getItem('crebuilder_hub') || 'null')
@@ -12302,12 +12294,14 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
         const url = await uploadToStorage(f, room.name) // per-property folder in Storage; https URL (15 MB+ OMs work)
         const om = { name: f.name, size: fileSize(f), date: new Date().toLocaleDateString('en-GB'), url }
         await putFile(`om_${room.id}`, om)
-        // Expose it publicly under THIS deal's unique id only (id-based) — never by name, so
-        // one deal's OM can't link to another deal.
-        putPublicPackage(room.listingId || room.id, { name: f.name, url }).catch(() => {})
-        // Reflect this OM on the matching My Deals listing row too, so its dropdown box shows
-        // the marketing package (keeps Deal Room + My Deals in sync).
-        if (setListings) setListings((list) => list.map((l) => ((l.id === (room.listingId || room.id)) ? { ...l, pkgName: f.name } : l)))
+        // Publish + link under the ACTUAL listing's id (resolved by listingId OR name via gateListing),
+        // not just room.id — otherwise the My Deals row (reads l.pkgName) and the public page (reads the
+        // package by listing id) stay out of sync and show "No OM yet". (#2 OM/Pictures preview bug.)
+        const pkgTargetId = (gateListing && gateListing.id) || room.listingId || room.id
+        putPublicPackage(pkgTargetId, { name: f.name, url }).catch(() => {})
+        // Reflect this OM on the matching My Deals listing row too, so its box shows the package
+        // (keeps Deal Room + My Deals in sync). Match by id OR name to be safe.
+        if (setListings) setListings((list) => list.map((l) => ((l.id === pkgTargetId || (l.name && room.name && String(l.name).trim().toLowerCase() === String(room.name).trim().toLowerCase())) ? { ...l, pkgName: f.name, om } : l)))
         setUploadPct(100); setTimeout(() => setUploadPct(null), 400)
         setOmFlyer(om)
         notify('OM / Flyer uploaded — it will show on the listing’s Download Package too')
@@ -12320,19 +12314,21 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
   // Saved per room and published to the public gallery path so the property URL renders them.
   const publishPhotos = (list) => {
     const urls = list.map((p) => p.url).filter(Boolean).slice(0, 12)
-    putGallery(room.listingId || room.id, urls)
+    // Publish the gallery under the ACTUAL listing's id (via gateListing), so the photos show on the
+    // public property page / preview — not just room.id. (#2 OM/Pictures preview bug.)
+    putGallery((gateListing && gateListing.id) || room.listingId || room.id, urls)
   }
   const onPhotoUpload = async (e) => {
     const files = Array.from(e.target.files || [])
     e.target.value = ''
     if (!files.length) return
     const imgs = files.filter((f) => f.type.startsWith('image/'))
-    if (!imgs.length) { notify('Please choose image files (PNG or JPG)', 'error'); return }
+    if (!imgs.length) { notify('Photos only (PNG or JPG) — videos can’t be uploaded', 'error'); return }
     setUploadPct(20)
     try {
       const added = []
       for (const f of imgs) {
-        if (f.size > 150 * 1024 * 1024) { notify(`"${f.name}" is too large (max 150 MB) — skipped`, 'error'); continue }
+        if (f.size > 15 * 1024 * 1024) { notify(`"${f.name}" is too large (max 15 MB per upload) — skipped`, 'error'); continue }
         const url = await uploadToStorage(await resizeImageFile(f), room.name) // resized; per-property folder; https URL
         added.push({ id: uid(), name: f.name, url })
       }
@@ -12389,9 +12385,13 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
 
   return (
     <div>
-      <button onClick={onBack} className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 transition hover:text-slate-800">
-        <ArrowLeft className="h-4 w-4" /> My Deals
-      </button>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <button onClick={onBack} className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 transition hover:text-slate-800">
+          <ArrowLeft className="h-4 w-4" /> My Deals
+        </button>
+        {/* Clear "Done" to finish editing this deal room (changes save as you make them). */}
+        <button onClick={onBack} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-brand-hover"><Check className="h-4 w-4" /> Done</button>
+      </div>
 
       {/* Header card */}
       <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -12477,7 +12477,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
                 <IconButton icon={Eye} label="Open / preview" onClick={() => openOm(omFlyer)} />
                 <IconButton icon={Download} label="Download" onClick={() => downloadFile(omFlyer)} />
                 <IconButton icon={Upload} label="Replace" onClick={() => omRef.current && omRef.current.click()} />
-                <IconButton icon={Trash2} label="Remove" tone="danger" onClick={() => { delFile(`om_${room.id}`); delPublicPackage(room.listingId || room.id); if (setListings) setListings((list) => list.map((l) => ((l.id === (room.listingId || room.id)) ? { ...l, pkgName: '' } : l))); setOmFlyer(null); notify('OM / Flyer removed', 'error') }} />
+                <IconButton icon={Trash2} label="Remove" tone="danger" onClick={() => { const pid = (gateListing && gateListing.id) || room.listingId || room.id; delFile(`om_${room.id}`); delPublicPackage(pid); if (setListings) setListings((list) => list.map((l) => ((l.id === pid || (l.name && room.name && String(l.name).trim().toLowerCase() === String(room.name).trim().toLowerCase())) ? { ...l, pkgName: '', om: null } : l))); setOmFlyer(null); notify('OM / Flyer removed', 'error') }} />
               </div>
             ) : (
               <button onClick={() => omRef.current && omRef.current.click()} className="mt-3 flex w-full flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-slate-200 py-6 text-center transition hover:border-orange-300 hover:bg-orange-50/30">
@@ -12527,6 +12527,38 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
               ))}
               {!files.length && <p className="py-6 text-center text-sm text-slate-400">No files yet — upload the OM and supporting docs.</p>}
             </div>
+          </div>
+
+          {/* Geography Map — where this property's leads come from, by state (client change:
+              percent per state, labelled in 3 colour tiers). State is captured on the inquiry form. */}
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="flex items-center gap-2 text-sm font-bold text-slate-900"><MapPin className="h-4 w-4 text-brand" /> Leads by state</p>
+            <p className="text-xs text-slate-400">Where this property's leads are originating. Buyers choose their state on the inquiry form.</p>
+            {(() => {
+              const withState = (roomLeads || []).filter((l) => l.state)
+              const by = {}
+              withState.forEach((l) => { const s = String(l.state).trim().toUpperCase(); by[s] = (by[s] || 0) + 1 })
+              const rows = Object.entries(by).sort((a, b) => b[1] - a[1])
+              const total = withState.length
+              if (!rows.length) return <p className="mt-3 rounded-lg bg-slate-50 p-4 text-center text-sm text-slate-400">No state data yet — it fills in as leads come in with a state.</p>
+              const tier = (pct) => pct >= 25 ? { c: 'bg-emerald-500', t: 'text-emerald-700', l: 'High' } : pct >= 10 ? { c: 'bg-amber-500', t: 'text-amber-700', l: 'Medium' } : { c: 'bg-slate-400', t: 'text-slate-500', l: 'Low' }
+              return (
+                <div className="mt-3 space-y-2">
+                  {rows.map(([st, n]) => { const pct = Math.round((n / total) * 100); const tr = tier(pct); return (
+                    <div key={st} className="flex items-center gap-3">
+                      <span className="w-20 shrink-0 truncate text-sm font-bold text-slate-700" title={st}>{st}</span>
+                      <span className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100"><span className={`block h-full rounded-full ${tr.c}`} style={{ width: `${pct}%` }} /></span>
+                      <span className={`w-32 shrink-0 text-right text-xs font-semibold ${tr.t}`}>{pct}% · {n} lead{n === 1 ? '' : 's'} · {tr.l}</span>
+                    </div>
+                  ) })}
+                  <div className="mt-2 flex flex-wrap gap-3 border-t border-slate-100 pt-2 text-[11px] text-slate-400">
+                    <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-500" /> High (25%+)</span>
+                    <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-amber-500" /> Medium (10–24%)</span>
+                    <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-slate-400" /> Low (&lt;10%)</span>
+                  </div>
+                </div>
+              )
+            })()}
           </div>
 
           {/* My Leads — central leads, auto-filtered to this property (Milestone II 3.3) */}
@@ -12699,6 +12731,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
               Deal contacts <span className="rounded-full bg-slate-100 px-1.5 text-xs font-semibold text-slate-500">{dealContacts.length} / 4</span>
             </p>
             <p className="text-xs text-slate-400">Up to 4 people on this deal — each can see the leads. The person labelled on the deal is a member, not the owner.</p>
+            {canEditDealParties && <p className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600"><Check className="h-3 w-3" /> Changes save automatically</p>}
             <div className="mt-3 space-y-2">
               {dealContacts.map((c) => (
                 <div key={c.id} className="rounded-lg border border-slate-100 bg-slate-50 p-3">
@@ -13021,6 +13054,11 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
               demo: d.demo || gateListing.demo || {},
               lat: (d.lat === '' || d.lat == null) ? (gateListing.lat ?? '') : Number(d.lat), lng: (d.lng === '' || d.lng == null) ? (gateListing.lng ?? '') : Number(d.lng),
               bor: (typeof d.bor === 'string' && d.bor.trim()) ? d.bor.trim() : (gateListing.bor || ''),
+              // Persist OM + contacts on the listing so the My Deals row + editor + preview all show
+              // them (Edit Deal here used to publish the OM but never set pkgName/om). (#2 Pre-Saved.)
+              om: d._omRemoved ? null : (d.om || gateListing.om || null),
+              pkgName: d._omRemoved ? '' : ((d.om && d.om.name) || gateListing.pkgName || ''),
+              contacts: Array.isArray(d.contacts) ? d.contacts : (gateListing.contacts || []),
               ...contactsToAgents(d.contacts),
             }
             if (setListings) setListings((list) => list.map((l) => (l.id === gateListing.id ? { ...l, ...patch } : l)))
@@ -13038,6 +13076,7 @@ function DealRoomDetail({ room, onBack, notify, onEditDocument, role = 'Member',
             if (onUpdateRoom) onUpdateRoom(room.id, { name: d.name, address, image: cover, price: priceN, capRate: d.capRate || '', noi: d.noi || '', access: d.gate || access, status: d.status || room.status })
             if (d.gate) { setAccess(d.gate); syncListingGate(d.gate) }
             if (d.om && d.om.url) putPublicPackage(gateListing.id, { name: d.om.name, url: d.om.url }).catch(() => {})
+            else if (d._omRemoved) { delPublicPackage(gateListing.id).catch(() => {}); delFile(`om_${gateListing.id}`).catch(() => {}); delFile(`om_${room.id}`).catch(() => {}); setOmFlyer(null) }
             if (d.photos && d.photos.length) putGallery(gateListing.id, d.photos.map((p) => p.url).filter(Boolean).slice(0, 12))
             setEditOpen(false); notify('Deal updated')
           }}
@@ -13387,7 +13426,8 @@ const CRM_TABS = [
   // "Today" removed per spec; Reports is now the main (default) view.
   { key: 'reports', label: 'Reports', icon: BarChart3 },
   { key: 'leads', label: 'Leads', icon: Inbox },
-  // Pipeline tab removed per client request (not used).
+  // Pipeline — re-enabled on request. The board, deal detail and deal-based reports live under this tab.
+  { key: 'pipelines', label: 'Pipeline', icon: TrendingUp },
   { key: 'contacts', label: 'Contacts', icon: Users },
   { key: 'scripts', label: 'Scripts', icon: ScrollText },
   { key: 'automations', label: 'Automations', icon: Zap },
@@ -13621,7 +13661,9 @@ const CRM_FORWARD_ADDR = 'leads+qx-s_yJEz4LH5tklhdOK0ojxlZpObhOYFJda7A442mY@inbo
 // Milestone II 3.5 — required column value sets for the Leads table.
 const LEAD_PROFILES = ['Broker', 'Principal']
 const LEAD_PIPELINES = ['Active', 'Call for Offers', 'Highest and Best', 'Under Contract', 'Closed', 'On Hold', 'No Longer for Sale']
-const LEAD_SOURCES = ['Listing Website', 'Social Media', 'Email', 'Text', 'Website']
+// Where a lead came from — editable per lead in My Leads (client change; final list to be confirmed
+// with Josh). The current value is always kept selectable even if it's not in this list.
+const LEAD_SOURCES = ['Listing Website', 'Package Download', 'Social Media', 'Email Blast', 'Crexi / LoopNet', 'Cold Call', 'Referral', 'Website', 'Text', 'Event / Conference', 'Other']
 // Fields the CSV import maps onto (Milestone II 3.7). `name` is required.
 const LEAD_IMPORT_FIELDS = [
   { key: 'name', label: 'Name', required: true, aliases: ['name', 'full name', 'contact', 'lead'] },
@@ -13779,8 +13821,11 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
   const [timeline, setTimeline] = useState('all') // relative date window
   const clearLeadFilters = () => { setSearch(''); setLeadTypeFilter('All'); setPropertyFilter('all'); setDateFrom(''); setDateTo(''); setLeadFilter('All'); setTimeline('all') }
   const [addLeadOpen, setAddLeadOpen] = useState(false)
-  const [newLead, setNewLead] = useState({ name: '', email: '', type: 'Inquiry', company: '', listing: '', property: '', profile: 'Principal', pipeline: 'Active', source: 'Website' })
+  const [newLead, setNewLead] = useState({ name: '', email: '', type: 'Inquiry', company: '', listing: '', property: '', profile: 'Principal', pipeline: 'Active', source: 'Website', state: '' })
   const [selLeads, setSelLeads] = useState([])
+  const [leadDel, setLeadDel] = useState(null) // { ids:[...] } → shows the delete-confirm modal
+  // Team's own lead-source options added from the dashboard (on top of the built-in LEAD_SOURCES).
+  const [customSources, setCustomSources] = usePersistentState('crm_lead_sources', [])
   const leadFileRef = useRef(null)
   const [leadImport, setLeadImport] = useState(null) // { headers:[], data:[[]], map:{field:colIndex} }
   const [importDealId, setImportDealId] = useState('') // Deal ID to attach imported leads to
@@ -14237,7 +14282,7 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
             return { valid, invalid, dupes, total: data.length }
           })() : null
           const markRead = (id) => setInbox((list) => list.map((l) => (l.id === id ? { ...l, unread: !l.unread, status: !l.unread ? 'Unread' : 'Read' } : l)))
-          const del = (id) => setInbox((list) => list.filter((l) => l.id !== id))
+          const del = (id) => setLeadDel({ ids: [id] })
           const revoke = (id) => setInbox((list) => list.map((l) => (l.id === id ? { ...l, status: 'Revoked' } : l)))
           const addLead = () => {
             if (!newLead.name.trim()) { notify('Enter a lead name', 'error'); return }
@@ -14246,20 +14291,39 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
             setInbox((list) => [{
               id: uid(), name: newLead.name.trim(), email: newLead.email.trim() || '—', type: newLead.type,
               company: newLead.company.trim() || '—', listing: newLead.listing.trim() || 'Unknown',
-              property: newLead.property || '', profile: newLead.profile, pipeline: newLead.pipeline, source: newLead.source, active: 'Active',
+              property: newLead.property || '', profile: newLead.profile, pipeline: newLead.pipeline, source: newLead.source, state: newLead.state || '', active: 'Active',
               date: today, ts: Date.now(), status: isInq ? 'Unread' : 'New', unread: isInq, owner: me,
             }, ...list])
             fireLeadAutomations(`"${newLead.name.trim()}"`)
             notify(newLead.property ? `Lead added to ${newLead.property}` : 'Lead added')
             setAddLeadOpen(false)
-            setNewLead({ name: '', email: '', type: 'Inquiry', company: '', listing: '', property: '', profile: 'Principal', pipeline: 'Active', source: 'Website' })
+            setNewLead({ name: '', email: '', type: 'Inquiry', company: '', listing: '', property: '', profile: 'Principal', pipeline: 'Active', source: 'Website', state: '' })
           }
           const allSelected = rows.length > 0 && rows.every((l) => selLeads.includes(l.id))
           const toggleSel = (id) => setSelLeads((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))
           const toggleAll = () => setSelLeads(allSelected ? [] : rows.map((l) => l.id))
-          const deleteSelected = () => { setInbox((list) => list.filter((l) => !selLeads.includes(l.id))); notify(`${selLeads.length} lead${selLeads.length === 1 ? '' : 's'} deleted`, 'error'); setSelLeads([]) }
+          const deleteSelected = () => { if (!selLeads.length) return; setLeadDel({ ids: [...selLeads] }) }
+          const confirmLeadDel = () => { const ids = (leadDel && leadDel.ids) || []; if (!ids.length) { setLeadDel(null); return } setInbox((list) => list.filter((l) => !ids.includes(l.id))); setSelLeads((s) => s.filter((x) => !ids.includes(x))); notify(`${ids.length} lead${ids.length === 1 ? '' : 's'} deleted`, 'error'); setLeadDel(null) }
           return (
           <div className="space-y-5">
+            {/* Delete-confirm modal — centered, matches the app (replaces the browser popup). */}
+            {leadDel && (
+              <div className="fixed inset-0 z-[9990] flex items-center justify-center bg-slate-900/50 p-4" onClick={() => setLeadDel(null)}>
+                <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-start gap-3">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-rose-50 text-rose-600"><Trash2 className="h-5 w-5" /></span>
+                    <div className="min-w-0">
+                      <p className="text-base font-extrabold text-slate-900">Delete {leadDel.ids.length > 1 ? `${leadDel.ids.length} leads` : 'this lead'}?</p>
+                      <p className="mt-1 text-sm leading-relaxed text-slate-500">This removes {leadDel.ids.length > 1 ? 'them' : 'it'} from My Leads only. The original captured lead{leadDel.ids.length > 1 ? 's are' : ' is'} kept safely and will not be deleted.</p>
+                    </div>
+                  </div>
+                  <div className="mt-6 flex justify-end gap-2">
+                    <button onClick={() => setLeadDel(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50">Cancel</button>
+                    <button onClick={confirmLeadDel} className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-rose-700"><Trash2 className="h-4 w-4" /> Delete</button>
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="-mt-2 text-sm text-slate-500">People who just inquired on your property.</p>
@@ -14289,6 +14353,7 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
                   <div><label className="mb-1 block text-xs font-semibold text-slate-500">Profile</label><select value={newLead.profile} onChange={(e) => setNewLead((f) => ({ ...f, profile: e.target.value }))} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400">{LEAD_PROFILES.map((o) => <option key={o}>{o}</option>)}</select></div>
                   <div><label className="mb-1 block text-xs font-semibold text-slate-500">Pipeline</label><select value={newLead.pipeline} onChange={(e) => setNewLead((f) => ({ ...f, pipeline: e.target.value }))} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400">{LEAD_PIPELINES.map((o) => <option key={o}>{o}</option>)}</select></div>
                   <div><label className="mb-1 block text-xs font-semibold text-slate-500">Source</label><select value={newLead.source} onChange={(e) => setNewLead((f) => ({ ...f, source: e.target.value }))} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400">{LEAD_SOURCES.map((o) => <option key={o}>{o}</option>)}</select></div>
+                  <div><label className="mb-1 block text-xs font-semibold text-slate-500">State <span className="font-normal text-slate-400">(for Geography Map)</span></label><select value={newLead.state || ''} onChange={(e) => setNewLead((f) => ({ ...f, state: e.target.value }))} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400"><option value="">— State —</option>{US_STATES.map((o) => <option key={o}>{o}</option>)}</select></div>
                 </div>
                 <div className="mt-4 flex justify-end gap-2">
                   <button onClick={() => setAddLeadOpen(false)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
@@ -14495,7 +14560,38 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
                       <td className={td}>{l.date}</td>
                       <td className={td}><span className={`text-xs font-semibold ${l.active === 'Inactive' ? 'text-slate-400' : 'text-emerald-600'}`}>{l.active || 'Active'}</span></td>
                       <td className={td}><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${LEAD_PIPELINE_BADGE[l.pipeline] || 'bg-slate-100 text-slate-600'}`}>{l.pipeline || 'Active'}</span></td>
-                      <td className={td}>{l.source || '—'}</td>
+                      <td className={td} onClick={(e) => e.stopPropagation()}>
+                        {/* Source is editable per lead (client change — "input source" in the lead list).
+                            "+ Add new source…" lets the team add its own source right from here. */}
+                        <select value={l.source || ''} onChange={(e) => {
+                          const v = e.target.value
+                          if (v === '__add__') {
+                            const name = (window.prompt('New source name:') || '').trim()
+                            if (!name) return
+                            setCustomSources((cs) => (cs.includes(name) || LEAD_SOURCES.includes(name) ? cs : [...cs, name]))
+                            setInbox((list) => list.map((x) => (x.id === l.id ? { ...x, source: name } : x)))
+                            return
+                          }
+                          if (v === '__remove__') {
+                            if (!customSources.length) { notify('No custom sources to remove (built-in ones can’t be removed)', 'error'); return }
+                            const name = (window.prompt('Type the custom source to remove:\n\n' + customSources.join(', ')) || '').trim()
+                            if (!name) return
+                            if (!customSources.includes(name)) { notify('That is not one of your custom sources', 'error'); return }
+                            setCustomSources((cs) => cs.filter((s) => s !== name))
+                            setInbox((list) => list.map((x) => (x.source === name ? { ...x, source: '' } : x)))
+                            notify(`Removed source "${name}"`)
+                            return
+                          }
+                          setInbox((list) => list.map((x) => (x.id === l.id ? { ...x, source: v } : x)))
+                        }} title="Where this lead came from" className="max-w-[160px] rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 outline-none transition focus:border-brand">
+                          {l.source && ![...LEAD_SOURCES, ...customSources].includes(l.source) && <option value={l.source}>{l.source}</option>}
+                          {!l.source && <option value="">—</option>}
+                          {LEAD_SOURCES.map((o) => <option key={o} value={o}>{o}</option>)}
+                          {customSources.map((o) => <option key={o} value={o}>{o}</option>)}
+                          <option value="__add__">+ Add new source…</option>
+                          {customSources.length > 0 && <option value="__remove__">✕ Remove custom source…</option>}
+                        </select>
+                      </td>
                       <td className={td}><span className={l.owner === me ? 'font-semibold text-slate-700' : 'text-slate-500'}>{l.owner || '—'}</span></td>
                       <td className={td + ' text-right'} onClick={(e) => e.stopPropagation()}>
                         {l.type === 'NDA Signer' || l.type === 'Email Lead' ? (
@@ -14872,7 +14968,7 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
           const moveTo = (id, stage) => {
             setDealsList((list) => list.map((d) => {
               if (d.id !== id || d.stage === stage) return d
-              const entry = { text: `Stage changed — ${d.stage} → ${stage}`, ts: stampNow() }
+              const entry = { text: `Stage changed — ${d.stage} → ${stage}`, ts: stampNow(), at: Date.now() }
               return { ...d, stage, activity: [entry, ...(d.activity || [])] }
             }))
             notify(`Moved to ${stage}`)
@@ -14914,7 +15010,11 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
             {pipeTab === 'Deals' ? (
               detailDeal ? (
               <>
-                <button onClick={() => setDealDetailId(null)} className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:underline"><ArrowLeft className="h-4 w-4" /> Deals</button>
+                <div className="flex items-center justify-between gap-3">
+                  <button onClick={() => setDealDetailId(null)} className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:underline"><ArrowLeft className="h-4 w-4" /> Deals</button>
+                  {/* Clear "Done" to finish editing this deal (fields save as you type). */}
+                  <button onClick={() => setDealDetailId(null)} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-brand-hover"><Check className="h-4 w-4" /> Done</button>
+                </div>
                 {/* Header card */}
                 <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
                   <div className="flex items-start justify-between gap-3">
@@ -15059,7 +15159,7 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
                             <div className={`overflow-hidden transition-all ${d.note ? 'mt-2 max-h-20' : 'max-h-0 group-hover:mt-2 group-hover:max-h-20'}`}>
                               <div className="flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5">
                                 <FileText className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                                <input value={d.note || ''} onChange={(e) => updateDeal(d.id, { note: e.target.value })} onPointerDown={(e) => e.stopPropagation()} placeholder="Add a note…" className="w-full bg-transparent text-xs text-slate-600 outline-none placeholder:text-slate-400" />
+                                <input value={d.note || ''} onChange={(e) => updateDeal(d.id, { note: e.target.value })} onPointerDown={(e) => e.stopPropagation()} placeholder="Add a note (saves automatically)…" title="Saves automatically" className="w-full bg-transparent text-xs text-slate-600 outline-none placeholder:text-slate-400" />
                               </div>
                             </div>
                             <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-100 pt-2">
@@ -15711,7 +15811,13 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
           const reached = openStages.map((s) => deals.filter((d) => idxOf(d.stage) >= idxOf(s) && idxOf(d.stage) <= idxOf('Under Contract')).length)
           // Leads by source & type — use the SAME captured leads (inbox) as the "Leads Captured" tile
           // so the totals reconcile (previously this read a separate contactList, showing 0) (#12).
-          const repContacts = scope === 'mine' ? inbox.filter((c) => c.owner === me) : inbox
+          // Date-range filter for the report toggle (All time / 30d / 90d / 1yr) — previously the
+          // toggle only highlighted a button and never filtered the data.
+          const _rangeDays = reportRange === '90d' ? 90 : reportRange === '1yr' ? 365 : reportRange === '30d' ? 30 : 0
+          const _rangeCut = _rangeDays ? Date.now() - _rangeDays * 86400000 : 0
+          const _leadTs = (l) => l.ts || (l.date ? new Date(l.date).getTime() : 0) || 0
+          const inRange = (l) => !_rangeCut || _leadTs(l) >= _rangeCut
+          const repContacts = (scope === 'mine' ? inbox.filter((c) => c.owner === me) : inbox).filter(inRange)
           const bySource = {}; repContacts.forEach((c) => { const k = c.source || 'Other'; bySource[k] = (bySource[k] || 0) + 1 })
           const sourceRows = Object.entries(bySource).sort((a, b) => b[1] - a[1])
           const maxSrc = Math.max(1, ...sourceRows.map((r) => r[1]))
@@ -15754,7 +15860,7 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
               const weeks = Array.from({ length: 12 }, (_, i) => sel.reduce((a, p) => a + (p.weeklyViews[i] || 0), 0))
               const maxWeek = Math.max(1, ...weeks)
               // Live: real leads YOU captured (from My Leads), filtered to the selected property + scope.
-              const reportLeads = inbox
+              const reportLeads = inbox.filter(inRange)
                 .filter((l) => (scope === 'mine' ? l.owner === me : true))
                 .filter((l) => (reportProperty === 'all' ? true : l.property === reportProperty))
               const liveLeads = reportLeads.length
@@ -15776,7 +15882,7 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
               // Derive Visitors / Open OMs / Executed CAs from real lead activity (like the Leads tab).
               const liveVisitors = new Set(reportLeads.map((l) => (l.email || '').toLowerCase()).filter((e) => e && e !== '—')).size || reportLeads.length
               const liveOpenOms = reportLeads.filter((l) => /download|package|\bom\b/i.test(l.source || '') || /download/i.test(l.message || '')).length
-              const liveExecutedCa = reportLeads.filter((l) => l.type === 'NDA Signer').length
+              const liveExecutedCa = reportLeads.filter((l) => l.type === 'NDA Signer' || /nda/i.test(`${l.type || ''} ${l.source || ''} ${l.message || ''}`)).length
               // When a single property is selected, show ITS impressions/page views (from the hit log,
               // keyed by property id); for "All properties", show the whole-site totals.
               const selId = reportProperty === 'all' ? null : (nameToId[reportProperty] || null)
@@ -15962,37 +16068,70 @@ function CRMPage({ user, onNavigate, role = 'Member', can = () => true }) {
               </div>
             </div>
 
-            {/* Source -> revenue */}
-            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-              <p className="px-5 pt-5 text-sm font-bold text-slate-900">Source → revenue</p>
-              <div className="scrollbar-slim mt-3 overflow-x-auto">
-                <table className="w-full min-w-[520px] text-left text-sm">
-                  <thead><tr className="border-y border-slate-100 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-400"><th className="px-5 py-2.5">Source</th><th className="px-5 py-2.5 text-right">Deals</th><th className="px-5 py-2.5 text-right">Won</th><th className="px-5 py-2.5 text-right">GCI</th></tr></thead>
-                  <tbody>
-                    {srcRevRows.length === 0 && <tr><td colSpan={4} className="px-5 py-8 text-center text-sm text-slate-400">No deals yet.</td></tr>}
-                    {srcRevRows.map(([src, r]) => (
-                      <tr key={src} className="border-b border-slate-100 last:border-0">
-                        <td className="px-5 py-2.5 text-slate-700">{srcLabel(src)}</td>
-                        <td className="px-5 py-2.5 text-right text-slate-700">{r.deals}</td>
-                        <td className="px-5 py-2.5 text-right text-slate-700">{r.won}</td>
-                        <td className="px-5 py-2.5 text-right font-semibold text-emerald-600">{money(r.gci)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            {/* Leads by source — where leads came from (uses the editable lead Source). Replaces the
+                old pipeline "Source → revenue" table, since the Pipeline was removed per client request. */}
+            {(() => {
+              const scopedLeads = (scope === 'mine' ? (inbox || []).filter((l) => l.owner === me) : (inbox || []))
+              const bySrc = {}
+              scopedLeads.forEach((l) => { const k = (l.source && String(l.source).trim()) || 'Unknown'; bySrc[k] = (bySrc[k] || 0) + 1 })
+              const rows = Object.entries(bySrc).sort((a, b) => b[1] - a[1])
+              const total = scopedLeads.length
+              const maxN = Math.max(1, ...rows.map((r) => r[1]))
+              return (
+                <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                  <p className="px-5 pt-5 text-sm font-bold text-slate-900">Leads by source</p>
+                  <p className="px-5 text-xs text-slate-400">Where your {total} lead{total === 1 ? '' : 's'} came from. Set a lead's source in the Leads tab.</p>
+                  <div className="scrollbar-slim mt-3 overflow-x-auto">
+                    <table className="w-full min-w-[480px] text-left text-sm">
+                      <thead><tr className="border-y border-slate-100 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-400"><th className="px-5 py-2.5">Source</th><th className="px-5 py-2.5 text-right">Leads</th><th className="px-5 py-2.5 text-right">Share</th></tr></thead>
+                      <tbody>
+                        {rows.length === 0 && <tr><td colSpan={3} className="px-5 py-8 text-center text-sm text-slate-400">No leads yet.</td></tr>}
+                        {rows.map(([src, n]) => (
+                          <tr key={src} className="border-b border-slate-100 last:border-0">
+                            <td className="px-5 py-2.5 text-slate-700">
+                              <div className="flex items-center gap-2">
+                                <span className="inline-block h-1.5 w-24 shrink-0 overflow-hidden rounded-full bg-slate-100"><span className="block h-full rounded-full bg-brand" style={{ width: `${Math.round((n / maxN) * 100)}%` }} /></span>
+                                <span className="truncate">{src}</span>
+                              </div>
+                            </td>
+                            <td className="px-5 py-2.5 text-right font-semibold text-slate-800">{n}</td>
+                            <td className="px-5 py-2.5 text-right text-slate-500">{total ? Math.round((n / total) * 100) : 0}%</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )
+            })()}
 
             {/* Activity */}
             <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
               <p className="text-sm font-bold text-slate-900">Activity — last 30 days</p>
               <div className="scrollbar-slim mt-4 flex gap-3 overflow-x-auto pb-1">
-                {CRM_ACTIVITY_SEED.map((a) => (
-                  <div key={a.label} className="flex min-w-[92px] shrink-0 flex-col rounded-lg border border-slate-200 px-3 py-2.5">
-                    <span className="text-lg font-extrabold text-slate-900">{a.count}</span>
-                    <span className="mt-0.5 text-xs text-slate-400">{a.label}</span>
-                  </div>
-                ))}
+                {(() => {
+                  // Real activity in the last 30 days, computed from actual leads + deal history
+                  // (was previously a hardcoded demo seed that never changed).
+                  const _d30 = Date.now() - 30 * 86400000
+                  const _ts = (l) => l.ts || (l.date ? new Date(l.date).getTime() : 0) || 0
+                  const lead30 = (scope === 'mine' ? inbox.filter((l) => l.owner === me) : inbox).filter((l) => _ts(l) >= _d30)
+                  // Activity entries store `at` (numeric) now; older ones only have a dd/mm/yyyy `ts` string.
+                  const _atime = (a) => { if (typeof a.at === 'number') return a.at; const m = String(a.ts || '').match(/(\d{2})\/(\d{2})\/(\d{4})/); return m ? new Date(+m[3], +m[2] - 1, +m[1]).getTime() : 0 }
+                  const stage30 = (deals || []).reduce((n, d) => n + ((d.activity || []).filter((a) => a && /stage/i.test(a.text || '') && _atime(a) >= _d30).length), 0)
+                  const acts = [
+                    { label: 'New Leads', count: lead30.length },
+                    { label: 'Inquiries', count: lead30.filter((l) => /inquiry/i.test(l.type || '') || /listing website/i.test(l.source || '')).length },
+                    { label: 'OM Downloads', count: lead30.filter((l) => /download|package|\bom\b/i.test(`${l.source || ''} ${l.message || ''}`)).length },
+                    { label: 'NDA Signed', count: lead30.filter((l) => /nda/i.test(`${l.type || ''} ${l.source || ''}`)).length },
+                    { label: 'Stage Changes', count: stage30 },
+                  ]
+                  return acts.map((a) => (
+                    <div key={a.label} className="flex min-w-[92px] shrink-0 flex-col rounded-lg border border-slate-200 px-3 py-2.5">
+                      <span className="text-lg font-extrabold text-slate-900">{a.count}</span>
+                      <span className="mt-0.5 text-xs text-slate-400">{a.label}</span>
+                    </div>
+                  ))
+                })()}
               </div>
             </div>
 
@@ -17039,6 +17178,7 @@ function ProfileSettingsPage({ user }) {
   })
   const email = user?.email || CURRENT_USER.email
   const [pw, setPw] = useState({ current: '', next: '', confirm: '' })
+  const [pwBusy, setPwBusy] = useState(false)
   const [delOpen, setDelOpen] = useState(false)
   const [delText, setDelText] = useState('')
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
@@ -17059,11 +17199,35 @@ function ProfileSettingsPage({ user }) {
   const sel = 'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-orange-400'
   const toolBtn = 'flex h-7 w-7 items-center justify-center rounded text-slate-500 transition hover:bg-slate-100 hover:text-slate-700'
 
-  const changePw = () => {
+  const changePw = async () => {
+    if (pwBusy) return
     if (!pw.current || !pw.next) { notify('Fill in your current and new password', 'error'); return }
+    if (pw.next.length < 6) { notify('New password must be at least 6 characters', 'error'); return }
     if (pw.next !== pw.confirm) { notify('New passwords do not match', 'error'); return }
-    setPw({ current: '', next: '', confirm: '' })
-    notify('Password updated')
+    if (pw.next === pw.current) { notify('New password must be different from the current one', 'error'); return }
+    const u = auth.currentUser
+    if (!u) { notify('You are signed out — please sign in again', 'error'); return }
+    // Password sign-in users only. Google-only accounts manage their password at Google.
+    const hasPassword = (u.providerData || []).some((p) => p.providerId === 'password')
+    if (!hasPassword) { notify('This account signs in with Google — change your password at myaccount.google.com', 'error'); return }
+    setPwBusy(true)
+    try {
+      // Firebase requires a recent login before changing a password: re-verify with the current one.
+      const cred = EmailAuthProvider.credential(u.email, pw.current)
+      await reauthenticateWithCredential(u, cred)
+      await updatePassword(u, pw.next)
+      setPw({ current: '', next: '', confirm: '' })
+      notify('Password changed — use your new password next time you sign in')
+    } catch (err) {
+      const code = err?.code || ''
+      if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') notify('Current password is incorrect', 'error')
+      else if (code === 'auth/weak-password') notify('New password is too weak (use 6+ characters)', 'error')
+      else if (code === 'auth/too-many-requests') notify('Too many attempts — please wait a moment and try again', 'error')
+      else if (code === 'auth/requires-recent-login') notify('Please sign out and sign in again, then change your password', 'error')
+      else notify('Could not change password. Please try again.', 'error')
+    } finally {
+      setPwBusy(false)
+    }
   }
 
   return (
@@ -17176,8 +17340,9 @@ function ProfileSettingsPage({ user }) {
           <ProfileField label="New Password" value={pw.next} onChange={setP('next')} type="password" placeholder="••••••••" />
           <ProfileField label="Confirm New" value={pw.confirm} onChange={setP('confirm')} type="password" placeholder="••••••••" />
         </div>
-        <div className="mt-4 flex justify-end">
-          <button onClick={changePw} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Change Password</button>
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <p className="text-xs text-slate-400">Enter your current password to confirm it's you.</p>
+          <button onClick={changePw} disabled={pwBusy} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">{pwBusy ? 'Changing…' : 'Change Password'}</button>
         </div>
       </div>
 
@@ -17237,6 +17402,46 @@ const CA_TEMPLATES = [
   { name: 'Short-form NDA', text: `This Confidentiality Agreement is entered into between the recipient and [COMPANY_NAME]. The recipient agrees to keep all information regarding the subject property strictly confidential and to use it solely to evaluate a potential transaction.\n\nPLEASE CONTACT THE [COMPANY_NAME] ADVISOR FOR MORE DETAILS.` },
   { name: 'Business (going-concern) CA', text: `The information regarding this business is confidential. By signing, the recipient agrees not to contact employees, landlords, customers, or suppliers, and to hold all financials and the identity of the business in strict confidence, as required by [COMPANY_NAME].\n\nPLEASE CONTACT THE [COMPANY_NAME] ADVISOR FOR MORE DETAILS.` },
 ]
+
+// Microsite public link — moved here from My Deals and shown to Owners/Admins only (client change:
+// "Move Microsite & Link to Settings | viewable to only admins"). Uses the same shared 'hub_slug'
+// key, so the URL and any custom-slug change stay in sync with the published microsite.
+function MicrositeLinkCard({ role = 'Member' }) {
+  const notify = useToast()
+  const [slug, setSlug] = usePersistentState('hub_slug', 'vaziamts', true)
+  const [slugDraft, setSlugDraft] = useState(slug)
+  const [editing, setEditing] = useState(false)
+  useEffect(() => { setSlugDraft(slug) }, [slug])
+  if (!['Owner', 'Admin'].includes(role)) return null
+  const url = `${window.location.origin}/${encodeURIComponent(slug)}`
+  const copy = async () => { const ok = await copyToClipboard(url); notify(ok ? 'Link copied' : 'Could not copy', ok ? 'success' : 'error') }
+  const open = () => { const w = window.open(url, '_blank'); if (w) w.opener = null }
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <p className="flex items-center gap-2 text-sm font-extrabold text-slate-900"><Link2 className="h-4 w-4 text-brand" /> Microsite &amp; public link</p>
+      <p className="mt-0.5 text-xs text-slate-500">Your public listings page. Only Owners and Admins can see or change this link.</p>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+          <Link2 className="h-4 w-4 shrink-0 text-slate-400" />
+          <span className="truncate text-sm text-slate-600">{url}</span>
+        </div>
+        <button onClick={copy} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"><Copy className="h-4 w-4" /> Copy Link</button>
+        <button onClick={open} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"><Eye className="h-4 w-4" /> Preview</button>
+      </div>
+      <button onClick={() => { setSlugDraft(slug); setEditing((v) => !v) }} className={`mt-3 inline-flex items-center gap-1.5 text-sm font-medium transition hover:text-brand ${editing ? 'text-brand' : 'text-slate-500'}`}><Pencil className="h-3.5 w-3.5" /> Custom URL</button>
+      {editing && (
+        <div className="mt-3 border-t border-slate-100 pt-3">
+          <p className="text-sm text-slate-500">Replace the long default URL with a short, easy-to-remember link. This is the URL you share with clients.</p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="whitespace-nowrap text-sm text-slate-500">{window.location.origin}/</span>
+            <input value={slugDraft} onChange={(e) => setSlugDraft(e.target.value.replace(/[^a-z0-9-]/gi, '').toLowerCase())} className="min-w-[220px] flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-brand" />
+            <button onClick={() => { if (!slugDraft.trim()) return; setSlug(slugDraft.trim()); setEditing(false); notify('Custom URL updated') }} className="rounded-lg bg-brand px-4 py-2 text-sm font-bold text-white transition hover:bg-brand-hover">Save</button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 function TeamSettingsPage({ role = 'Member' }) {
   const isAdminUp = ['Owner', 'Admin'].includes(role)
@@ -17320,6 +17525,14 @@ function TeamSettingsPage({ role = 'Member' }) {
         <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">Campaign Templates</h2>
         <TemplateManager role={role} />
       </div>
+
+      {/* Microsite & public link (moved here from My Deals — Admin/Owner only) */}
+      {isAdminUp && (
+        <div className="mt-5">
+          <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">Microsite &amp; Public Link</h2>
+          <MicrositeLinkCard role={role} />
+        </div>
+      )}
 
       {/* Appearance (moved here from My Deals — Admin/Owner only) */}
       {isAdminUp && <AppearanceSettings />}
@@ -17531,6 +17744,19 @@ function TeamPermissionsPage({ myUid, role = 'Member', can = () => true }) {
   const canManage = ['Owner', 'Admin'].includes(role)
   const [users, setUsers] = useState({})
   const [openUid, setOpenUid] = useState(null)
+  const [memberSearch, setMemberSearch] = useState('')
+  // For per-member stats (how many deals/leads each handles) — read the shared team data.
+  const [teamListings, setTeamListings] = useState([])
+  const [teamLeads] = usePersistentState('crm_inbox', [])
+  useEffect(() => { getCol('listings').then((l) => setTeamListings(Array.isArray(l) ? l : [])).catch(() => {}) }, [])
+  const statFor = (u) => {
+    const email = String(u.email || '').trim().toLowerCase()
+    const name = String(u.name || '').trim().toLowerCase()
+    const deals = email ? teamListings.filter((l) => [l.agentEmail, l.agent2Email].some((e) => e && String(e).trim().toLowerCase() === email)).length : 0
+    const leads = name ? teamLeads.filter((l) => String(l.owner || '').trim().toLowerCase() === name).length : 0
+    return { deals, leads }
+  }
+  const joinedLabel = (u) => { try { const d = new Date(u.createdAt); return isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) } catch { return '' } }
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
@@ -17564,7 +17790,11 @@ function TeamPermissionsPage({ myUid, role = 'Member', can = () => true }) {
     return onValue(dbRef(db, 'users'), (snap) => { setUsers(snap.val() || {}); setLoading(false) }, () => { setErr(true); setLoading(false) })
   }, [])
 
-  const list = Object.entries(users).map(([uid, u]) => ({ uid, ...u })).sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+  const allList = Object.entries(users).map(([uid, u]) => ({ uid, ...u })).sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+  // Search + per-role counts, so it's clear at a glance who's on the team and in what role.
+  const q = memberSearch.trim().toLowerCase()
+  const list = q ? allList.filter((u) => `${u.name || ''} ${u.email || ''} ${u.role || ''}`.toLowerCase().includes(q)) : allList
+  const roleCounts = allList.reduce((acc, u) => { const r = u.role || 'Member'; acc[r] = (acc[r] || 0) + 1; return acc }, {})
 
   const setUserRole = (uid, role) => { dbUpdate(dbRef(db, `users/${uid}`), { role }).then(() => notify('Role updated')).catch(() => notify('Save failed — check DB rules', 'error')) }
   const [confirmDelUser, setConfirmDelUser] = useState(null) // user pending removal from the team
@@ -17604,7 +17834,7 @@ function TeamPermissionsPage({ myUid, role = 'Member', can = () => true }) {
     dbSet(dbRef(db, `users/${uid}/overrides`), encodeOverrides(overrides)).catch(() => notify('Save failed — check DB rules', 'error'))
   }
 
-  const roleBadge = (r) => ({ Owner: 'bg-amber-50 text-amber-700', Admin: 'bg-rose-50 text-rose-700', Manager: 'bg-indigo-50 text-indigo-700', Member: 'bg-slate-100 text-slate-600' }[r] || 'bg-slate-100 text-slate-600')
+  const roleBadge = (r) => ({ Owner: 'bg-amber-50 text-amber-700', Admin: 'bg-rose-50 text-rose-700', Manager: 'bg-indigo-50 text-indigo-700', Coordinator: 'bg-emerald-50 text-emerald-700', Member: 'bg-slate-100 text-slate-600' }[r] || 'bg-slate-100 text-slate-600')
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-8">
@@ -17617,6 +17847,20 @@ function TeamPermissionsPage({ myUid, role = 'Member', can = () => true }) {
           </div>
         </div>
         <button onClick={() => setAddOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover"><Plus className="h-4 w-4" /> Add Member</button>
+      </div>
+
+      {/* Explanation of Roles (client change) — what each role can and cannot do. */}
+      <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <p className="flex items-center gap-2 text-sm font-extrabold text-slate-900"><ShieldCheck className="h-4 w-4 text-brand" /> What each role can do</p>
+        <p className="mt-0.5 text-xs text-slate-500">The default access for each role. You can still fine-tune any member's permissions below.</p>
+        <div className="mt-3 space-y-2.5">
+          {ROLES.map((r) => (
+            <div key={r} className="flex items-start gap-3">
+              <span className={`mt-0.5 w-24 shrink-0 rounded-full px-2.5 py-1 text-center text-xs font-bold ${roleBadge(r)}`}>{r}</span>
+              <p className="text-sm leading-relaxed text-slate-600">{(ROLE_INFO[r] && ROLE_INFO[r].desc) || ''}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
       {addOpen && (
@@ -17669,23 +17913,45 @@ function TeamPermissionsPage({ myUid, role = 'Member', can = () => true }) {
         New members join by choosing <b>Create account</b> on the sign-in page. They start as <b>Member</b> and appear here — then you adjust their access below.
       </div>
 
+      {/* Team summary + search — at a glance, who is on the team and in what role. */}
+      {!loading && !err && allList.length > 0 && (
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-bold text-white">{allList.length} member{allList.length === 1 ? '' : 's'}</span>
+          {ROLES.filter((r) => roleCounts[r]).map((r) => (
+            <span key={r} className={`rounded-full px-2.5 py-1 text-xs font-semibold ${roleBadge(r)}`}>{roleCounts[r]} {r}{roleCounts[r] === 1 ? '' : 's'}</span>
+          ))}
+          <div className="relative ml-auto">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+            <input value={memberSearch} onChange={(e) => setMemberSearch(e.target.value)} placeholder="Search members…" className="w-48 rounded-lg border border-slate-200 bg-white py-1.5 pl-8 pr-3 text-sm text-slate-700 outline-none transition focus:border-brand" />
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <p className="mt-8 text-sm text-slate-400">Loading team…</p>
       ) : err ? (
         <p className="mt-8 rounded-lg bg-amber-50 p-4 text-sm text-amber-700">Couldn't read the team from Firebase. Make sure Realtime Database rules allow authenticated reads of <code>/users</code>.</p>
       ) : (
         <div className="mt-5 space-y-3">
+          {list.length === 0 && <p className="rounded-lg bg-slate-50 p-4 text-center text-sm text-slate-400">No members match “{memberSearch}”.</p>}
           {list.map((u) => {
             const eff = resolvePerms(u.role, decodeOverrides(u.overrides))
             const isMe = u.uid === myUid
             const open = openUid === u.uid
+            const st = statFor(u)
+            const joined = joinedLabel(u)
             return (
               <div key={u.uid} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
                 <div className="flex flex-wrap items-center gap-3 p-4">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-500">{(u.name || u.email || '?').slice(0, 1).toUpperCase()}</div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-bold text-slate-900">{u.name || '—'} {isMe && <span className="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">You</span>}</p>
+                    <p className="flex items-center gap-1.5 truncate text-sm font-bold text-slate-900"><span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" title="Active" />{u.name || '—'} {isMe && <span className="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">You</span>}</p>
                     <p className="truncate text-xs text-slate-500">{u.email}</p>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-slate-400">
+                      <span>{st.deals} deal{st.deals === 1 ? '' : 's'}</span>
+                      <span>{st.leads} lead{st.leads === 1 ? '' : 's'}</span>
+                      {joined && <span>Joined {joined}</span>}
+                    </div>
                   </div>
                   <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${roleBadge(u.role)}`}>{u.role}</span>
                   <select value={u.role} onChange={(e) => setUserRole(u.uid, e.target.value)} disabled={isMe || !canManage} title={canManage ? '' : 'Only an Admin or Owner can change roles'} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-700 outline-none disabled:opacity-50">
@@ -17706,6 +17972,7 @@ function TeamPermissionsPage({ myUid, role = 'Member', can = () => true }) {
                 {open && (
                   <div className="border-t border-slate-100 bg-slate-50/50 p-4">
                     {isMe && <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">You can't remove your own admin access here.</p>}
+                    {canManage && <p className="mb-3 inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600"><Check className="h-3 w-3" /> Changes save automatically</p>}
                     <div className="grid gap-5 sm:grid-cols-2">
                       {PERMISSION_GROUPS.map((grp) => (
                         <div key={grp.group}>
@@ -18316,6 +18583,20 @@ export default function App() {
   useEffect(() => {
     if (dbLoaded) putCol('dealrooms', dealRooms).catch(() => {})
   }, [dealRooms, dbLoaded])
+
+  // Live sync — keep listings/packages/deal rooms current with any teammate's (or another device's)
+  // changes in real time. Without this, two open sessions load once and can overwrite each other with
+  // stale data, which is why a cover/agent could "disappear" a day or two later. The JSON compare
+  // avoids redundant re-renders and write loops.
+  useEffect(() => {
+    if (!dbLoaded || !myUid) return
+    const same = (a, b) => { try { return JSON.stringify(a) === JSON.stringify(b) } catch { return false } }
+    const unsubL = subscribeCol('listings', (arr) => setListings((cur) => (same(cur, arr) ? cur : arr)))
+    const unsubP = subscribeCol('packages', (arr) => setPackages((cur) => (same(cur, arr) ? cur : arr)))
+    const unsubD = subscribeCol('dealrooms', (arr) => setDealRooms((cur) => (same(cur, arr) ? cur : arr)))
+    return () => { unsubL(); unsubP(); unsubD() }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dbLoaded, myUid])
 
   // Backfill a Deal ID (##-######) onto any older deal that predates the Deal ID system.
   // Step 1: every LISTING gets an ID (the listing is the source of truth for a deal's ID).

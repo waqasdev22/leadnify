@@ -64,10 +64,15 @@ export const ALL_PERMS = PERMISSION_GROUPS.flatMap((g) => g.perms.map((p) => p.k
 const OWNER_ONLY = ['listing.delete', 'dealroom.delete']          // Delete deal — Owner only
 const OWNER_ADMIN_ONLY = ['team.manage_permissions', 'billing.manage'] // roles & billing
 const MEMBER_EXCLUDE = ['team.invite', 'listing.feature', 'deal.edit_contacts', 'deal.edit_broker', 'deal.edit_owner']
+// Coordinator — an operations role that coordinates deals: can create/edit listings, documents,
+// deal rooms and deal contacts, and sees all team data, but can't delete deals, manage the team
+// (roles/billing/invite) or feature listings. Sits between Manager and Member.
+const COORD_EXCLUDE = [...OWNER_ONLY, ...OWNER_ADMIN_ONLY, 'team.invite', 'listing.feature']
 export const ROLE_PRESETS = {
   Owner: [...ALL_PERMS],
   Admin: ALL_PERMS.filter((k) => !OWNER_ONLY.includes(k)),
   Manager: ALL_PERMS.filter((k) => !OWNER_ONLY.includes(k) && !OWNER_ADMIN_ONLY.includes(k)),
+  Coordinator: ALL_PERMS.filter((k) => !COORD_EXCLUDE.includes(k)),
   Member: ALL_PERMS.filter((k) => !OWNER_ONLY.includes(k) && !OWNER_ADMIN_ONLY.includes(k) && !MEMBER_EXCLUDE.includes(k)),
 }
 
@@ -76,8 +81,9 @@ export const ROLES = Object.keys(ROLE_PRESETS)
 export const ROLE_INFO = {
   Owner: { color: 'amber', desc: 'Account owner — full control, including billing, team management, and the only role that can delete a deal.' },
   Admin: { color: 'rose', desc: 'Everything except deleting a deal — full team management & billing.' },
-  Manager: { color: 'indigo', desc: "All features except deleting a deal and managing roles/billing. Can invite members and sees all team leads & data. Paid seat." },
-  Member: { color: 'slate', desc: "Sees all team leads & data, but can't invite, feature listings, or edit a deal's contacts / broker / owner. Paid seat." },
+  Manager: { color: 'indigo', desc: "All features except deleting a deal and managing roles/billing. Can invite members and sees all team leads & data." },
+  Coordinator: { color: 'emerald', desc: "Coordinates deals — can create and edit listings, documents, deal rooms and deal contacts, and sees all team data. Cannot delete deals, manage the team, invite members, or feature listings." },
+  Member: { color: 'slate', desc: "Sees all team leads & data, but can't invite, feature listings, or edit a deal's contacts / broker / owner." },
 }
 
 // Realtime DB keys can't contain "." — encode permission keys for storage.
